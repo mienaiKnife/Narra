@@ -1,0 +1,29 @@
+package com.mienaiknife.narra
+
+import android.os.Bundle
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
+import androidx.activity.viewModels
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import com.mienaiknife.narra.ui.theme.NarraTheme
+import com.mienaiknife.narra.ui.theme.ThemeViewModel
+
+class MainActivity : ComponentActivity() {
+    private val themeViewModel: ThemeViewModel by viewModels()
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        themeViewModel.initialize(this)
+        enableEdgeToEdge()
+        setContent {
+            val isDarkMode by themeViewModel.isDarkMode.collectAsState()
+            val isDynamicColor by themeViewModel.isDynamicColor.collectAsState()
+
+            NarraTheme(darkTheme = isDarkMode, dynamicColor = isDynamicColor) {
+                AppNavigation(themeViewModel = themeViewModel)
+            }
+        }
+    }
+}
