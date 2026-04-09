@@ -9,7 +9,9 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import com.mienaiknife.narra.ui.theme.NarraTheme
 import com.mienaiknife.narra.ui.theme.ThemeViewModel
+import dagger.hilt.android.AndroidEntryPoint
 
+@AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     private val themeViewModel: ThemeViewModel by viewModels()
 

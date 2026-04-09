@@ -28,7 +28,7 @@ fun AppNavigation(themeViewModel: ThemeViewModel) {
         ) {
             composable("home")    { HomeScreen() }
             composable("queue")   { QueueScreen() }
-            composable("add")     { AddScreen() }
+            composable("add")     { AddScreen(onArticleAdded = { navController.navigate("home") }) }
             composable("inbox")   { InboxScreen() }
             composable("settings"){ SettingsScreen(themeViewModel) }
         }
