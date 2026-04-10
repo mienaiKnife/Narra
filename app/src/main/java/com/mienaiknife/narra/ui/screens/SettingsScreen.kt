@@ -4,8 +4,10 @@ import android.content.res.Configuration
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -32,50 +34,65 @@ fun SettingsScreen(themeViewModel: ThemeViewModel) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp)
     ) {
+        Spacer(modifier = Modifier.height(24.dp))
+
         Text(
-            text = "Appearance",
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.padding(bottom = 8.dp)
+            text = "Settings",
+            style = MaterialTheme.typography.headlineLarge,
+            modifier = Modifier.padding(horizontal = 16.dp)
         )
 
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = "Dark Mode",
-                style = MaterialTheme.typography.bodyLarge,
-                modifier = Modifier.weight(1f)
-            )
-            Switch(
-                checked = isDarkMode,
-                onCheckedChange = { themeViewModel.setDarkMode(it) }
-            )
-        }
+        Spacer(modifier = Modifier.height(24.dp))
 
-        Row(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(top = 8.dp),
-            verticalAlignment = Alignment.CenterVertically
+                .padding(horizontal = 16.dp)
         ) {
             Text(
-                text = "Dynamic Colors",
-                style = MaterialTheme.typography.bodyLarge,
-                modifier = Modifier.weight(1f)
+                text = "Appearance",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(bottom = 8.dp)
             )
-            Switch(
-                checked = isDynamicColor,
-                onCheckedChange = { themeViewModel.setDynamicColor(it) }
-            )
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Dark Mode",
+                    style = MaterialTheme.typography.bodyLarge,
+                    modifier = Modifier.weight(1f)
+                )
+                Switch(
+                    checked = isDarkMode,
+                    onCheckedChange = { themeViewModel.setDarkMode(it) }
+                )
+            }
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Dynamic Colors",
+                    style = MaterialTheme.typography.bodyLarge,
+                    modifier = Modifier.weight(1f)
+                )
+                Switch(
+                    checked = isDynamicColor,
+                    onCheckedChange = { themeViewModel.setDynamicColor(it) }
+                )
+            }
         }
     }
 }
 
-@Preview(uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Preview(uiMode = Configuration.UI_MODE_NIGHT_YES, showBackground = true)
 @Composable
 fun SettingsScreenPreview() {
     val themeViewModel = remember {
@@ -84,7 +101,7 @@ fun SettingsScreenPreview() {
         }
     }
     val navController = rememberNavController()
-    NarraTheme(darkTheme = true) {
+    NarraTheme(darkTheme = true, dynamicColor = false) {
         Scaffold(
             bottomBar = { BottomNavBar(navController) }
         ) { innerPadding ->

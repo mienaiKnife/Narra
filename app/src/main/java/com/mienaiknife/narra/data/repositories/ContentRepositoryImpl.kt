@@ -44,6 +44,24 @@ class ContentRepositoryImpl(
         }
     }
 
+    override fun getQueueArticles(): Flow<List<Article>> {
+        return articleDao.getQueueArticles().map { entities ->
+            entities.map { it.toDomainModel() }
+        }
+    }
+
+    override fun getHistoryArticles(): Flow<List<Article>> {
+        return articleDao.getHistoryArticles().map { entities ->
+            entities.map { it.toDomainModel() }
+        }
+    }
+
+    override fun getInboxArticles(): Flow<List<Article>> {
+        return articleDao.getInboxArticles().map { entities ->
+            entities.map { it.toDomainModel() }
+        }
+    }
+
     override suspend fun getArticleById(id: String): Article? {
         return articleDao.getArticleById(id)?.toDomainModel()
     }
@@ -91,6 +109,26 @@ class ContentRepositoryImpl(
 
     override suspend fun deleteArticle(id: String) {
         articleDao.deleteArticleById(id)
+    }
+
+    override suspend fun removeFromQueue(id: String) {
+        articleDao.removeFromQueue(id)
+    }
+
+    override suspend fun addToQueue(id: String) {
+        articleDao.addToQueue(id)
+    }
+
+    override suspend fun clearHistory() {
+        articleDao.clearHistory()
+    }
+
+    override suspend fun clearInbox() {
+        articleDao.clearInbox()
+    }
+
+    override suspend fun clearQueue() {
+        articleDao.clearQueue()
     }
 
     override suspend fun subscribeToFeed(url: String): Result<Unit> = withContext(Dispatchers.IO) {

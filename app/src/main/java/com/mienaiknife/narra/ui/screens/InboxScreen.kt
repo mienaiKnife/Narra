@@ -1,43 +1,166 @@
+/*
+ * Copyright 2025 Narra Authors
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package com.mienaiknife.narra.ui.screens
 
 import android.content.res.Configuration
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.compose.rememberNavController
+import com.mienaiknife.narra.data.models.Article
+import com.mienaiknife.narra.data.models.SampleArticles
 import com.mienaiknife.narra.ui.components.BottomNavBar
+import com.mienaiknife.narra.ui.components.QueueItem
 import com.mienaiknife.narra.ui.theme.NarraTheme
+import com.mienaiknife.narra.ui.viewmodels.InboxViewModel
 
 @Composable
-fun InboxScreen() {
-    Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
+fun InboxScreen(
+    viewModel: InboxViewModel = hiltViewModel()
+) {
+    val articles by viewModel.articles.collectAsState()
+    InboxScreenContent(
+        articles = articles,
+        onAddToQueue = { viewModel.addToQueue(it) },
+        onClearInbox = { viewModel.clearInbox() }
+    )
+}
+
+@Composable
+fun InboxScreenContent(
+    articles: List<Article>,
+    onAddToQueue: (Article) -> Unit,
+    onClearInbox: () -> Unit = {}
+) {
+    var showMenu by remember { mutableStateOf(false) }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
     ) {
-        Text(
-            text = "Inbox Screen",
-            style = MaterialTheme.typography.headlineMedium
-        )
+        Spacer(modifier = Modifier.height(24.dp))
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "Inbox",
+                style = MaterialTheme.typography.headlineLarge,
+                color = MaterialTheme.colorScheme.onBackground
+            )
+            Box {
+                IconButton(onClick = { showMenu = true }) {
+                    Icon(
+                        imageVector = Icons.Default.Menu,
+                        contentDescription = "Menu",
+                        modifier = Modifier.size(32.dp),
+                        tint = MaterialTheme.colorScheme.onBackground
+                    )
+                }
+
+                DropdownMenu(
+                    expanded = showMenu,
+                    onDismissRequest = { showMenu = false }
+                ) {
+                    DropdownMenuItem(
+                        text = { Text("Search") },
+                        onClick = { showMenu = false },
+                        leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Refresh") },
+                        onClick = { showMenu = false },
+                        leadingIcon = { Icon(Icons.Default.Refresh, contentDescription = null) }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Clear") },
+                        onClick = {
+                            showMenu = false
+                            onClearInbox()
+                        },
+                        leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null) }
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        if (articles.isEmpty()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 16.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "No new articles from your feeds.",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        } else {
+            LazyColumn(
+                modifier = Modifier.padding(horizontal = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(24.dp),
+                contentPadding = PaddingValues(bottom = 16.dp)
+            ) {
+                items(articles, key = { it.id }) { article ->
+                    QueueItem(
+                        article = article,
+                        isPlaying = false,
+                        modifier = Modifier.animateItem(),
+                        onPlayPauseClick = { onAddToQueue(article) },
+                        onReorderClick = { /* No reorder in inbox */ }
+                    )
+                }
+            }
+        }
     }
 }
 
-@Preview(uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Preview(uiMode = Configuration.UI_MODE_NIGHT_YES, showBackground = true)
 @Composable
 fun InboxScreenPreview() {
     val navController = rememberNavController()
-    NarraTheme(darkTheme = true) {
+    NarraTheme(darkTheme = true, dynamicColor = false) {
         Scaffold(
             bottomBar = { BottomNavBar(navController) }
         ) { innerPadding ->
             Box(modifier = Modifier.padding(innerPadding)) {
-                InboxScreen()
+                InboxScreenContent(
+                    articles = SampleArticles.all.filter { it.isFromFeed },
+                    onAddToQueue = {}
+                )
             }
         }
     }

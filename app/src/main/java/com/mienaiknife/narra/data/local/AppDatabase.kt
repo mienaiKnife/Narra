@@ -23,7 +23,7 @@ import com.mienaiknife.narra.data.local.dao.FeedDao
 import com.mienaiknife.narra.data.local.entities.ArticleEntity
 import com.mienaiknife.narra.data.local.entities.FeedEntity
 
-@Database(entities = [ArticleEntity::class, FeedEntity::class], version = 1, exportSchema = false)
+@Database(entities = [ArticleEntity::class, FeedEntity::class], version = 3, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun articleDao(): ArticleDao
     abstract fun feedDao(): FeedDao

@@ -32,9 +32,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Sort
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
@@ -44,17 +43,12 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarDuration
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -68,54 +62,28 @@ import com.mienaiknife.narra.data.models.SampleArticles
 import com.mienaiknife.narra.ui.components.BottomNavBar
 import com.mienaiknife.narra.ui.components.QueueItem
 import com.mienaiknife.narra.ui.theme.NarraTheme
-import com.mienaiknife.narra.ui.viewmodels.QueueViewModel
-import kotlinx.coroutines.launch
+import com.mienaiknife.narra.ui.viewmodels.HistoryViewModel
 
 @Composable
-fun QueueScreen(
+fun HistoryScreen(
     navController: NavController,
-    onArticleClick: (String) -> Unit,
-    viewModel: QueueViewModel = hiltViewModel()
+    viewModel: HistoryViewModel = hiltViewModel()
 ) {
     val articles by viewModel.articles.collectAsState()
-    val snackbarHostState = remember { SnackbarHostState() }
-    val scope = rememberCoroutineScope()
-
-    Scaffold(
-        snackbarHost = { SnackbarHost(snackbarHostState) },
-        modifier = Modifier.fillMaxSize()
-    ) { paddingValues ->
-        Box(modifier = Modifier.padding(paddingValues)) {
-            QueueScreenContent(
-                articles = articles,
-                onArticleClick = onArticleClick,
-                onHistoryClick = { navController.navigate("history") },
-                onRemoveFromQueue = { article ->
-                    viewModel.removeFromQueue(article)
-                    scope.launch {
-                        val result = snackbarHostState.showSnackbar(
-                            message = "Removed from queue",
-                            actionLabel = "Undo",
-                            duration = SnackbarDuration.Short
-                        )
-                        if (result == SnackbarResult.ActionPerformed) {
-                            viewModel.addToQueue(article.id)
-                        }
-                    }
-                },
-                onClearQueue = { viewModel.clearQueue() }
-            )
-        }
-    }
+    HistoryScreenContent(
+        articles = articles,
+        onBackClick = { navController.popBackStack() },
+        onAddToQueue = { viewModel.addToQueue(it) },
+        onClearHistory = { viewModel.clearHistory() }
+    )
 }
 
 @Composable
-fun QueueScreenContent(
+fun HistoryScreenContent(
     articles: List<Article>,
-    onArticleClick: (String) -> Unit = {},
-    onHistoryClick: () -> Unit = {},
-    onRemoveFromQueue: (Article) -> Unit = {},
-    onClearQueue: () -> Unit = {}
+    onBackClick: () -> Unit,
+    onAddToQueue: (Article) -> Unit,
+    onClearHistory: () -> Unit = {}
 ) {
     var showMenu by remember { mutableStateOf(false) }
 
@@ -133,11 +101,23 @@ fun QueueScreenContent(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text = "Queue",
-                style = MaterialTheme.typography.headlineLarge,
-                color = MaterialTheme.colorScheme.onBackground
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                IconButton(onClick = onBackClick) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = "Back",
+                        modifier = Modifier.size(32.dp),
+                        tint = MaterialTheme.colorScheme.onBackground
+                    )
+                }
+                Spacer(modifier = Modifier.size(8.dp))
+                Text(
+                    text = "History",
+                    style = MaterialTheme.typography.headlineLarge,
+                    color = MaterialTheme.colorScheme.onBackground
+                )
+            }
+
             Box {
                 IconButton(onClick = { showMenu = true }) {
                     Icon(
@@ -158,28 +138,15 @@ fun QueueScreenContent(
                         leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) }
                     )
                     DropdownMenuItem(
-                        text = { Text("Sort") },
-                        onClick = { showMenu = false },
-                        leadingIcon = { Icon(Icons.AutoMirrored.Filled.Sort, contentDescription = null) }
-                    )
-                    DropdownMenuItem(
                         text = { Text("Refresh") },
                         onClick = { showMenu = false },
                         leadingIcon = { Icon(Icons.Default.Refresh, contentDescription = null) }
                     )
                     DropdownMenuItem(
-                        text = { Text("History") },
-                        onClick = {
-                            showMenu = false
-                            onHistoryClick()
-                        },
-                        leadingIcon = { Icon(Icons.Default.History, contentDescription = null) }
-                    )
-                    DropdownMenuItem(
                         text = { Text("Clear") },
                         onClick = {
                             showMenu = false
-                            onClearQueue()
+                            onClearHistory()
                         },
                         leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null) }
                     )
@@ -187,32 +154,21 @@ fun QueueScreenContent(
             }
         }
 
-        Column(modifier = Modifier.padding(horizontal = 16.dp)) {
-            Text(
-                text = "${articles.size} ${if (articles.size == 1) "text" else "texts"}",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+        Spacer(modifier = Modifier.height(24.dp))
 
-            Spacer(modifier = Modifier.height(24.dp))
-
-            LazyColumn(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(24.dp),
-                contentPadding = PaddingValues(bottom = 16.dp)
-            ) {
-                items(articles, key = { it.id }) { article ->
-                    QueueItem(
-                        article = article,
-                        isPlaying = article.id == "2", // Hardcoded for now, will be linked to PlaybackService later
-                        modifier = Modifier.animateItem(),
-                        onPlayPauseClick = { 
-                            onArticleClick(article.id)
-                        },
-                        onRemoveClick = { onRemoveFromQueue(article) },
-                        onReorderClick = { /* TODO: Implement drag and drop reordering */ }
-                    )
-                }
+        LazyColumn(
+            modifier = Modifier.padding(horizontal = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(24.dp),
+            contentPadding = PaddingValues(bottom = 16.dp)
+        ) {
+            items(articles, key = { it.id }) { article ->
+                QueueItem(
+                    article = article,
+                    isPlaying = false,
+                    modifier = Modifier.animateItem(),
+                    onPlayPauseClick = { onAddToQueue(article) },
+                    onReorderClick = { /* No reorder in history */ }
+                )
             }
         }
     }
@@ -220,16 +176,17 @@ fun QueueScreenContent(
 
 @Preview(uiMode = Configuration.UI_MODE_NIGHT_YES, showBackground = true)
 @Composable
-fun QueueScreenPreview() {
+fun HistoryScreenPreview() {
     val navController = rememberNavController()
     NarraTheme(darkTheme = true, dynamicColor = false) {
         Scaffold(
             bottomBar = { BottomNavBar(navController) }
         ) { innerPadding ->
             Box(modifier = Modifier.padding(innerPadding)) {
-                QueueScreenContent(
-                    articles = SampleArticles.all.filter { it.isInQueue },
-                    onHistoryClick = {}
+                HistoryScreenContent(
+                    articles = listOf(SampleArticles.finishedArticle),
+                    onBackClick = {},
+                    onAddToQueue = {}
                 )
             }
         }

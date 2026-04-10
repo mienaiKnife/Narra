@@ -25,8 +25,17 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface ArticleDao {
+    @Query("SELECT * FROM articles WHERE isInQueue = 1 ORDER BY createdAt DESC")
+    fun getQueueArticles(): Flow<List<ArticleEntity>>
+
+    @Query("SELECT * FROM articles WHERE isInQueue = 0 ORDER BY createdAt DESC")
+    fun getHistoryArticles(): Flow<List<ArticleEntity>>
+
     @Query("SELECT * FROM articles ORDER BY createdAt DESC")
     fun getAllArticles(): Flow<List<ArticleEntity>>
+
+    @Query("SELECT * FROM articles WHERE isFromFeed = 1 ORDER BY createdAt DESC")
+    fun getInboxArticles(): Flow<List<ArticleEntity>>
 
     @Query("SELECT * FROM articles WHERE id = :id")
     suspend fun getArticleById(id: String): ArticleEntity?
@@ -36,4 +45,19 @@ interface ArticleDao {
 
     @Query("DELETE FROM articles WHERE id = :id")
     suspend fun deleteArticleById(id: String)
+
+    @Query("UPDATE articles SET isInQueue = 0 WHERE id = :id")
+    suspend fun removeFromQueue(id: String)
+
+    @Query("UPDATE articles SET isInQueue = 1 WHERE id = :id")
+    suspend fun addToQueue(id: String)
+
+    @Query("DELETE FROM articles WHERE isInQueue = 0 AND isFromFeed = 0")
+    suspend fun clearHistory()
+
+    @Query("DELETE FROM articles WHERE isInQueue = 0 AND isFromFeed = 1")
+    suspend fun clearInbox()
+
+    @Query("UPDATE articles SET isInQueue = 0")
+    suspend fun clearQueue()
 }

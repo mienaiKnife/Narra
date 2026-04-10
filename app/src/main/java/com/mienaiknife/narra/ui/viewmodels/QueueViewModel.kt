@@ -28,10 +28,12 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
-class HomeViewModel @Inject constructor(
+class QueueViewModel @Inject constructor(
     private val repository: ContentRepository
 ) : ViewModel() {
 
+    // For now, the queue is just all articles. 
+    // In the future, this might filter for a specific "queue" status.
     val articles: StateFlow<List<Article>> = repository.getQueueArticles()
         .stateIn(
             scope = viewModelScope,
@@ -39,21 +41,21 @@ class HomeViewModel @Inject constructor(
             initialValue = emptyList()
         )
 
-    fun downloadArticle(url: String) {
+    fun removeFromQueue(article: Article) {
         viewModelScope.launch {
-            repository.downloadWebPage(url)
+            repository.removeFromQueue(article.id)
         }
     }
 
-    fun deleteArticle(id: String) {
+    fun addToQueue(articleId: String) {
         viewModelScope.launch {
-            repository.removeFromQueue(id)
+            repository.addToQueue(articleId)
         }
     }
 
-    fun subscribeToFeed(url: String) {
+    fun clearQueue() {
         viewModelScope.launch {
-            repository.subscribeToFeed(url)
+            repository.clearQueue()
         }
     }
 }

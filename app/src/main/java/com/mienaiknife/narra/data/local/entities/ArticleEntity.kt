@@ -25,13 +25,15 @@ data class ArticleEntity(
     @PrimaryKey val id: String,
     val title: String,
     val source: String,
-    val content: String,
+    val content: String?,
     val excerpt: String? = null,
     val imageUrl: String? = null,
     val url: String? = null,
     val progress: Float = 0f,
     val isFavorite: Boolean = false,
     val isFromFeed: Boolean = false,
+    val isInQueue: Boolean = true,
+    val publishedAt: String? = null,
     val createdAt: Long = System.currentTimeMillis()
 )
 
@@ -40,9 +42,13 @@ fun ArticleEntity.toDomainModel(): Article {
         id = id,
         title = title,
         source = source,
+        publishedAt = publishedAt,
+        content = content ?: "",
         imageUrl = imageUrl,
+        url = url,
         progress = progress,
         isFavorite = isFavorite,
-        isFromFeed = isFromFeed
+        isFromFeed = isFromFeed,
+        isInQueue = isInQueue
     )
 }

@@ -28,32 +28,26 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
-class HomeViewModel @Inject constructor(
+class InboxViewModel @Inject constructor(
     private val repository: ContentRepository
 ) : ViewModel() {
 
-    val articles: StateFlow<List<Article>> = repository.getQueueArticles()
+    val articles: StateFlow<List<Article>> = repository.getInboxArticles()
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = emptyList()
         )
 
-    fun downloadArticle(url: String) {
+    fun addToQueue(article: Article) {
         viewModelScope.launch {
-            repository.downloadWebPage(url)
+            repository.addToQueue(article.id)
         }
     }
 
-    fun deleteArticle(id: String) {
+    fun clearInbox() {
         viewModelScope.launch {
-            repository.removeFromQueue(id)
-        }
-    }
-
-    fun subscribeToFeed(url: String) {
-        viewModelScope.launch {
-            repository.subscribeToFeed(url)
+            repository.clearInbox()
         }
     }
 }

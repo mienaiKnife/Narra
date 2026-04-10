@@ -21,6 +21,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.compose.rememberNavController
 import com.mienaiknife.narra.data.models.Article
+import com.mienaiknife.narra.data.models.SampleArticles
 import com.mienaiknife.narra.ui.components.ArticleCarousel
 import com.mienaiknife.narra.ui.components.BottomNavBar
 import com.mienaiknife.narra.ui.theme.NarraTheme
@@ -28,15 +29,20 @@ import com.mienaiknife.narra.ui.viewmodels.HomeViewModel
 
 @Composable
 fun HomeScreen(
+    onArticleClick: (String) -> Unit,
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val articles by viewModel.articles.collectAsState()
-    HomeScreenContent(articles = articles)
+    HomeScreenContent(
+        articles = articles,
+        onArticleClick = onArticleClick
+    )
 }
 
 @Composable
 fun HomeScreenContent(
     articles: List<Article>,
+    onArticleClick: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val scrollState = rememberScrollState()
@@ -45,25 +51,27 @@ fun HomeScreenContent(
         modifier = modifier
             .fillMaxSize()
             .verticalScroll(scrollState)
-            .padding(vertical = 16.dp)
     ) {
+        Spacer(modifier = Modifier.height(24.dp))
+
         Text(
             text = "Home",
             style = MaterialTheme.typography.headlineLarge,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+            modifier = Modifier.padding(horizontal = 16.dp)
         )
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(24.dp))
 
         if (articles.isNotEmpty()) {
-            val continueListening = articles.filter { (it.progress ?: 0f) > 0f }.take(10)
-            val newFromFeeds = articles.filter { it.isFromFeed }.take(10)
+            val continueListening = articles.filter { (it.progress ?: 0f) > 0f && it.isInQueue }.take(10)
+            val newFromFeeds = articles.filter { it.isFromFeed && it.isInQueue }.take(10)
             val favorites = articles.filter { it.isFavorite }.take(10)
 
             if (continueListening.isNotEmpty()) {
                 ArticleCarousel(
                     title = "Continue Listening",
-                    articles = continueListening
+                    articles = continueListening,
+                    onArticleClick = onArticleClick
                 )
                 Spacer(modifier = Modifier.height(24.dp))
             }
@@ -71,7 +79,8 @@ fun HomeScreenContent(
             if (newFromFeeds.isNotEmpty()) {
                 ArticleCarousel(
                     title = "New from your feeds",
-                    articles = newFromFeeds
+                    articles = newFromFeeds,
+                    onArticleClick = onArticleClick
                 )
                 Spacer(modifier = Modifier.height(24.dp))
             }
@@ -79,7 +88,8 @@ fun HomeScreenContent(
             if (favorites.isNotEmpty()) {
                 ArticleCarousel(
                     title = "Your Favorites",
-                    articles = favorites
+                    articles = favorites,
+                    onArticleClick = onArticleClick
                 )
                 Spacer(modifier = Modifier.height(24.dp))
             }
@@ -88,12 +98,13 @@ fun HomeScreenContent(
             if (continueListening.isEmpty() && newFromFeeds.isEmpty() && favorites.isEmpty()) {
                 ArticleCarousel(
                     title = "All Articles",
-                    articles = articles
+                    articles = articles,
+                    onArticleClick = onArticleClick
                 )
             }
         } else {
             Text(
-                text = "No articles yet. Add some from the Add screen!",
+                text = "No texts yet. Add some from the Add screen!",
                 modifier = Modifier.padding(16.dp),
                 style = MaterialTheme.typography.bodyLarge
             )
@@ -107,27 +118,16 @@ fun HomeScreenContent(
 @Composable
 fun HomeScreenPreview() {
     val navController = rememberNavController()
-    val mockArticles = listOf(
-        Article(
-            id = "1",
-            title = "Modern Android Development",
-            source = "Android Developers",
-            content = "Content goes here...",
-            progress = 0.5f
-        ),
-        Article(
-            id = "2",
-            title = "Jetpack Compose Basics",
-            source = "Medium",
-            content = "Content goes here..."
-        )
-    )
+    val mockArticles = SampleArticles.all
     NarraTheme(darkTheme = true, dynamicColor = false) {
         Scaffold(
             bottomBar = { BottomNavBar(navController) }
         ) { innerPadding ->
             Box(modifier = Modifier.padding(innerPadding)) {
-                HomeScreenContent(articles = mockArticles)
+                HomeScreenContent(
+                    articles = mockArticles,
+                    onArticleClick = {}
+                )
             }
         }
     }

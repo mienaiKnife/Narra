@@ -14,6 +14,7 @@ import com.mienaiknife.narra.data.models.Article
 fun ArticleCarousel(
     title: String,
     articles: List<Article>,
+    onArticleClick: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(modifier = modifier) {
@@ -27,7 +28,10 @@ fun ArticleCarousel(
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             items(articles) { article ->
-                ArticleCard(article = article)
+                ArticleCard(
+                    article = article,
+                    onClick = { onArticleClick(article.id) }
+                )
             }
         }
     }

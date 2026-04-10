@@ -20,9 +20,17 @@ import com.mienaiknife.narra.data.models.Article
 import kotlinx.coroutines.flow.Flow
 
 interface ContentRepository {
+    fun getQueueArticles(): Flow<List<Article>>
+    fun getHistoryArticles(): Flow<List<Article>>
+    fun getInboxArticles(): Flow<List<Article>>
     fun getAllArticles(): Flow<List<Article>>
     suspend fun getArticleById(id: String): Article?
     suspend fun downloadWebPage(url: String): Result<Article>
+    suspend fun removeFromQueue(id: String)
+    suspend fun addToQueue(id: String)
     suspend fun deleteArticle(id: String)
+    suspend fun clearHistory()
+    suspend fun clearInbox()
+    suspend fun clearQueue()
     suspend fun subscribeToFeed(url: String): Result<Unit>
 }
