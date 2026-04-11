@@ -20,6 +20,7 @@ import android.content.res.Configuration
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -35,17 +36,17 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil3.compose.AsyncImage
 import com.mienaiknife.narra.data.models.Article
 import com.mienaiknife.narra.data.models.SampleArticles
 import com.mienaiknife.narra.ui.theme.NarraTheme
-import java.time.LocalDate
-import java.time.format.DateTimeFormatter
-import java.util.Locale
+import com.mienaiknife.narra.utils.DateUtils
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -53,6 +54,7 @@ fun QueueItem(
     article: Article,
     isPlaying: Boolean,
     modifier: Modifier = Modifier,
+    onItemClick: () -> Unit = {},
     onPlayPauseClick: () -> Unit = {},
     onRemoveClick: () -> Unit = {},
     onReorderClick: () -> Unit = {}
@@ -97,6 +99,7 @@ fun QueueItem(
             QueueItemRow(
                 article = article,
                 isPlaying = isPlaying,
+                onItemClick = onItemClick,
                 onPlayPauseClick = onPlayPauseClick,
                 onReorderClick = onReorderClick
             )
@@ -106,6 +109,7 @@ fun QueueItem(
             article = article,
             isPlaying = isPlaying,
             modifier = modifier,
+            onItemClick = onItemClick,
             onPlayPauseClick = onPlayPauseClick,
             onReorderClick = onReorderClick
         )
@@ -117,16 +121,23 @@ private fun QueueItemRow(
     article: Article,
     isPlaying: Boolean,
     modifier: Modifier = Modifier,
+    onItemClick: () -> Unit = {},
     onPlayPauseClick: () -> Unit = {},
     onReorderClick: () -> Unit = {}
 ) {
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.background),
+            .background(MaterialTheme.colorScheme.background)
+            .clickable { onItemClick() },
         verticalAlignment = Alignment.CenterVertically
     ) {
-        IconButton(onClick = onReorderClick) {
+        Box(
+            modifier = Modifier
+                .size(width = 32.dp, height = 48.dp)
+                .clickable(onClick = onReorderClick),
+            contentAlignment = Alignment.Center
+        ) {
             Icon(
                 imageVector = Icons.Default.DragIndicator,
                 contentDescription = "Reorder",
@@ -142,7 +153,16 @@ private fun QueueItemRow(
                 .clip(RoundedCornerShape(12.dp))
                 .background(MaterialTheme.colorScheme.surfaceContainer),
             contentAlignment = Alignment.Center
-        ) {}
+        ) {
+            article.imageUrl?.let { imageUrl ->
+                AsyncImage(
+                    model = imageUrl,
+                    contentDescription = null,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop
+                )
+            }
+        }
 
         Spacer(modifier = Modifier.width(12.dp))
 
@@ -150,18 +170,8 @@ private fun QueueItemRow(
             modifier = Modifier.weight(1f)
         ) {
             val sourceText = buildString {
-                if (!article.publishedAt.isNullOrBlank()) {
-                    val formattedDate = try {
-                        val date = LocalDate.parse(article.publishedAt, DateTimeFormatter.ofPattern("MMM d, yyyy", Locale.US))
-                        val currentYear = LocalDate.now().year
-                        if (date.year == currentYear) {
-                            date.format(DateTimeFormatter.ofPattern("MMM d", Locale.US))
-                        } else {
-                            article.publishedAt
-                        }
-                    } catch (_: Exception) {
-                        article.publishedAt
-                    }
+                val formattedDate = DateUtils.formatPublishedDate(article.publishedAt)
+                if (formattedDate != null) {
                     append(formattedDate)
                     append(" • ")
                 }

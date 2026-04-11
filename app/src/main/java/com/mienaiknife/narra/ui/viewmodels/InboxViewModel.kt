@@ -39,6 +39,16 @@ class InboxViewModel @Inject constructor(
             initialValue = emptyList()
         )
 
+    init {
+        refresh()
+    }
+
+    fun refresh() {
+        viewModelScope.launch {
+            repository.refreshFeeds()
+        }
+    }
+
     fun addToQueue(article: Article) {
         viewModelScope.launch {
             repository.addToQueue(article.id)

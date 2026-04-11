@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -40,13 +41,19 @@ import com.mienaiknife.narra.ui.viewmodels.InboxViewModel
 
 @Composable
 fun InboxScreen(
+    navController: androidx.navigation.NavController,
+    onNavigateToFeeds: () -> Unit,
     viewModel: InboxViewModel = hiltViewModel()
 ) {
     val articles by viewModel.articles.collectAsState()
     InboxScreenContent(
         articles = articles,
         onAddToQueue = { viewModel.addToQueue(it) },
-        onClearInbox = { viewModel.clearInbox() }
+        onArticleClick = { articleId -> navController.navigate("reader/$articleId") },
+        onClearInbox = { viewModel.clearInbox() },
+        onRefresh = { viewModel.refresh() },
+        onSortArticles = { /* TODO: Implement sort */ },
+        onEditFeeds = { navController.navigate("feeds") }
     )
 }
 
@@ -54,13 +61,18 @@ fun InboxScreen(
 fun InboxScreenContent(
     articles: List<Article>,
     onAddToQueue: (Article) -> Unit,
-    onClearInbox: () -> Unit = {}
+    onArticleClick: (String) -> Unit = {},
+    onClearInbox: () -> Unit = {},
+    onRefresh: () -> Unit = {},
+    onSortArticles: () -> Unit = {},
+    onEditFeeds: () -> Unit = {}
 ) {
     var showMenu by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .statusBarsPadding()
             .background(MaterialTheme.colorScheme.background)
     ) {
         Spacer(modifier = Modifier.height(24.dp))
@@ -97,8 +109,19 @@ fun InboxScreenContent(
                         leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) }
                     )
                     DropdownMenuItem(
+                        text = { Text("Sort") },
+                        onClick = {
+                            showMenu = false
+                            onSortArticles()
+                        },
+                        leadingIcon = { Icon(Icons.AutoMirrored.Filled.Sort, contentDescription = null) }
+                    )
+                    DropdownMenuItem(
                         text = { Text("Refresh") },
-                        onClick = { showMenu = false },
+                        onClick = {
+                            showMenu = false
+                            onRefresh()
+                        },
                         leadingIcon = { Icon(Icons.Default.Refresh, contentDescription = null) }
                     )
                     DropdownMenuItem(
@@ -108,6 +131,14 @@ fun InboxScreenContent(
                             onClearInbox()
                         },
                         leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null) }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Edit feeds") },
+                        onClick = {
+                            showMenu = false
+                            onEditFeeds()
+                        },
+                        leadingIcon = { Icon(Icons.Default.RssFeed, contentDescription = null) }
                     )
                 }
             }
@@ -130,7 +161,7 @@ fun InboxScreenContent(
             }
         } else {
             LazyColumn(
-                modifier = Modifier.padding(horizontal = 16.dp),
+                modifier = Modifier.fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(24.dp),
                 contentPadding = PaddingValues(bottom = 16.dp)
             ) {
@@ -139,6 +170,7 @@ fun InboxScreenContent(
                         article = article,
                         isPlaying = false,
                         modifier = Modifier.animateItem(),
+                        onItemClick = { onArticleClick(article.id) },
                         onPlayPauseClick = { onAddToQueue(article) },
                         onReorderClick = { /* No reorder in inbox */ }
                     )

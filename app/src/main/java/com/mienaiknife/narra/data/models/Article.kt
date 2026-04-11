@@ -25,7 +25,10 @@ data class Article(
     val imageUrl: String? = null,
     val url: String? = null,
     val progress: Float? = null,
+    val currentParagraphIndex: Int = 0,
+    val currentWordOffset: Int = 0,
     val isFavorite: Boolean = false,
     val isFromFeed: Boolean = false,
-    val isInQueue: Boolean = true
+    val isInQueue: Boolean = true,
+    val publishedTimestamp: Long? = null
 )

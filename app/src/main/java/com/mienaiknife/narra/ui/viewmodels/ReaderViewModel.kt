@@ -22,20 +22,29 @@ import com.mienaiknife.narra.data.models.Article
 import com.mienaiknife.narra.domain.repository.ContentRepository
 import com.mienaiknife.narra.ui.models.ContentBlock
 import com.mienaiknife.narra.ui.utils.HtmlParser
+import com.mienaiknife.narra.playback.PlaybackManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
 class ReaderViewModel @Inject constructor(
-    private val repository: ContentRepository
+    private val repository: ContentRepository,
+    private val playbackManager: PlaybackManager
 ) : ViewModel() {
 
-    private val _article = MutableStateFlow<Article?>(null)
-    val article: StateFlow<Article?> = _article.asStateFlow()
+    val article: StateFlow<Article?> = playbackManager.currentArticle
+    val isPlaying: StateFlow<Boolean> = playbackManager.isPlaying
+    val currentPosition: StateFlow<Long> = playbackManager.currentPosition
+    val duration: StateFlow<Long> = playbackManager.duration
+    val playbackSpeed: StateFlow<Float> = playbackManager.playbackSpeed
+    val currentParagraphIndex: StateFlow<Int> = playbackManager.currentParagraphIndex
+    val currentWordRange: StateFlow<IntRange?> = playbackManager.currentWordRange
 
     private val _blocks = MutableStateFlow<List<ContentBlock>>(emptyList())
     val blocks: StateFlow<List<ContentBlock>> = _blocks.asStateFlow()
@@ -43,72 +52,24 @@ class ReaderViewModel @Inject constructor(
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
 
-    private val _isPlaying = MutableStateFlow(false)
-    val isPlaying: StateFlow<Boolean> = _isPlaying.asStateFlow()
-
-    private val _playbackSpeed = MutableStateFlow(1.0f)
-    val playbackSpeed: StateFlow<Float> = _playbackSpeed.asStateFlow()
-
-    private val _currentPosition = MutableStateFlow(0L)
-    val currentPosition: StateFlow<Long> = _currentPosition.asStateFlow()
-
-    private val _duration = MutableStateFlow(0L)
-    val duration: StateFlow<Long> = _duration.asStateFlow()
-
-    private val _currentParagraphIndex = MutableStateFlow(0)
-    val currentParagraphIndex: StateFlow<Int> = _currentParagraphIndex.asStateFlow()
-
-    private val _currentWordRange = MutableStateFlow<IntRange?>(null)
-    val currentWordRange: StateFlow<IntRange?> = _currentWordRange.asStateFlow()
-
     fun loadArticle(id: String) {
         viewModelScope.launch {
             _isLoading.value = true
             val articleData = repository.getArticleById(id)
-            _article.value = articleData
-            _blocks.value = HtmlParser.parse(articleData?.content ?: "")
-            // Mock duration for now
-            _duration.value = 180000L // 3 minutes
-            _currentPosition.value = ((articleData?.progress ?: 0f) * _duration.value).toLong()
+            if (articleData != null) {
+                val parsedBlocks = HtmlParser.parse(articleData.content)
+                _blocks.value = parsedBlocks
+                playbackManager.setCurrentArticle(articleData, parsedBlocks.map { it.text.toString() })
+            }
             _isLoading.value = false
         }
     }
 
-    fun togglePlayPause() {
-        _isPlaying.value = !_isPlaying.value
-    }
-
-    fun seekTo(position: Long) {
-        _currentPosition.value = position
-    }
-
-    fun seekToParagraph(index: Int) {
-        _currentParagraphIndex.value = index
-        _currentWordRange.value = null
-        // In a real app, this would also update _currentPosition based on text length/time mapping
-    }
-
-    fun seekToWord(paragraphIndex: Int, wordRange: IntRange) {
-        _currentParagraphIndex.value = paragraphIndex
-        _currentWordRange.value = wordRange
-        // Update _currentPosition accordingly
-    }
-
-    fun skipForward() {
-        _currentPosition.value = (_currentPosition.value + 15000L).coerceAtMost(_duration.value)
-    }
-
-    fun skipBackward() {
-        _currentPosition.value = (_currentPosition.value - 15000L).coerceAtLeast(0L)
-    }
-
-    fun cycleSpeed() {
-        _playbackSpeed.value = when (_playbackSpeed.value) {
-            1.0f -> 1.25f
-            1.25f -> 1.5f
-            1.5f -> 2.0f
-            2.0f -> 0.75f
-            else -> 1.0f
-        }
-    }
+    fun togglePlayPause() = playbackManager.togglePlayPause()
+    fun seekTo(position: Long) = playbackManager.seekTo(position)
+    fun seekToParagraph(index: Int) = playbackManager.seekToParagraph(index)
+    fun seekToWord(paragraphIndex: Int, wordRange: IntRange) = playbackManager.seekToWord(paragraphIndex, wordRange)
+    fun skipForward() = playbackManager.skipForward()
+    fun skipBackward() = playbackManager.skipBackward()
+    fun cycleSpeed() = playbackManager.cycleSpeed()
 }

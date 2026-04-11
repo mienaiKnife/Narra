@@ -20,6 +20,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mienaiknife.narra.data.models.Article
 import com.mienaiknife.narra.domain.repository.ContentRepository
+import com.mienaiknife.narra.playback.PlaybackManager
+import com.mienaiknife.narra.ui.utils.HtmlParser
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -29,8 +31,12 @@ import javax.inject.Inject
 
 @HiltViewModel
 class QueueViewModel @Inject constructor(
-    private val repository: ContentRepository
+    private val repository: ContentRepository,
+    private val playbackManager: PlaybackManager
 ) : ViewModel() {
+
+    val currentArticle = playbackManager.currentArticle
+    val isPlaying = playbackManager.isPlaying
 
     // For now, the queue is just all articles. 
     // In the future, this might filter for a specific "queue" status.
@@ -40,6 +46,15 @@ class QueueViewModel @Inject constructor(
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = emptyList()
         )
+
+    fun onPlayPauseClick(article: Article) {
+        if (currentArticle.value?.id == article.id) {
+            playbackManager.togglePlayPause()
+        } else {
+            val paragraphs = HtmlParser.parse(article.content).map { it.text.toString() }
+            playbackManager.setCurrentArticle(article, paragraphs)
+        }
+    }
 
     fun removeFromQueue(article: Article) {
         viewModelScope.launch {
@@ -56,6 +71,12 @@ class QueueViewModel @Inject constructor(
     fun clearQueue() {
         viewModelScope.launch {
             repository.clearQueue()
+        }
+    }
+
+    fun reorderQueue(fromIndex: Int, toIndex: Int) {
+        viewModelScope.launch {
+            repository.reorderQueue(fromIndex, toIndex)
         }
     }
 }

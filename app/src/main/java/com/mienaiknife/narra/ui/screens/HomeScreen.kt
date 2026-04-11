@@ -1,28 +1,45 @@
 package com.mienaiknife.narra.ui.screens
 
 import android.content.res.Configuration
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.compose.rememberNavController
+import coil3.compose.AsyncImage
 import com.mienaiknife.narra.data.models.Article
 import com.mienaiknife.narra.data.models.SampleArticles
-import com.mienaiknife.narra.ui.components.ArticleCarousel
 import com.mienaiknife.narra.ui.components.BottomNavBar
 import com.mienaiknife.narra.ui.theme.NarraTheme
 import com.mienaiknife.narra.ui.viewmodels.HomeViewModel
@@ -50,6 +67,7 @@ fun HomeScreenContent(
     Column(
         modifier = modifier
             .fillMaxSize()
+            .statusBarsPadding()
             .verticalScroll(scrollState)
     ) {
         Spacer(modifier = Modifier.height(24.dp))
@@ -63,8 +81,11 @@ fun HomeScreenContent(
         Spacer(modifier = Modifier.height(24.dp))
 
         if (articles.isNotEmpty()) {
-            val continueListening = articles.filter { (it.progress ?: 0f) > 0f && it.isInQueue }.take(10)
-            val newFromFeeds = articles.filter { it.isFromFeed && it.isInQueue }.take(10)
+            val continueListening = articles
+                .filter { (it.progress ?: 0f) < 1f }
+                .sortedByDescending { it.publishedTimestamp ?: 0L }
+                .take(10)
+            val newFromFeeds = articles.filter { it.isFromFeed && (it.progress ?: 0f) == 0f }.take(10)
             val favorites = articles.filter { it.isFavorite }.take(10)
 
             if (continueListening.isNotEmpty()) {
@@ -93,15 +114,6 @@ fun HomeScreenContent(
                 )
                 Spacer(modifier = Modifier.height(24.dp))
             }
-
-            // Fallback if none of the specific carousels are populated but we have articles
-            if (continueListening.isEmpty() && newFromFeeds.isEmpty() && favorites.isEmpty()) {
-                ArticleCarousel(
-                    title = "All Articles",
-                    articles = articles,
-                    onArticleClick = onArticleClick
-                )
-            }
         } else {
             Text(
                 text = "No texts yet. Add some from the Add screen!",
@@ -111,6 +123,110 @@ fun HomeScreenContent(
         }
 
         Spacer(modifier = Modifier.height(16.dp))
+    }
+}
+
+@Composable
+fun ArticleCarousel(
+    title: String,
+    articles: List<Article>,
+    onArticleClick: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(modifier = modifier) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleLarge,
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+        )
+        LazyRow(
+            contentPadding = PaddingValues(horizontal = 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            items(articles) { article ->
+                ArticleCard(
+                    article = article,
+                    onClick = { onArticleClick(article.id) }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun ArticleCard(
+    article: Article,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier
+            .width(140.dp),
+        onClick = onClick,
+        shape = RoundedCornerShape(5.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainer,
+        )
+    ) {
+        Column {
+            // Image Placeholder
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(140.dp)
+                    .background(MaterialTheme.colorScheme.surfaceContainer),
+                contentAlignment = Alignment.Center
+            ) {
+                article.imageUrl?.let { imageUrl ->
+                    AsyncImage(
+                        model = imageUrl,
+                        contentDescription = null,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                }
+            }
+
+            // Progress Bar underneath the image
+            article.progress?.let { progress ->
+                if (progress > 0f && progress < 1f) {
+                    LinearProgressIndicator(
+                        progress = { progress },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(5.dp),
+                        color = MaterialTheme.colorScheme.primary,
+                        trackColor = MaterialTheme.colorScheme.primaryContainer,
+                        strokeCap = StrokeCap.Butt,
+                        gapSize = 5.dp,
+                        drawStopIndicator = {}
+                    )
+                }
+            }
+
+            Column(
+                modifier = Modifier
+                    .padding(12.dp)
+                    .fillMaxWidth()
+            ) {
+                Text(
+                    text = article.title,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = if (article.progress == 1f) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f) else MaterialTheme.colorScheme.onSurface,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    minLines = 2
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = article.source,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+        }
     }
 }
 
@@ -129,6 +245,23 @@ fun HomeScreenPreview() {
                     onArticleClick = {}
                 )
             }
+        }
+    }
+}
+
+@Preview(
+    uiMode = Configuration.UI_MODE_NIGHT_YES,
+    showBackground = true,
+    backgroundColor = 0xFF191919
+)
+@Composable
+fun ArticleCardPreview() {
+    NarraTheme(darkTheme = true, dynamicColor = false) {
+        Surface {
+            ArticleCard(
+                article = SampleArticles.sampleArticle1,
+                onClick = {}
+            )
         }
     }
 }

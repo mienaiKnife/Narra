@@ -29,14 +29,12 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -74,6 +72,7 @@ fun HistoryScreen(
         articles = articles,
         onBackClick = { navController.popBackStack() },
         onAddToQueue = { viewModel.addToQueue(it) },
+        onArticleClick = { articleId -> navController.navigate("reader/$articleId") },
         onClearHistory = { viewModel.clearHistory() }
     )
 }
@@ -83,6 +82,7 @@ fun HistoryScreenContent(
     articles: List<Article>,
     onBackClick: () -> Unit,
     onAddToQueue: (Article) -> Unit,
+    onArticleClick: (String) -> Unit = {},
     onClearHistory: () -> Unit = {}
 ) {
     var showMenu by remember { mutableStateOf(false) }
@@ -90,6 +90,7 @@ fun HistoryScreenContent(
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .statusBarsPadding()
             .background(MaterialTheme.colorScheme.background)
     ) {
         Spacer(modifier = Modifier.height(24.dp))
@@ -149,7 +150,7 @@ fun HistoryScreenContent(
                             onClearHistory()
                         },
                         leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null) }
-                    )
+                                        )
                 }
             }
         }
@@ -157,7 +158,7 @@ fun HistoryScreenContent(
         Spacer(modifier = Modifier.height(24.dp))
 
         LazyColumn(
-            modifier = Modifier.padding(horizontal = 16.dp),
+            modifier = Modifier.fillMaxWidth(),
             verticalArrangement = Arrangement.spacedBy(24.dp),
             contentPadding = PaddingValues(bottom = 16.dp)
         ) {
@@ -166,6 +167,7 @@ fun HistoryScreenContent(
                     article = article,
                     isPlaying = false,
                     modifier = Modifier.animateItem(),
+                    onItemClick = { onArticleClick(article.id) },
                     onPlayPauseClick = { onAddToQueue(article) },
                     onReorderClick = { /* No reorder in history */ }
                 )

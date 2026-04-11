@@ -23,9 +23,11 @@ import com.mienaiknife.narra.data.local.entities.FeedEntity
 import com.mienaiknife.narra.data.local.entities.toDomainModel
 import com.mienaiknife.narra.data.models.Article
 import com.mienaiknife.narra.domain.repository.ContentRepository
+import com.mienaiknife.narra.utils.DateUtils
 import com.prof18.rssparser.RssParser
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import net.dankito.readability4j.Readability4J
@@ -68,6 +70,21 @@ class ContentRepositoryImpl(
 
     override suspend fun downloadWebPage(url: String): Result<Article> = withContext(Dispatchers.IO) {
         try {
+            val existingArticle = articleDao.getArticleByUrl(url)
+            if (existingArticle != null) {
+                if (existingArticle.isInQueue) {
+                    return@withContext Result.failure(Exception("Article already in queue"))
+                } else {
+                    // Move from history to queue
+                    val updatedArticle = existingArticle.copy(
+                        isInQueue = true,
+                        createdAt = System.currentTimeMillis() // Move to top of queue?
+                    )
+                    articleDao.insertArticle(updatedArticle)
+                    return@withContext Result.success(updatedArticle.toDomainModel())
+                }
+            }
+
             val doc = Jsoup.connect(url)
                 .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36")
                 .get()
@@ -79,15 +96,24 @@ class ContentRepositoryImpl(
                 return@withContext Result.failure(Exception("Failed to extract content from $url"))
             }
 
+            val publishedAt = doc.select("meta[property=article:published_time]").attr("content").ifEmpty { null }
+                    ?: doc.select("meta[name=publish-date]").attr("content").ifEmpty { null }
+                    ?: doc.select("meta[property=og:pubdate]").attr("content").ifEmpty { null }
+                    ?: doc.select("meta[name=pubdate]").attr("content").ifEmpty { null }
+                    ?: doc.select("meta[name=date]").attr("content").ifEmpty { null }
+                    ?: doc.select("time[itemprop=datePublished]").attr("datetime").ifEmpty { null }
+                    ?: doc.select("time").attr("datetime").ifEmpty { null }
+
             val articleEntity = ArticleEntity(
                 id = UUID.randomUUID().toString(),
                 title = article.title ?: doc.title() ?: "Untitled",
                 source = doc.location().let { java.net.URL(it).host } ?: "Web",
                 content = article.content ?: "",
                 excerpt = article.excerpt,
-                imageUrl = article.byline, // Readability4J's byline often contains author or sometimes image info, but let's be careful. Actually readability4j has featured image? 
-                // Let's check Jsoup for meta tags if readability fails for image.
+                imageUrl = article.byline,
                 url = url,
+                publishedAt = publishedAt,
+                publishedTimestamp = DateUtils.parseToTimestamp(publishedAt),
                 createdAt = System.currentTimeMillis()
             )
 
@@ -131,19 +157,130 @@ class ContentRepositoryImpl(
         articleDao.clearQueue()
     }
 
-    override suspend fun subscribeToFeed(url: String): Result<Unit> = withContext(Dispatchers.IO) {
+    override suspend fun updateArticleProgress(id: String, progress: Float, paragraphIndex: Int, wordOffset: Int) {
+        articleDao.getArticleById(id)?.let { article ->
+            articleDao.insertArticle(article.copy(
+                progress = progress,
+                currentParagraphIndex = paragraphIndex,
+                currentWordOffset = wordOffset
+            ))
+        }
+    }
+
+    override suspend fun reorderQueue(fromIndex: Int, toIndex: Int) = withContext(Dispatchers.IO) {
+        val currentQueue = articleDao.getQueueArticles().map { entities ->
+            entities.sortedBy { it.queueOrder }
+        }.first().toMutableList()
+
+        if (fromIndex !in currentQueue.indices || toIndex !in currentQueue.indices) return@withContext
+
+        val item = currentQueue.removeAt(fromIndex)
+        currentQueue.add(toIndex, item)
+
+        val updatedQueue = currentQueue.mapIndexed { index, article ->
+            article.copy(queueOrder = index)
+        }
+
+        articleDao.updateArticles(updatedQueue)
+    }
+
+    override suspend fun subscribeToFeed(url: String): Result<String> = withContext(Dispatchers.IO) {
         try {
-            val channel = rssParser.getRssChannel(url)
+            var targetUrl = url
+            var channel = try {
+                rssParser.getRssChannel(targetUrl)
+            } catch (e: Exception) {
+                null
+            }
+
+            if (channel == null) {
+                // Try feed discovery
+                val doc = Jsoup.connect(url)
+                    .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36")
+                    .get()
+                
+                val feedLink = doc.select("link[rel=alternate][type=application/rss+xml]").attr("abs:href")
+                    .ifEmpty { doc.select("link[rel=alternate][type=application/atom+xml]").attr("abs:href") }
+                
+                if (feedLink.isNotEmpty()) {
+                    targetUrl = feedLink
+                    channel = rssParser.getRssChannel(targetUrl)
+                }
+            }
+
+            if (channel == null) {
+                return@withContext Result.failure(Exception("Could not find a valid RSS feed at $url"))
+            }
+
+            var imageUrl = channel.image?.url
+            val link = channel.link
+            val title = channel.title ?: "Untitled Feed"
+
+            if (imageUrl == null && link != null) {
+                try {
+                    val doc = Jsoup.connect(link)
+                        .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36")
+                        .get()
+                    
+                    imageUrl = doc.select("link[rel~=(?i)^(shortcut|apple-touch-)?icon]").attr("abs:href")
+                    if (imageUrl.isEmpty()) {
+                        imageUrl = doc.select("meta[property=og:image]").attr("abs:href")
+                    }
+                    if (imageUrl.isEmpty()) {
+                        imageUrl = null
+                    }
+                } catch (e: Exception) {
+                    // Ignore favicon fetching errors
+                }
+            }
+
             val feedEntity = FeedEntity(
-                url = url,
-                title = channel.title ?: "Untitled Feed",
+                url = targetUrl,
+                title = title,
                 description = channel.description,
-                imageUrl = channel.image?.url
+                imageUrl = imageUrl
             )
             feedDao.insertFeed(feedEntity)
-            Result.success(Unit)
+            Result.success(title)
         } catch (e: Exception) {
             Result.failure(e)
+        }
+    }
+
+    override suspend fun refreshFeeds() = withContext(Dispatchers.IO) {
+        try {
+            val feeds = feedDao.getAllFeeds().first()
+            for (feed in feeds) {
+                val channel = try {
+                    rssParser.getRssChannel(feed.url)
+                } catch (e: Exception) {
+                    continue
+                }
+
+                for (item in channel.items) {
+                    val url = item.link ?: continue
+                    val existingArticle = articleDao.getArticleByUrl(url)
+                    if (existingArticle == null) {
+                        val articleEntity = ArticleEntity(
+                            id = UUID.randomUUID().toString(),
+                            title = item.title ?: "Untitled",
+                            source = feed.title,
+                            content = item.content ?: item.description,
+                            excerpt = item.description,
+                            imageUrl = item.image,
+                            url = url,
+                            publishedAt = item.pubDate,
+                            publishedTimestamp = DateUtils.parseToTimestamp(item.pubDate),
+                            isFromFeed = true,
+                            isInQueue = false,
+                            createdAt = System.currentTimeMillis()
+                        )
+                        articleDao.insertArticle(articleEntity)
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            // Log error
         }
     }
 }

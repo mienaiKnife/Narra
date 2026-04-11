@@ -1,0 +1,509 @@
+/*
+ * Copyright 2025 Narra Authors
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.mienaiknife.narra.playback
+
+import android.os.Looper
+import android.view.Surface
+import android.view.SurfaceHolder
+import android.view.SurfaceView
+import android.view.TextureView
+import androidx.core.net.toUri
+import androidx.media3.common.AudioAttributes
+import androidx.media3.common.BasePlayer
+import androidx.media3.common.DeviceInfo
+import androidx.media3.common.MediaItem
+import androidx.media3.common.MediaMetadata
+import androidx.media3.common.PlaybackException
+import androidx.media3.common.PlaybackParameters
+import androidx.media3.common.Player
+import androidx.media3.common.Timeline
+import androidx.media3.common.TrackSelectionParameters
+import androidx.media3.common.Tracks
+import androidx.media3.common.VideoSize
+import androidx.media3.common.text.CueGroup
+import androidx.media3.common.util.Size
+import androidx.media3.common.util.UnstableApi
+import com.mienaiknife.narra.domain.TtsEngine
+import com.mienaiknife.narra.domain.TtsState
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
+import javax.inject.Inject
+import javax.inject.Singleton
+
+/**
+ * A custom Media3 Player implementation that wraps a TtsEngine.
+ */
+@UnstableApi
+@Singleton
+class TtsPlayer @Inject constructor(
+    private val ttsEngine: TtsEngine
+) : BasePlayer() {
+
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+    private val listeners = mutableListOf<Player.Listener>()
+    
+    private var _playWhenReady = false
+    private var _playbackState = STATE_IDLE
+    private var _currentMediaItem: MediaItem? = null
+    private var _playbackParameters = PlaybackParameters.DEFAULT
+
+    private var paragraphs: List<String> = emptyList()
+    private var currentParagraphIndex = -1
+    private var currentWordRange: IntRange? = null
+    private var resumeWordOffset = 0
+    private var isEngineSpeaking = false
+
+    init {
+        ttsEngine.state.onEach { state ->
+            when (state) {
+                is TtsState.Ready -> {
+                    isEngineSpeaking = false
+                    updatePlaybackState(STATE_READY)
+                    
+                    // If we are supposed to be playing but the engine stopped (e.g. finished an article or initialization)
+                    if (_playWhenReady && currentParagraphIndex >= 0 && currentParagraphIndex < paragraphs.size) {
+                        // Check if we reached the end
+                        if (currentParagraphIndex == paragraphs.size - 1 && currentWordRange != null && currentWordRange!!.last >= paragraphs[currentParagraphIndex].length - 1) {
+                            // Finished article
+                            _playWhenReady = false
+                            updatePlaybackState(STATE_ENDED)
+                        } else if (!isEngineSpeaking) {
+                            // This might be called after initialization or if the engine somehow stopped unexpectedly
+                            // We don't want to call this if we're just transitioning between paragraphs,
+                            // but TtsEngine.Ready is only sent when the ENTIRE queue is done or stopped.
+                            // In AndroidTtsEngine, onDone sends Ready.
+                            // If we have more in the queue, onStart of next one should come quickly.
+                        }
+                    }
+                }
+                is TtsState.Speaking -> {
+                    isEngineSpeaking = true
+                    updatePlaybackState(STATE_READY)
+                    val index = state.utteranceId.toIntOrNull()
+                    if (index != null) {
+                        if (index != currentParagraphIndex) {
+                            currentParagraphIndex = index
+                            currentWordRange = null
+                            resumeWordOffset = 0
+                        }
+
+                        if (state.start < state.end) {
+                            currentWordRange = (state.start + resumeWordOffset) until (state.end + resumeWordOffset)
+                        }
+                        
+                        listeners.forEach { 
+                            // Using position discontinuity to signal UI that paragraph/word changed
+                            it.onPositionDiscontinuity(
+                                Player.PositionInfo(
+                                    null, 0, null, 0, 0, 0, 0, 0, 0
+                                ),
+                                Player.PositionInfo(
+                                    null, 0, null, 0, 0, 0, 0, 0, 0
+                                ),
+                                DISCONTINUITY_REASON_AUTO_TRANSITION
+                            ) 
+                        }
+                    }
+                }
+                is TtsState.Initializing -> {
+                    updatePlaybackState(STATE_BUFFERING)
+                }
+                is TtsState.Error -> {
+                    // Handle error
+                }
+                is TtsState.Idle -> {
+                    updatePlaybackState(STATE_IDLE)
+                }
+            }
+        }.launchIn(scope)
+    }
+
+    private fun updatePlaybackState(state: Int) {
+        if (_playbackState != state) {
+            android.util.Log.d("TtsPlayer", "Playback state changed: ${getStateString(_playbackState)} -> ${getStateString(state)}")
+            _playbackState = state
+            listeners.forEach { 
+                it.onPlaybackStateChanged(state)
+                it.onIsPlayingChanged(isPlaying)
+            }
+        }
+    }
+
+    private fun getStateString(state: Int): String = when(state) {
+        STATE_IDLE -> "IDLE"
+        STATE_BUFFERING -> "BUFFERING"
+        STATE_READY -> "READY"
+        STATE_ENDED -> "ENDED"
+        else -> "UNKNOWN"
+    }
+
+    override fun addListener(listener: Player.Listener) {
+        listeners.add(listener)
+    }
+
+    override fun removeListener(listener: Player.Listener) {
+        listeners.remove(listener)
+    }
+
+    override fun getApplicationLooper(): Looper = Looper.getMainLooper()
+
+    override fun setPlayWhenReady(playWhenReady: Boolean) {
+        if (_playWhenReady != playWhenReady) {
+            android.util.Log.d("TtsPlayer", "setPlayWhenReady: $playWhenReady")
+            _playWhenReady = playWhenReady
+            if (playWhenReady) {
+                if (currentParagraphIndex >= 0 && paragraphs.isNotEmpty()) {
+                    val index = currentParagraphIndex.coerceAtLeast(0)
+                    resumeWordOffset = currentWordRange?.first ?: 0
+                    speakCurrentFrom(index, resumeWordOffset)
+                }
+            } else {
+                ttsEngine.stop()
+                isEngineSpeaking = false
+            }
+            listeners.forEach { 
+                it.onPlayWhenReadyChanged(playWhenReady, PLAY_WHEN_READY_CHANGE_REASON_USER_REQUEST)
+                it.onIsPlayingChanged(isPlaying)
+            }
+        }
+    }
+
+    override fun setMediaItems(mediaItems: MutableList<MediaItem>, resetPosition: Boolean) {
+        if (mediaItems.isNotEmpty()) {
+            _currentMediaItem = mediaItems[0]
+            // In a real implementation we'd handle the full list
+        }
+    }
+
+    override fun setMediaItems(mediaItems: MutableList<MediaItem>, startIndex: Int, startPositionMs: Long) {
+        if (startIndex in mediaItems.indices) {
+            _currentMediaItem = mediaItems[startIndex]
+        }
+    }
+
+    override fun addMediaItems(index: Int, mediaItems: MutableList<MediaItem>) {}
+
+    override fun moveMediaItems(fromIndex: Int, toIndex: Int, newIndex: Int) {}
+
+    override fun replaceMediaItems(fromIndex: Int, toIndex: Int, mediaItems: MutableList<MediaItem>) {}
+
+    override fun removeMediaItems(fromIndex: Int, toIndex: Int) {}
+
+    override fun prepare() {
+        if (ttsEngine.state.value is TtsState.Initializing) {
+            updatePlaybackState(STATE_BUFFERING)
+        } else {
+            updatePlaybackState(STATE_READY)
+        }
+    }
+
+    override fun getPlaybackSuppressionReason(): Int = PLAYBACK_SUPPRESSION_REASON_NONE
+
+    override fun getPlayerError(): PlaybackException? = null
+
+    override fun setRepeatMode(repeatMode: Int) {}
+
+    override fun getRepeatMode(): Int = REPEAT_MODE_OFF
+
+    override fun setShuffleModeEnabled(shuffleModeEnabled: Boolean) {}
+
+    override fun getShuffleModeEnabled(): Boolean = false
+
+    override fun isLoading(): Boolean = false
+
+    override fun getSeekBackIncrement(): Long = 0
+
+    override fun getSeekForwardIncrement(): Long = 0
+
+    override fun getMaxSeekToPreviousPosition(): Long = 0
+
+    override fun clearVideoSurface() {}
+
+    override fun clearVideoSurface(surface: Surface?) {}
+
+    override fun setVideoSurface(surface: Surface?) {}
+
+    override fun setVideoSurfaceHolder(surfaceHolder: SurfaceHolder?) {}
+
+    override fun clearVideoSurfaceHolder(surfaceHolder: SurfaceHolder?) {}
+
+    override fun setVideoSurfaceView(surfaceView: SurfaceView?) {}
+
+    override fun clearVideoSurfaceView(surfaceView: SurfaceView?) {}
+
+    override fun setVideoTextureView(textureView: TextureView?) {}
+
+    override fun clearVideoTextureView(textureView: TextureView?) {}
+
+    override fun getSurfaceSize(): Size = Size.UNKNOWN
+
+    override fun setAudioAttributes(audioAttributes: AudioAttributes, handleAudioFocus: Boolean) {}
+
+    override fun getPlayWhenReady(): Boolean = _playWhenReady
+
+    override fun getPlaybackState(): Int = _playbackState
+
+    override fun setPlaybackParameters(playbackParameters: PlaybackParameters) {
+        _playbackParameters = playbackParameters
+        ttsEngine.setPlaybackSpeed(playbackParameters.speed)
+        listeners.forEach { 
+            it.onPlaybackParametersChanged(playbackParameters)
+        }
+    }
+
+    override fun getPlaybackParameters(): PlaybackParameters = _playbackParameters
+
+    override fun stop() {
+        _playWhenReady = false
+        ttsEngine.stop()
+        updatePlaybackState(STATE_IDLE)
+    }
+
+    override fun release() {
+        stop()
+        ttsEngine.release()
+        scope.cancel()
+    }
+
+    override fun getDuration(): Long = paragraphs.size.toLong() * 1000L
+
+    override fun getCurrentPosition(): Long {
+        if (paragraphs.isEmpty() || currentParagraphIndex < 0) return 0L
+        val basePosition = currentParagraphIndex.toLong() * 1000L
+        val paragraphText = paragraphs.getOrNull(currentParagraphIndex) ?: return basePosition
+        if (paragraphText.isEmpty()) return basePosition
+
+        val wordOffset = currentWordRange?.first ?: 0
+        val intraParagraphProgress = wordOffset.toFloat() / paragraphText.length.toFloat()
+        return basePosition + (intraParagraphProgress * 1000L).toLong()
+    }
+
+    override fun getBufferedPosition(): Long = 0
+
+    override fun getTotalBufferedDuration(): Long = 0
+
+    override fun isPlayingAd(): Boolean = false
+
+    override fun getCurrentAdGroupIndex(): Int = -1
+
+    override fun getCurrentAdIndexInAdGroup(): Int = -1
+
+    override fun getContentPosition(): Long = 0
+
+    override fun getContentBufferedPosition(): Long = 0
+
+    // Timeline and Tracks
+    override fun getCurrentTracks(): Tracks = Tracks.EMPTY
+    @Suppress("DEPRECATION")
+    override fun getTrackSelectionParameters(): TrackSelectionParameters = TrackSelectionParameters.DEFAULT
+    override fun setTrackSelectionParameters(parameters: TrackSelectionParameters) {}
+    override fun getMediaMetadata(): MediaMetadata = _currentMediaItem?.mediaMetadata ?: MediaMetadata.EMPTY
+    override fun getPlaylistMetadata(): MediaMetadata = getMediaMetadata()
+    override fun setPlaylistMetadata(mediaMetadata: MediaMetadata) {}
+    override fun getCurrentTimeline(): Timeline {
+        val item = _currentMediaItem ?: return Timeline.EMPTY
+        return object : Timeline() {
+            override fun getWindowCount(): Int = 1
+            override fun getWindow(windowIndex: Int, window: Window, defaultPositionProjectionUs: Long): Window {
+                window.set(
+                    "window",
+                    item,
+                    null,
+                    0,
+                    0,
+                    0,
+                    true,
+                    false,
+                    null,
+                    0,
+                    getDuration() * 1000L,
+                    0,
+                    0,
+                    0
+                )
+                return window
+            }
+            override fun getPeriodCount(): Int = 1
+            override fun getPeriod(periodIndex: Int, period: Period, setIdentifiers: Boolean): Period {
+                period.set("period", "period", 0, getDuration() * 1000L, 0)
+                return period
+            }
+            override fun getIndexOfPeriod(uid: Any): Int = if (uid == "period") 0 else -1
+            override fun getUidOfPeriod(periodIndex: Int): Any = "period"
+        }
+    }
+    override fun getCurrentPeriodIndex(): Int = 0
+    override fun getCurrentMediaItemIndex(): Int = 0
+
+    // Commands
+    override fun getAvailableCommands(): Player.Commands = Player.Commands.Builder()
+        .addAll(
+            Player.COMMAND_PLAY_PAUSE,
+            Player.COMMAND_STOP,
+            Player.COMMAND_SET_SPEED_AND_PITCH,
+            Player.COMMAND_GET_CURRENT_MEDIA_ITEM,
+            Player.COMMAND_GET_METADATA,
+            Player.COMMAND_GET_TIMELINE,
+            Player.COMMAND_SEEK_TO_NEXT,
+            Player.COMMAND_SEEK_TO_PREVIOUS,
+            Player.COMMAND_SEEK_IN_CURRENT_MEDIA_ITEM
+        ).build()
+
+    // Required by BasePlayer
+    override fun getAudioAttributes(): AudioAttributes = AudioAttributes.DEFAULT
+    override fun getVolume(): Float = 1f
+    override fun setVolume(volume: Float) {}
+    override fun getDeviceInfo(): DeviceInfo = DeviceInfo.UNKNOWN
+    override fun getDeviceVolume(): Int = 0
+    override fun isDeviceMuted(): Boolean = false
+    @Deprecated("Deprecated in Java")
+    override fun setDeviceVolume(volume: Int) {}
+    override fun setDeviceVolume(volume: Int, flags: Int) {}
+    @Deprecated("Deprecated in Java")
+    override fun increaseDeviceVolume() {}
+    override fun increaseDeviceVolume(flags: Int) {}
+    @Deprecated("Deprecated in Java")
+    override fun decreaseDeviceVolume() {}
+    override fun decreaseDeviceVolume(flags: Int) {}
+    @Deprecated("Deprecated in Java")
+    override fun setDeviceMuted(muted: Boolean) {}
+    override fun setDeviceMuted(muted: Boolean, flags: Int) {}
+    override fun getVideoSize(): VideoSize = VideoSize.UNKNOWN
+    override fun getCurrentCues(): CueGroup = CueGroup.EMPTY_TIME_ZERO
+
+    // Navigation (Minimal implementation)
+    override fun seekTo(mediaItemIndex: Int, positionMs: Long, seekCommand: Int, isAutoSeek: Boolean) {
+        val index = (positionMs / 1000).toInt()
+        val remainder = positionMs % 1000
+        if (index in paragraphs.indices) {
+            val text = paragraphs[index]
+            val charOffset = if (text.isNotEmpty()) {
+                (remainder.toFloat() / 1000f * text.length).toInt().coerceIn(0, text.length)
+            } else 0
+            
+            val word = Regex("\\w+").find(text, charOffset)?.range 
+                ?: Regex("\\w+").find(text)?.range // fallback to first word if none found after offset
+                ?: (charOffset until charOffset)
+                
+            seekToWord(index, word, _playWhenReady)
+        }
+    }
+
+    fun seekToWord(paragraphIndex: Int, wordRange: IntRange, startPlaying: Boolean = true) {
+        if (paragraphIndex in paragraphs.indices) {
+            currentParagraphIndex = paragraphIndex
+            resumeWordOffset = wordRange.first
+            currentWordRange = wordRange
+
+            ttsEngine.stop()
+            val previousPlayWhenReady = _playWhenReady
+            if (startPlaying) {
+                _playWhenReady = true
+            }
+
+            if (_playWhenReady) {
+                speakCurrentFrom(paragraphIndex, wordRange.first)
+            }
+
+            listeners.forEach {
+                if (previousPlayWhenReady != _playWhenReady) {
+                    it.onPlayWhenReadyChanged(_playWhenReady, PLAY_WHEN_READY_CHANGE_REASON_USER_REQUEST)
+                    it.onIsPlayingChanged(isPlaying)
+                }
+                // Signal position change to update UI highlighting
+                it.onPositionDiscontinuity(
+                    Player.PositionInfo(null, 0, null, 0, 0, 0, 0, 0, 0),
+                    Player.PositionInfo(null, 0, null, 0, 0, paragraphIndex.toLong(), 0, 0, 0),
+                    DISCONTINUITY_REASON_SEEK
+                )
+            }
+        }
+    }
+    
+    // TtsPlayer specific
+    fun speak(article: com.mienaiknife.narra.data.models.Article, parsedParagraphs: List<String>) {
+        _playWhenReady = false
+        _currentMediaItem = MediaItem.Builder()
+            .setMediaId(article.id)
+            .setMediaMetadata(
+                MediaMetadata.Builder()
+                    .setTitle(article.title)
+                    .setArtist(article.source)
+                    .setArtworkUri(article.imageUrl?.toUri())
+                    .build()
+            )
+            .build()
+        
+        paragraphs = parsedParagraphs
+        currentParagraphIndex = article.currentParagraphIndex.coerceIn(0, paragraphs.size - 1).takeIf { paragraphs.isNotEmpty() } ?: 0
+        
+        // Initialize currentWordRange to the saved word offset or the first word of the resumed paragraph
+        val currentParaText = paragraphs.getOrNull(currentParagraphIndex)
+        currentWordRange = currentParaText?.let { text ->
+            if (article.currentWordOffset > 0 && article.currentWordOffset < text.length) {
+                Regex("\\w+").find(text, article.currentWordOffset)?.range
+            } else {
+                Regex("\\w+").find(text)?.range
+            }
+        }
+        
+        resumeWordOffset = article.currentWordOffset.coerceAtLeast(0)
+        
+        listeners.forEach { 
+            it.onMediaItemTransition(_currentMediaItem, Player.MEDIA_ITEM_TRANSITION_REASON_PLAYLIST_CHANGED)
+            it.onMediaMetadataChanged(mediaMetadata)
+            it.onTimelineChanged(currentTimeline, Player.TIMELINE_CHANGE_REASON_PLAYLIST_CHANGED)
+            it.onPlayWhenReadyChanged(_playWhenReady, Player.PLAY_WHEN_READY_CHANGE_REASON_USER_REQUEST)
+            it.onIsPlayingChanged(isPlaying)
+            // Signal position change to update UI highlighting and scroll to current position
+            it.onPositionDiscontinuity(
+                Player.PositionInfo(null, 0, null, 0, 0, 0, 0, 0, 0),
+                Player.PositionInfo(null, 0, null, 0, 0, currentParagraphIndex.toLong(), 0, 0, 0),
+                Player.DISCONTINUITY_REASON_AUTO_TRANSITION
+            )
+        }
+
+        if (ttsEngine.state.value is TtsState.Initializing) {
+            updatePlaybackState(STATE_BUFFERING)
+        } else {
+            updatePlaybackState(STATE_READY)
+        }
+    }
+
+    private fun speakCurrentFrom(startIndex: Int, wordOffset: Int = 0) {
+        for (i in startIndex until paragraphs.size) {
+            val text = if (i == startIndex && wordOffset > 0 && wordOffset < paragraphs[i].length) {
+                paragraphs[i].substring(wordOffset)
+            } else {
+                paragraphs[i]
+            }
+            if (i == startIndex) {
+                ttsEngine.speak(text, i.toString())
+            } else {
+                ttsEngine.enqueue(text, i.toString())
+            }
+        }
+    }
+
+    fun getCurrentParagraphIndex(): Int = currentParagraphIndex
+
+    fun getCurrentWordRange(): IntRange? = currentWordRange
+}

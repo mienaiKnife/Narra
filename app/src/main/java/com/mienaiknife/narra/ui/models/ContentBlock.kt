@@ -19,7 +19,8 @@ package com.mienaiknife.narra.ui.models
 import androidx.compose.ui.text.AnnotatedString
 
 sealed class ContentBlock {
-    data class Paragraph(val text: AnnotatedString) : ContentBlock()
-    data class BlockQuote(val text: AnnotatedString) : ContentBlock()
-    data class Heading(val text: AnnotatedString, val level: Int) : ContentBlock()
+    abstract val text: AnnotatedString
+    data class Paragraph(override val text: AnnotatedString) : ContentBlock()
+    data class BlockQuote(override val text: AnnotatedString) : ContentBlock()
+    data class Heading(override val text: AnnotatedString, val level: Int) : ContentBlock()
 }

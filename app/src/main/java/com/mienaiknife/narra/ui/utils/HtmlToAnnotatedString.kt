@@ -22,7 +22,10 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.BaselineShift
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.unit.sp
 import com.mienaiknife.narra.ui.models.ContentBlock
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Element
@@ -36,36 +39,79 @@ object HtmlParser {
         val body = document.body()
         val blocks = mutableListOf<ContentBlock>()
 
-        body.children().forEach { element ->
-            when (element.tagName()) {
-                "p" -> blocks.add(ContentBlock.Paragraph(parseElement(element)))
-                "blockquote" -> blocks.add(ContentBlock.BlockQuote(parseElement(element)))
-                "h1", "h2", "h3", "h4", "h5", "h6" -> {
-                    val level = element.tagName().substring(1).toInt()
-                    blocks.add(ContentBlock.Heading(parseElement(element), level))
-                }
-                else -> {
-                    // Fallback for other tags or top-level text
-                    val text = parseElement(element)
-                    if (text.isNotEmpty()) {
-                        blocks.add(ContentBlock.Paragraph(text))
-                    }
-                }
-            }
-        }
-
-        // If no blocks were found but there is text (e.g., plain text input)
-        if (blocks.isEmpty() && html.isNotBlank()) {
-            // Split by double newline to handle plain text paragraphs
-            html.split(Regex("\\n\\s*\\n")).forEach { p ->
-                val trimmed = p.trim()
-                if (trimmed.isNotEmpty()) {
-                    blocks.add(ContentBlock.Paragraph(buildAnnotatedString { append(trimmed) }))
-                }
-            }
-        }
+        parseNodes(body.childNodes(), blocks)
 
         return blocks
+    }
+
+    private fun parseNodes(nodes: List<Node>, blocks: MutableList<ContentBlock>) {
+        val currentInlineNodes = mutableListOf<Node>()
+
+        fun flushInline() {
+            if (currentInlineNodes.isNotEmpty()) {
+                val annotatedString = buildAnnotatedString {
+                    currentInlineNodes.forEach { traverse(it, this) }
+                }
+                addBlocksFromAnnotatedString(annotatedString, blocks)
+                currentInlineNodes.clear()
+            }
+        }
+
+        nodes.forEach { node ->
+            when (node) {
+                is Element -> {
+                    val tagName = node.tagName()
+                    when {
+                        tagName == "p" || tagName == "li" -> {
+                            flushInline()
+                            addBlocksFromAnnotatedString(parseElement(node), blocks)
+                        }
+                        tagName == "blockquote" -> {
+                            flushInline()
+                            blocks.add(ContentBlock.BlockQuote(parseElement(node)))
+                        }
+                        tagName.startsWith("h") && tagName.length == 2 && tagName[1].isDigit() -> {
+                            flushInline()
+                            val level = tagName.substring(1).toIntOrNull() ?: 1
+                            blocks.add(ContentBlock.Heading(parseElement(node), level))
+                        }
+                        node.isBlock -> {
+                            flushInline()
+                            parseNodes(node.childNodes(), blocks)
+                        }
+                        else -> {
+                            currentInlineNodes.add(node)
+                        }
+                    }
+                }
+                is TextNode -> {
+                    currentInlineNodes.add(node)
+                }
+            }
+        }
+        flushInline()
+    }
+
+    private fun addBlocksFromAnnotatedString(annotatedString: AnnotatedString, blocks: MutableList<ContentBlock>) {
+        val parts = splitAnnotatedString(annotatedString, Regex("\\n\\s*\\n+"))
+        parts.forEach { part ->
+            val trimmed = part.trim()
+            if (trimmed.isNotEmpty()) {
+                blocks.add(ContentBlock.Paragraph(trimmed))
+            }
+        }
+    }
+
+    private fun splitAnnotatedString(annotatedString: AnnotatedString, regex: Regex): List<AnnotatedString> {
+        val text = annotatedString.text
+        val result = mutableListOf<AnnotatedString>()
+        var lastStart = 0
+        regex.findAll(text).forEach { match ->
+            result.add(annotatedString.subSequence(lastStart, match.range.first))
+            lastStart = match.range.last + 1
+        }
+        result.add(annotatedString.subSequence(lastStart, text.length))
+        return result
     }
 
     private fun parseElement(element: Element): AnnotatedString {
@@ -85,9 +131,21 @@ object HtmlParser {
 
     private fun traverse(node: Node, builder: AnnotatedString.Builder) {
         when (node) {
-            is TextNode -> builder.append(node.text())
+            is TextNode -> {
+                val text = node.wholeText
+                builder.append(normalizeWhitespace(text))
+            }
             is Element -> {
-                val style = getStyleForTag(node.tagName())
+                val tagName = node.tagName()
+                val style = getStyleForTag(tagName)
+                
+                if (tagName == "sup") {
+                    builder.pushStringAnnotation("footnote", "true")
+                }
+                if (tagName == "a") {
+                    builder.pushStringAnnotation("link", node.attr("href"))
+                }
+
                 if (style != null) {
                     builder.withStyle(style) {
                         node.childNodes().forEach { traverse(it, builder) }
@@ -95,21 +153,43 @@ object HtmlParser {
                 } else {
                     node.childNodes().forEach { traverse(it, builder) }
                 }
+
+                if (tagName == "sup" || tagName == "a") {
+                    builder.pop()
+                }
                 
-                // Add newlines for certain tags if they are nested
-                if (node.tagName() == "br") {
+                // Add newlines for block-level tags if they are nested within an inline context
+                if (tagName == "br" || tagName == "p" || tagName == "div" || tagName == "li" || 
+                    tagName.startsWith("h") && tagName.length == 2) {
                     builder.append("\n")
                 }
             }
         }
     }
 
+    private fun normalizeWhitespace(text: String): String {
+        return text.replace('\u00A0', ' ')
+            .replace(Regex("[ \\t]+"), " ")
+    }
+
     private fun getStyleForTag(tagName: String): SpanStyle? {
         return when (tagName) {
             "b", "strong" -> SpanStyle(fontWeight = FontWeight.Bold)
             "i", "em" -> SpanStyle(fontStyle = FontStyle.Italic)
-            "u" -> SpanStyle(textDecoration = androidx.compose.ui.text.style.TextDecoration.Underline)
+            "u" -> SpanStyle(textDecoration = TextDecoration.Underline)
+            "h1", "h2", "h3", "h4", "h5", "h6" -> SpanStyle(fontWeight = FontWeight.Bold)
             "code" -> SpanStyle(background = Color.LightGray.copy(alpha = 0.3f))
+            "sup" -> SpanStyle(
+                baselineShift = BaselineShift.Superscript,
+                fontSize = 12.sp
+            )
+            "sub" -> SpanStyle(
+                baselineShift = BaselineShift.Subscript,
+                fontSize = 12.sp
+            )
+            "a" -> SpanStyle(
+                textDecoration = TextDecoration.Underline
+            )
             else -> null
         }
     }

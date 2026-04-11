@@ -24,8 +24,11 @@ class MainActivity : ComponentActivity() {
         setContent {
             val isDarkMode by themeViewModel.isDarkMode.collectAsState()
             val isDynamicColor by themeViewModel.isDynamicColor.collectAsState()
+            val useSystemTheme by themeViewModel.useSystemTheme.collectAsState()
 
-            NarraTheme(darkTheme = isDarkMode, dynamicColor = isDynamicColor) {
+            val darkTheme = if (useSystemTheme) androidx.compose.foundation.isSystemInDarkTheme() else isDarkMode
+
+            NarraTheme(darkTheme = darkTheme, dynamicColor = isDynamicColor) {
                 AppNavigation(themeViewModel = themeViewModel)
             }
         }

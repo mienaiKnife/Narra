@@ -20,25 +20,29 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Update
 import com.mienaiknife.narra.data.local.entities.ArticleEntity
 import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface ArticleDao {
-    @Query("SELECT * FROM articles WHERE isInQueue = 1 ORDER BY createdAt DESC")
+    @Query("SELECT * FROM articles WHERE isInQueue = 1 ORDER BY queueOrder ASC, COALESCE(publishedTimestamp, createdAt) DESC")
     fun getQueueArticles(): Flow<List<ArticleEntity>>
 
-    @Query("SELECT * FROM articles WHERE isInQueue = 0 ORDER BY createdAt DESC")
+    @Query("SELECT * FROM articles WHERE isInQueue = 0 AND finishedAt IS NOT NULL ORDER BY finishedAt DESC")
     fun getHistoryArticles(): Flow<List<ArticleEntity>>
 
-    @Query("SELECT * FROM articles ORDER BY createdAt DESC")
+    @Query("SELECT * FROM articles ORDER BY COALESCE(publishedTimestamp, createdAt) DESC")
     fun getAllArticles(): Flow<List<ArticleEntity>>
 
-    @Query("SELECT * FROM articles WHERE isFromFeed = 1 ORDER BY createdAt DESC")
+    @Query("SELECT * FROM articles WHERE isFromFeed = 1 AND isInQueue = 0 ORDER BY COALESCE(publishedTimestamp, createdAt) DESC")
     fun getInboxArticles(): Flow<List<ArticleEntity>>
 
     @Query("SELECT * FROM articles WHERE id = :id")
     suspend fun getArticleById(id: String): ArticleEntity?
+
+    @Query("SELECT * FROM articles WHERE url = :url LIMIT 1")
+    suspend fun getArticleByUrl(url: String): ArticleEntity?
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertArticle(article: ArticleEntity)
@@ -52,7 +56,10 @@ interface ArticleDao {
     @Query("UPDATE articles SET isInQueue = 1 WHERE id = :id")
     suspend fun addToQueue(id: String)
 
-    @Query("DELETE FROM articles WHERE isInQueue = 0 AND isFromFeed = 0")
+    @Query("UPDATE articles SET isInQueue = 0, finishedAt = :finishedAt WHERE id = :id")
+    suspend fun markAsFinished(id: String, finishedAt: Long = System.currentTimeMillis())
+
+    @Query("DELETE FROM articles WHERE isInQueue = 0 AND finishedAt IS NOT NULL")
     suspend fun clearHistory()
 
     @Query("DELETE FROM articles WHERE isInQueue = 0 AND isFromFeed = 1")
@@ -60,4 +67,7 @@ interface ArticleDao {
 
     @Query("UPDATE articles SET isInQueue = 0")
     suspend fun clearQueue()
+
+    @Update
+    suspend fun updateArticles(articles: List<ArticleEntity>)
 }

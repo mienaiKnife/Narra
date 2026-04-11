@@ -18,6 +18,7 @@ package com.mienaiknife.narra.ui.screens
 
 import android.content.res.Configuration
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -27,10 +28,13 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.Delete
@@ -58,8 +62,11 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
@@ -78,6 +85,8 @@ fun QueueScreen(
     viewModel: QueueViewModel = hiltViewModel()
 ) {
     val articles by viewModel.articles.collectAsState()
+    val currentArticle by viewModel.currentArticle.collectAsState()
+    val isPlaying by viewModel.isPlaying.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
@@ -88,8 +97,10 @@ fun QueueScreen(
         Box(modifier = Modifier.padding(paddingValues)) {
             QueueScreenContent(
                 articles = articles,
+                currentArticle = currentArticle,
+                isPlaying = isPlaying,
                 onArticleClick = onArticleClick,
-                onHistoryClick = { navController.navigate("history") },
+                onPlayPauseClick = { article -> viewModel.onPlayPauseClick(article) },
                 onRemoveFromQueue = { article ->
                     viewModel.removeFromQueue(article)
                     scope.launch {
@@ -103,7 +114,9 @@ fun QueueScreen(
                         }
                     }
                 },
-                onClearQueue = { viewModel.clearQueue() }
+                onHistoryClick = { navController.navigate("history") },
+                onClearQueue = { viewModel.clearQueue() },
+                onReorder = { from, to -> viewModel.reorderQueue(from, to) }
             )
         }
     }
@@ -112,20 +125,28 @@ fun QueueScreen(
 @Composable
 fun QueueScreenContent(
     articles: List<Article>,
+    currentArticle: Article? = null,
+    isPlaying: Boolean = false,
     onArticleClick: (String) -> Unit = {},
-    onHistoryClick: () -> Unit = {},
+    onPlayPauseClick: (Article) -> Unit = {},
     onRemoveFromQueue: (Article) -> Unit = {},
-    onClearQueue: () -> Unit = {}
+    onHistoryClick: () -> Unit = {},
+    onClearQueue: () -> Unit = {},
+    onReorder: (Int, Int) -> Unit = { _, _ -> }
 ) {
     var showMenu by remember { mutableStateOf(false) }
+    val lazyListState = rememberLazyListState()
+
+    var draggedItemIndex by remember { mutableStateOf<Int?>(null) }
+    var draggingOffset by remember { mutableStateOf(0f) }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .statusBarsPadding()
             .background(MaterialTheme.colorScheme.background)
     ) {
-        Spacer(modifier = Modifier.height(24.dp))
-
+        Spacer(modifier = Modifier.height(16.dp))
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -187,32 +208,89 @@ fun QueueScreenContent(
             }
         }
 
-        Column(modifier = Modifier.padding(horizontal = 16.dp)) {
-            Text(
-                text = "${articles.size} ${if (articles.size == 1) "text" else "texts"}",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+        Text(
+            text = "${articles.size} ${if (articles.size == 1) "text" else "texts"}",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(horizontal = 16.dp)
+        )
 
-            Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(24.dp))
 
-            LazyColumn(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(24.dp),
-                contentPadding = PaddingValues(bottom = 16.dp)
-            ) {
-                items(articles, key = { it.id }) { article ->
-                    QueueItem(
-                        article = article,
-                        isPlaying = article.id == "2", // Hardcoded for now, will be linked to PlaybackService later
-                        modifier = Modifier.animateItem(),
-                        onPlayPauseClick = { 
-                            onArticleClick(article.id)
+        LazyColumn(
+            state = lazyListState,
+            modifier = Modifier
+                .weight(1f)
+                .pointerInput(articles) {
+                    detectDragGesturesAfterLongPress(
+                        onDragStart = { offset ->
+                            lazyListState.layoutInfo.visibleItemsInfo
+                                .firstOrNull { item ->
+                                    offset.y.toInt() in item.offset..(item.offset + item.size)
+                                }
+                                ?.let { item ->
+                                    draggedItemIndex = item.index
+                                }
                         },
-                        onRemoveClick = { onRemoveFromQueue(article) },
-                        onReorderClick = { /* TODO: Implement drag and drop reordering */ }
+                        onDrag = { change, dragAmount ->
+                            change.consume()
+                            draggingOffset += dragAmount.y
+
+                            val currentDraggedIndex = draggedItemIndex ?: return@detectDragGesturesAfterLongPress
+                            val itemHeight = lazyListState.layoutInfo.visibleItemsInfo
+                                .firstOrNull { it.index == currentDraggedIndex }?.size ?: 0
+
+                            if (itemHeight > 0) {
+                                val targetIndex = when {
+                                    draggingOffset > itemHeight / 2 -> currentDraggedIndex + 1
+                                    draggingOffset < -itemHeight / 2 -> currentDraggedIndex - 1
+                                    else -> currentDraggedIndex
+                                }
+
+                                if (targetIndex in articles.indices && targetIndex != currentDraggedIndex) {
+                                    onReorder(currentDraggedIndex, targetIndex)
+                                    draggedItemIndex = targetIndex
+                                    draggingOffset = 0f
+                                }
+                            }
+                        },
+                        onDragEnd = {
+                            draggedItemIndex = null
+                            draggingOffset = 0f
+                        },
+                        onDragCancel = {
+                            draggedItemIndex = null
+                            draggingOffset = 0f
+                        }
                     )
-                }
+                },
+            verticalArrangement = Arrangement.spacedBy(24.dp),
+            contentPadding = PaddingValues(bottom = 16.dp)
+        ) {
+            itemsIndexed(articles, key = { _, article -> article.id }) { index, article ->
+                val isDragging = index == draggedItemIndex
+                QueueItem(
+                    article = article,
+                    isPlaying = article.id == currentArticle?.id && isPlaying,
+                    modifier = Modifier
+                        .zIndex(if (isDragging) 1f else 0f)
+                        .offset {
+                            if (isDragging) {
+                                IntOffset(0, draggingOffset.toInt())
+                            } else {
+                                IntOffset.Zero
+                            }
+                        }
+                        .animateItem(),
+                    onItemClick = {
+                        onArticleClick(article.id)
+                    },
+                    onPlayPauseClick = {
+                        onPlayPauseClick(article)
+                    },
+                    onRemoveClick = { onRemoveFromQueue(article) },
+                    onReorderClick = { /* Handled by long press on the whole item for now */ }
+                )
             }
         }
     }

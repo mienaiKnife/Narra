@@ -20,6 +20,7 @@ val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "se
 class ThemeManager(private val context: Context, private val scope: CoroutineScope) {
     private val darkModeKey = booleanPreferencesKey("dark_mode")
     private val dynamicColorKey = booleanPreferencesKey("dynamic_color")
+    private val useSystemThemeKey = booleanPreferencesKey("use_system_theme")
 
     private val _isDarkMode = MutableStateFlow(true)
     val isDarkMode: StateFlow<Boolean> = _isDarkMode.asStateFlow()
@@ -27,11 +28,15 @@ class ThemeManager(private val context: Context, private val scope: CoroutineSco
     private val _isDynamicColor = MutableStateFlow(true)
     val isDynamicColor: StateFlow<Boolean> = _isDynamicColor.asStateFlow()
 
+    private val _useSystemTheme = MutableStateFlow(true)
+    val useSystemTheme: StateFlow<Boolean> = _useSystemTheme.asStateFlow()
+
     init {
         scope.launch {
             val prefs = context.dataStore.data.first()
             _isDarkMode.value = prefs[darkModeKey] ?: true
             _isDynamicColor.value = prefs[dynamicColorKey] ?: true
+            _useSystemTheme.value = prefs[useSystemThemeKey] ?: true
         }
     }
 
@@ -52,6 +57,15 @@ class ThemeManager(private val context: Context, private val scope: CoroutineSco
             _isDynamicColor.value = enabled
         }
     }
+
+    fun setUseSystemTheme(enabled: Boolean) {
+        scope.launch {
+            context.dataStore.edit { prefs ->
+                prefs[useSystemThemeKey] = enabled
+            }
+            _useSystemTheme.value = enabled
+        }
+    }
 }
 
 open class ThemeViewModel : ViewModel() {
@@ -61,6 +75,9 @@ open class ThemeViewModel : ViewModel() {
 
     private val _isDynamicColor = MutableStateFlow(true)
     val isDynamicColor: StateFlow<Boolean> = _isDynamicColor.asStateFlow()
+
+    private val _useSystemTheme = MutableStateFlow(true)
+    val useSystemTheme: StateFlow<Boolean> = _useSystemTheme.asStateFlow()
 
     open fun initialize(context: Context) {
         if (themeManager == null) {
@@ -75,6 +92,11 @@ open class ThemeViewModel : ViewModel() {
                     _isDynamicColor.value = isDynamic
                 }
             }
+            viewModelScope.launch {
+                themeManager?.useSystemTheme?.collect { useSystem ->
+                    _useSystemTheme.value = useSystem
+                }
+            }
         }
     }
 
@@ -84,5 +106,9 @@ open class ThemeViewModel : ViewModel() {
 
     fun setDynamicColor(enabled: Boolean) {
         themeManager?.setDynamicColor(enabled)
+    }
+
+    fun setUseSystemTheme(enabled: Boolean) {
+        themeManager?.setUseSystemTheme(enabled)
     }
 }

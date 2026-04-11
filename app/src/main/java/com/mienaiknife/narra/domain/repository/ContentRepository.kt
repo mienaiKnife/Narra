@@ -32,5 +32,8 @@ interface ContentRepository {
     suspend fun clearHistory()
     suspend fun clearInbox()
     suspend fun clearQueue()
-    suspend fun subscribeToFeed(url: String): Result<Unit>
+    suspend fun reorderQueue(fromIndex: Int, toIndex: Int)
+    suspend fun subscribeToFeed(url: String): Result<String>
+    suspend fun refreshFeeds()
+    suspend fun updateArticleProgress(id: String, progress: Float, paragraphIndex: Int, wordOffset: Int)
 }

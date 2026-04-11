@@ -21,8 +21,11 @@ import androidx.lifecycle.viewModelScope
 import com.mienaiknife.narra.data.models.Article
 import com.mienaiknife.narra.domain.repository.ContentRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -31,6 +34,15 @@ import javax.inject.Inject
 class HomeViewModel @Inject constructor(
     private val repository: ContentRepository
 ) : ViewModel() {
+
+    private val _uiEvent = MutableSharedFlow<UiEvent>()
+    val uiEvent: SharedFlow<UiEvent> = _uiEvent.asSharedFlow()
+
+    sealed class UiEvent {
+        data class ShowSnackbar(val message: String) : UiEvent()
+        object ArticleAdded : UiEvent()
+        data class FeedSubscribed(val feedName: String) : UiEvent()
+    }
 
     val articles: StateFlow<List<Article>> = repository.getQueueArticles()
         .stateIn(
@@ -42,6 +54,16 @@ class HomeViewModel @Inject constructor(
     fun downloadArticle(url: String) {
         viewModelScope.launch {
             repository.downloadWebPage(url)
+                .onSuccess {
+                    _uiEvent.emit(UiEvent.ArticleAdded)
+                }
+                .onFailure { error ->
+                    if (error.message == "Article already in queue") {
+                        _uiEvent.emit(UiEvent.ShowSnackbar("Article is already in your queue"))
+                    } else {
+                        _uiEvent.emit(UiEvent.ShowSnackbar("Failed to download article"))
+                    }
+                }
         }
     }
 
@@ -54,6 +76,12 @@ class HomeViewModel @Inject constructor(
     fun subscribeToFeed(url: String) {
         viewModelScope.launch {
             repository.subscribeToFeed(url)
+                .onSuccess { feedName ->
+                    _uiEvent.emit(UiEvent.FeedSubscribed(feedName))
+                }
+                .onFailure {
+                    _uiEvent.emit(UiEvent.ShowSnackbar("Failed to subscribe to feed"))
+                }
         }
     }
 }

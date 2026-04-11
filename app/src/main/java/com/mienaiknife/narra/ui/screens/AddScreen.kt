@@ -1,3 +1,19 @@
+/*
+ * Copyright 2025 Narra Authors
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package com.mienaiknife.narra.ui.screens
 
 import android.content.res.Configuration
@@ -9,6 +25,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -22,8 +39,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -37,19 +57,43 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.compose.rememberNavController
 import com.mienaiknife.narra.ui.components.BottomNavBar
 import com.mienaiknife.narra.ui.theme.NarraTheme
+import com.mienaiknife.narra.ui.utils.UrlUtils
 import com.mienaiknife.narra.ui.viewmodels.HomeViewModel
+import kotlinx.coroutines.flow.collectLatest
 
 @Composable
 fun AddScreen(
     viewModel: HomeViewModel = hiltViewModel(),
     onArticleAdded: () -> Unit = {}
 ) {
-    AddScreenContent(
-        onDownloadClick = { url -> viewModel.downloadArticle(url) },
-        onSubscribeClick = { url -> viewModel.subscribeToFeed(url) },
-        onUploadClick = { /* TODO: Implement file upload */ },
-        onArticleAdded = onArticleAdded
-    )
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    LaunchedEffect(viewModel.uiEvent) {
+        viewModel.uiEvent.collectLatest { event ->
+            when (event) {
+                is HomeViewModel.UiEvent.ShowSnackbar -> {
+                    snackbarHostState.showSnackbar(event.message)
+                }
+                is HomeViewModel.UiEvent.ArticleAdded -> {
+                    onArticleAdded()
+                }
+                is HomeViewModel.UiEvent.FeedSubscribed -> {
+                    snackbarHostState.showSnackbar("Subscribed to ${event.feedName}")
+                }
+            }
+        }
+    }
+
+    Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) }
+    ) { padding ->
+        AddScreenContent(
+            onDownloadClick = { url -> viewModel.downloadArticle(UrlUtils.cleanUrl(url)) },
+            onSubscribeClick = { url -> viewModel.subscribeToFeed(UrlUtils.cleanUrl(url)) },
+            onUploadClick = { /* TODO: Implement file upload */ },
+            modifier = Modifier.padding(padding)
+        )
+    }
 }
 
 @Composable
@@ -57,14 +101,14 @@ fun AddScreenContent(
     onDownloadClick: (String) -> Unit,
     onSubscribeClick: (String) -> Unit,
     onUploadClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    onArticleAdded: () -> Unit = {}
+    modifier: Modifier = Modifier
 ) {
     var url by remember { mutableStateOf("") }
 
     Column(
         modifier = modifier
-            .fillMaxSize(),
+            .fillMaxSize()
+            .statusBarsPadding(),
         horizontalAlignment = Alignment.Start
     ) {
         Spacer(modifier = Modifier.height(24.dp))
@@ -85,15 +129,13 @@ fun AddScreenContent(
             OutlinedTextField(
                 value = url,
                 onValueChange = { url = it },
-                label = { Text("Paste a URL...") },
+                placeholder = { Text("Paste a URL...") },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
-                shape = RoundedCornerShape(8.dp),
+                shape = RoundedCornerShape(24.dp),
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = MaterialTheme.colorScheme.onSurface,
-                    unfocusedBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
-                    focusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                    unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant
+                    unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
+                    focusedBorderColor = MaterialTheme.colorScheme.primary
                 )
             )
 
@@ -106,7 +148,6 @@ fun AddScreenContent(
                     onClick = {
                         if (url.isNotBlank()) {
                             onDownloadClick(url)
-                            onArticleAdded()
                         }
                     },
                     modifier = Modifier
@@ -138,7 +179,6 @@ fun AddScreenContent(
                     onClick = {
                         if (url.isNotBlank()) {
                             onSubscribeClick(url)
-                            onArticleAdded()
                         }
                     },
                     modifier = Modifier
@@ -157,7 +197,7 @@ fun AddScreenContent(
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = "Subscribe to feed",
+                            text = "Add feed",
                             style = MaterialTheme.typography.labelLarge,
                             textAlign = TextAlign.Center
                         )
@@ -170,7 +210,6 @@ fun AddScreenContent(
             Button(
                 onClick = {
                     onUploadClick()
-                    onArticleAdded()
                 },
                 modifier = Modifier
                     .fillMaxWidth()
