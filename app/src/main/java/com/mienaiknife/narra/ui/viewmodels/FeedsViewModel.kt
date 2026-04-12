@@ -20,6 +20,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mienaiknife.narra.data.local.dao.FeedDao
 import com.mienaiknife.narra.data.local.entities.FeedEntity
+import com.mienaiknife.narra.domain.repository.ContentRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -29,7 +30,8 @@ import javax.inject.Inject
 
 @HiltViewModel
 class FeedsViewModel @Inject constructor(
-    private val feedDao: FeedDao
+    private val feedDao: FeedDao,
+    private val repository: ContentRepository
 ) : ViewModel() {
 
     val feeds: StateFlow<List<FeedEntity>> = feedDao.getAllFeeds()
@@ -42,6 +44,12 @@ class FeedsViewModel @Inject constructor(
     fun deleteFeed(feed: FeedEntity) {
         viewModelScope.launch {
             feedDao.deleteFeedByUrl(feed.url)
+        }
+    }
+
+    fun refresh() {
+        viewModelScope.launch {
+            repository.refreshFeeds()
         }
     }
 }

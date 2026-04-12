@@ -131,7 +131,14 @@ class PlaybackManager @Inject constructor(
             _currentWordRange.value = null
             
             ttsPlayer.speak(article, paragraphs)
+            ttsPlayer.play()
         }
+    }
+
+    fun stop() {
+        ttsPlayer.pause()
+        _currentArticle.value = null
+        _isPlaying.value = false
     }
 
     fun togglePlayPause() {

@@ -73,7 +73,9 @@ fun HistoryScreen(
         onBackClick = { navController.popBackStack() },
         onAddToQueue = { viewModel.addToQueue(it) },
         onArticleClick = { articleId -> navController.navigate("reader/$articleId") },
-        onClearHistory = { viewModel.clearHistory() }
+        onMarkAsPlayedClick = { viewModel.togglePlayedStatus(it) },
+        onClearHistory = { viewModel.clearHistory() },
+        onRefresh = { viewModel.refresh() }
     )
 }
 
@@ -83,7 +85,9 @@ fun HistoryScreenContent(
     onBackClick: () -> Unit,
     onAddToQueue: (Article) -> Unit,
     onArticleClick: (String) -> Unit = {},
-    onClearHistory: () -> Unit = {}
+    onMarkAsPlayedClick: (Article) -> Unit = {},
+    onClearHistory: () -> Unit = {},
+    onRefresh: () -> Unit = {}
 ) {
     var showMenu by remember { mutableStateOf(false) }
 
@@ -140,7 +144,10 @@ fun HistoryScreenContent(
                     )
                     DropdownMenuItem(
                         text = { Text("Refresh") },
-                        onClick = { showMenu = false },
+                        onClick = {
+                            showMenu = false
+                            onRefresh()
+                        },
                         leadingIcon = { Icon(Icons.Default.Refresh, contentDescription = null) }
                     )
                     DropdownMenuItem(
@@ -169,6 +176,7 @@ fun HistoryScreenContent(
                     modifier = Modifier.animateItem(),
                     onItemClick = { onArticleClick(article.id) },
                     onPlayPauseClick = { onAddToQueue(article) },
+                    onMarkAsPlayedClick = { onMarkAsPlayedClick(article) },
                     onReorderClick = { /* No reorder in history */ }
                 )
             }

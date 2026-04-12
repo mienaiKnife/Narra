@@ -17,25 +17,26 @@
 package com.mienaiknife.narra.ui.components
 
 import android.content.res.Configuration
-import androidx.compose.animation.animateColorAsState
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.PlaylistAdd
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DragIndicator
-import androidx.compose.material.icons.filled.PauseCircleOutline
-import androidx.compose.material.icons.filled.PlayCircleOutline
+import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -48,7 +49,6 @@ import com.mienaiknife.narra.data.models.SampleArticles
 import com.mienaiknife.narra.ui.theme.NarraTheme
 import com.mienaiknife.narra.utils.DateUtils
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun QueueItem(
     article: Article,
@@ -57,71 +57,85 @@ fun QueueItem(
     onItemClick: () -> Unit = {},
     onPlayPauseClick: () -> Unit = {},
     onRemoveClick: () -> Unit = {},
+    onAddToQueueClick: () -> Unit = {},
+    onMarkAsPlayedClick: () -> Unit = {},
     onReorderClick: () -> Unit = {}
 ) {
-    if (article.isInQueue) {
-        val dismissState = rememberSwipeToDismissBoxState()
+    var showMenu by remember { mutableStateOf(false) }
 
-        val isDismissed = dismissState.currentValue == SwipeToDismissBoxValue.StartToEnd
-        LaunchedEffect(isDismissed) {
-            if (isDismissed) {
-                onRemoveClick()
-            }
-        }
-
-        SwipeToDismissBox(
-            state = dismissState,
-            modifier = modifier,
-            enableDismissFromStartToEnd = true,
-            enableDismissFromEndToStart = false,
-            backgroundContent = {
-                val color by animateColorAsState(
-                    when (dismissState.targetValue) {
-                        SwipeToDismissBoxValue.StartToEnd -> MaterialTheme.colorScheme.errorContainer
-                        else -> Color.Transparent
-                    }, label = "dismissBackground"
-                )
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(color)
-                        .padding(horizontal = 16.dp),
-                    contentAlignment = Alignment.CenterStart
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Delete,
-                        contentDescription = "Remove",
-                        tint = MaterialTheme.colorScheme.onErrorContainer
-                    )
-                }
-            }
-        ) {
-            QueueItemRow(
-                article = article,
-                isPlaying = isPlaying,
-                onItemClick = onItemClick,
-                onPlayPauseClick = onPlayPauseClick,
-                onReorderClick = onReorderClick
-            )
-        }
-    } else {
+    Box(modifier = modifier) {
         QueueItemRow(
             article = article,
             isPlaying = isPlaying,
-            modifier = modifier,
             onItemClick = onItemClick,
+            onLongClick = { showMenu = true },
             onPlayPauseClick = onPlayPauseClick,
             onReorderClick = onReorderClick
         )
+
+        DropdownMenu(
+            expanded = showMenu,
+            onDismissRequest = { showMenu = false }
+        ) {
+            DropdownMenuItem(
+                text = {
+                    Text(
+                        if (article.progress == 1f) "Mark as unplayed"
+                        else "Mark as played"
+                    )
+                },
+                onClick = {
+                    onMarkAsPlayedClick()
+                    showMenu = false
+                },
+                leadingIcon = {
+                    Icon(
+                        imageVector = Icons.Default.CheckCircle,
+                        contentDescription = null
+                    )
+                }
+            )
+            if (article.isInQueue) {
+                DropdownMenuItem(
+                    text = { Text("Remove from queue") },
+                    onClick = {
+                        onRemoveClick()
+                        showMenu = false
+                    },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.Default.Delete,
+                            contentDescription = null
+                        )
+                    }
+                )
+            } else {
+                DropdownMenuItem(
+                    text = { Text("Add to queue") },
+                    onClick = {
+                        onAddToQueueClick()
+                        showMenu = false
+                    },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Outlined.PlaylistAdd,
+                            contentDescription = null
+                        )
+                    }
+                )
+            }
+        }
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun QueueItemRow(
     article: Article,
     isPlaying: Boolean,
     modifier: Modifier = Modifier,
     onItemClick: () -> Unit = {},
+    onLongClick: () -> Unit = {},
     onPlayPauseClick: () -> Unit = {},
     onReorderClick: () -> Unit = {}
 ) {
@@ -129,21 +143,28 @@ private fun QueueItemRow(
         modifier = modifier
             .fillMaxWidth()
             .background(MaterialTheme.colorScheme.background)
-            .clickable { onItemClick() },
+            .combinedClickable(
+                onClick = onItemClick,
+                onLongClick = onLongClick
+            ),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Box(
-            modifier = Modifier
-                .size(width = 32.dp, height = 48.dp)
-                .clickable(onClick = onReorderClick),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = Icons.Default.DragIndicator,
-                contentDescription = "Reorder",
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(24.dp)
-            )
+        if (article.isInQueue) {
+            Box(
+                modifier = Modifier
+                    .size(width = 32.dp, height = 48.dp)
+                    .clickable(onClick = onReorderClick),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.DragIndicator,
+                    contentDescription = "Reorder",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+        } else {
+            Spacer(modifier = Modifier.width(16.dp))
         }
 
         // Thumbnail Placeholder
@@ -245,32 +266,30 @@ private fun QueueItemRow(
 
         Spacer(modifier = Modifier.width(8.dp))
 
-        IconButton(onClick = onPlayPauseClick) {
-            if (!article.isInQueue) {
-                Box(
-                    modifier = Modifier
-                        .size(42.dp)
-                        .border(
-                            width = 1.5.dp,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            shape = CircleShape
-                        ),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Outlined.PlaylistAdd,
-                        contentDescription = "Add to playlist",
-                        modifier = Modifier.size(24.dp),
-                        tint = MaterialTheme.colorScheme.onSurface
-                    )
-                }
-            } else {
-                val icon = if (isPlaying) Icons.Default.PauseCircleOutline else Icons.Default.PlayCircleOutline
-                val contentDescription = if (isPlaying) "Pause" else "Play"
+        IconButton(
+            onClick = onPlayPauseClick,
+            modifier = Modifier.padding(end = 8.dp)
+        ) {
+            val (icon, contentDescription) = when {
+                !article.isInQueue -> Icons.AutoMirrored.Outlined.PlaylistAdd to "Add to playlist"
+                isPlaying -> Icons.Default.Pause to "Pause"
+                else -> Icons.Default.PlayArrow to "Play"
+            }
+
+            Box(
+                modifier = Modifier
+                    .size(42.dp)
+                    .border(
+                        width = 1.5.dp,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        shape = CircleShape
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
                 Icon(
                     imageVector = icon,
                     contentDescription = contentDescription,
-                    modifier = Modifier.size(48.dp),
+                    modifier = Modifier.size(24.dp),
                     tint = MaterialTheme.colorScheme.onSurface
                 )
             }

@@ -20,6 +20,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mienaiknife.narra.data.models.Article
 import com.mienaiknife.narra.domain.repository.ContentRepository
+import com.mienaiknife.narra.playback.PlaybackManager
+import com.mienaiknife.narra.ui.utils.HtmlParser
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -29,8 +31,12 @@ import javax.inject.Inject
 
 @HiltViewModel
 class InboxViewModel @Inject constructor(
-    private val repository: ContentRepository
+    private val repository: ContentRepository,
+    private val playbackManager: PlaybackManager
 ) : ViewModel() {
+
+    val currentArticle = playbackManager.currentArticle
+    val isPlaying = playbackManager.isPlaying
 
     val articles: StateFlow<List<Article>> = repository.getInboxArticles()
         .stateIn(
@@ -38,6 +44,19 @@ class InboxViewModel @Inject constructor(
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = emptyList()
         )
+
+    fun onPlayPauseClick(article: Article) {
+        if (!article.isInQueue) {
+            addToQueue(article)
+        } else {
+            if (currentArticle.value?.id == article.id) {
+                playbackManager.togglePlayPause()
+            } else {
+                val paragraphs = HtmlParser.parse(article.content).map { it.text.toString() }
+                playbackManager.setCurrentArticle(article, paragraphs)
+            }
+        }
+    }
 
     init {
         refresh()
@@ -52,6 +71,13 @@ class InboxViewModel @Inject constructor(
     fun addToQueue(article: Article) {
         viewModelScope.launch {
             repository.addToQueue(article.id)
+        }
+    }
+
+    fun togglePlayedStatus(article: Article) {
+        viewModelScope.launch {
+            val newProgress = if (article.progress == 1f) 0f else 1f
+            repository.updateArticleProgress(article.id, newProgress, 0, 0)
         }
     }
 

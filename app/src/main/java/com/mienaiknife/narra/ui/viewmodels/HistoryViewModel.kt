@@ -20,6 +20,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mienaiknife.narra.data.models.Article
 import com.mienaiknife.narra.domain.repository.ContentRepository
+import com.mienaiknife.narra.playback.PlaybackManager
+import com.mienaiknife.narra.ui.utils.HtmlParser
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -29,8 +31,12 @@ import javax.inject.Inject
 
 @HiltViewModel
 class HistoryViewModel @Inject constructor(
-    private val repository: ContentRepository
+    private val repository: ContentRepository,
+    private val playbackManager: PlaybackManager
 ) : ViewModel() {
+
+    val currentArticle = playbackManager.currentArticle
+    val isPlaying = playbackManager.isPlaying
 
     val articles: StateFlow<List<Article>> = repository.getHistoryArticles()
         .stateIn(
@@ -39,15 +45,45 @@ class HistoryViewModel @Inject constructor(
             initialValue = emptyList()
         )
 
+    fun onPlayPauseClick(article: Article) {
+        if (!article.isInQueue) {
+            addToQueue(article)
+        } else {
+            if (currentArticle.value?.id == article.id) {
+                playbackManager.togglePlayPause()
+            } else {
+                val paragraphs = HtmlParser.parse(article.content).map { it.text.toString() }
+                playbackManager.setCurrentArticle(article, paragraphs)
+            }
+        }
+    }
+
     fun addToQueue(article: Article) {
         viewModelScope.launch {
             repository.addToQueue(article.id)
         }
     }
 
+    fun togglePlayedStatus(article: Article) {
+        viewModelScope.launch {
+            if (article.progress == 1f) {
+                repository.markAsUnplayed(article.id)
+                repository.addToQueue(article.id)
+            } else {
+                repository.markAsFinished(article.id)
+            }
+        }
+    }
+
     fun clearHistory() {
         viewModelScope.launch {
             repository.clearHistory()
+        }
+    }
+
+    fun refresh() {
+        viewModelScope.launch {
+            repository.refreshFeeds()
         }
     }
 }

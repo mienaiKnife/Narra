@@ -157,13 +157,29 @@ class ContentRepositoryImpl(
         articleDao.clearQueue()
     }
 
+    override suspend fun markAsFinished(id: String) {
+        articleDao.markAsFinished(id)
+    }
+
+    override suspend fun markAsPlayed(id: String) {
+        articleDao.markAsPlayed(id)
+    }
+
+    override suspend fun markAsUnplayed(id: String) {
+        articleDao.markAsUnplayed(id)
+    }
+
     override suspend fun updateArticleProgress(id: String, progress: Float, paragraphIndex: Int, wordOffset: Int) {
-        articleDao.getArticleById(id)?.let { article ->
-            articleDao.insertArticle(article.copy(
-                progress = progress,
-                currentParagraphIndex = paragraphIndex,
-                currentWordOffset = wordOffset
-            ))
+        if (progress >= 1f) {
+            articleDao.markAsFinished(id)
+        } else {
+            articleDao.getArticleById(id)?.let { article ->
+                articleDao.insertArticle(article.copy(
+                    progress = progress,
+                    currentParagraphIndex = paragraphIndex,
+                    currentWordOffset = wordOffset
+                ))
+            }
         }
     }
 

@@ -62,6 +62,34 @@ class QueueViewModel @Inject constructor(
         }
     }
 
+    fun togglePlayedStatus(article: Article) {
+        viewModelScope.launch {
+            if (article.progress == 1f) {
+                repository.markAsUnplayed(article.id)
+                repository.addToQueue(article.id)
+            } else {
+                val isCurrentlyPlaying = currentArticle.value?.id == article.id
+                val nextArticle = if (isCurrentlyPlaying) {
+                    val currentList = articles.value
+                    val currentIndex = currentList.indexOfFirst { it.id == article.id }
+                    if (currentIndex != -1 && currentIndex < currentList.size - 1) {
+                        currentList[currentIndex + 1]
+                    } else null
+                } else null
+
+                repository.markAsPlayed(article.id)
+
+                if (isCurrentlyPlaying) {
+                    if (nextArticle != null) {
+                        onPlayPauseClick(nextArticle)
+                    } else {
+                        playbackManager.stop()
+                    }
+                }
+            }
+        }
+    }
+
     fun addToQueue(articleId: String) {
         viewModelScope.launch {
             repository.addToQueue(articleId)
@@ -77,6 +105,12 @@ class QueueViewModel @Inject constructor(
     fun reorderQueue(fromIndex: Int, toIndex: Int) {
         viewModelScope.launch {
             repository.reorderQueue(fromIndex, toIndex)
+        }
+    }
+
+    fun refresh() {
+        viewModelScope.launch {
+            repository.refreshFeeds()
         }
     }
 }

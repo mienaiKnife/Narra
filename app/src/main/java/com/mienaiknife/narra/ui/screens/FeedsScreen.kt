@@ -24,6 +24,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -52,7 +53,8 @@ fun FeedsScreen(
     FeedsScreenContent(
         feeds = feeds,
         onBackClick = { navController.popBackStack() },
-        onDeleteFeed = { viewModel.deleteFeed(it) }
+        onDeleteFeed = { viewModel.deleteFeed(it) },
+        onRefresh = { viewModel.refresh() }
     )
 }
 
@@ -60,7 +62,8 @@ fun FeedsScreen(
 fun FeedsScreenContent(
     feeds: List<FeedEntity>,
     onBackClick: () -> Unit,
-    onDeleteFeed: (FeedEntity) -> Unit = {}
+    onDeleteFeed: (FeedEntity) -> Unit = {},
+    onRefresh: () -> Unit = {}
 ) {
     var showMenu by remember { mutableStateOf(false) }
 
@@ -116,9 +119,17 @@ fun FeedsScreenContent(
                         leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) }
                     )
                     DropdownMenuItem(
-                        text = { Text("Add Feed") },
+                        text = { Text("Sort") },
                         onClick = { showMenu = false },
-                        leadingIcon = { Icon(Icons.Default.Add, contentDescription = null) }
+                        leadingIcon = { Icon(Icons.AutoMirrored.Filled.Sort, contentDescription = null) }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Refresh") },
+                        onClick = {
+                            showMenu = false
+                            onRefresh()
+                        },
+                        leadingIcon = { Icon(Icons.Default.Refresh, contentDescription = null) }
                     )
                 }
             }
@@ -217,7 +228,7 @@ fun FeedItem(
         }
 
         // Notification icon on the right
-        IconButton(onClick = { /* Toggle notifications */ }) {
+        IconButton(onClick = { /* TODO: Implement feed notifications */ }) {
             Icon(
                 imageVector = Icons.Default.NotificationsNone,
                 contentDescription = "Notifications",

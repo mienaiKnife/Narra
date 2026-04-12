@@ -35,5 +35,8 @@ interface ContentRepository {
     suspend fun reorderQueue(fromIndex: Int, toIndex: Int)
     suspend fun subscribeToFeed(url: String): Result<String>
     suspend fun refreshFeeds()
+    suspend fun markAsFinished(id: String)
+    suspend fun markAsPlayed(id: String)
+    suspend fun markAsUnplayed(id: String)
     suspend fun updateArticleProgress(id: String, progress: Float, paragraphIndex: Int, wordOffset: Int)
 }

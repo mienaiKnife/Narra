@@ -101,6 +101,7 @@ fun QueueScreen(
                 isPlaying = isPlaying,
                 onArticleClick = onArticleClick,
                 onPlayPauseClick = { article -> viewModel.onPlayPauseClick(article) },
+                onMarkAsPlayedClick = { article -> viewModel.togglePlayedStatus(article) },
                 onRemoveFromQueue = { article ->
                     viewModel.removeFromQueue(article)
                     scope.launch {
@@ -116,6 +117,7 @@ fun QueueScreen(
                 },
                 onHistoryClick = { navController.navigate("history") },
                 onClearQueue = { viewModel.clearQueue() },
+                onRefresh = { viewModel.refresh() },
                 onReorder = { from, to -> viewModel.reorderQueue(from, to) }
             )
         }
@@ -129,9 +131,11 @@ fun QueueScreenContent(
     isPlaying: Boolean = false,
     onArticleClick: (String) -> Unit = {},
     onPlayPauseClick: (Article) -> Unit = {},
+    onMarkAsPlayedClick: (Article) -> Unit = {},
     onRemoveFromQueue: (Article) -> Unit = {},
     onHistoryClick: () -> Unit = {},
     onClearQueue: () -> Unit = {},
+    onRefresh: () -> Unit = {},
     onReorder: (Int, Int) -> Unit = { _, _ -> }
 ) {
     var showMenu by remember { mutableStateOf(false) }
@@ -185,7 +189,10 @@ fun QueueScreenContent(
                     )
                     DropdownMenuItem(
                         text = { Text("Refresh") },
-                        onClick = { showMenu = false },
+                        onClick = {
+                            showMenu = false
+                            onRefresh()
+                        },
                         leadingIcon = { Icon(Icons.Default.Refresh, contentDescription = null) }
                     )
                     DropdownMenuItem(
@@ -287,6 +294,9 @@ fun QueueScreenContent(
                     },
                     onPlayPauseClick = {
                         onPlayPauseClick(article)
+                    },
+                    onMarkAsPlayedClick = {
+                        onMarkAsPlayedClick(article)
                     },
                     onRemoveClick = { onRemoveFromQueue(article) },
                     onReorderClick = { /* Handled by long press on the whole item for now */ }

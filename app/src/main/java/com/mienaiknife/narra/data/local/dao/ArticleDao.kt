@@ -53,11 +53,17 @@ interface ArticleDao {
     @Query("UPDATE articles SET isInQueue = 0 WHERE id = :id")
     suspend fun removeFromQueue(id: String)
 
-    @Query("UPDATE articles SET isInQueue = 1 WHERE id = :id")
+    @Query("UPDATE articles SET isInQueue = 1, finishedAt = NULL WHERE id = :id")
     suspend fun addToQueue(id: String)
 
-    @Query("UPDATE articles SET isInQueue = 0, finishedAt = :finishedAt WHERE id = :id")
+    @Query("UPDATE articles SET isInQueue = 0, progress = 1.0, finishedAt = :finishedAt WHERE id = :id")
     suspend fun markAsFinished(id: String, finishedAt: Long = System.currentTimeMillis())
+
+    @Query("UPDATE articles SET isInQueue = 0, progress = 1.0, finishedAt = NULL WHERE id = :id")
+    suspend fun markAsPlayed(id: String)
+
+    @Query("UPDATE articles SET progress = 0.0, finishedAt = NULL WHERE id = :id")
+    suspend fun markAsUnplayed(id: String)
 
     @Query("DELETE FROM articles WHERE isInQueue = 0 AND finishedAt IS NOT NULL")
     suspend fun clearHistory()

@@ -50,6 +50,7 @@ fun InboxScreen(
         articles = articles,
         onAddToQueue = { viewModel.addToQueue(it) },
         onArticleClick = { articleId -> navController.navigate("reader/$articleId") },
+        onMarkAsPlayedClick = { viewModel.togglePlayedStatus(it) },
         onClearInbox = { viewModel.clearInbox() },
         onRefresh = { viewModel.refresh() },
         onSortArticles = { /* TODO: Implement sort */ },
@@ -62,6 +63,7 @@ fun InboxScreenContent(
     articles: List<Article>,
     onAddToQueue: (Article) -> Unit,
     onArticleClick: (String) -> Unit = {},
+    onMarkAsPlayedClick: (Article) -> Unit = {},
     onClearInbox: () -> Unit = {},
     onRefresh: () -> Unit = {},
     onSortArticles: () -> Unit = {},
@@ -172,6 +174,8 @@ fun InboxScreenContent(
                         modifier = Modifier.animateItem(),
                         onItemClick = { onArticleClick(article.id) },
                         onPlayPauseClick = { onAddToQueue(article) },
+                        onAddToQueueClick = { onAddToQueue(article) },
+                        onMarkAsPlayedClick = { onMarkAsPlayedClick(article) },
                         onReorderClick = { /* No reorder in inbox */ }
                     )
                 }
