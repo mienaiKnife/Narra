@@ -26,7 +26,7 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface ArticleDao {
-    @Query("SELECT * FROM articles WHERE isInQueue = 1 ORDER BY queueOrder ASC, COALESCE(publishedTimestamp, createdAt) DESC")
+    @Query("SELECT * FROM articles WHERE isInQueue = 1 AND progress < 1.0 ORDER BY queueOrder ASC, COALESCE(publishedTimestamp, createdAt) ASC")
     fun getQueueArticles(): Flow<List<ArticleEntity>>
 
     @Query("SELECT * FROM articles WHERE isInQueue = 0 AND finishedAt IS NOT NULL ORDER BY finishedAt DESC")
@@ -37,6 +37,12 @@ interface ArticleDao {
 
     @Query("SELECT * FROM articles WHERE isFromFeed = 1 AND isInQueue = 0 ORDER BY COALESCE(publishedTimestamp, createdAt) DESC")
     fun getInboxArticles(): Flow<List<ArticleEntity>>
+
+    @Query("SELECT * FROM articles WHERE isFavorite = 1 ORDER BY createdAt DESC")
+    fun getFavoriteArticles(): Flow<List<ArticleEntity>>
+
+    @Query("SELECT * FROM articles WHERE source = :source ORDER BY COALESCE(publishedTimestamp, createdAt) DESC")
+    fun getArticlesBySource(source: String): Flow<List<ArticleEntity>>
 
     @Query("SELECT * FROM articles WHERE id = :id")
     suspend fun getArticleById(id: String): ArticleEntity?
@@ -50,19 +56,22 @@ interface ArticleDao {
     @Query("DELETE FROM articles WHERE id = :id")
     suspend fun deleteArticleById(id: String)
 
-    @Query("UPDATE articles SET isInQueue = 0 WHERE id = :id")
+    @Query("UPDATE articles SET isInQueue = 0, content = NULL WHERE id = :id")
     suspend fun removeFromQueue(id: String)
 
-    @Query("UPDATE articles SET isInQueue = 1, finishedAt = NULL WHERE id = :id")
+    @Query("SELECT COALESCE(MAX(queueOrder), -1) + 1 FROM articles WHERE isInQueue = 1")
+    suspend fun getNextQueueOrder(): Int
+
+    @Query("UPDATE articles SET isInQueue = 1, queueOrder = (SELECT COALESCE(MAX(queueOrder), -1) + 1 FROM articles WHERE isInQueue = 1), finishedAt = NULL, progress = (CASE WHEN progress >= 1.0 THEN 0.0 ELSE progress END), currentParagraphIndex = (CASE WHEN progress >= 1.0 THEN 0 ELSE currentParagraphIndex END), currentWordOffset = (CASE WHEN progress >= 1.0 THEN 0 ELSE currentWordOffset END) WHERE id = :id")
     suspend fun addToQueue(id: String)
 
-    @Query("UPDATE articles SET isInQueue = 0, progress = 1.0, finishedAt = :finishedAt WHERE id = :id")
+    @Query("UPDATE articles SET isInQueue = 0, progress = 1.0, finishedAt = :finishedAt, content = NULL WHERE id = :id")
     suspend fun markAsFinished(id: String, finishedAt: Long = System.currentTimeMillis())
 
-    @Query("UPDATE articles SET isInQueue = 0, progress = 1.0, finishedAt = NULL WHERE id = :id")
+    @Query("UPDATE articles SET isInQueue = 0, progress = 1.0, finishedAt = NULL, content = NULL WHERE id = :id")
     suspend fun markAsPlayed(id: String)
 
-    @Query("UPDATE articles SET progress = 0.0, finishedAt = NULL WHERE id = :id")
+    @Query("UPDATE articles SET progress = 0.0, finishedAt = NULL, currentParagraphIndex = 0, currentWordOffset = 0 WHERE id = :id")
     suspend fun markAsUnplayed(id: String)
 
     @Query("DELETE FROM articles WHERE isInQueue = 0 AND finishedAt IS NOT NULL")
@@ -71,9 +80,12 @@ interface ArticleDao {
     @Query("DELETE FROM articles WHERE isInQueue = 0 AND isFromFeed = 1")
     suspend fun clearInbox()
 
-    @Query("UPDATE articles SET isInQueue = 0")
+    @Query("UPDATE articles SET isInQueue = 0, content = NULL")
     suspend fun clearQueue()
 
     @Update
     suspend fun updateArticles(articles: List<ArticleEntity>)
+
+    @Query("UPDATE articles SET isFavorite = NOT isFavorite WHERE id = :id")
+    suspend fun toggleFavorite(id: String)
 }

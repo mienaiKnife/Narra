@@ -23,6 +23,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -39,7 +40,6 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -66,8 +66,13 @@ fun HomeScreen(
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val articles by viewModel.articles.collectAsState()
+    val inboxArticles by viewModel.inboxArticles.collectAsState()
+    val favoriteArticles by viewModel.favoriteArticles.collectAsState()
+
     HomeScreenContent(
         articles = articles,
+        inboxArticles = inboxArticles,
+        favoriteArticles = favoriteArticles,
         onArticleClick = onArticleClick
     )
 }
@@ -75,6 +80,8 @@ fun HomeScreen(
 @Composable
 fun HomeScreenContent(
     articles: List<Article>,
+    inboxArticles: List<Article>,
+    favoriteArticles: List<Article>,
     onArticleClick: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -91,18 +98,21 @@ fun HomeScreenContent(
         Text(
             text = "Home",
             style = MaterialTheme.typography.headlineLarge,
-            modifier = Modifier.padding(horizontal = 16.dp)
+            modifier = Modifier.padding(horizontal = 16.dp),
+            color = MaterialTheme.colorScheme.onBackground
         )
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        if (articles.isNotEmpty()) {
+        if (articles.isNotEmpty() || inboxArticles.isNotEmpty() || favoriteArticles.isNotEmpty()) {
             val continueListening = articles
-                .filter { (it.progress ?: 0f) < 1f }
+                .filter { (it.progress ?: 0f) > 0f && (it.progress ?: 0f) < 1f }
                 .sortedByDescending { it.publishedTimestamp ?: 0L }
                 .take(10)
-            val newFromFeeds = articles.filter { it.isFromFeed && (it.progress ?: 0f) == 0f }.take(10)
-            val favorites = articles.filter { it.isFavorite }.take(10)
+            val newFromFeeds = inboxArticles
+                .sortedByDescending { it.publishedTimestamp ?: 0L }
+                .take(5)
+            val favorites = favoriteArticles.take(10)
 
             if (continueListening.isNotEmpty()) {
                 ArticleCarousel(
@@ -134,7 +144,8 @@ fun HomeScreenContent(
             Text(
                 text = "No texts yet. Add some from the Add screen!",
                 modifier = Modifier.padding(16.dp),
-                style = MaterialTheme.typography.bodyLarge
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
 
@@ -153,7 +164,8 @@ fun ArticleCarousel(
         Text(
             text = title,
             style = MaterialTheme.typography.titleLarge,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+            color = MaterialTheme.colorScheme.onBackground
         )
         LazyRow(
             contentPadding = PaddingValues(horizontal = 16.dp),
@@ -258,6 +270,8 @@ fun HomeScreenPreview() {
             Box(modifier = Modifier.padding(innerPadding)) {
                 HomeScreenContent(
                     articles = mockArticles,
+                    inboxArticles = mockArticles.filter { it.isFromFeed },
+                    favoriteArticles = mockArticles.filter { it.isFavorite },
                     onArticleClick = {}
                 )
             }
@@ -265,19 +279,3 @@ fun HomeScreenPreview() {
     }
 }
 
-@Preview(
-    uiMode = Configuration.UI_MODE_NIGHT_YES,
-    showBackground = true,
-    backgroundColor = 0xFF191919
-)
-@Composable
-fun ArticleCardPreview() {
-    NarraTheme(darkTheme = true, dynamicColor = false) {
-        Surface {
-            ArticleCard(
-                article = SampleArticles.sampleArticle1,
-                onClick = {}
-            )
-        }
-    }
-}

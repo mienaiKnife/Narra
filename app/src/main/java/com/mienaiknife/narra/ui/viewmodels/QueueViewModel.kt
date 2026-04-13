@@ -22,9 +22,14 @@ import com.mienaiknife.narra.data.models.Article
 import com.mienaiknife.narra.domain.repository.ContentRepository
 import com.mienaiknife.narra.playback.PlaybackManager
 import com.mienaiknife.narra.ui.utils.HtmlParser
+import com.mienaiknife.narra.data.models.SortOption
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -35,17 +40,88 @@ class QueueViewModel @Inject constructor(
     private val playbackManager: PlaybackManager
 ) : ViewModel() {
 
+    private val _isRefreshing = MutableStateFlow(false)
+    val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
+
+    private val _sortOption = MutableStateFlow(SortOption.MANUAL)
+    val sortOption: StateFlow<SortOption> = _sortOption.asStateFlow()
+
+    private val _keepSorted = MutableStateFlow(false)
+    val keepSorted: StateFlow<Boolean> = _keepSorted.asStateFlow()
+
     val currentArticle = playbackManager.currentArticle
     val isPlaying = playbackManager.isPlaying
 
     // For now, the queue is just all articles. 
     // In the future, this might filter for a specific "queue" status.
-    val articles: StateFlow<List<Article>> = repository.getQueueArticles()
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
-            initialValue = emptyList()
-        )
+    val articles: StateFlow<List<Article>> = combine(
+        repository.getQueueArticles(),
+        _sortOption,
+        _keepSorted
+    ) { articles, sort, keep ->
+        if (keep) {
+            when (sort) {
+                SortOption.MANUAL -> articles
+                SortOption.DATE_DESC -> articles.sortedByDescending { it.publishedTimestamp ?: 0L }
+                SortOption.DATE_ASC -> articles.sortedBy { it.publishedTimestamp ?: Long.MAX_VALUE }
+                SortOption.TITLE_ASC -> articles.sortedBy { it.title }
+                SortOption.TITLE_DESC -> articles.sortedByDescending { it.title }
+                SortOption.SOURCE_ASC -> articles.sortedBy { it.source }
+                SortOption.SOURCE_DESC -> articles.sortedByDescending { it.source }
+            }
+        } else {
+            articles
+        }
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = emptyList()
+    )
+
+    fun setSortOption(option: SortOption) {
+        val finalOption = if (_sortOption.value == option) {
+            when (option) {
+                SortOption.DATE_DESC -> SortOption.DATE_ASC
+                SortOption.DATE_ASC -> SortOption.DATE_DESC
+                SortOption.TITLE_ASC -> SortOption.TITLE_DESC
+                SortOption.TITLE_DESC -> SortOption.TITLE_ASC
+                SortOption.SOURCE_ASC -> SortOption.SOURCE_DESC
+                SortOption.SOURCE_DESC -> SortOption.SOURCE_ASC
+                SortOption.MANUAL -> SortOption.MANUAL
+            }
+        } else {
+            option
+        }
+        _sortOption.value = finalOption
+        if (!_keepSorted.value) {
+            viewModelScope.launch {
+                applyOneTimeSort(finalOption)
+            }
+        }
+    }
+
+    fun setKeepSorted(keep: Boolean) {
+        _keepSorted.value = keep
+        if (!keep) {
+            _sortOption.value = SortOption.MANUAL
+        }
+    }
+
+    private suspend fun applyOneTimeSort(option: SortOption) {
+        val currentArticles = repository.getQueueArticles().first()
+        val sortedArticles = when (option) {
+            SortOption.DATE_DESC -> currentArticles.sortedByDescending { it.publishedTimestamp ?: 0L }
+            SortOption.DATE_ASC -> currentArticles.sortedBy { it.publishedTimestamp ?: Long.MAX_VALUE }
+            SortOption.TITLE_ASC -> currentArticles.sortedBy { it.title }
+            SortOption.TITLE_DESC -> currentArticles.sortedByDescending { it.title }
+            SortOption.SOURCE_ASC -> currentArticles.sortedBy { it.source }
+            SortOption.SOURCE_DESC -> currentArticles.sortedByDescending { it.source }
+            SortOption.MANUAL -> currentArticles
+        }
+
+        // Apply this order to the database
+        repository.updateQueueOrder(sortedArticles.map { it.id })
+    }
 
     fun onPlayPauseClick(article: Article) {
         if (currentArticle.value?.id == article.id) {
@@ -104,13 +180,20 @@ class QueueViewModel @Inject constructor(
 
     fun reorderQueue(fromIndex: Int, toIndex: Int) {
         viewModelScope.launch {
+            _keepSorted.value = false
+            _sortOption.value = SortOption.MANUAL
             repository.reorderQueue(fromIndex, toIndex)
         }
     }
 
     fun refresh() {
         viewModelScope.launch {
-            repository.refreshFeeds()
+            _isRefreshing.value = true
+            try {
+                repository.refreshFeeds()
+            } finally {
+                _isRefreshing.value = false
+            }
         }
     }
 }

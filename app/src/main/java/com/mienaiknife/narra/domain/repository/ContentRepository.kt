@@ -23,7 +23,9 @@ interface ContentRepository {
     fun getQueueArticles(): Flow<List<Article>>
     fun getHistoryArticles(): Flow<List<Article>>
     fun getInboxArticles(): Flow<List<Article>>
+    fun getFavoriteArticles(): Flow<List<Article>>
     fun getAllArticles(): Flow<List<Article>>
+    fun getArticlesBySource(source: String): Flow<List<Article>>
     suspend fun getArticleById(id: String): Article?
     suspend fun downloadWebPage(url: String): Result<Article>
     suspend fun removeFromQueue(id: String)
@@ -33,10 +35,12 @@ interface ContentRepository {
     suspend fun clearInbox()
     suspend fun clearQueue()
     suspend fun reorderQueue(fromIndex: Int, toIndex: Int)
+    suspend fun updateQueueOrder(articleIds: List<String>)
     suspend fun subscribeToFeed(url: String): Result<String>
     suspend fun refreshFeeds()
     suspend fun markAsFinished(id: String)
     suspend fun markAsPlayed(id: String)
     suspend fun markAsUnplayed(id: String)
     suspend fun updateArticleProgress(id: String, progress: Float, paragraphIndex: Int, wordOffset: Int)
+    suspend fun toggleFavorite(id: String)
 }

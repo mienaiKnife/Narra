@@ -46,6 +46,12 @@ class ContentRepositoryImpl(
         }
     }
 
+    override fun getArticlesBySource(source: String): Flow<List<Article>> {
+        return articleDao.getArticlesBySource(source).map { entities ->
+            entities.map { it.toDomainModel() }
+        }
+    }
+
     override fun getQueueArticles(): Flow<List<Article>> {
         return articleDao.getQueueArticles().map { entities ->
             entities.map { it.toDomainModel() }
@@ -64,6 +70,12 @@ class ContentRepositoryImpl(
         }
     }
 
+    override fun getFavoriteArticles(): Flow<List<Article>> {
+        return articleDao.getFavoriteArticles().map { entities ->
+            entities.map { it.toDomainModel() }
+        }
+    }
+
     override suspend fun getArticleById(id: String): Article? {
         return articleDao.getArticleById(id)?.toDomainModel()
     }
@@ -76,9 +88,15 @@ class ContentRepositoryImpl(
                     return@withContext Result.failure(Exception("Article already in queue"))
                 } else {
                     // Move from history to queue
+                    val nextOrder = articleDao.getNextQueueOrder()
                     val updatedArticle = existingArticle.copy(
                         isInQueue = true,
-                        createdAt = System.currentTimeMillis() // Move to top of queue?
+                        queueOrder = nextOrder,
+                        createdAt = System.currentTimeMillis(),
+                        progress = if (existingArticle.progress >= 1f) 0f else existingArticle.progress,
+                        currentParagraphIndex = if (existingArticle.progress >= 1f) 0 else existingArticle.currentParagraphIndex,
+                        currentWordOffset = if (existingArticle.progress >= 1f) 0 else existingArticle.currentWordOffset,
+                        finishedAt = null
                     )
                     articleDao.insertArticle(updatedArticle)
                     return@withContext Result.success(updatedArticle.toDomainModel())
@@ -104,6 +122,7 @@ class ContentRepositoryImpl(
                     ?: doc.select("time[itemprop=datePublished]").attr("datetime").ifEmpty { null }
                     ?: doc.select("time").attr("datetime").ifEmpty { null }
 
+            val nextOrder = articleDao.getNextQueueOrder()
             val articleEntity = ArticleEntity(
                 id = UUID.randomUUID().toString(),
                 title = article.title ?: doc.title() ?: "Untitled",
@@ -114,6 +133,8 @@ class ContentRepositoryImpl(
                 url = url,
                 publishedAt = publishedAt,
                 publishedTimestamp = DateUtils.parseToTimestamp(publishedAt),
+                isInQueue = true,
+                queueOrder = nextOrder,
                 createdAt = System.currentTimeMillis()
             )
 
@@ -142,7 +163,12 @@ class ContentRepositoryImpl(
     }
 
     override suspend fun addToQueue(id: String) {
-        articleDao.addToQueue(id)
+        val article = articleDao.getArticleById(id)
+        if (article != null && article.content.isNullOrEmpty() && article.url != null) {
+            downloadWebPage(article.url)
+        } else {
+            articleDao.addToQueue(id)
+        }
     }
 
     override suspend fun clearHistory() {
@@ -167,6 +193,10 @@ class ContentRepositoryImpl(
 
     override suspend fun markAsUnplayed(id: String) {
         articleDao.markAsUnplayed(id)
+    }
+
+    override suspend fun toggleFavorite(id: String) {
+        articleDao.toggleFavorite(id)
     }
 
     override suspend fun updateArticleProgress(id: String, progress: Float, paragraphIndex: Int, wordOffset: Int) {
@@ -197,6 +227,19 @@ class ContentRepositoryImpl(
             article.copy(queueOrder = index)
         }
 
+        articleDao.updateArticles(updatedQueue)
+    }
+
+    override suspend fun updateQueueOrder(articleIds: List<String>) = withContext(Dispatchers.IO) {
+        val currentQueue = articleDao.getQueueArticles().first()
+        val updatedQueue = currentQueue.map { article ->
+            val newOrder = articleIds.indexOf(article.id)
+            if (newOrder != -1) {
+                article.copy(queueOrder = newOrder)
+            } else {
+                article
+            }
+        }
         articleDao.updateArticles(updatedQueue)
     }
 
@@ -281,8 +324,8 @@ class ContentRepositoryImpl(
                             id = UUID.randomUUID().toString(),
                             title = item.title ?: "Untitled",
                             source = feed.title,
-                            content = item.content ?: item.description,
-                            excerpt = item.description,
+                            content = null,
+                            excerpt = item.description ?: item.content,
                             imageUrl = item.image,
                             url = url,
                             publishedAt = item.pubDate,

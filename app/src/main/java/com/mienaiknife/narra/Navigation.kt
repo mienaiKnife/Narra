@@ -42,6 +42,7 @@ import androidx.navigation.navArgument
 import com.mienaiknife.narra.ui.components.BottomNavBar
 import com.mienaiknife.narra.ui.components.MiniPlayer
 import com.mienaiknife.narra.ui.screens.AddScreen
+import com.mienaiknife.narra.ui.screens.FeedArticlesScreen
 import com.mienaiknife.narra.ui.screens.FeedsScreen
 import com.mienaiknife.narra.ui.screens.HistoryScreen
 import com.mienaiknife.narra.ui.screens.HomeScreen
@@ -104,6 +105,12 @@ fun AppNavigation(themeViewModel: ThemeViewModel) {
                 )
             }
             composable("feeds")   { FeedsScreen(navController) }
+            composable(
+                "feed/{feedTitle}",
+                arguments = listOf(navArgument("feedTitle") { type = NavType.StringType })
+            ) {
+                FeedArticlesScreen(navController)
+            }
             composable("settings"){
                 SettingsScreen(
                     themeViewModel = themeViewModel,

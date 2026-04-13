@@ -21,10 +21,13 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -34,8 +37,11 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.compose.rememberNavController
 import com.mienaiknife.narra.data.models.Article
 import com.mienaiknife.narra.data.models.SampleArticles
+import com.mienaiknife.narra.data.models.SortOption
 import com.mienaiknife.narra.ui.components.BottomNavBar
+import com.mienaiknife.narra.ui.components.NarraScrollbar
 import com.mienaiknife.narra.ui.components.QueueItem
+import com.mienaiknife.narra.ui.components.SortBottomSheet
 import com.mienaiknife.narra.ui.theme.NarraTheme
 import com.mienaiknife.narra.ui.viewmodels.InboxViewModel
 
@@ -46,30 +52,47 @@ fun InboxScreen(
     viewModel: InboxViewModel = hiltViewModel()
 ) {
     val articles by viewModel.articles.collectAsState()
+    val isRefreshing by viewModel.isRefreshing.collectAsState()
+    val sortOption by viewModel.sortOption.collectAsState()
+
     InboxScreenContent(
         articles = articles,
+        isRefreshing = isRefreshing,
+        sortOption = sortOption,
         onAddToQueue = { viewModel.addToQueue(it) },
         onArticleClick = { articleId -> navController.navigate("reader/$articleId") },
         onMarkAsPlayedClick = { viewModel.togglePlayedStatus(it) },
         onClearInbox = { viewModel.clearInbox() },
         onRefresh = { viewModel.refresh() },
-        onSortArticles = { /* TODO: Implement sort */ },
+        onSortOptionSelected = { viewModel.setSortOption(it) },
         onEditFeeds = { navController.navigate("feeds") }
     )
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun InboxScreenContent(
     articles: List<Article>,
+    isRefreshing: Boolean = false,
+    sortOption: SortOption = SortOption.DATE_DESC,
     onAddToQueue: (Article) -> Unit,
     onArticleClick: (String) -> Unit = {},
     onMarkAsPlayedClick: (Article) -> Unit = {},
     onClearInbox: () -> Unit = {},
     onRefresh: () -> Unit = {},
-    onSortArticles: () -> Unit = {},
+    onSortOptionSelected: (SortOption) -> Unit = {},
     onEditFeeds: () -> Unit = {}
 ) {
     var showMenu by remember { mutableStateOf(false) }
+    var showSortSheet by remember { mutableStateOf(false) }
+
+    if (showSortSheet) {
+        SortBottomSheet(
+            selectedOption = sortOption,
+            onOptionSelected = onSortOptionSelected,
+            onDismissRequest = { showSortSheet = false }
+        )
+    }
 
     Column(
         modifier = Modifier
@@ -114,7 +137,7 @@ fun InboxScreenContent(
                         text = { Text("Sort") },
                         onClick = {
                             showMenu = false
-                            onSortArticles()
+                            showSortSheet = true
                         },
                         leadingIcon = { Icon(Icons.AutoMirrored.Filled.Sort, contentDescription = null) }
                     )
@@ -148,35 +171,49 @@ fun InboxScreenContent(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        if (articles.isEmpty()) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 16.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = "No new articles from your feeds.",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        } else {
-            LazyColumn(
-                modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(24.dp),
-                contentPadding = PaddingValues(bottom = 16.dp)
-            ) {
-                items(articles, key = { it.id }) { article ->
-                    QueueItem(
-                        article = article,
-                        isPlaying = false,
-                        modifier = Modifier.animateItem(),
-                        onItemClick = { onArticleClick(article.id) },
-                        onPlayPauseClick = { onAddToQueue(article) },
-                        onAddToQueueClick = { onAddToQueue(article) },
-                        onMarkAsPlayedClick = { onMarkAsPlayedClick(article) },
-                        onReorderClick = { /* No reorder in inbox */ }
+        PullToRefreshBox(
+            isRefreshing = isRefreshing,
+            onRefresh = onRefresh,
+            modifier = Modifier.weight(1f)
+        ) {
+            if (articles.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 16.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "No new articles from your feeds.",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            } else {
+                val scrollState = rememberLazyListState()
+                Box(modifier = Modifier.fillMaxSize()) {
+                    LazyColumn(
+                        state = scrollState,
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(24.dp),
+                        contentPadding = PaddingValues(bottom = 16.dp)
+                    ) {
+                        items(articles, key = { it.id }) { article ->
+                            QueueItem(
+                                article = article,
+                                isPlaying = false,
+                                modifier = Modifier.animateItem(),
+                                onItemClick = { onArticleClick(article.id) },
+                                onPlayPauseClick = { onAddToQueue(article) },
+                                onAddToQueueClick = { onAddToQueue(article) },
+                                onMarkAsPlayedClick = { onMarkAsPlayedClick(article) }
+                            )
+                        }
+                    }
+
+                    NarraScrollbar(
+                        lazyListState = scrollState,
+                        modifier = Modifier.align(Alignment.CenterEnd)
                     )
                 }
             }

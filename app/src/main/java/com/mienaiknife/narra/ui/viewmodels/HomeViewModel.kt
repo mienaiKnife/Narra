@@ -51,6 +51,20 @@ class HomeViewModel @Inject constructor(
             initialValue = emptyList()
         )
 
+    val inboxArticles: StateFlow<List<Article>> = repository.getInboxArticles()
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+        )
+
+    val favoriteArticles: StateFlow<List<Article>> = repository.getFavoriteArticles()
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+        )
+
     fun downloadArticle(url: String) {
         viewModelScope.launch {
             repository.downloadWebPage(url)

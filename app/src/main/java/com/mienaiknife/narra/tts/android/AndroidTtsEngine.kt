@@ -136,6 +136,22 @@ class AndroidTtsEngine @Inject constructor(
     }
 
     @Synchronized
+    override fun setAudioAttributes(usage: Int, contentType: Int) {
+        val attr = android.media.AudioAttributes.Builder()
+            .setUsage(usage)
+            .setContentType(contentType)
+            .build()
+        tts?.setAudioAttributes(attr)
+    }
+
+    @Synchronized
+    override fun setVolume(volume: Float) {
+        // TextToSpeech doesn't have a direct setVolume, 
+        // it uses the stream volume it's assigned to.
+        // We could use Bundle params in speak() but that's per-utterance.
+    }
+
+    @Synchronized
     override fun release() {
         pendingRequests.clear()
         tts?.stop()

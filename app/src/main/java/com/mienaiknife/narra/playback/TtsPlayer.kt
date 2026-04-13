@@ -16,7 +16,16 @@
 
 package com.mienaiknife.narra.playback
 
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
+import android.media.AudioFocusRequest
+import android.media.AudioManager
+import android.net.wifi.WifiManager
+import android.os.Build
 import android.os.Looper
+import android.os.PowerManager
 import android.view.Surface
 import android.view.SurfaceHolder
 import android.view.SurfaceView
@@ -39,6 +48,7 @@ import androidx.media3.common.util.Size
 import androidx.media3.common.util.UnstableApi
 import com.mienaiknife.narra.domain.TtsEngine
 import com.mienaiknife.narra.domain.TtsState
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -54,22 +64,155 @@ import javax.inject.Singleton
 @UnstableApi
 @Singleton
 class TtsPlayer @Inject constructor(
+    @ApplicationContext private val context: Context,
     private val ttsEngine: TtsEngine
 ) : BasePlayer() {
 
+    var onSkipNext: (() -> Unit)? = null
+    var onSkipPrevious: (() -> Unit)? = null
+
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private val listeners = mutableListOf<Player.Listener>()
+    private val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
     
     private var _playWhenReady = false
     private var _playbackState = STATE_IDLE
     private var _currentMediaItem: MediaItem? = null
     private var _playbackParameters = PlaybackParameters.DEFAULT
+    private var _playbackSuppressionReason = PLAYBACK_SUPPRESSION_REASON_NONE
+    private var _playerError: PlaybackException? = null
+    private var _handleAudioFocus = true
+    private var _volume = 1.0f
 
     private var paragraphs: List<String> = emptyList()
     private var currentParagraphIndex = -1
     private var currentWordRange: IntRange? = null
     private var resumeWordOffset = 0
     private var isEngineSpeaking = false
+
+    private val audioFocusChangeListener = AudioManager.OnAudioFocusChangeListener { focusChange ->
+        when (focusChange) {
+            AudioManager.AUDIOFOCUS_GAIN -> {
+                if (_playbackSuppressionReason != PLAYBACK_SUPPRESSION_REASON_NONE) {
+                    _playbackSuppressionReason = PLAYBACK_SUPPRESSION_REASON_NONE
+                    if (_playWhenReady) {
+                        resumeInternal()
+                    }
+                    notifySuppressionChanged()
+                }
+            }
+            AudioManager.AUDIOFOCUS_LOSS -> {
+                setPlayWhenReady(false)
+                abandonAudioFocusInternal()
+            }
+            AudioManager.AUDIOFOCUS_LOSS_TRANSIENT -> {
+                if (_playWhenReady && _playbackSuppressionReason == PLAYBACK_SUPPRESSION_REASON_NONE) {
+                    _playbackSuppressionReason = PLAYBACK_SUPPRESSION_REASON_TRANSIENT_AUDIO_FOCUS_LOSS
+                    pauseInternal()
+                    notifySuppressionChanged()
+                }
+            }
+            AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK -> {
+                // For speech, we usually want to pause instead of ducking, 
+                // but if we were to duck, we'd lower volume here.
+                // For Narra, we treat ducking as a transient loss.
+                if (_playWhenReady && _playbackSuppressionReason == PLAYBACK_SUPPRESSION_REASON_NONE) {
+                    _playbackSuppressionReason = PLAYBACK_SUPPRESSION_REASON_TRANSIENT_AUDIO_FOCUS_LOSS
+                    pauseInternal()
+                    notifySuppressionChanged()
+                }
+            }
+        }
+    }
+
+    private val noisyReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent?.action == AudioManager.ACTION_AUDIO_BECOMING_NOISY) {
+                pause()
+            }
+        }
+    }
+    private var isNoisyReceiverRegistered = false
+
+    private var focusRequest: AudioFocusRequest? = null
+    private var wakeLock: PowerManager.WakeLock? = null
+    private var wifiLock: WifiManager.WifiLock? = null
+
+    /**
+     * Requests audio focus. Returns the result code from AudioManager.
+     */
+    fun requestAudioFocus(): Int {
+        if (!_handleAudioFocus) return AudioManager.AUDIOFOCUS_REQUEST_GRANTED
+        
+        registerNoisyReceiver()
+        acquireLocks()
+
+        val usage = when (_audioAttributes.usage) {
+            androidx.media3.common.C.USAGE_MEDIA -> android.media.AudioAttributes.USAGE_MEDIA
+            androidx.media3.common.C.USAGE_ASSISTANCE_ACCESSIBILITY -> android.media.AudioAttributes.USAGE_ASSISTANCE_ACCESSIBILITY
+            else -> android.media.AudioAttributes.USAGE_MEDIA
+        }
+        val contentType = when (_audioAttributes.contentType) {
+            androidx.media3.common.C.AUDIO_CONTENT_TYPE_SPEECH -> android.media.AudioAttributes.CONTENT_TYPE_SPEECH
+            androidx.media3.common.C.AUDIO_CONTENT_TYPE_MUSIC -> android.media.AudioAttributes.CONTENT_TYPE_MUSIC
+            else -> android.media.AudioAttributes.CONTENT_TYPE_SPEECH
+        }
+
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val attributes = android.media.AudioAttributes.Builder()
+                .setUsage(usage)
+                .setContentType(contentType)
+                .build()
+            
+            val request = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN)
+                .setAudioAttributes(attributes)
+                .setAcceptsDelayedFocusGain(true)
+                .setOnAudioFocusChangeListener(audioFocusChangeListener)
+                .build()
+            
+            focusRequest = request
+            audioManager.requestAudioFocus(request)
+        } else {
+            @Suppress("DEPRECATION")
+            audioManager.requestAudioFocus(
+                audioFocusChangeListener,
+                AudioManager.STREAM_MUSIC,
+                AudioManager.AUDIOFOCUS_GAIN
+            )
+        }
+    }
+
+    private fun abandonAudioFocusInternal() {
+        unregisterNoisyReceiver()
+        releaseLocks()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            focusRequest?.let { audioManager.abandonAudioFocusRequest(it) }
+            focusRequest = null
+        } else {
+            @Suppress("DEPRECATION")
+            audioManager.abandonAudioFocus(audioFocusChangeListener)
+        }
+    }
+
+    private fun notifySuppressionChanged() {
+        listeners.forEach {
+            it.onPlaybackSuppressionReasonChanged(_playbackSuppressionReason)
+            it.onIsPlayingChanged(isPlaying)
+        }
+    }
+
+    private fun pauseInternal() {
+        ttsEngine.stop()
+        isEngineSpeaking = false
+    }
+
+    private fun resumeInternal() {
+        if (currentParagraphIndex >= 0 && paragraphs.isNotEmpty()) {
+            val index = currentParagraphIndex.coerceAtLeast(0)
+            resumeWordOffset = currentWordRange?.first ?: 0
+            speakCurrentFrom(index, resumeWordOffset)
+        }
+    }
 
     init {
         ttsEngine.state.onEach { state ->
@@ -80,17 +223,15 @@ class TtsPlayer @Inject constructor(
                     
                     // If we are supposed to be playing but the engine stopped (e.g. finished an article or initialization)
                     if (_playWhenReady && currentParagraphIndex >= 0 && currentParagraphIndex < paragraphs.size) {
-                        // Check if we reached the end
-                        if (currentParagraphIndex == paragraphs.size - 1 && currentWordRange != null && currentWordRange!!.last >= paragraphs[currentParagraphIndex].length - 1) {
+                        // Check if we reached the end of the last paragraph
+                        if (currentParagraphIndex == paragraphs.size - 1) {
                             // Finished article
                             _playWhenReady = false
+                            abandonAudioFocusInternal()
                             updatePlaybackState(STATE_ENDED)
                         } else if (!isEngineSpeaking) {
                             // This might be called after initialization or if the engine somehow stopped unexpectedly
-                            // We don't want to call this if we're just transitioning between paragraphs,
-                            // but TtsEngine.Ready is only sent when the ENTIRE queue is done or stopped.
-                            // In AndroidTtsEngine, onDone sends Ready.
-                            // If we have more in the queue, onStart of next one should come quickly.
+                            // speakCurrentFrom(currentParagraphIndex, resumeWordOffset)
                         }
                     }
                 }
@@ -127,7 +268,12 @@ class TtsPlayer @Inject constructor(
                     updatePlaybackState(STATE_BUFFERING)
                 }
                 is TtsState.Error -> {
-                    // Handle error
+                    _playerError = PlaybackException(
+                        state.message,
+                        null,
+                        PlaybackException.ERROR_CODE_UNSPECIFIED
+                    )
+                    updatePlaybackState(STATE_IDLE)
                 }
                 is TtsState.Idle -> {
                     updatePlaybackState(STATE_IDLE)
@@ -166,21 +312,40 @@ class TtsPlayer @Inject constructor(
     override fun getApplicationLooper(): Looper = Looper.getMainLooper()
 
     override fun setPlayWhenReady(playWhenReady: Boolean) {
-        if (_playWhenReady != playWhenReady) {
-            android.util.Log.d("TtsPlayer", "setPlayWhenReady: $playWhenReady")
+        val playWhenReadyChanged = _playWhenReady != playWhenReady
+        if (playWhenReadyChanged || (playWhenReady && _playbackSuppressionReason != PLAYBACK_SUPPRESSION_REASON_NONE)) {
+            android.util.Log.d("TtsPlayer", "setPlayWhenReady: $playWhenReady (changed: $playWhenReadyChanged, suppression: $_playbackSuppressionReason)")
             _playWhenReady = playWhenReady
+            
             if (playWhenReady) {
-                if (currentParagraphIndex >= 0 && paragraphs.isNotEmpty()) {
-                    val index = currentParagraphIndex.coerceAtLeast(0)
-                    resumeWordOffset = currentWordRange?.first ?: 0
-                    speakCurrentFrom(index, resumeWordOffset)
+                val focusResult = requestAudioFocus()
+                when (focusResult) {
+                    AudioManager.AUDIOFOCUS_REQUEST_GRANTED -> {
+                        _playbackSuppressionReason = PLAYBACK_SUPPRESSION_REASON_NONE
+                        resumeInternal()
+                    }
+                    AudioManager.AUDIOFOCUS_REQUEST_DELAYED -> {
+                        _playbackSuppressionReason = PLAYBACK_SUPPRESSION_REASON_TRANSIENT_AUDIO_FOCUS_LOSS
+                        pauseInternal()
+                    }
+                    else -> {
+                        _playbackSuppressionReason = PLAYBACK_SUPPRESSION_REASON_TRANSIENT_AUDIO_FOCUS_LOSS
+                        pauseInternal()
+                    }
                 }
             } else {
-                ttsEngine.stop()
-                isEngineSpeaking = false
+                _playbackSuppressionReason = PLAYBACK_SUPPRESSION_REASON_NONE
+                // We don't abandon focus here immediately to ensure we remain the 
+                // preferred media app for headset buttons when paused.
+                // abandonAudioFocusInternal() 
+                pauseInternal()
             }
+            
             listeners.forEach { 
-                it.onPlayWhenReadyChanged(playWhenReady, PLAY_WHEN_READY_CHANGE_REASON_USER_REQUEST)
+                if (playWhenReadyChanged) {
+                    it.onPlayWhenReadyChanged(playWhenReady, PLAY_WHEN_READY_CHANGE_REASON_USER_REQUEST)
+                }
+                it.onPlaybackSuppressionReasonChanged(_playbackSuppressionReason)
                 it.onIsPlayingChanged(isPlaying)
             }
         }
@@ -215,9 +380,9 @@ class TtsPlayer @Inject constructor(
         }
     }
 
-    override fun getPlaybackSuppressionReason(): Int = PLAYBACK_SUPPRESSION_REASON_NONE
+    override fun getPlaybackSuppressionReason(): Int = _playbackSuppressionReason
 
-    override fun getPlayerError(): PlaybackException? = null
+    override fun getPlayerError(): PlaybackException? = _playerError
 
     override fun setRepeatMode(repeatMode: Int) {}
 
@@ -229,9 +394,9 @@ class TtsPlayer @Inject constructor(
 
     override fun isLoading(): Boolean = false
 
-    override fun getSeekBackIncrement(): Long = 0
+    override fun getSeekBackIncrement(): Long = 10000L
 
-    override fun getSeekForwardIncrement(): Long = 0
+    override fun getSeekForwardIncrement(): Long = 30000L
 
     override fun getMaxSeekToPreviousPosition(): Long = 0
 
@@ -255,7 +420,26 @@ class TtsPlayer @Inject constructor(
 
     override fun getSurfaceSize(): Size = Size.UNKNOWN
 
-    override fun setAudioAttributes(audioAttributes: AudioAttributes, handleAudioFocus: Boolean) {}
+    private var _audioAttributes: AudioAttributes = AudioAttributes.DEFAULT
+
+    override fun setAudioAttributes(audioAttributes: AudioAttributes, handleAudioFocus: Boolean) {
+        _audioAttributes = audioAttributes
+        _handleAudioFocus = handleAudioFocus
+        // Map Media3 AudioAttributes to Android AudioAttributes for TTS
+        val usage = when (audioAttributes.usage) {
+            androidx.media3.common.C.USAGE_MEDIA -> android.media.AudioAttributes.USAGE_MEDIA
+            androidx.media3.common.C.USAGE_ASSISTANCE_ACCESSIBILITY -> android.media.AudioAttributes.USAGE_ASSISTANCE_ACCESSIBILITY
+            else -> android.media.AudioAttributes.USAGE_MEDIA
+        }
+        val contentType = when (audioAttributes.contentType) {
+            androidx.media3.common.C.AUDIO_CONTENT_TYPE_SPEECH -> android.media.AudioAttributes.CONTENT_TYPE_SPEECH
+            androidx.media3.common.C.AUDIO_CONTENT_TYPE_MUSIC -> android.media.AudioAttributes.CONTENT_TYPE_MUSIC
+            else -> android.media.AudioAttributes.CONTENT_TYPE_SPEECH
+        }
+        ttsEngine.setAudioAttributes(usage, contentType)
+    }
+
+    override fun getAudioAttributes(): AudioAttributes = _audioAttributes
 
     override fun getPlayWhenReady(): Boolean = _playWhenReady
 
@@ -272,13 +456,63 @@ class TtsPlayer @Inject constructor(
     override fun getPlaybackParameters(): PlaybackParameters = _playbackParameters
 
     override fun stop() {
+        val previousPlayWhenReady = _playWhenReady
         _playWhenReady = false
         ttsEngine.stop()
+        abandonAudioFocusInternal()
         updatePlaybackState(STATE_IDLE)
+        if (previousPlayWhenReady) {
+            listeners.forEach {
+                it.onPlayWhenReadyChanged(false, PLAY_WHEN_READY_CHANGE_REASON_USER_REQUEST)
+                it.onIsPlayingChanged(isPlaying)
+            }
+        }
+    }
+
+    private fun registerNoisyReceiver() {
+        if (!isNoisyReceiverRegistered) {
+            context.registerReceiver(noisyReceiver, IntentFilter(AudioManager.ACTION_AUDIO_BECOMING_NOISY))
+            isNoisyReceiverRegistered = true
+        }
+    }
+
+    private fun unregisterNoisyReceiver() {
+        if (isNoisyReceiverRegistered) {
+            context.unregisterReceiver(noisyReceiver)
+            isNoisyReceiverRegistered = false
+        }
+    }
+
+    private fun acquireLocks() {
+        if (wakeLock == null) {
+            val powerManager = context.getSystemService(Context.POWER_SERVICE) as PowerManager
+            wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "Narra:PlaybackWakeLock").apply {
+                acquire()
+            }
+        }
+        if (wifiLock == null) {
+            val wifiManager = context.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
+            wifiLock = wifiManager.createWifiLock(WifiManager.WIFI_MODE_FULL_HIGH_PERF, "Narra:PlaybackWifiLock").apply {
+                acquire()
+            }
+        }
+    }
+
+    private fun releaseLocks() {
+        wakeLock?.let {
+            if (it.isHeld) it.release()
+        }
+        wakeLock = null
+        wifiLock?.let {
+            if (it.isHeld) it.release()
+        }
+        wifiLock = null
     }
 
     override fun release() {
         stop()
+        unregisterNoisyReceiver()
+        releaseLocks()
         ttsEngine.release()
         scope.cancel()
     }
@@ -364,11 +598,14 @@ class TtsPlayer @Inject constructor(
             Player.COMMAND_GET_TIMELINE,
             Player.COMMAND_SEEK_TO_NEXT,
             Player.COMMAND_SEEK_TO_PREVIOUS,
+            Player.COMMAND_SEEK_TO_NEXT_MEDIA_ITEM,
+            Player.COMMAND_SEEK_TO_PREVIOUS_MEDIA_ITEM,
+            Player.COMMAND_SEEK_FORWARD,
+            Player.COMMAND_SEEK_BACK,
             Player.COMMAND_SEEK_IN_CURRENT_MEDIA_ITEM
         ).build()
 
     // Required by BasePlayer
-    override fun getAudioAttributes(): AudioAttributes = AudioAttributes.DEFAULT
     override fun getVolume(): Float = 1f
     override fun setVolume(volume: Float) {}
     override fun getDeviceInfo(): DeviceInfo = DeviceInfo.UNKNOWN
@@ -389,7 +626,7 @@ class TtsPlayer @Inject constructor(
     override fun getVideoSize(): VideoSize = VideoSize.UNKNOWN
     override fun getCurrentCues(): CueGroup = CueGroup.EMPTY_TIME_ZERO
 
-    // Navigation (Minimal implementation)
+    // Navigation
     override fun seekTo(mediaItemIndex: Int, positionMs: Long, seekCommand: Int, isAutoSeek: Boolean) {
         val index = (positionMs / 1000).toInt()
         val remainder = positionMs % 1000
@@ -405,6 +642,23 @@ class TtsPlayer @Inject constructor(
                 
             seekToWord(index, word, _playWhenReady)
         }
+    }
+    
+    // Internal handlers for navigation commands
+    fun seekToNextInternal() {
+        onSkipNext?.invoke()
+    }
+
+    fun seekToPreviousInternal() {
+        onSkipPrevious?.invoke()
+    }
+
+    fun seekForwardInternal() {
+        seekTo(currentPosition + seekForwardIncrement)
+    }
+
+    fun seekBackInternal() {
+        seekTo(currentPosition - seekBackIncrement)
     }
 
     fun seekToWord(paragraphIndex: Int, wordRange: IntRange, startPlaying: Boolean = true) {
@@ -439,8 +693,11 @@ class TtsPlayer @Inject constructor(
     }
     
     // TtsPlayer specific
-    fun speak(article: com.mienaiknife.narra.data.models.Article, parsedParagraphs: List<String>) {
-        _playWhenReady = false
+    fun speak(article: com.mienaiknife.narra.data.models.Article, parsedParagraphs: List<String>, playWhenReady: Boolean = false) {
+        // Stop any current playback
+        ttsEngine.stop()
+        isEngineSpeaking = false
+
         _currentMediaItem = MediaItem.Builder()
             .setMediaId(article.id)
             .setMediaMetadata(
@@ -453,6 +710,10 @@ class TtsPlayer @Inject constructor(
             .build()
         
         paragraphs = parsedParagraphs
+        if (paragraphs.isEmpty()) {
+            updatePlaybackState(STATE_ENDED)
+            return
+        }
         currentParagraphIndex = article.currentParagraphIndex.coerceIn(0, paragraphs.size - 1).takeIf { paragraphs.isNotEmpty() } ?: 0
         
         // Initialize currentWordRange to the saved word offset or the first word of the resumed paragraph
@@ -471,8 +732,11 @@ class TtsPlayer @Inject constructor(
             it.onMediaItemTransition(_currentMediaItem, Player.MEDIA_ITEM_TRANSITION_REASON_PLAYLIST_CHANGED)
             it.onMediaMetadataChanged(mediaMetadata)
             it.onTimelineChanged(currentTimeline, Player.TIMELINE_CHANGE_REASON_PLAYLIST_CHANGED)
-            it.onPlayWhenReadyChanged(_playWhenReady, Player.PLAY_WHEN_READY_CHANGE_REASON_USER_REQUEST)
-            it.onIsPlayingChanged(isPlaying)
+        }
+
+        setPlayWhenReady(playWhenReady)
+
+        listeners.forEach {
             // Signal position change to update UI highlighting and scroll to current position
             it.onPositionDiscontinuity(
                 Player.PositionInfo(null, 0, null, 0, 0, 0, 0, 0, 0),
@@ -485,6 +749,16 @@ class TtsPlayer @Inject constructor(
             updatePlaybackState(STATE_BUFFERING)
         } else {
             updatePlaybackState(STATE_READY)
+        }
+    }
+
+    fun speakAnnouncement(text: String) {
+        // Clear current article state so we don't trigger STATE_ENDED when announcement finishes
+        paragraphs = emptyList()
+        currentParagraphIndex = -1
+        currentWordRange = null
+        if (requestAudioFocus() == AudioManager.AUDIOFOCUS_REQUEST_GRANTED) {
+            ttsEngine.speak(text, "announcement")
         }
     }
 

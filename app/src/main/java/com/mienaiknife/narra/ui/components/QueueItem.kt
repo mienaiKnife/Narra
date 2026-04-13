@@ -59,7 +59,7 @@ fun QueueItem(
     onRemoveClick: () -> Unit = {},
     onAddToQueueClick: () -> Unit = {},
     onMarkAsPlayedClick: () -> Unit = {},
-    onReorderClick: () -> Unit = {}
+    dragModifier: Modifier? = null
 ) {
     var showMenu by remember { mutableStateOf(false) }
 
@@ -70,7 +70,7 @@ fun QueueItem(
             onItemClick = onItemClick,
             onLongClick = { showMenu = true },
             onPlayPauseClick = onPlayPauseClick,
-            onReorderClick = onReorderClick
+            dragModifier = dragModifier
         )
 
         DropdownMenu(
@@ -137,23 +137,19 @@ private fun QueueItemRow(
     onItemClick: () -> Unit = {},
     onLongClick: () -> Unit = {},
     onPlayPauseClick: () -> Unit = {},
-    onReorderClick: () -> Unit = {}
+    dragModifier: Modifier? = null
 ) {
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.background)
-            .combinedClickable(
-                onClick = onItemClick,
-                onLongClick = onLongClick
-            ),
+            .background(MaterialTheme.colorScheme.background),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        if (article.isInQueue) {
+        if (dragModifier != null && article.isInQueue) {
             Box(
                 modifier = Modifier
-                    .size(width = 32.dp, height = 48.dp)
-                    .clickable(onClick = onReorderClick),
+                    .size(width = 48.dp, height = 48.dp)
+                    .then(dragModifier),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
@@ -167,99 +163,109 @@ private fun QueueItemRow(
             Spacer(modifier = Modifier.width(16.dp))
         }
 
-        // Thumbnail Placeholder
-        Box(
+        Row(
             modifier = Modifier
-                .size(64.dp)
-                .clip(RoundedCornerShape(12.dp))
-                .background(MaterialTheme.colorScheme.surfaceContainer),
-            contentAlignment = Alignment.Center
-        ) {
-            article.imageUrl?.let { imageUrl ->
-                AsyncImage(
-                    model = imageUrl,
-                    contentDescription = null,
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.width(12.dp))
-
-        Column(
-            modifier = Modifier.weight(1f)
-        ) {
-            val sourceText = buildString {
-                val formattedDate = DateUtils.formatPublishedDate(article.publishedAt)
-                if (formattedDate != null) {
-                    append(formattedDate)
-                    append(" • ")
-                }
-                append(article.source)
-            }
-            Text(
-                text = sourceText,
-                style = MaterialTheme.typography.bodySmall,
-                color = if (article.progress == 1f) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f) else MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            Text(
-                text = article.title,
-                style = MaterialTheme.typography.bodyLarge.copy(
-                    fontWeight = FontWeight.SemiBold,
-                    lineHeight = 20.sp
+                .weight(1f)
+                .combinedClickable(
+                    onClick = onItemClick,
+                    onLongClick = onLongClick
                 ),
-                color = if (article.progress == 1f) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f) else MaterialTheme.colorScheme.onSurface,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis
-            )
-
-            Spacer(modifier = Modifier.height(4.dp))
-
-            val progress = article.progress ?: 0f
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth()
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Thumbnail Placeholder
+            Box(
+                modifier = Modifier
+                    .size(64.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(MaterialTheme.colorScheme.surfaceContainer),
+                contentAlignment = Alignment.Center
             ) {
+                article.imageUrl?.let { imageUrl ->
+                    AsyncImage(
+                        model = imageUrl,
+                        contentDescription = null,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.width(12.dp))
+
+            Column(
+                modifier = Modifier.weight(1f)
+            ) {
+                val sourceText = buildString {
+                    val formattedDate = DateUtils.formatPublishedDate(article.publishedAt)
+                    if (formattedDate != null) {
+                        append(formattedDate)
+                        append(" • ")
+                    }
+                    append(article.source)
+                }
                 Text(
-                    text = if (article.id == "3") "0:42" else if (article.id == "2") "0:46" else "5:07",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    text = sourceText,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (article.progress == 1f) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f) else MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = article.title,
+                    style = MaterialTheme.typography.bodyLarge.copy(
+                        fontWeight = FontWeight.SemiBold,
+                        lineHeight = 20.sp
+                    ),
+                    color = if (article.progress == 1f) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f) else MaterialTheme.colorScheme.onSurface,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
                 )
 
-                if (progress > 0f && progress < 1f) {
-                    Spacer(modifier = Modifier.width(8.dp))
+                Spacer(modifier = Modifier.height(4.dp))
 
-                    LinearProgressIndicator(
-                        progress = { progress },
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(5.dp)
-                            .clip(RoundedCornerShape(2.dp)),
-                        color = MaterialTheme.colorScheme.primary,
-                        trackColor = MaterialTheme.colorScheme.primaryContainer,
-                        gapSize = 5.dp,
-                        drawStopIndicator = {}
-                    )
-
-                    Spacer(modifier = Modifier.width(8.dp))
-
+                val progress = article.progress ?: 0f
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
                     Text(
-                        text = if (article.id == "2") "-0:46" else "-5:07",
+                        text = if (article.id == "3") "0:42" else if (article.id == "2") "0:46" else "5:07",
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                } else if (progress == 1f) {
-                    Text(
-                        text = " • Played",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-                    )
-                    Spacer(modifier = Modifier.weight(1f))
-                } else {
-                    Spacer(modifier = Modifier.weight(1f))
+
+                    if (progress > 0f && progress < 1f) {
+                        Spacer(modifier = Modifier.width(8.dp))
+
+                        LinearProgressIndicator(
+                            progress = { progress },
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(5.dp)
+                                .clip(RoundedCornerShape(2.dp)),
+                            color = MaterialTheme.colorScheme.primary,
+                            trackColor = MaterialTheme.colorScheme.primaryContainer,
+                            gapSize = 5.dp,
+                            drawStopIndicator = {}
+                        )
+
+                        Spacer(modifier = Modifier.width(8.dp))
+
+                        Text(
+                            text = if (article.id == "2") "-0:46" else "-5:07",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    } else if (progress == 1f) {
+                        Text(
+                            text = " • Played",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                        )
+                        Spacer(modifier = Modifier.weight(1f))
+                    } else {
+                        Spacer(modifier = Modifier.weight(1f))
+                    }
                 }
             }
         }
@@ -296,6 +302,7 @@ private fun QueueItemRow(
         }
     }
 }
+
 
 @Preview(
     uiMode = Configuration.UI_MODE_NIGHT_YES,

@@ -28,6 +28,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -52,14 +54,38 @@ class ReaderViewModel @Inject constructor(
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
 
+    init {
+        // Automatically update blocks when the article changes in the PlaybackManager
+        playbackManager.currentArticle
+            .onEach { art ->
+                if (art != null) {
+                    val parsedBlocks = HtmlParser.parse(art.content)
+                    _blocks.value = parsedBlocks
+                } else {
+                    _blocks.value = emptyList()
+                }
+            }
+            .launchIn(viewModelScope)
+    }
+
     fun loadArticle(id: String) {
+        if (playbackManager.currentArticle.value?.id == id) return
+
         viewModelScope.launch {
             _isLoading.value = true
-            val articleData = repository.getArticleById(id)
+            var articleData = repository.getArticleById(id)
             if (articleData != null) {
-                val parsedBlocks = HtmlParser.parse(articleData.content)
-                _blocks.value = parsedBlocks
-                playbackManager.setCurrentArticle(articleData, parsedBlocks.map { it.text.toString() })
+                if (!articleData.isInQueue) {
+                    repository.addToQueue(id)
+                    // Refresh data after adding to queue (which might have downloaded content)
+                    articleData = repository.getArticleById(id)
+                }
+
+                if (articleData != null) {
+                    // This triggers the Flow in PlaybackManager, which our init block observes
+                    val paragraphs = HtmlParser.parse(articleData.content).map { it.text.toString() }
+                    playbackManager.setCurrentArticle(articleData, paragraphs, playWhenReady = false)
+                }
             }
             _isLoading.value = false
         }
@@ -71,5 +97,15 @@ class ReaderViewModel @Inject constructor(
     fun seekToWord(paragraphIndex: Int, wordRange: IntRange) = playbackManager.seekToWord(paragraphIndex, wordRange)
     fun skipForward() = playbackManager.skipForward()
     fun skipBackward() = playbackManager.skipBackward()
+    fun skipNext() = playbackManager.skipNext()
     fun cycleSpeed() = playbackManager.cycleSpeed()
+
+    fun toggleFavorite() {
+        article.value?.let { art ->
+            viewModelScope.launch {
+                repository.toggleFavorite(art.id)
+                // The article Flow in loadArticle will automatically emit the updated article
+            }
+        }
+    }
 }

@@ -53,6 +53,17 @@ interface TtsEngine {
     fun setPlaybackSpeed(speed: Float)
 
     /**
+     * Sets the audio attributes for playback.
+     */
+    fun setAudioAttributes(usage: Int, contentType: Int)
+
+    /**
+     * Sets the volume for playback.
+     * @param volume The volume level from 0.0f to 1.0f.
+     */
+    fun setVolume(volume: Float)
+
+    /**
      * Releases resources used by the engine.
      */
     fun release()

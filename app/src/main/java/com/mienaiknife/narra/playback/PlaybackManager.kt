@@ -16,25 +16,33 @@
 
 package com.mienaiknife.narra.playback
 
+import android.content.Context
+import android.media.MediaPlayer
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.common.Timeline
 import com.mienaiknife.narra.data.models.Article
 import com.mienaiknife.narra.domain.repository.ContentRepository
+import com.mienaiknife.narra.ui.utils.HtmlParser
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
 class PlaybackManager @Inject constructor(
+    @ApplicationContext private val context: Context,
     private val ttsPlayer: TtsPlayer,
-    private val repository: ContentRepository
+    private val repository: ContentRepository,
+    private val settingsManager: PlaybackSettingsManager
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private val _currentArticle = MutableStateFlow<Article?>(null)
@@ -59,6 +67,9 @@ class PlaybackManager @Inject constructor(
     val currentWordRange: StateFlow<IntRange?> = _currentWordRange.asStateFlow()
 
     init {
+        ttsPlayer.onSkipNext = { skipNext() }
+        ttsPlayer.onSkipPrevious = { skipBackward() }
+
         ttsPlayer.addListener(object : Player.Listener {
             override fun onIsPlayingChanged(isPlaying: Boolean) {
                 _isPlaying.value = isPlaying
@@ -79,6 +90,10 @@ class PlaybackManager @Inject constructor(
             override fun onPlaybackStateChanged(playbackState: Int) {
                 _duration.value = ttsPlayer.duration
                 updateProgress()
+
+                if (playbackState == Player.STATE_ENDED) {
+                    playNextArticle()
+                }
             }
 
             override fun onTimelineChanged(timeline: Timeline, reason: Int) {
@@ -122,16 +137,91 @@ class PlaybackManager @Inject constructor(
         }
     }
 
-    fun setCurrentArticle(article: Article, paragraphs: List<String>) {
+    fun setCurrentArticle(article: Article, paragraphs: List<String>, playWhenReady: Boolean = true) {
         if (_currentArticle.value?.id != article.id) {
+            val isTransition = _currentArticle.value != null
+            
             _currentArticle.value = article
             _duration.value = 0L // TTS doesn't have fixed duration
             _currentPosition.value = 0L
             _currentParagraphIndex.value = 0
             _currentWordRange.value = null
             
-            ttsPlayer.speak(article, paragraphs)
-            ttsPlayer.play()
+            if (isTransition) {
+                scope.launch {
+                    // Request audio focus before playing chime and announcement
+                    ttsPlayer.requestAudioFocus()
+
+                    playChime()
+                    // Small delay to let the chime breathe
+                    delay(500)
+                    
+                    // Announcements usually sound better at normal speed even if the article is fast
+                    val currentSpeed = _playbackSpeed.value
+                    if (currentSpeed != 1.0f) ttsPlayer.setPlaybackSpeed(1.0f)
+                    
+                    ttsPlayer.speakAnnouncement("Now playing: ${article.title}")
+                    
+                    // Restore speed for the actual content
+                    if (currentSpeed != 1.0f) {
+                        // We need to wait for the announcement to finish or just set it back?
+                        // TtsPlayer.speak clears the queue, so we should probably wait or use a callback.
+                        // For now, let's just speak the article which will flush the announcement if it's too long.
+                        // But we want to pause after the announcement.
+                        delay(2000) // Rough estimate for title length + 1s pause
+                        ttsPlayer.setPlaybackSpeed(currentSpeed)
+                    } else {
+                        delay(2000)
+                    }
+                    
+                    ttsPlayer.speak(article, paragraphs, playWhenReady)
+                    if (playWhenReady) ttsPlayer.play()
+                }
+            } else {
+                ttsPlayer.speak(article, paragraphs, playWhenReady)
+                if (playWhenReady) ttsPlayer.play()
+            }
+        }
+    }
+
+    private fun playNextArticle() {
+        val finishedArticle = _currentArticle.value ?: return
+        scope.launch {
+            // Find the next article in the queue
+            val queue = repository.getQueueArticles().first()
+            val currentIndex = queue.indexOfFirst { it.id == finishedArticle.id }
+            
+            val nextArticle = if (currentIndex != -1 && currentIndex < queue.size - 1) {
+                queue[currentIndex + 1]
+            } else {
+                // If it's already removed or was the last one, try to find the next one by queue order
+                queue.firstOrNull { it.queueOrder > finishedArticle.queueOrder }
+            }
+
+            if (nextArticle != null) {
+                repository.markAsFinished(finishedArticle.id)
+                val paragraphs = HtmlParser.parse(nextArticle.content).map { it.text.toString() }
+                setCurrentArticle(nextArticle, paragraphs)
+            } else {
+                repository.markAsFinished(finishedArticle.id)
+                _currentArticle.value = null
+                _isPlaying.value = false
+            }
+        }
+    }
+
+    private suspend fun playChime() {
+        try {
+            val soundName = settingsManager.chimeSound.first()
+            val resId = context.resources.getIdentifier(soundName, "raw", context.packageName)
+            if (resId != 0) {
+                MediaPlayer.create(context, resId)?.apply {
+                    setOnCompletionListener { release() }
+                    start()
+                }
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("PlaybackManager", "Error playing chime", e)
         }
     }
 
@@ -167,11 +257,22 @@ class PlaybackManager @Inject constructor(
     }
 
     fun skipForward() {
-        // TODO: Skip logic for TTS
+        ttsPlayer.seekForward()
+    }
+
+    fun skipNext() {
+        playNextArticle()
     }
 
     fun skipBackward() {
-        // TODO: Skip logic for TTS
+        // For now, just restart current article or go to previous if we track it
+        val article = _currentArticle.value ?: return
+        val paragraphs = HtmlParser.parse(article.content).map { it.text.toString() }
+        // Reset progress
+        scope.launch {
+            repository.updateArticleProgress(article.id, 0f, 0, 0)
+            setCurrentArticle(article.copy(currentParagraphIndex = 0, currentWordOffset = 0, progress = 0f), paragraphs)
+        }
     }
 
     fun cycleSpeed() {

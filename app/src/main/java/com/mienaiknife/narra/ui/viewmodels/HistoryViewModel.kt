@@ -23,8 +23,10 @@ import com.mienaiknife.narra.domain.repository.ContentRepository
 import com.mienaiknife.narra.playback.PlaybackManager
 import com.mienaiknife.narra.ui.utils.HtmlParser
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -34,6 +36,9 @@ class HistoryViewModel @Inject constructor(
     private val repository: ContentRepository,
     private val playbackManager: PlaybackManager
 ) : ViewModel() {
+
+    private val _isRefreshing = MutableStateFlow(false)
+    val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
 
     val currentArticle = playbackManager.currentArticle
     val isPlaying = playbackManager.isPlaying
@@ -83,7 +88,12 @@ class HistoryViewModel @Inject constructor(
 
     fun refresh() {
         viewModelScope.launch {
-            repository.refreshFeeds()
+            _isRefreshing.value = true
+            try {
+                repository.refreshFeeds()
+            } finally {
+                _isRefreshing.value = false
+            }
         }
     }
 }

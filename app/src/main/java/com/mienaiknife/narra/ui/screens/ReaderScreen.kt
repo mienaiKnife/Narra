@@ -51,14 +51,20 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CenterFocusStrong
 import androidx.compose.material.icons.filled.FastForward
 import androidx.compose.material.icons.filled.FastRewind
+import androidx.compose.material.icons.automirrored.filled.OpenInNew
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.Speed
+import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -82,6 +88,7 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextLayoutResult
@@ -105,6 +112,7 @@ import com.mienaiknife.narra.ui.viewmodels.ReaderViewModel
 import com.mienaiknife.narra.utils.DateUtils
 import kotlinx.coroutines.delay
 import java.util.Locale
+import com.mienaiknife.narra.ui.components.NarraScrollbar
 import java.util.concurrent.TimeUnit
 @Composable
 fun ReaderScreen(
@@ -150,7 +158,9 @@ fun ReaderScreen(
                     onSeekToWord = viewModel::seekToWord,
                     onSkipForward = viewModel::skipForward,
                     onSkipBackward = viewModel::skipBackward,
-                    onCycleSpeed = viewModel::cycleSpeed
+                    onSkipNext = viewModel::skipNext,
+                    onCycleSpeed = viewModel::cycleSpeed,
+                    onToggleFavorite = viewModel::toggleFavorite
                 )
             }
         }
@@ -172,13 +182,29 @@ fun ReaderContent(
     onSeekToWord: (Int, IntRange) -> Unit,
     onSkipForward: () -> Unit,
     onSkipBackward: () -> Unit,
-    onCycleSpeed: () -> Unit
+    onSkipNext: () -> Unit,
+    onCycleSpeed: () -> Unit,
+    onToggleFavorite: () -> Unit
 ) {
     var isControlsVisible by remember { mutableStateOf(true) }
     var lastInteractionTrigger by remember { mutableIntStateOf(0) }
+    var isMenuExpanded by remember { mutableStateOf(false) }
+
+    val scrollState = rememberLazyListState(
+        initialFirstVisibleItemIndex = currentParagraphIndex
+    )
+
+    val isAtTop by remember {
+        derivedStateOf {
+            scrollState.firstVisibleItemIndex == 0 && scrollState.firstVisibleItemScrollOffset == 0
+        }
+    }
+
+    var isFollowing by remember { mutableStateOf(true) }
 
     val context = LocalContext.current
     val view = LocalView.current
+    val uriHandler = LocalUriHandler.current
     
     // Keep screen on while in the reader
     DisposableEffect(Unit) {
@@ -202,8 +228,10 @@ fun ReaderContent(
         }
     }
 
-    LaunchedEffect(isPlaying, isControlsVisible, lastInteractionTrigger) {
-        if (isPlaying) {
+    LaunchedEffect(isPlaying, isControlsVisible, lastInteractionTrigger, isAtTop) {
+        if (isAtTop) {
+            isControlsVisible = true
+        } else if (isPlaying) {
             if (isControlsVisible) {
                 delay(5000)
                 isControlsVisible = false
@@ -228,11 +256,11 @@ fun ReaderContent(
             }
     ) {
         // Article Content
-        val scrollState = rememberLazyListState()
         
         // State to track if we should follow the current paragraph
-        var isFollowing by remember { mutableStateOf(true) }
-        var currentWordYInItem by remember { mutableFloatStateOf(0f) }
+        var isFollowing by remember(article.id) { mutableStateOf(true) }
+        var isInitialScroll by remember(article.id) { mutableStateOf(true) }
+        var currentWordYInItem by remember(article.id) { mutableFloatStateOf(0f) }
         
         // Delayed word range to create a slight lag behind TTS
         var delayedWordRange by remember { mutableStateOf<IntRange?>(null) }
@@ -241,7 +269,7 @@ fun ReaderContent(
             delayedWordRange = currentWordRange
         }
 
-        var currentWordYIndex by remember { mutableIntStateOf(-1) }
+        var currentWordYIndex by remember(article.id) { mutableIntStateOf(-1) }
         
         // Listen for manual scroll interactions
         val isDragged by scrollState.interactionSource.collectIsDraggedAsState()
@@ -270,16 +298,31 @@ fun ReaderContent(
                         val delta = currentWordViewportY - targetViewportY
                         
                         if (kotlin.math.abs(delta) > 2f) {
-                            scrollState.animateScrollBy(delta)
+                            if (isInitialScroll) {
+                                scrollState.scrollToItem(currentParagraphIndex, (currentWordYInItem - targetViewportY).toInt())
+                                isInitialScroll = false
+                            } else {
+                                scrollState.animateScrollBy(delta)
+                            }
+                        } else if (isInitialScroll) {
+                            isInitialScroll = false
                         }
                     } else {
                         // Item not visible or word position not yet measured, perform an initial jump
                         val scrollOffset = if (currentWordYInItem > 0 && currentWordYIndex == currentParagraphIndex) {
                             (currentWordYInItem - targetViewportY).toInt()
                         } else {
-                            (-viewportHeight * 0.5f).toInt()
+                            (-targetViewportY).toInt()
                         }
-                        scrollState.animateScrollToItem(currentParagraphIndex, scrollOffset)
+                        
+                        if (isInitialScroll) {
+                            scrollState.scrollToItem(currentParagraphIndex, scrollOffset)
+                            if (currentWordYInItem > 0 && currentWordYIndex == currentParagraphIndex) {
+                                isInitialScroll = false
+                            }
+                        } else {
+                            scrollState.animateScrollToItem(currentParagraphIndex, scrollOffset)
+                        }
                     }
                 }
             }
@@ -486,35 +529,18 @@ fun ReaderContent(
             item { Spacer(modifier = Modifier.height(8.dp)) }
         }
 
-        // Floating Button: Scrolls back to the current paragraph if it's off-screen
-        val currentParagraphScrollStatus by remember {
-            derivedStateOf {
-                val visibleItems = scrollState.layoutInfo.visibleItemsInfo
-                if (visibleItems.isEmpty()) return@derivedStateOf 0 // Visible
-
-                val targetIndex = currentParagraphIndex
-                val firstVisible = visibleItems.firstOrNull()?.index ?: 0
-                val lastVisible = visibleItems.lastOrNull()?.index ?: 0
-
-                when {
-                    targetIndex < firstVisible -> -1 // Above
-                    targetIndex > lastVisible -> 1 // Below
-                    else -> 0 // Visible
-                }
-            }
-        }
-
         val fabBottomPadding by animateDpAsState(
-            targetValue = if (isControlsVisible) 240.dp else 40.dp,
+            targetValue = if (isControlsVisible) 150.dp else 40.dp,
             label = "fabBottomPadding"
         )
 
         AnimatedVisibility(
-            visible = !isFollowing,
+            visible = !isFollowing && isControlsVisible,
             enter = fadeIn(),
             exit = fadeOut(),
             modifier = Modifier
                 .align(Alignment.BottomEnd)
+                .navigationBarsPadding()
                 .padding(bottom = fabBottomPadding, end = 24.dp)
         ) {
             IconButton(
@@ -526,11 +552,7 @@ fun ReaderContent(
                     .background(MaterialTheme.colorScheme.primary, CircleShape)
             ) {
                 Icon(
-                    imageVector = when (currentParagraphScrollStatus) {
-                        -1 -> Icons.Default.KeyboardArrowUp
-                        1 -> Icons.Default.KeyboardArrowDown
-                        else -> Icons.Default.CenterFocusStrong
-                    },
+                    imageVector = Icons.Default.CenterFocusStrong,
                     contentDescription = "Scroll to current position",
                     tint = MaterialTheme.colorScheme.onPrimary,
                     modifier = Modifier.size(32.dp)
@@ -595,13 +617,75 @@ fun ReaderContent(
                         )
                     }
 
-                    IconButton(onClick = { /* TODO */ }) {
-                        Icon(
-                            imageVector = Icons.Default.Menu,
-                            contentDescription = "Menu",
-                            modifier = Modifier.size(28.dp),
-                            tint = MaterialTheme.colorScheme.onBackground
-                        )
+                    Box {
+                        IconButton(onClick = { isMenuExpanded = true }) {
+                            Icon(
+                                imageVector = Icons.Default.Menu,
+                                contentDescription = "Menu",
+                                modifier = Modifier.size(28.dp),
+                                tint = MaterialTheme.colorScheme.onBackground
+                            )
+                        }
+
+                        DropdownMenu(
+                            expanded = isMenuExpanded,
+                            onDismissRequest = { isMenuExpanded = false }
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text("Search") },
+                                onClick = {
+                                    isMenuExpanded = false
+                                    /* TODO */
+                                },
+                                leadingIcon = {
+                                    Icon(
+                                        Icons.Default.Search,
+                                        contentDescription = null
+                                    )
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text(if (article.isFavorite) "Unfavorite" else "Favorite") },
+                                onClick = {
+                                    isMenuExpanded = false
+                                    onToggleFavorite()
+                                },
+                                leadingIcon = {
+                                    Icon(
+                                        if (article.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                                        contentDescription = null,
+                                        tint = if (article.isFavorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                                    )
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Sleep timer") },
+                                onClick = {
+                                    isMenuExpanded = false
+                                    /* TODO */
+                                },
+                                leadingIcon = {
+                                    Icon(
+                                        Icons.Default.Timer,
+                                        contentDescription = null
+                                    )
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Visit site") },
+                                onClick = {
+                                    isMenuExpanded = false
+                                    article.url?.let { uriHandler.openUri(it) }
+                                },
+                                enabled = article.url != null,
+                                leadingIcon = {
+                                    Icon(
+                                        Icons.AutoMirrored.Filled.OpenInNew,
+                                        contentDescription = null
+                                    )
+                                }
+                            )
+                        }
                     }
                 }
             }
@@ -733,7 +817,7 @@ fun ReaderContent(
                         }
 
                         // Next
-                        IconButton(onClick = { /* TODO */ }) {
+                        IconButton(onClick = onSkipNext) {
                             Icon(
                                 imageVector = Icons.Default.SkipNext,
                                 contentDescription = "Next",
@@ -745,6 +829,17 @@ fun ReaderContent(
                 }
             }
         }
+
+        // Vertical Scrollbar
+        NarraScrollbar(
+            lazyListState = scrollState,
+            verticalPadding = 120.dp,
+            onInteraction = {
+                isFollowing = false
+                isControlsVisible = true
+                lastInteractionTrigger++
+            }
+        )
     }
 }
 
@@ -779,7 +874,9 @@ fun ReaderScreenPreview() {
             onSeekToWord = { _, _ -> },
             onSkipForward = {},
             onSkipBackward = {},
-            onCycleSpeed = {}
+            onSkipNext = {},
+            onCycleSpeed = {},
+            onToggleFavorite = {}
         )
     }
 }

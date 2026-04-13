@@ -32,22 +32,13 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
@@ -58,6 +49,7 @@ import androidx.navigation.compose.rememberNavController
 import com.mienaiknife.narra.data.models.Article
 import com.mienaiknife.narra.data.models.SampleArticles
 import com.mienaiknife.narra.ui.components.BottomNavBar
+import com.mienaiknife.narra.ui.components.NarraScrollbar
 import com.mienaiknife.narra.ui.components.QueueItem
 import com.mienaiknife.narra.ui.theme.NarraTheme
 import com.mienaiknife.narra.ui.viewmodels.HistoryViewModel
@@ -68,8 +60,11 @@ fun HistoryScreen(
     viewModel: HistoryViewModel = hiltViewModel()
 ) {
     val articles by viewModel.articles.collectAsState()
+    val isRefreshing by viewModel.isRefreshing.collectAsState()
+
     HistoryScreenContent(
         articles = articles,
+        isRefreshing = isRefreshing,
         onBackClick = { navController.popBackStack() },
         onAddToQueue = { viewModel.addToQueue(it) },
         onArticleClick = { articleId -> navController.navigate("reader/$articleId") },
@@ -82,6 +77,7 @@ fun HistoryScreen(
 @Composable
 fun HistoryScreenContent(
     articles: List<Article>,
+    isRefreshing: Boolean = false,
     onBackClick: () -> Unit,
     onAddToQueue: (Article) -> Unit,
     onArticleClick: (String) -> Unit = {},
@@ -164,20 +160,34 @@ fun HistoryScreenContent(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        LazyColumn(
-            modifier = Modifier.fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(24.dp),
-            contentPadding = PaddingValues(bottom = 16.dp)
+        PullToRefreshBox(
+            isRefreshing = isRefreshing,
+            onRefresh = onRefresh,
+            modifier = Modifier.weight(1f)
         ) {
-            items(articles, key = { it.id }) { article ->
-                QueueItem(
-                    article = article,
-                    isPlaying = false,
-                    modifier = Modifier.animateItem(),
-                    onItemClick = { onArticleClick(article.id) },
-                    onPlayPauseClick = { onAddToQueue(article) },
-                    onMarkAsPlayedClick = { onMarkAsPlayedClick(article) },
-                    onReorderClick = { /* No reorder in history */ }
+            val scrollState = rememberLazyListState()
+            Box(modifier = Modifier.fillMaxSize()) {
+                LazyColumn(
+                    state = scrollState,
+                    modifier = Modifier.fillMaxSize(),
+                    verticalArrangement = Arrangement.spacedBy(24.dp),
+                    contentPadding = PaddingValues(bottom = 16.dp)
+                ) {
+                    items(articles, key = { it.id }) { article ->
+                        QueueItem(
+                            article = article,
+                            isPlaying = false,
+                            modifier = Modifier.animateItem(),
+                            onItemClick = { onArticleClick(article.id) },
+                            onPlayPauseClick = { onAddToQueue(article) },
+                            onMarkAsPlayedClick = { onMarkAsPlayedClick(article) }
+                        )
+                    }
+                }
+
+                NarraScrollbar(
+                    lazyListState = scrollState,
+                    modifier = Modifier.align(Alignment.CenterEnd)
                 )
             }
         }

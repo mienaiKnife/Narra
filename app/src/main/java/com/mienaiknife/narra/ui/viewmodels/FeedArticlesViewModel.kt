@@ -16,13 +16,12 @@
 
 package com.mienaiknife.narra.ui.viewmodels
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mienaiknife.narra.data.models.Article
 import com.mienaiknife.narra.data.models.SortOption
 import com.mienaiknife.narra.domain.repository.ContentRepository
-import com.mienaiknife.narra.playback.PlaybackManager
-import com.mienaiknife.narra.ui.utils.HtmlParser
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -34,22 +33,18 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
-class InboxViewModel @Inject constructor(
+class FeedArticlesViewModel @Inject constructor(
     private val repository: ContentRepository,
-    private val playbackManager: PlaybackManager
+    savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
-    private val _isRefreshing = MutableStateFlow(false)
-    val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
+    val feedTitle: String = savedStateHandle.get<String>("feedTitle") ?: ""
 
     private val _sortOption = MutableStateFlow(SortOption.DATE_DESC)
     val sortOption: StateFlow<SortOption> = _sortOption.asStateFlow()
 
-    val currentArticle = playbackManager.currentArticle
-    val isPlaying = playbackManager.isPlaying
-
     val articles: StateFlow<List<Article>> = combine(
-        repository.getInboxArticles(),
+        repository.getArticlesBySource(feedTitle),
         _sortOption
     ) { articles, sort ->
         when (sort) {
@@ -84,50 +79,15 @@ class InboxViewModel @Inject constructor(
         }
     }
 
-    fun onPlayPauseClick(article: Article) {
-        if (!article.isInQueue) {
-            addToQueue(article)
-        } else {
-            if (currentArticle.value?.id == article.id) {
-                playbackManager.togglePlayPause()
-            } else {
-                val paragraphs = HtmlParser.parse(article.content).map { it.text.toString() }
-                playbackManager.setCurrentArticle(article, paragraphs)
-            }
-        }
-    }
-
-    init {
-        refresh()
-    }
-
-    fun refresh() {
-        viewModelScope.launch {
-            _isRefreshing.value = true
-            try {
-                repository.refreshFeeds()
-            } finally {
-                _isRefreshing.value = false
-            }
-        }
-    }
-
     fun addToQueue(article: Article) {
         viewModelScope.launch {
             repository.addToQueue(article.id)
         }
     }
 
-    fun togglePlayedStatus(article: Article) {
+    fun deleteArticle(article: Article) {
         viewModelScope.launch {
-            val newProgress = if (article.progress == 1f) 0f else 1f
-            repository.updateArticleProgress(article.id, newProgress, 0, 0)
-        }
-    }
-
-    fun clearInbox() {
-        viewModelScope.launch {
-            repository.clearInbox()
+            repository.deleteArticle(article.id)
         }
     }
 }

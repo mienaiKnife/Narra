@@ -16,20 +16,12 @@
 
 package com.mienaiknife.narra.data.models
 
-data class Article(
-    val id: String,
-    val title: String,
-    val source: String,
-    val publishedAt: String? = null,
-    val content: String = "",
-    val imageUrl: String? = null,
-    val url: String? = null,
-    val progress: Float? = null,
-    val currentParagraphIndex: Int = 0,
-    val currentWordOffset: Int = 0,
-    val isFavorite: Boolean = false,
-    val isFromFeed: Boolean = false,
-    val isInQueue: Boolean = true,
-    val queueOrder: Int = 0,
-    val publishedTimestamp: Long? = null
-)
+enum class SortOption(val label: String) {
+    MANUAL("Manual"),
+    DATE_DESC("Newest first"),
+    DATE_ASC("Oldest first"),
+    TITLE_ASC("Title (A-Z)"),
+    TITLE_DESC("Title (Z-A)"),
+    SOURCE_ASC("Source (A-Z)"),
+    SOURCE_DESC("Source (Z-A)")
+}

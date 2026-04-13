@@ -57,6 +57,7 @@ fun ArticleEntity.toDomainModel(): Article {
         isFavorite = isFavorite,
         isFromFeed = isFromFeed,
         isInQueue = isInQueue,
+        queueOrder = queueOrder,
         publishedTimestamp = publishedTimestamp
     )
 }

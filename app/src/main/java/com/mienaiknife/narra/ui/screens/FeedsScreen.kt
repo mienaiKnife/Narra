@@ -17,16 +17,21 @@
 package com.mienaiknife.narra.ui.screens
 
 import android.content.res.Configuration
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -39,7 +44,10 @@ import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import coil3.compose.AsyncImage
 import com.mienaiknife.narra.data.local.entities.FeedEntity
+import com.mienaiknife.narra.data.models.SortOption
 import com.mienaiknife.narra.ui.components.BottomNavBar
+import com.mienaiknife.narra.ui.components.NarraScrollbar
+import com.mienaiknife.narra.ui.components.SortBottomSheet
 import com.mienaiknife.narra.ui.theme.NarraTheme
 import com.mienaiknife.narra.ui.viewmodels.FeedsViewModel
 
@@ -49,23 +57,43 @@ fun FeedsScreen(
     viewModel: FeedsViewModel = hiltViewModel()
 ) {
     val feeds by viewModel.feeds.collectAsState()
+    val isRefreshing by viewModel.isRefreshing.collectAsState()
+    val sortOption by viewModel.sortOption.collectAsState()
 
     FeedsScreenContent(
+        navController = navController,
         feeds = feeds,
+        isRefreshing = isRefreshing,
+        sortOption = sortOption,
         onBackClick = { navController.popBackStack() },
         onDeleteFeed = { viewModel.deleteFeed(it) },
-        onRefresh = { viewModel.refresh() }
+        onRefresh = { viewModel.refresh() },
+        onSortOptionSelected = { viewModel.setSortOption(it) }
     )
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FeedsScreenContent(
+    navController: NavController,
     feeds: List<FeedEntity>,
+    isRefreshing: Boolean = false,
+    sortOption: SortOption = SortOption.TITLE_ASC,
     onBackClick: () -> Unit,
     onDeleteFeed: (FeedEntity) -> Unit = {},
-    onRefresh: () -> Unit = {}
+    onRefresh: () -> Unit = {},
+    onSortOptionSelected: (SortOption) -> Unit = {}
 ) {
     var showMenu by remember { mutableStateOf(false) }
+    var showSortSheet by remember { mutableStateOf(false) }
+
+    if (showSortSheet) {
+        SortBottomSheet(
+            selectedOption = sortOption,
+            onOptionSelected = onSortOptionSelected,
+            onDismissRequest = { showSortSheet = false }
+        )
+    }
 
     Column(
         modifier = Modifier
@@ -120,7 +148,10 @@ fun FeedsScreenContent(
                     )
                     DropdownMenuItem(
                         text = { Text("Sort") },
-                        onClick = { showMenu = false },
+                        onClick = {
+                            showMenu = false
+                            showSortSheet = true
+                        },
                         leadingIcon = { Icon(Icons.AutoMirrored.Filled.Sort, contentDescription = null) }
                     )
                     DropdownMenuItem(
@@ -137,31 +168,49 @@ fun FeedsScreenContent(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        if (feeds.isEmpty()) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 16.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = "No feeds yet. Add one to get started!",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        } else {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
-                contentPadding = PaddingValues(bottom = 24.dp)
-            ) {
-                items(feeds) { feed ->
-                    FeedItem(
-                        feed = feed,
-                        onDeleteClick = { onDeleteFeed(feed) }
+        PullToRefreshBox(
+            isRefreshing = isRefreshing,
+            onRefresh = onRefresh,
+            modifier = Modifier.weight(1f)
+        ) {
+            if (feeds.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 16.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "No feeds yet. Add one to get started!",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            } else {
+                val scrollState = rememberLazyListState()
+                Box(modifier = Modifier.fillMaxSize()) {
+                    LazyColumn(
+                        state = scrollState,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(horizontal = 16.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp),
+                        contentPadding = PaddingValues(bottom = 24.dp)
+                    ) {
+                        items(feeds) { feed ->
+                            FeedItem(
+                                feed = feed,
+                                onClick = {
+                                    navController.navigate("feed/${feed.title}")
+                                },
+                                onDeleteClick = { onDeleteFeed(feed) }
+                            )
+                        }
+                    }
+
+                    NarraScrollbar(
+                        lazyListState = scrollState,
+                        modifier = Modifier.align(Alignment.CenterEnd)
                     )
                 }
             }
@@ -169,71 +218,95 @@ fun FeedsScreenContent(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun FeedItem(
     feed: FeedEntity,
+    onClick: () -> Unit,
     onDeleteClick: () -> Unit
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(64.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        // Square favicon or placeholder image
-        Box(
+    var showMenu by remember { mutableStateOf(false) }
+
+    Box {
+        Row(
             modifier = Modifier
-                .size(64.dp)
-                .clip(RoundedCornerShape(12.dp))
-                .background(MaterialTheme.colorScheme.surfaceContainer),
-            contentAlignment = Alignment.Center
+                .fillMaxWidth()
+                .height(64.dp)
+                .combinedClickable(
+                    onClick = onClick,
+                    onLongClick = { showMenu = true }
+                ),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            if (feed.imageUrl != null) {
-                AsyncImage(
-                    model = feed.imageUrl,
-                    contentDescription = "Feed icon",
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop
-                )
-            } else {
-                Icon(
-                    imageVector = Icons.Default.RssFeed,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(32.dp)
-                )
+            // Square favicon or placeholder image
+            Box(
+                modifier = Modifier
+                    .size(64.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(MaterialTheme.colorScheme.surfaceContainer),
+                contentAlignment = Alignment.Center
+            ) {
+                if (feed.imageUrl != null) {
+                    AsyncImage(
+                        model = feed.imageUrl,
+                        contentDescription = "Feed icon",
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                } else {
+                    Icon(
+                        imageVector = Icons.Default.RssFeed,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(32.dp)
+                    )
+                }
             }
-        }
 
-        Spacer(modifier = Modifier.width(16.dp))
+            Spacer(modifier = Modifier.width(16.dp))
 
-        // Feed name
-        Column(
-            modifier = Modifier.weight(1f)
-        ) {
-            Text(
-                text = feed.title,
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onBackground,
-                maxLines = 1
-            )
-            if (feed.description != null) {
+            // Feed name
+            Column(
+                modifier = Modifier.weight(1f)
+            ) {
                 Text(
-                    text = feed.description,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 2
+                    text = feed.title,
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onBackground,
+                    maxLines = 1
+                )
+                if (feed.description != null) {
+                    Text(
+                        text = feed.description,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 2
+                    )
+                }
+            }
+
+            // Notification icon on the right
+            IconButton(onClick = { /* TODO: Implement feed notifications */ }) {
+                Icon(
+                    imageVector = Icons.Default.NotificationsNone,
+                    contentDescription = "Notifications",
+                    modifier = Modifier.size(24.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }
 
-        // Notification icon on the right
-        IconButton(onClick = { /* TODO: Implement feed notifications */ }) {
-            Icon(
-                imageVector = Icons.Default.NotificationsNone,
-                contentDescription = "Notifications",
-                modifier = Modifier.size(24.dp),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
+        DropdownMenu(
+            expanded = showMenu,
+            onDismissRequest = { showMenu = false }
+        ) {
+            DropdownMenuItem(
+                text = { Text("Delete feed") },
+                onClick = {
+                    showMenu = false
+                    onDeleteClick()
+                },
+                leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null) }
             )
         }
     }
@@ -254,6 +327,7 @@ fun FeedsScreenPreview() {
         ) { innerPadding ->
             Box(modifier = Modifier.padding(innerPadding)) {
                 FeedsScreenContent(
+                    navController = navController,
                     feeds = sampleFeeds,
                     onBackClick = {}
                 )

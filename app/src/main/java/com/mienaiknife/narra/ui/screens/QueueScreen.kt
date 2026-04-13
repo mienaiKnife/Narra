@@ -18,7 +18,7 @@ package com.mienaiknife.narra.ui.screens
 
 import android.content.res.Configuration
 import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -44,6 +44,7 @@ import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -53,9 +54,12 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -72,8 +76,11 @@ import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import com.mienaiknife.narra.data.models.Article
 import com.mienaiknife.narra.data.models.SampleArticles
+import com.mienaiknife.narra.data.models.SortOption
 import com.mienaiknife.narra.ui.components.BottomNavBar
+import com.mienaiknife.narra.ui.components.NarraScrollbar
 import com.mienaiknife.narra.ui.components.QueueItem
+import com.mienaiknife.narra.ui.components.SortBottomSheet
 import com.mienaiknife.narra.ui.theme.NarraTheme
 import com.mienaiknife.narra.ui.viewmodels.QueueViewModel
 import kotlinx.coroutines.launch
@@ -85,8 +92,11 @@ fun QueueScreen(
     viewModel: QueueViewModel = hiltViewModel()
 ) {
     val articles by viewModel.articles.collectAsState()
+    val isRefreshing by viewModel.isRefreshing.collectAsState()
     val currentArticle by viewModel.currentArticle.collectAsState()
     val isPlaying by viewModel.isPlaying.collectAsState()
+    val sortOption by viewModel.sortOption.collectAsState()
+    val keepSorted by viewModel.keepSorted.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
@@ -97,8 +107,11 @@ fun QueueScreen(
         Box(modifier = Modifier.padding(paddingValues)) {
             QueueScreenContent(
                 articles = articles,
+                isRefreshing = isRefreshing,
                 currentArticle = currentArticle,
                 isPlaying = isPlaying,
+                sortOption = sortOption,
+                keepSorted = keepSorted,
                 onArticleClick = onArticleClick,
                 onPlayPauseClick = { article -> viewModel.onPlayPauseClick(article) },
                 onMarkAsPlayedClick = { article -> viewModel.togglePlayedStatus(article) },
@@ -118,17 +131,23 @@ fun QueueScreen(
                 onHistoryClick = { navController.navigate("history") },
                 onClearQueue = { viewModel.clearQueue() },
                 onRefresh = { viewModel.refresh() },
+                onSortOptionSelected = { viewModel.setSortOption(it) },
+                onKeepSortedChange = { viewModel.setKeepSorted(it) },
                 onReorder = { from, to -> viewModel.reorderQueue(from, to) }
             )
         }
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun QueueScreenContent(
     articles: List<Article>,
+    isRefreshing: Boolean = false,
     currentArticle: Article? = null,
     isPlaying: Boolean = false,
+    sortOption: SortOption = SortOption.DATE_DESC,
+    keepSorted: Boolean = false,
     onArticleClick: (String) -> Unit = {},
     onPlayPauseClick: (Article) -> Unit = {},
     onMarkAsPlayedClick: (Article) -> Unit = {},
@@ -136,13 +155,30 @@ fun QueueScreenContent(
     onHistoryClick: () -> Unit = {},
     onClearQueue: () -> Unit = {},
     onRefresh: () -> Unit = {},
+    onSortOptionSelected: (SortOption) -> Unit = {},
+    onKeepSortedChange: (Boolean) -> Unit = {},
     onReorder: (Int, Int) -> Unit = { _, _ -> }
 ) {
     var showMenu by remember { mutableStateOf(false) }
+    val showSortSheet = remember { mutableStateOf(false) }
     val lazyListState = rememberLazyListState()
 
-    var draggedItemIndex by remember { mutableStateOf<Int?>(null) }
-    var draggingOffset by remember { mutableStateOf(0f) }
+    var draggedItemIndex by remember { mutableIntStateOf(-1) }
+    var draggingOffset by remember { mutableFloatStateOf(0f) }
+
+    if (showSortSheet.value) {
+        SortBottomSheet(
+            selectedOption = sortOption,
+            onOptionSelected = {
+                onSortOptionSelected(it)
+                showSortSheet.value = false
+            },
+            onDismissRequest = { showSortSheet.value = false },
+            isQueue = true,
+            keepSorted = keepSorted,
+            onKeepSortedChange = onKeepSortedChange
+        )
+    }
 
     Column(
         modifier = Modifier
@@ -184,7 +220,10 @@ fun QueueScreenContent(
                     )
                     DropdownMenuItem(
                         text = { Text("Sort") },
-                        onClick = { showMenu = false },
+                        onClick = {
+                            showMenu = false
+                            showSortSheet.value = true
+                        },
                         leadingIcon = { Icon(Icons.AutoMirrored.Filled.Sort, contentDescription = null) }
                     )
                     DropdownMenuItem(
@@ -224,82 +263,84 @@ fun QueueScreenContent(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        LazyColumn(
-            state = lazyListState,
-            modifier = Modifier
-                .weight(1f)
-                .pointerInput(articles) {
-                    detectDragGesturesAfterLongPress(
-                        onDragStart = { offset ->
-                            lazyListState.layoutInfo.visibleItemsInfo
-                                .firstOrNull { item ->
-                                    offset.y.toInt() in item.offset..(item.offset + item.size)
-                                }
-                                ?.let { item ->
-                                    draggedItemIndex = item.index
-                                }
-                        },
-                        onDrag = { change, dragAmount ->
-                            change.consume()
-                            draggingOffset += dragAmount.y
-
-                            val currentDraggedIndex = draggedItemIndex ?: return@detectDragGesturesAfterLongPress
-                            val itemHeight = lazyListState.layoutInfo.visibleItemsInfo
-                                .firstOrNull { it.index == currentDraggedIndex }?.size ?: 0
-
-                            if (itemHeight > 0) {
-                                val targetIndex = when {
-                                    draggingOffset > itemHeight / 2 -> currentDraggedIndex + 1
-                                    draggingOffset < -itemHeight / 2 -> currentDraggedIndex - 1
-                                    else -> currentDraggedIndex
-                                }
-
-                                if (targetIndex in articles.indices && targetIndex != currentDraggedIndex) {
-                                    onReorder(currentDraggedIndex, targetIndex)
-                                    draggedItemIndex = targetIndex
-                                    draggingOffset = 0f
-                                }
-                            }
-                        },
-                        onDragEnd = {
-                            draggedItemIndex = null
-                            draggingOffset = 0f
-                        },
-                        onDragCancel = {
-                            draggedItemIndex = null
-                            draggingOffset = 0f
-                        }
-                    )
-                },
-            verticalArrangement = Arrangement.spacedBy(24.dp),
-            contentPadding = PaddingValues(bottom = 16.dp)
+        PullToRefreshBox(
+            isRefreshing = isRefreshing,
+            onRefresh = onRefresh,
+            modifier = Modifier.weight(1f)
         ) {
-            itemsIndexed(articles, key = { _, article -> article.id }) { index, article ->
-                val isDragging = index == draggedItemIndex
-                QueueItem(
-                    article = article,
-                    isPlaying = article.id == currentArticle?.id && isPlaying,
+            Box(modifier = Modifier.fillMaxSize()) {
+                LazyColumn(
+                    state = lazyListState,
                     modifier = Modifier
-                        .zIndex(if (isDragging) 1f else 0f)
-                        .offset {
-                            if (isDragging) {
-                                IntOffset(0, draggingOffset.toInt())
-                            } else {
-                                IntOffset.Zero
+                        .fillMaxSize(),
+                    verticalArrangement = Arrangement.spacedBy(24.dp),
+                    contentPadding = PaddingValues(bottom = 16.dp)
+                ) {
+                    itemsIndexed(
+                        items = articles,
+                        key = { _, article -> article.id }
+                    ) { index, article ->
+                        val isDragged = index == draggedItemIndex
+                        val offset = if (isDragged) IntOffset(0, draggingOffset.toInt()) else IntOffset.Zero
+                        val zIndex = if (isDragged) 1f else 0f
+
+                        QueueItem(
+                            article = article,
+                            isPlaying = isPlaying && currentArticle?.id == article.id,
+                            modifier = Modifier
+                                .offset { offset }
+                                .zIndex(zIndex)
+                                .animateItem()
+                                .fillMaxWidth(),
+                            onItemClick = { onArticleClick(article.id) },
+                            onPlayPauseClick = { onPlayPauseClick(article) },
+                            onMarkAsPlayedClick = { onMarkAsPlayedClick(article) },
+                            onRemoveClick = { onRemoveFromQueue(article) },
+                            dragModifier = Modifier.pointerInput(articles) {
+                                detectDragGestures(
+                                    onDragStart = { _ ->
+                                        draggedItemIndex = index
+                                    },
+                                    onDrag = { change, dragAmount ->
+                                        change.consume()
+                                        draggingOffset += dragAmount.y
+
+                                        val currentDraggedIndex = draggedItemIndex
+                                        if (currentDraggedIndex == -1) return@detectDragGestures
+                                        val itemHeight = lazyListState.layoutInfo.visibleItemsInfo
+                                            .firstOrNull { it.index == currentDraggedIndex }?.size ?: 0
+
+                                        if (itemHeight > 0) {
+                                            val targetIndex = when {
+                                                draggingOffset > itemHeight / 2 -> currentDraggedIndex + 1
+                                                draggingOffset < -itemHeight / 2 -> currentDraggedIndex - 1
+                                                else -> currentDraggedIndex
+                                            }
+
+                                            if (targetIndex in articles.indices && targetIndex != currentDraggedIndex) {
+                                                onReorder(currentDraggedIndex, targetIndex)
+                                                draggedItemIndex = targetIndex
+                                                draggingOffset = 0f
+                                            }
+                                        }
+                                    },
+                                    onDragEnd = {
+                                        draggedItemIndex = -1
+                                        draggingOffset = 0f
+                                    },
+                                    onDragCancel = {
+                                        draggedItemIndex = -1
+                                        draggingOffset = 0f
+                                    }
+                                )
                             }
-                        }
-                        .animateItem(),
-                    onItemClick = {
-                        onArticleClick(article.id)
-                    },
-                    onPlayPauseClick = {
-                        onPlayPauseClick(article)
-                    },
-                    onMarkAsPlayedClick = {
-                        onMarkAsPlayedClick(article)
-                    },
-                    onRemoveClick = { onRemoveFromQueue(article) },
-                    onReorderClick = { /* Handled by long press on the whole item for now */ }
+                        )
+                    }
+                }
+
+                NarraScrollbar(
+                    lazyListState = lazyListState,
+                    modifier = Modifier.align(Alignment.CenterEnd)
                 )
             }
         }
