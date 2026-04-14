@@ -56,7 +56,26 @@ class PlaybackService : MediaSessionService() {
 
         mediaSession = MediaSession.Builder(this, ttsPlayer)
             .setSessionActivity(pendingIntent)
-            .setCallback(object : MediaSession.Callback {})
+            .setCallback(object : MediaSession.Callback {
+                @Suppress("DEPRECATION")
+                override fun onPlayerCommandRequest(
+                    session: MediaSession,
+                    controller: MediaSession.ControllerInfo,
+                    playerCommand: Int
+                ): Int {
+                    when (playerCommand) {
+                        Player.COMMAND_SEEK_TO_NEXT,
+                        Player.COMMAND_SEEK_TO_NEXT_MEDIA_ITEM -> {
+                            ttsPlayer.seekToNextInternal()
+                        }
+                        Player.COMMAND_SEEK_TO_PREVIOUS,
+                        Player.COMMAND_SEEK_TO_PREVIOUS_MEDIA_ITEM -> {
+                            ttsPlayer.seekToPreviousInternal()
+                        }
+                    }
+                    return super.onPlayerCommandRequest(session, controller, playerCommand)
+                }
+            })
             .build()
     }
 

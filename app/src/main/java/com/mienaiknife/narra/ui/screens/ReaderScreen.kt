@@ -200,8 +200,6 @@ fun ReaderContent(
         }
     }
 
-    var isFollowing by remember { mutableStateOf(true) }
-
     val context = LocalContext.current
     val view = LocalView.current
     val uriHandler = LocalUriHandler.current

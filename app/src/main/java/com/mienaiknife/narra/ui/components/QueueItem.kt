@@ -185,7 +185,8 @@ private fun QueueItemRow(
                         model = imageUrl,
                         contentDescription = null,
                         modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Crop
+                        contentScale = ContentScale.Crop,
+                        alpha = if (article.progress == 1f) 0.6f else 1f
                     )
                 }
             }
@@ -231,7 +232,7 @@ private fun QueueItemRow(
                     Text(
                         text = if (article.id == "3") "0:42" else if (article.id == "2") "0:46" else "5:07",
                         style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = if (article.progress == 1f) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f) else MaterialTheme.colorScheme.onSurfaceVariant,
                     )
 
                     if (progress > 0f && progress < 1f) {
@@ -254,7 +255,7 @@ private fun QueueItemRow(
                         Text(
                             text = if (article.id == "2") "-0:46" else "-5:07",
                             style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = if (article.progress == 1f) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f) else MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     } else if (progress == 1f) {
                         Text(

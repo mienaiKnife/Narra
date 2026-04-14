@@ -26,7 +26,7 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface ArticleDao {
-    @Query("SELECT * FROM articles WHERE isInQueue = 1 AND progress < 1.0 ORDER BY queueOrder ASC, COALESCE(publishedTimestamp, createdAt) ASC")
+    @Query("SELECT * FROM articles WHERE isInQueue = 1 ORDER BY queueOrder ASC, COALESCE(publishedTimestamp, createdAt) ASC")
     fun getQueueArticles(): Flow<List<ArticleEntity>>
 
     @Query("SELECT * FROM articles WHERE isInQueue = 0 AND finishedAt IS NOT NULL ORDER BY finishedAt DESC")
@@ -68,8 +68,8 @@ interface ArticleDao {
     @Query("UPDATE articles SET isInQueue = 0, progress = 1.0, finishedAt = :finishedAt, content = NULL WHERE id = :id")
     suspend fun markAsFinished(id: String, finishedAt: Long = System.currentTimeMillis())
 
-    @Query("UPDATE articles SET isInQueue = 0, progress = 1.0, finishedAt = NULL, content = NULL WHERE id = :id")
-    suspend fun markAsPlayed(id: String)
+    @Query("UPDATE articles SET isInQueue = 0, progress = 1.0, finishedAt = :finishedAt, content = NULL WHERE id = :id")
+    suspend fun markAsPlayed(id: String, finishedAt: Long = System.currentTimeMillis())
 
     @Query("UPDATE articles SET progress = 0.0, finishedAt = NULL, currentParagraphIndex = 0, currentWordOffset = 0 WHERE id = :id")
     suspend fun markAsUnplayed(id: String)

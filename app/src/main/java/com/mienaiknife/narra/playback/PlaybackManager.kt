@@ -22,6 +22,7 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.common.Timeline
 import com.mienaiknife.narra.data.models.Article
+import com.mienaiknife.narra.domain.TtsState
 import com.mienaiknife.narra.domain.repository.ContentRepository
 import com.mienaiknife.narra.ui.utils.HtmlParser
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -34,8 +35,10 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.coroutines.resume
 
 @Singleton
 class PlaybackManager @Inject constructor(
@@ -65,6 +68,8 @@ class PlaybackManager @Inject constructor(
 
     private val _currentWordRange = MutableStateFlow<IntRange?>(null)
     val currentWordRange: StateFlow<IntRange?> = _currentWordRange.asStateFlow()
+
+    private var transitionJob: kotlinx.coroutines.Job? = null
 
     init {
         ttsPlayer.onSkipNext = { skipNext() }
@@ -139,6 +144,7 @@ class PlaybackManager @Inject constructor(
 
     fun setCurrentArticle(article: Article, paragraphs: List<String>, playWhenReady: Boolean = true) {
         if (_currentArticle.value?.id != article.id) {
+            transitionJob?.cancel()
             val isTransition = _currentArticle.value != null
             
             _currentArticle.value = article
@@ -147,14 +153,17 @@ class PlaybackManager @Inject constructor(
             _currentParagraphIndex.value = 0
             _currentWordRange.value = null
             
-            if (isTransition) {
-                scope.launch {
+            if (isTransition && playWhenReady) {
+                // Prepare TtsPlayer with the new article but don't start playing yet
+                ttsPlayer.speak(article, paragraphs, playWhenReady = false)
+
+                transitionJob = scope.launch {
                     // Request audio focus before playing chime and announcement
                     ttsPlayer.requestAudioFocus()
 
                     playChime()
                     // Small delay to let the chime breathe
-                    delay(500)
+                    delay(300)
                     
                     // Announcements usually sound better at normal speed even if the article is fast
                     val currentSpeed = _playbackSpeed.value
@@ -162,24 +171,28 @@ class PlaybackManager @Inject constructor(
                     
                     ttsPlayer.speakAnnouncement("Now playing: ${article.title}")
                     
-                    // Restore speed for the actual content
-                    if (currentSpeed != 1.0f) {
-                        // We need to wait for the announcement to finish or just set it back?
-                        // TtsPlayer.speak clears the queue, so we should probably wait or use a callback.
-                        // For now, let's just speak the article which will flush the announcement if it's too long.
-                        // But we want to pause after the announcement.
-                        delay(2000) // Rough estimate for title length + 1s pause
-                        ttsPlayer.setPlaybackSpeed(currentSpeed)
-                    } else {
-                        delay(2000)
+                    // Wait for the announcement to start and then finish
+                    withTimeoutOrNull(5000) {
+                        // Wait for Speaking state with "announcement" ID
+                        ttsPlayer.engineState.first { 
+                            it is TtsState.Speaking && it.utteranceId == "announcement" 
+                        }
+                        // Then wait for it to be Ready (meaning it finished)
+                        ttsPlayer.engineState.first { it is TtsState.Ready }
                     }
                     
-                    ttsPlayer.speak(article, paragraphs, playWhenReady)
-                    if (playWhenReady) ttsPlayer.play()
+                    delay(500) // Brief pause after announcement
+                    
+                    // Restore speed for the actual content
+                    if (currentSpeed != 1.0f) {
+                        ttsPlayer.setPlaybackSpeed(currentSpeed)
+                    }
+                    
+                    // Now start the actual article content
+                    ttsPlayer.play()
                 }
             } else {
                 ttsPlayer.speak(article, paragraphs, playWhenReady)
-                if (playWhenReady) ttsPlayer.play()
             }
         }
     }
@@ -215,9 +228,21 @@ class PlaybackManager @Inject constructor(
             val soundName = settingsManager.chimeSound.first()
             val resId = context.resources.getIdentifier(soundName, "raw", context.packageName)
             if (resId != 0) {
-                MediaPlayer.create(context, resId)?.apply {
-                    setOnCompletionListener { release() }
-                    start()
+                val mediaPlayer = MediaPlayer.create(context, resId) ?: return
+                kotlinx.coroutines.suspendCancellableCoroutine<Unit> { continuation ->
+                    mediaPlayer.setOnCompletionListener { 
+                        it.release()
+                        if (continuation.isActive) continuation.resume(Unit)
+                    }
+                    mediaPlayer.setOnErrorListener { mp, _, _ ->
+                        mp.release()
+                        if (continuation.isActive) continuation.resume(Unit)
+                        true
+                    }
+                    mediaPlayer.start()
+                    continuation.invokeOnCancellation {
+                        mediaPlayer.release()
+                    }
                 }
             }
         } catch (e: Exception) {
@@ -226,13 +251,15 @@ class PlaybackManager @Inject constructor(
     }
 
     fun stop() {
+        transitionJob?.cancel()
         ttsPlayer.pause()
         _currentArticle.value = null
         _isPlaying.value = false
     }
 
     fun togglePlayPause() {
-        if (ttsPlayer.isPlaying) {
+        if (ttsPlayer.isPlaying || transitionJob?.isActive == true) {
+            transitionJob?.cancel()
             ttsPlayer.pause()
         } else {
             ttsPlayer.play()
@@ -265,13 +292,48 @@ class PlaybackManager @Inject constructor(
     }
 
     fun skipBackward() {
-        // For now, just restart current article or go to previous if we track it
         val article = _currentArticle.value ?: return
-        val paragraphs = HtmlParser.parse(article.content).map { it.text.toString() }
-        // Reset progress
+        // If we are more than 3 seconds in, just restart current article
+        if (ttsPlayer.currentPosition > 3000) {
+            val paragraphs = HtmlParser.parse(article.content).map { it.text.toString() }
+            scope.launch {
+                repository.updateArticleProgress(article.id, 0f, 0, 0)
+                ttsPlayer.speak(
+                    article.copy(currentParagraphIndex = 0, currentWordOffset = 0, progress = 0f),
+                    paragraphs,
+                    ttsPlayer.playWhenReady
+                )
+            }
+        } else {
+            playPreviousArticle()
+        }
+    }
+
+    private fun playPreviousArticle() {
+        val current = _currentArticle.value ?: return
         scope.launch {
-            repository.updateArticleProgress(article.id, 0f, 0, 0)
-            setCurrentArticle(article.copy(currentParagraphIndex = 0, currentWordOffset = 0, progress = 0f), paragraphs)
+            val queue = repository.getQueueArticles().first()
+            val currentIndex = queue.indexOfFirst { it.id == current.id }
+            
+            val prevArticle = if (currentIndex > 0) {
+                queue[currentIndex - 1]
+            } else {
+                null
+            }
+
+            if (prevArticle != null) {
+                val paragraphs = HtmlParser.parse(prevArticle.content).map { it.text.toString() }
+                setCurrentArticle(prevArticle, paragraphs)
+            } else {
+                // Restart current if no previous
+                val paragraphs = HtmlParser.parse(current.content).map { it.text.toString() }
+                repository.updateArticleProgress(current.id, 0f, 0, 0)
+                ttsPlayer.speak(
+                    current.copy(currentParagraphIndex = 0, currentWordOffset = 0, progress = 0f),
+                    paragraphs,
+                    ttsPlayer.playWhenReady
+                )
+            }
         }
     }
 

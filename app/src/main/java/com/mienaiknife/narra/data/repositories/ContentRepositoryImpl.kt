@@ -83,24 +83,8 @@ class ContentRepositoryImpl(
     override suspend fun downloadWebPage(url: String): Result<Article> = withContext(Dispatchers.IO) {
         try {
             val existingArticle = articleDao.getArticleByUrl(url)
-            if (existingArticle != null) {
-                if (existingArticle.isInQueue) {
-                    return@withContext Result.failure(Exception("Article already in queue"))
-                } else {
-                    // Move from history to queue
-                    val nextOrder = articleDao.getNextQueueOrder()
-                    val updatedArticle = existingArticle.copy(
-                        isInQueue = true,
-                        queueOrder = nextOrder,
-                        createdAt = System.currentTimeMillis(),
-                        progress = if (existingArticle.progress >= 1f) 0f else existingArticle.progress,
-                        currentParagraphIndex = if (existingArticle.progress >= 1f) 0 else existingArticle.currentParagraphIndex,
-                        currentWordOffset = if (existingArticle.progress >= 1f) 0 else existingArticle.currentWordOffset,
-                        finishedAt = null
-                    )
-                    articleDao.insertArticle(updatedArticle)
-                    return@withContext Result.success(updatedArticle.toDomainModel())
-                }
+            if (existingArticle != null && existingArticle.isInQueue) {
+                return@withContext Result.failure(Exception("Article already in queue"))
             }
 
             val doc = Jsoup.connect(url)
@@ -124,18 +108,23 @@ class ContentRepositoryImpl(
 
             val nextOrder = articleDao.getNextQueueOrder()
             val articleEntity = ArticleEntity(
-                id = UUID.randomUUID().toString(),
+                id = existingArticle?.id ?: UUID.randomUUID().toString(),
                 title = article.title ?: doc.title() ?: "Untitled",
                 source = doc.location().let { java.net.URL(it).host } ?: "Web",
                 content = article.content ?: "",
                 excerpt = article.excerpt,
                 imageUrl = article.byline,
                 url = url,
+                progress = 0f,
+                currentParagraphIndex = 0,
+                currentWordOffset = 0,
                 publishedAt = publishedAt,
                 publishedTimestamp = DateUtils.parseToTimestamp(publishedAt),
                 isInQueue = true,
                 queueOrder = nextOrder,
-                createdAt = System.currentTimeMillis()
+                createdAt = System.currentTimeMillis(),
+                isFavorite = existingArticle?.isFavorite ?: false,
+                isFromFeed = existingArticle?.isFromFeed ?: false
             )
 
             // Try to find a better image URL if possible
@@ -163,9 +152,9 @@ class ContentRepositoryImpl(
     }
 
     override suspend fun addToQueue(id: String) {
-        val article = articleDao.getArticleById(id)
-        if (article != null && article.content.isNullOrEmpty() && article.url != null) {
-            downloadWebPage(article.url)
+        val article = articleDao.getArticleById(id) ?: return
+        if (article.content.isNullOrEmpty()) {
+            article.url?.let { downloadWebPage(it) }
         } else {
             articleDao.addToQueue(id)
         }

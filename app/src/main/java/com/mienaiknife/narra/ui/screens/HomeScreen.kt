@@ -23,7 +23,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -110,13 +109,14 @@ fun HomeScreenContent(
                 .sortedByDescending { it.publishedTimestamp ?: 0L }
                 .take(10)
             val newFromFeeds = inboxArticles
+                .filter { (it.progress ?: 0f) < 1f }
                 .sortedByDescending { it.publishedTimestamp ?: 0L }
                 .take(5)
             val favorites = favoriteArticles.take(10)
 
             if (continueListening.isNotEmpty()) {
                 ArticleCarousel(
-                    title = "Continue Listening",
+                    title = "Continue listening",
                     articles = continueListening,
                     onArticleClick = onArticleClick
                 )
@@ -134,7 +134,7 @@ fun HomeScreenContent(
 
             if (favorites.isNotEmpty()) {
                 ArticleCarousel(
-                    title = "Your Favorites",
+                    title = "Your favorites",
                     articles = favorites,
                     onArticleClick = onArticleClick
                 )
@@ -210,7 +210,8 @@ fun ArticleCard(
                         model = imageUrl,
                         contentDescription = null,
                         modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Crop
+                        contentScale = ContentScale.Crop,
+                        alpha = if (article.progress == 1f) 0.6f else 1f
                     )
                 }
             }
@@ -249,7 +250,7 @@ fun ArticleCard(
                 Text(
                     text = article.source,
                     style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = if (article.progress == 1f) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f) else MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )

@@ -41,12 +41,14 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.mienaiknife.narra.ui.components.BottomNavBar
 import com.mienaiknife.narra.ui.components.MiniPlayer
+import com.mienaiknife.narra.ui.screens.AboutScreen
 import com.mienaiknife.narra.ui.screens.AddScreen
 import com.mienaiknife.narra.ui.screens.FeedArticlesScreen
 import com.mienaiknife.narra.ui.screens.FeedsScreen
 import com.mienaiknife.narra.ui.screens.HistoryScreen
 import com.mienaiknife.narra.ui.screens.HomeScreen
 import com.mienaiknife.narra.ui.screens.InboxScreen
+import com.mienaiknife.narra.ui.screens.LicensesScreen
 import com.mienaiknife.narra.ui.screens.QueueScreen
 import com.mienaiknife.narra.ui.screens.ReaderScreen
 import com.mienaiknife.narra.ui.screens.SettingsScreen
@@ -134,7 +136,13 @@ fun AppNavigation(themeViewModel: ThemeViewModel) {
                 PlaceholderSettingsScreen("Downloads", onBack = { navController.popBackStack() })
             }
             composable("settings/about") {
-                PlaceholderSettingsScreen("About Narra", onBack = { navController.popBackStack() })
+                AboutScreen(
+                    onBack = { navController.popBackStack() },
+                    onNavigateToLicenses = { navController.navigate("settings/licenses") }
+                )
+            }
+            composable("settings/licenses") {
+                LicensesScreen(onBack = { navController.popBackStack() })
             }
             composable(
                 "reader/{articleId}",

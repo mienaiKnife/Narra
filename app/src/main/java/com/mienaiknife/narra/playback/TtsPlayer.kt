@@ -71,6 +71,8 @@ class TtsPlayer @Inject constructor(
     var onSkipNext: (() -> Unit)? = null
     var onSkipPrevious: (() -> Unit)? = null
 
+    val engineState: kotlinx.coroutines.flow.StateFlow<TtsState> = ttsEngine.state
+
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private val listeners = mutableListOf<Player.Listener>()
     private val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
@@ -753,10 +755,6 @@ class TtsPlayer @Inject constructor(
     }
 
     fun speakAnnouncement(text: String) {
-        // Clear current article state so we don't trigger STATE_ENDED when announcement finishes
-        paragraphs = emptyList()
-        currentParagraphIndex = -1
-        currentWordRange = null
         if (requestAudioFocus() == AudioManager.AUDIOFOCUS_REQUEST_GRANTED) {
             ttsEngine.speak(text, "announcement")
         }
