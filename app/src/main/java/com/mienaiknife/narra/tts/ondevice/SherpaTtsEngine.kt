@@ -23,25 +23,25 @@ import android.media.AudioTrack
 import android.util.Log
 import com.mienaiknife.narra.domain.TtsEngine
 import com.mienaiknife.narra.domain.TtsState
+import com.mienaiknife.narra.domain.models.TtsModel
+import com.mienaiknife.narra.domain.models.TtsModelType
 import com.mienaiknife.narra.domain.repository.ModelRepository
 import com.mienaiknife.narra.playback.PlaybackSettingsManager
-import com.k2fsa.sherpa.onnx.OfflineTts
-import com.k2fsa.sherpa.onnx.OfflineTtsConfig
-import com.k2fsa.sherpa.onnx.OfflineTtsModelConfig
-import com.k2fsa.sherpa.onnx.OfflineTtsVitsModelConfig
+import com.k2fsa.sherpa.onnx.*
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
-import java.util.concurrent.LinkedBlockingQueue
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -64,11 +64,15 @@ class SherpaTtsEngine @Inject constructor(
     private var audioUsage = AudioAttributes.USAGE_MEDIA
     private var audioContentType = AudioAttributes.CONTENT_TYPE_SPEECH
 
-    private val queue = LinkedBlockingQueue<UtteranceRequest>()
+    private val utteranceQueue = Channel<UtteranceRequest>(Channel.UNLIMITED)
+    private val synthesizedQueue = Channel<SynthesizedAudio>(Channel.BUFFERED)
+    
     private var synthesisJob: Job? = null
+    private var playbackJob: Job? = null
     private var currentModelId: String? = null
 
     data class UtteranceRequest(val text: String, val utteranceId: String)
+    data class SynthesizedAudio(val samples: FloatArray, val sampleRate: Int, val utteranceId: String, val text: String)
 
     init {
         scope.launch {
@@ -85,6 +89,14 @@ class SherpaTtsEngine @Inject constructor(
         withContext(Dispatchers.IO) {
             _state.value = TtsState.Initializing
             try {
+                // Stop any current synthesis/playback loops
+                synthesisJob?.cancel()
+                playbackJob?.cancel()
+                
+                // Clear queues
+                while (utteranceQueue.tryReceive().isSuccess) {}
+                while (synthesizedQueue.tryReceive().isSuccess) {}
+
                 tts?.release()
                 tts = null
 
@@ -94,30 +106,25 @@ class SherpaTtsEngine @Inject constructor(
                 }
 
                 val modelPath = modelRepository.getModelPath(modelId)
-                if (modelPath == null) {
+                val modelMetadata = modelRepository.getAvailableModels().first().find { it.id == modelId }
+                
+                if (modelPath == null || modelMetadata == null) {
                     _state.value = TtsState.Error("Model files not found")
                     return@withContext
                 }
 
-                val vitsConfig = OfflineTtsVitsModelConfig(
-                    model = File(modelPath, "model.onnx").absolutePath,
-                    tokens = File(modelPath, "tokens.txt").absolutePath,
-                    dataDir = modelPath
-                )
-
-                val modelConfig = OfflineTtsModelConfig(
-                    vits = vitsConfig,
-                    numThreads = 1,
-                    debug = true
-                )
-
+                val modelConfig = createModelConfig(modelMetadata, modelPath)
                 val config = OfflineTtsConfig(
-                    model = modelConfig
+                    model = modelConfig,
+                    ruleFsts = "",
+                    ruleFars = "",
+                    maxNumSentences = 1,
+                    silenceScale = 0.2f
                 )
                 
                 tts = OfflineTts(context.assets, config)
                 _state.value = TtsState.Ready
-                startSynthesisLoop()
+                startLoops()
             } catch (e: Exception) {
                 Log.e("SherpaTtsEngine", "Failed to initialize engine", e)
                 _state.value = TtsState.Error(e.message ?: "Unknown initialization error")
@@ -125,23 +132,129 @@ class SherpaTtsEngine @Inject constructor(
         }
     }
 
-    private fun startSynthesisLoop() {
+    private fun createModelConfig(model: TtsModel, modelPath: String): OfflineTtsModelConfig {
+        var vits = OfflineTtsVitsModelConfig()
+        var matcha = OfflineTtsMatchaModelConfig()
+        var kokoro = OfflineTtsKokoroModelConfig()
+        var zipvoice = OfflineTtsZipVoiceModelConfig()
+        var kitten = OfflineTtsKittenModelConfig()
+        var pocket = OfflineTtsPocketModelConfig()
+        var supertonic = OfflineTtsSupertonicModelConfig()
+        
+        when (model.type) {
+            TtsModelType.VITS -> {
+                vits = OfflineTtsVitsModelConfig(
+                    model = File(modelPath, "model.onnx").absolutePath,
+                    lexicon = "",
+                    tokens = File(modelPath, "tokens.txt").absolutePath,
+                    dataDir = modelPath,
+                    noiseScale = 0.667f,
+                    noiseScaleW = 0.8f,
+                    lengthScale = 1.0f
+                )
+            }
+            TtsModelType.MATCHA -> {
+                matcha = OfflineTtsMatchaModelConfig(
+                    acousticModel = File(modelPath, "model.onnx").absolutePath,
+                    vocoder = File(modelPath, "vocoder.onnx").absolutePath,
+                    lexicon = "",
+                    tokens = File(modelPath, "tokens.txt").absolutePath,
+                    dataDir = modelPath,
+                    noiseScale = 1.0f,
+                    lengthScale = 1.0f
+                )
+            }
+            TtsModelType.KOKORO -> {
+                kokoro = OfflineTtsKokoroModelConfig(
+                    model = File(modelPath, "model.onnx").absolutePath,
+                    voices = File(modelPath, "voices.bin").absolutePath,
+                    tokens = File(modelPath, "tokens.txt").absolutePath,
+                    dataDir = modelPath,
+                    lengthScale = 1.0f
+                )
+            }
+            TtsModelType.ZIPVOICE -> {
+                zipvoice = OfflineTtsZipVoiceModelConfig(
+                    encoder = File(modelPath, "encoder.onnx").absolutePath,
+                    decoder = File(modelPath, "decoder.onnx").absolutePath,
+                    tokens = File(modelPath, "tokens.txt").absolutePath,
+                    dataDir = modelPath
+                )
+            }
+            TtsModelType.KITTEN -> {
+                kitten = OfflineTtsKittenModelConfig(
+                    model = File(modelPath, "model.onnx").absolutePath,
+                    voices = File(modelPath, "voices.bin").absolutePath,
+                    tokens = File(modelPath, "tokens.txt").absolutePath,
+                    dataDir = modelPath,
+                    lengthScale = 1.0f
+                )
+            }
+            TtsModelType.POCKET -> {
+                pocket = OfflineTtsPocketModelConfig(
+                    lmFlow = File(modelPath, "lm_flow.onnx").absolutePath,
+                    lmMain = File(modelPath, "lm_main.onnx").absolutePath,
+                    encoder = File(modelPath, "encoder.onnx").absolutePath,
+                    decoder = File(modelPath, "decoder.onnx").absolutePath,
+                    textConditioner = File(modelPath, "text_conditioner.onnx").absolutePath,
+                    vocabJson = File(modelPath, "vocab.json").absolutePath,
+                    tokenScoresJson = File(modelPath, "token_scores.json").absolutePath
+                )
+            }
+            TtsModelType.SUPERTONIC -> {
+                supertonic = OfflineTtsSupertonicModelConfig(
+                    durationPredictor = File(modelPath, "duration_predictor.onnx").absolutePath,
+                    textEncoder = File(modelPath, "text_encoder.onnx").absolutePath,
+                    vectorEstimator = File(modelPath, "vector_estimator.onnx").absolutePath,
+                    vocoder = File(modelPath, "vocoder.onnx").absolutePath,
+                    ttsJson = File(modelPath, "tts.json").absolutePath,
+                    unicodeIndexer = File(modelPath, "unicode_indexer.onnx").absolutePath,
+                    voiceStyle = File(modelPath, "voice_style.bin").absolutePath
+                )
+            }
+        }
+
+        return OfflineTtsModelConfig(
+            vits = vits,
+            matcha = matcha,
+            kokoro = kokoro,
+            zipvoice = zipvoice,
+            kitten = kitten,
+            pocket = pocket,
+            supertonic = supertonic,
+            numThreads = 1,
+            debug = true,
+            provider = "cpu"
+        )
+    }
+
+    private fun startLoops() {
         synthesisJob?.cancel()
-        synthesisJob = scope.launch(Dispatchers.IO) {
-            while (true) {
-                val request = queue.take()
-                synthesizeAndPlay(request)
+        playbackJob?.cancel()
+
+        synthesisJob = scope.launch(Dispatchers.Default) {
+            for (request in utteranceQueue) {
+                val engine = tts ?: continue
+                try {
+                    val audio = engine.generate(request.text)
+                    synthesizedQueue.send(SynthesizedAudio(audio.samples, audio.sampleRate, request.utteranceId, request.text))
+                } catch (e: Exception) {
+                    Log.e("SherpaTtsEngine", "Synthesis failed", e)
+                }
+            }
+        }
+
+        playbackJob = scope.launch(Dispatchers.Default) {
+            for (audio in synthesizedQueue) {
+                playAudio(audio)
             }
         }
     }
 
-    private fun synthesizeAndPlay(request: UtteranceRequest) {
-        val engine = tts ?: return
-        
+    private suspend fun playAudio(audio: SynthesizedAudio) {
         try {
-            _state.value = TtsState.Speaking(request.utteranceId, 0, request.text.length, 0)
+            _state.value = TtsState.Speaking(audio.utteranceId, 0, audio.text.length, 0)
             
-            val audio = engine.generate(request.text)
             val samples = audio.samples
             val sampleRate = audio.sampleRate
 
@@ -151,40 +264,85 @@ class SherpaTtsEngine @Inject constructor(
                 AudioFormat.ENCODING_PCM_FLOAT
             )
 
-            audioTrack?.release()
-            audioTrack = AudioTrack.Builder()
-                .setAudioAttributes(
-                    AudioAttributes.Builder()
-                        .setUsage(audioUsage)
-                        .setContentType(audioContentType)
-                        .build()
-                )
-                .setAudioFormat(
-                    AudioFormat.Builder()
-                        .setEncoding(AudioFormat.ENCODING_PCM_FLOAT)
-                        .setSampleRate(sampleRate)
-                        .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
-                        .build()
-                )
-                .setBufferSizeInBytes(maxOf(bufferSize, samples.size * 4))
-                .setTransferMode(AudioTrack.MODE_STATIC)
-                .build()
+            if (audioTrack == null || audioTrack?.sampleRate != sampleRate) {
+                audioTrack?.release()
+                audioTrack = AudioTrack.Builder()
+                    .setAudioAttributes(
+                        AudioAttributes.Builder()
+                            .setUsage(audioUsage)
+                            .setContentType(audioContentType)
+                            .build()
+                    )
+                    .setAudioFormat(
+                        AudioFormat.Builder()
+                            .setEncoding(AudioFormat.ENCODING_PCM_FLOAT)
+                            .setSampleRate(sampleRate)
+                            .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
+                            .build()
+                    )
+                    .setBufferSizeInBytes(maxOf(bufferSize, samples.size * 4))
+                    .setTransferMode(AudioTrack.MODE_STREAM)
+                    .build()
+            }
 
             audioTrack?.apply {
-                write(samples, 0, samples.size, AudioTrack.WRITE_BLOCKING)
+                if (state == AudioTrack.STATE_UNINITIALIZED) return@apply
+                
                 setPlaybackParams(playbackParams.setSpeed(playbackSpeed))
                 setVolume(volume)
-                play()
+                if (playState != AudioTrack.PLAYSTATE_PLAYING) {
+                    play()
+                }
+
+                val startHeadPosition = playbackHeadPosition
+                var offset = 0
+                val totalSamples = samples.size
                 
-                // Wait for playback to finish
-                val playTimeMs = (samples.size.toFloat() / sampleRate / playbackSpeed * 1000).toLong()
-                Thread.sleep(playTimeMs)
+                while (offset < totalSamples) {
+                    val toWrite = totalSamples - offset
+                    val written = write(samples, offset, toWrite, AudioTrack.WRITE_NON_BLOCKING)
+                    if (written < 0) {
+                        Log.e("SherpaTtsEngine", "AudioTrack write error: $written")
+                        break
+                    }
+                    offset += written
+                    
+                    val currentHead = playbackHeadPosition
+                    val playedFrames = (currentHead - startHeadPosition).toInt().coerceAtLeast(0)
+                    
+                    // Throttle state updates to avoid overwhelming the UI
+                    if (offset % 4000 == 0 || offset >= totalSamples) {
+                        _state.value = TtsState.Speaking(
+                            audio.utteranceId,
+                            0,
+                            audio.text.length,
+                            playedFrames
+                        )
+                    }
+                    
+                    if (written == 0) {
+                        // Buffer full, wait a bit longer to be power efficient
+                        kotlinx.coroutines.delay(50)
+                    }
+                }
+                
+                // Wait for the remainder of the audio to finish playing
+                val expectedEndHeadPosition = startHeadPosition + totalSamples
+                while (playbackHeadPosition < expectedEndHeadPosition && playState == AudioTrack.PLAYSTATE_PLAYING) {
+                    _state.value = TtsState.Speaking(
+                        audio.utteranceId,
+                        0,
+                        audio.text.length,
+                        (playbackHeadPosition - startHeadPosition).toInt()
+                    )
+                    kotlinx.coroutines.delay(30)
+                }
             }
             
             _state.value = TtsState.Ready
         } catch (e: Exception) {
-            Log.e("SherpaTtsEngine", "Synthesis failed", e)
-            _state.value = TtsState.Error(e.message ?: "Synthesis failed")
+            Log.e("SherpaTtsEngine", "Playback failed", e)
+            _state.value = TtsState.Error(e.message ?: "Playback failed")
         }
     }
 
@@ -194,11 +352,13 @@ class SherpaTtsEngine @Inject constructor(
     }
 
     override fun enqueue(text: String, utteranceId: String) {
-        queue.offer(UtteranceRequest(text, utteranceId))
+        utteranceQueue.trySend(UtteranceRequest(text, utteranceId))
     }
 
     override fun stop() {
-        queue.clear()
+        while (utteranceQueue.tryReceive().isSuccess) {}
+        while (synthesizedQueue.tryReceive().isSuccess) {}
+        
         audioTrack?.stop()
         audioTrack?.flush()
         _state.value = TtsState.Ready
@@ -209,7 +369,6 @@ class SherpaTtsEngine @Inject constructor(
         try {
             audioTrack?.playbackParams = audioTrack?.playbackParams?.setSpeed(speed) ?: return
         } catch (e: Exception) {
-            // Might fail if not playing
         }
     }
 
@@ -225,6 +384,7 @@ class SherpaTtsEngine @Inject constructor(
 
     override fun release() {
         synthesisJob?.cancel()
+        playbackJob?.cancel()
         tts?.release()
         audioTrack?.release()
         tts = null

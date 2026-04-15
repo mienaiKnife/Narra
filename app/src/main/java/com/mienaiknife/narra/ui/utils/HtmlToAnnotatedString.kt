@@ -16,6 +16,7 @@
 
 package com.mienaiknife.narra.ui.utils
 
+import android.net.Uri
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
@@ -69,6 +70,13 @@ object HtmlParser {
                         tagName == "blockquote" -> {
                             flushInline()
                             blocks.add(ContentBlock.BlockQuote(parseElement(node)))
+                        }
+                        tagName == "img" -> {
+                            flushInline()
+                            val src = node.attr("src")
+                            if (src.isNotEmpty()) {
+                                blocks.add(ContentBlock.Image(src, node.attr("alt").ifEmpty { null }))
+                            }
                         }
                         tagName.startsWith("h") && tagName.length == 2 && tagName[1].isDigit() -> {
                             flushInline()
@@ -200,5 +208,70 @@ object HtmlParser {
             )
             else -> null
         }
+    }
+}
+
+fun AnnotatedString.toSpeakableText(): String {
+    val result = StringBuilder(text)
+    
+    // Handle footnotes: replace with spaces
+    val footnotes = getStringAnnotations("footnote", 0, length)
+    for (annotation in footnotes) {
+        for (i in annotation.start until annotation.end) {
+            result.setCharAt(i, ' ')
+        }
+    }
+
+    // Handle links: if link text is just the URL, replace with a summary
+    val links = getStringAnnotations("link", 0, length)
+    // Process links in reverse order to not mess up offsets if we were changing length,
+    // but here we are keeping indices aligned with the original text for simplicity
+    // and just replacing characters. Actually, since we might want to "speak" something
+    // different, we should build a new string.
+    
+    val output = StringBuilder()
+    var lastIndex = 0
+    
+    val allAnnotations = (footnotes + links).sortedBy { it.start }
+    
+    for (annotation in allAnnotations) {
+        // Append text before the annotation
+        output.append(text.substring(lastIndex, annotation.start))
+        
+        if (annotation.tag == "footnote") {
+            // Footnotes are skipped (replaced by space to maintain cadence/separation)
+            output.append(" ")
+        } else if (annotation.tag == "link") {
+            val linkText = text.substring(annotation.start, annotation.end).trim()
+            val url = annotation.item
+            
+            if (isUrlLike(linkText)) {
+                output.append(" link to ${simplifyUrl(url)} ")
+            } else {
+                // Keep original link text if it's not just a URL
+                output.append(linkText)
+            }
+        }
+        lastIndex = annotation.end
+    }
+    output.append(text.substring(lastIndex))
+    
+    return output.toString()
+}
+
+private fun isUrlLike(text: String): Boolean {
+    return text.startsWith("http://") || 
+           text.startsWith("https://") || 
+           text.contains(Regex("\\.[a-z]{2,3}/")) ||
+           text.split("/").size > 2
+}
+
+private fun simplifyUrl(url: String): String {
+    return try {
+        val uri = Uri.parse(url)
+        val host = uri.host ?: return url
+        host.removePrefix("www.")
+    } catch (e: Exception) {
+        url
     }
 }

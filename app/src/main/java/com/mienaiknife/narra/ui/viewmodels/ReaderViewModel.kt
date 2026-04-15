@@ -140,8 +140,8 @@ class ReaderViewModel @Inject constructor(
 
                 if (articleData != null) {
                     // This triggers the Flow in PlaybackManager, which our init block observes
-                    val paragraphs = HtmlParser.parse(articleData.content).map { it.text.toString() }
-                    playbackManager.setCurrentArticle(articleData, paragraphs, playWhenReady = false)
+                    val blocks = HtmlParser.parse(articleData.content)
+                    playbackManager.setCurrentArticle(articleData, blocks, playWhenReady = false)
                 }
             }
             _isLoading.value = false

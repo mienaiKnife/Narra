@@ -31,6 +31,9 @@ interface TtsModelDao {
     @Query("SELECT * FROM tts_models WHERE id = :id")
     suspend fun getModelById(id: String): TtsModelEntity?
 
+    @Query("SELECT COUNT(*) FROM tts_models")
+    suspend fun getModelCount(): Int
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertModel(model: TtsModelEntity)
 

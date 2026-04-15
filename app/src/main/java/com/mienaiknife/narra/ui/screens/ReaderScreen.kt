@@ -89,6 +89,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.LocalView
@@ -105,6 +106,8 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.compose.ui.draw.clip
+import coil3.compose.AsyncImage
 import com.mienaiknife.narra.data.models.SampleArticles
 import com.mienaiknife.narra.ui.models.ContentBlock
 import com.mienaiknife.narra.ui.theme.NarraTheme
@@ -359,17 +362,15 @@ fun ReaderContent(
                         // Copy original styles from baseAnnotatedString
                         append(baseAnnotatedString)
 
-                        // Apply primary color to footnotes and links
-                        listOf("footnote", "link").forEach { tag ->
-                            baseAnnotatedString.getStringAnnotations(tag, 0, baseAnnotatedString.length)
-                                .forEach { annotation ->
-                                    addStyle(
-                                        SpanStyle(color = colorScheme.primary),
-                                        annotation.start,
-                                        annotation.end
-                                    )
-                                }
-                        }
+                        // Apply primary color to links
+                        baseAnnotatedString.getStringAnnotations("link", 0, baseAnnotatedString.length)
+                            .forEach { annotation ->
+                                addStyle(
+                                    SpanStyle(color = colorScheme.primary),
+                                    annotation.start,
+                                    annotation.end
+                                )
+                            }
 
                         if (isCurrentParagraph) {
                             // Highlight current paragraph
@@ -436,7 +437,27 @@ fun ReaderContent(
                     )
                 }
 
-                if (block is ContentBlock.BlockQuote) {
+                if (block is ContentBlock.Image) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 8.dp)
+                            .then(
+                                if (isCurrentParagraph) Modifier.background(
+                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
+                                ) else Modifier
+                            )
+                    ) {
+                        AsyncImage(
+                            model = block.url,
+                            contentDescription = block.altText,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(MaterialTheme.shapes.medium),
+                            contentScale = ContentScale.Fit
+                        )
+                    }
+                } else if (block is ContentBlock.BlockQuote) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()

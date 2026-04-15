@@ -24,7 +24,9 @@ import androidx.media3.common.Timeline
 import com.mienaiknife.narra.data.models.Article
 import com.mienaiknife.narra.domain.TtsState
 import com.mienaiknife.narra.domain.repository.ContentRepository
+import com.mienaiknife.narra.ui.models.ContentBlock
 import com.mienaiknife.narra.ui.utils.HtmlParser
+import com.mienaiknife.narra.ui.utils.toSpeakableText
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -148,7 +150,7 @@ class PlaybackManager @Inject constructor(
         }
     }
 
-    fun setCurrentArticle(article: Article, paragraphs: List<String>, playWhenReady: Boolean = true) {
+    fun setCurrentArticle(article: Article, blocks: List<ContentBlock>, playWhenReady: Boolean = true) {
         if (_currentArticle.value?.id != article.id) {
             transitionJob?.cancel()
             val isTransition = _currentArticle.value != null
@@ -158,10 +160,17 @@ class PlaybackManager @Inject constructor(
             _currentPosition.value = 0L
             _currentParagraphIndex.value = 0
             _currentWordRange.value = null
+
+            val ttsTexts = blocks.map { block ->
+                when (block) {
+                    is ContentBlock.Image -> block.altText?.let { "Image: $it" } ?: ""
+                    else -> block.text.toSpeakableText()
+                }
+            }
             
             if (isTransition && playWhenReady) {
                 // Prepare TtsPlayer with the new article but don't start playing yet
-                ttsPlayer.speak(article, paragraphs, playWhenReady = false)
+                ttsPlayer.speak(article, ttsTexts, playWhenReady = false)
 
                 transitionJob = scope.launch {
                     // Request audio focus before playing chime and announcement
@@ -198,7 +207,7 @@ class PlaybackManager @Inject constructor(
                     ttsPlayer.play()
                 }
             } else {
-                ttsPlayer.speak(article, paragraphs, playWhenReady)
+                ttsPlayer.speak(article, ttsTexts, playWhenReady)
             }
         }
     }
@@ -219,8 +228,8 @@ class PlaybackManager @Inject constructor(
 
             if (nextArticle != null) {
                 repository.markAsFinished(finishedArticle.id)
-                val paragraphs = HtmlParser.parse(nextArticle.content).map { it.text.toString() }
-                setCurrentArticle(nextArticle, paragraphs)
+                val blocks = HtmlParser.parse(nextArticle.content)
+                setCurrentArticle(nextArticle, blocks)
             } else {
                 repository.markAsFinished(finishedArticle.id)
                 _currentArticle.value = null
@@ -305,12 +314,19 @@ class PlaybackManager @Inject constructor(
         val article = _currentArticle.value ?: return
         // If we are more than 3 seconds in, just restart current article
         if (ttsPlayer.currentPosition > 3000) {
-            val paragraphs = HtmlParser.parse(article.content).map { it.text.toString() }
+            val blocks = HtmlParser.parse(article.content)
+            val ttsTexts = blocks.map { block ->
+                if (block is ContentBlock.Image) {
+                    block.altText?.let { "Image: $it" } ?: ""
+                } else {
+                    block.text.toSpeakableText()
+                }
+            }
             scope.launch {
                 repository.updateArticleProgress(article.id, 0f, 0, 0)
                 ttsPlayer.speak(
                     article.copy(currentParagraphIndex = 0, currentWordOffset = 0, progress = 0f),
-                    paragraphs,
+                    ttsTexts,
                     ttsPlayer.playWhenReady
                 )
             }
@@ -332,15 +348,22 @@ class PlaybackManager @Inject constructor(
             }
 
             if (prevArticle != null) {
-                val paragraphs = HtmlParser.parse(prevArticle.content).map { it.text.toString() }
-                setCurrentArticle(prevArticle, paragraphs)
+                val blocks = HtmlParser.parse(prevArticle.content)
+                setCurrentArticle(prevArticle, blocks)
             } else {
                 // Restart current if no previous
-                val paragraphs = HtmlParser.parse(current.content).map { it.text.toString() }
+                val blocks = HtmlParser.parse(current.content)
+                val ttsTexts = blocks.map { block ->
+                    if (block is ContentBlock.Image) {
+                        block.altText?.let { "Image: $it" } ?: ""
+                    } else {
+                        block.text.toString()
+                    }
+                }
                 repository.updateArticleProgress(current.id, 0f, 0, 0)
                 ttsPlayer.speak(
                     current.copy(currentParagraphIndex = 0, currentWordOffset = 0, progress = 0f),
-                    paragraphs,
+                    ttsTexts,
                     ttsPlayer.playWhenReady
                 )
             }

@@ -19,6 +19,7 @@ package com.mienaiknife.narra.data.local.entities
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import com.mienaiknife.narra.domain.models.TtsModel
+import com.mienaiknife.narra.domain.models.TtsModelType
 
 @Entity(tableName = "tts_models")
 data class TtsModelEntity(
@@ -26,8 +27,10 @@ data class TtsModelEntity(
     val name: String,
     val language: String,
     val description: String,
+    val type: String, // Store as String for Room compatibility
     val modelUrl: String,
     val tokensUrl: String,
+    val extraUrls: String = "", // JSON map of extra file URLs
     val dataDir: String?,
     val sizeBytes: Long,
     val isDownloaded: Boolean,
@@ -38,13 +41,29 @@ data class TtsModelEntity(
         name = name,
         language = language,
         description = description,
+        type = TtsModelType.valueOf(type),
         modelUrl = modelUrl,
         tokensUrl = tokensUrl,
+        extraUrls = parseExtraUrls(extraUrls),
         dataDir = dataDir,
         sizeBytes = sizeBytes,
         isDownloaded = isDownloaded,
         progress = progress
     )
+
+    private fun parseExtraUrls(json: String): Map<String, String> {
+        if (json.isBlank()) return emptyMap()
+        return try {
+            json.trim('{', '}')
+                .split(",")
+                .associate { 
+                    val parts = it.split(":")
+                    parts[0].trim('"') to parts[1].trim('"')
+                }
+        } catch (e: Exception) {
+            emptyMap()
+        }
+    }
 
     companion object {
         fun fromDomain(model: TtsModel) = TtsModelEntity(
@@ -52,12 +71,21 @@ data class TtsModelEntity(
             name = model.name,
             language = model.language,
             description = model.description,
+            type = model.type.name,
             modelUrl = model.modelUrl,
             tokensUrl = model.tokensUrl,
+            extraUrls = formatExtraUrls(model.extraUrls),
             dataDir = model.dataDir,
             sizeBytes = model.sizeBytes,
             isDownloaded = model.isDownloaded,
             progress = model.progress
         )
+
+        private fun formatExtraUrls(urls: Map<String, String>): String {
+            if (urls.isEmpty()) return ""
+            return urls.entries.joinToString(prefix = "{", postfix = "}") { 
+                "\"${it.key}\":\"${it.value}\"" 
+            }
+        }
     }
 }

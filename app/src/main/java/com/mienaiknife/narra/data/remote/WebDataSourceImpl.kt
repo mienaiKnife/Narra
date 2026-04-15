@@ -18,6 +18,9 @@ package com.mienaiknife.narra.data.remote
 
 import com.mienaiknife.narra.data.models.Article
 import com.mienaiknife.narra.utils.DateUtils
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import net.dankito.readability4j.Readability4J
 import org.jsoup.Jsoup
 import java.util.UUID
@@ -38,25 +41,15 @@ class WebDataSourceImpl @Inject constructor() : WebDataSource {
                 return Result.failure(Exception("Failed to extract content from $url"))
             }
 
-            val publishedAt = doc.select("meta[property=article:published_time]").attr("content").ifEmpty { null }
-                ?: doc.select("meta[name=publish-date]").attr("content").ifEmpty { null }
-                ?: doc.select("meta[property=og:pubdate]").attr("content").ifEmpty { null }
-                ?: doc.select("meta[name=pubdate]").attr("content").ifEmpty { null }
-                ?: doc.select("meta[name=date]").attr("content").ifEmpty { null }
-                ?: doc.select("time[itemprop=datePublished]").attr("datetime").ifEmpty { null }
-                ?: doc.select("time").attr("datetime").ifEmpty { null }
-
-            var imageUrl = parsedArticle.byline
-            if (imageUrl == null) {
-                val ogImage = doc.select("meta[property=og:image]").attr("content")
-                val twitterImage = doc.select("meta[name=twitter:image]").attr("content")
-                imageUrl = ogImage.ifEmpty { twitterImage }.ifEmpty { null }
-            }
+            val publishedAt = extractPublishedDate(doc)
+            val imageUrl = extractImageUrl(doc, parsedArticle.byline)
 
             val article = Article(
                 id = UUID.randomUUID().toString(),
                 title = parsedArticle.title ?: doc.title() ?: "Untitled",
-                source = doc.location().let { java.net.URL(it).host } ?: "Web",
+                source = doc.location()?.let { 
+                    try { java.net.URL(it).host } catch (e: Exception) { null }
+                } ?: "Web",
                 content = parsedArticle.content ?: "",
                 publishedAt = publishedAt,
                 publishedTimestamp = DateUtils.parseToTimestamp(publishedAt),
@@ -68,6 +61,60 @@ class WebDataSourceImpl @Inject constructor() : WebDataSource {
             Result.success(article)
         } catch (e: Exception) {
             Result.failure(e)
+        }
+    }
+
+    private fun extractPublishedDate(doc: org.jsoup.nodes.Document): String? {
+        // Try JSON-LD first
+        val jsonLdTags = doc.select("script[type=application/ld+json]")
+        for (tag in jsonLdTags) {
+            try {
+                val json = Json.parseToJsonElement(tag.data())
+                val date = findKeyInJson(json, "datePublished") ?: findKeyInJson(json, "dateCreated")
+                if (date != null) return date
+            } catch (e: Exception) {
+                // Ignore malformed JSON-LD
+            }
+        }
+
+        // Standard meta tags
+        return doc.select("meta[property=article:published_time]").attr("content").ifEmpty { null }
+            ?: doc.select("meta[name=publish-date]").attr("content").ifEmpty { null }
+            ?: doc.select("meta[property=og:pubdate]").attr("content").ifEmpty { null }
+            ?: doc.select("meta[name=pubdate]").attr("content").ifEmpty { null }
+            ?: doc.select("meta[name=date]").attr("content").ifEmpty { null }
+            ?: doc.select("time[itemprop=datePublished]").attr("datetime").ifEmpty { null }
+            ?: doc.select("time").attr("datetime").ifEmpty { null }
+    }
+
+    private fun extractImageUrl(doc: org.jsoup.nodes.Document, byline: String?): String? {
+        // Try JSON-LD first
+        val jsonLdTags = doc.select("script[type=application/ld+json]")
+        for (tag in jsonLdTags) {
+            try {
+                val json = Json.parseToJsonElement(tag.data())
+                val image = findKeyInJson(json, "image")
+                if (image != null) return image
+            } catch (e: Exception) {
+            }
+        }
+
+        return doc.select("meta[property=og:image]").attr("content").ifEmpty { null }
+            ?: doc.select("meta[name=twitter:image]").attr("content").ifEmpty { null }
+            ?: doc.select("meta[property=og:image:url]").attr("content").ifEmpty { null }
+            ?: byline?.ifEmpty { null }
+    }
+
+    private fun findKeyInJson(element: kotlinx.serialization.json.JsonElement, key: String): String? {
+        return when (element) {
+            is JsonObject -> {
+                element[key]?.jsonPrimitive?.content
+                    ?: element.values.asSequence().mapNotNull { findKeyInJson(it, key) }.firstOrNull()
+            }
+            is kotlinx.serialization.json.JsonArray -> {
+                element.asSequence().mapNotNull { findKeyInJson(it, key) }.firstOrNull()
+            }
+            else -> null
         }
     }
 }

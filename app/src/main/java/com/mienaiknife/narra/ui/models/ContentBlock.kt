@@ -23,4 +23,7 @@ sealed class ContentBlock {
     data class Paragraph(override val text: AnnotatedString) : ContentBlock()
     data class BlockQuote(override val text: AnnotatedString) : ContentBlock()
     data class Heading(override val text: AnnotatedString, val level: Int) : ContentBlock()
+    data class Image(val url: String, val altText: String?) : ContentBlock() {
+        override val text: AnnotatedString = AnnotatedString(altText ?: "")
+    }
 }

@@ -41,6 +41,14 @@ class VoicesSettingsViewModel @Inject constructor(
     private val settingsManager: PlaybackSettingsManager
 ) : ViewModel() {
 
+    init {
+        viewModelScope.launch {
+            if (modelRepository is com.mienaiknife.narra.data.repositories.ModelRepositoryImpl) {
+                modelRepository.ensureDefaultModelsInitialized()
+            }
+        }
+    }
+
     val uiState: StateFlow<VoicesSettingsUiState> = combine(
         modelRepository.getAvailableModels(),
         settingsManager.ttsEngine,

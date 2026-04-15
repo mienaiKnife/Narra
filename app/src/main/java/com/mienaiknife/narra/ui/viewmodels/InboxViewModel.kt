@@ -119,8 +119,8 @@ class InboxViewModel @Inject constructor(
             if (uiState.value.currentArticle?.id == article.id) {
                 playbackManager.togglePlayPause()
             } else {
-                val paragraphs = HtmlParser.parse(article.content).map { it.text.toString() }
-                playbackManager.setCurrentArticle(article, paragraphs)
+                val blocks = HtmlParser.parse(article.content)
+                playbackManager.setCurrentArticle(article, blocks)
             }
         }
     }

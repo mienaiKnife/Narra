@@ -20,6 +20,7 @@ import android.content.Context
 import com.mienaiknife.narra.data.local.dao.TtsModelDao
 import com.mienaiknife.narra.data.local.entities.TtsModelEntity
 import com.mienaiknife.narra.domain.models.TtsModel
+import com.mienaiknife.narra.domain.models.TtsModelType
 import com.mienaiknife.narra.domain.repository.ModelRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
@@ -51,12 +52,18 @@ class ModelRepositoryImpl @Inject constructor(
 
     override fun getAvailableModels(): Flow<List<TtsModel>> {
         return ttsModelDao.getAllModels().map { entities ->
-            if (entities.isEmpty()) {
-                // Initialize with some default Sherpa-ONNX models if empty
-                // In a real app, this might come from a remote config
-                initializeDefaultModels()
-            }
             entities.map { it.toDomain() }
+        }
+    }
+
+    /**
+     * Ensures that the default models are present in the database.
+     * Should be called during app startup or when entering the voices settings.
+     */
+    suspend fun ensureDefaultModelsInitialized() = withContext(Dispatchers.IO) {
+        val count = ttsModelDao.getModelCount()
+        if (count == 0) {
+            initializeDefaultModels()
         }
     }
 
@@ -67,18 +74,42 @@ class ModelRepositoryImpl @Inject constructor(
                 name = "Amy (English, US)",
                 language = "en-US",
                 description = "Low quality, fast American English female voice",
+                type = TtsModelType.VITS,
                 modelUrl = "https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/vits-piper-en_US-amy-low.onnx",
                 tokensUrl = "https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/tokens.txt",
-                sizeBytes = 28000000 // Approx 28MB
+                sizeBytes = 28000000 
             ),
             TtsModel(
                 id = "vits-piper-en_US-ryan-medium",
                 name = "Ryan (English, US)",
                 language = "en-US",
                 description = "Medium quality American English male voice",
+                type = TtsModelType.VITS,
                 modelUrl = "https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/vits-piper-en_US-ryan-medium.onnx",
                 tokensUrl = "https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/tokens.txt",
-                sizeBytes = 60000000 // Approx 60MB
+                sizeBytes = 60000000 
+            ),
+            TtsModel(
+                id = "kokoro-en-v0_19",
+                name = "Kokoro (English)",
+                language = "en",
+                description = "High quality Kokoro TTS model",
+                type = TtsModelType.KOKORO,
+                modelUrl = "https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/model-small.onnx",
+                tokensUrl = "https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/tokens.txt",
+                extraUrls = mapOf("voices.bin" to "https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/voices.bin"),
+                sizeBytes = 80000000
+            ),
+            TtsModel(
+                id = "matcha-en-ljspeech",
+                name = "Matcha (English)",
+                language = "en",
+                description = "High quality Matcha TTS model",
+                type = TtsModelType.MATCHA,
+                modelUrl = "https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/matcha-en-ljspeech.onnx",
+                tokensUrl = "https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/tokens.txt",
+                extraUrls = mapOf("vocoder.onnx" to "https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/hifigan_v2.onnx"),
+                sizeBytes = 150000000
             )
         )
         defaultModels.forEach { model ->
@@ -87,23 +118,33 @@ class ModelRepositoryImpl @Inject constructor(
     }
 
     override suspend fun downloadModel(modelId: String): Result<Unit> = withContext(Dispatchers.IO) {
-        val model = ttsModelDao.getModelById(modelId) ?: return@withContext Result.failure(Exception("Model not found"))
-        
+        val entity = ttsModelDao.getModelById(modelId) ?: return@withContext Result.failure(Exception("Model not found"))
+        val model = entity.toDomain()
+
         val targetDir = File(modelsDir, modelId)
         if (!targetDir.exists()) {
             targetDir.mkdirs()
         }
 
         try {
-            // Download model file
-            val modelFile = File(targetDir, "model.onnx")
-            downloadFile(model.modelUrl, modelFile) { progress ->
-                ttsModelDao.updateProgress(modelId, progress)
+            val filesToDownload = mutableListOf<Pair<String, String>>()
+            filesToDownload.add(model.modelUrl to "model.onnx")
+            filesToDownload.add(model.tokensUrl to "tokens.txt")
+            model.extraUrls.forEach { (fileName, url) ->
+                filesToDownload.add(url to fileName)
             }
 
-            // Download tokens file
-            val tokensFile = File(targetDir, "tokens.txt")
-            downloadFile(model.tokensUrl, tokensFile)
+            val totalFiles = filesToDownload.size
+            filesToDownload.forEachIndexed { index, (url, fileName) ->
+                val targetFile = File(targetDir, fileName)
+                downloadFile(url, targetFile) { fileProgress ->
+                    val overallProgress = (index + fileProgress) / totalFiles
+                    // Update progress in DB every ~1% to avoid excessive DB writes
+                    if (overallProgress - model.progress > 0.01f || overallProgress >= 0.99f) {
+                        ttsModelDao.updateProgress(modelId, overallProgress)
+                    }
+                }
+            }
 
             ttsModelDao.updateProgress(modelId, 1.0f)
             ttsModelDao.updateDownloadStatus(modelId, true, targetDir.absolutePath)
