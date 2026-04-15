@@ -88,4 +88,13 @@ interface ArticleDao {
 
     @Query("UPDATE articles SET isFavorite = NOT isFavorite WHERE id = :id")
     suspend fun toggleFavorite(id: String)
+
+    @Query("DELETE FROM articles")
+    suspend fun deleteAllArticles()
+
+    @Query("DELETE FROM articles WHERE isFromFeed = 1")
+    suspend fun deleteAllArticlesFromFeeds()
+
+    @Query("DELETE FROM articles WHERE source = :source AND isFromFeed = 1 AND isInQueue = 0")
+    suspend fun deleteArticlesBySourceFromInbox(source: String)
 }

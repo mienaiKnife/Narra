@@ -33,35 +33,39 @@ import androidx.compose.ui.Modifier
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.dp
+import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import androidx.navigation.toRoute
 import com.mienaiknife.narra.ui.components.BottomNavBar
 import com.mienaiknife.narra.ui.components.MiniPlayer
 import com.mienaiknife.narra.ui.screens.AboutScreen
 import com.mienaiknife.narra.ui.screens.AddScreen
+import com.mienaiknife.narra.ui.screens.DownloadsSettingsScreen
 import com.mienaiknife.narra.ui.screens.FeedArticlesScreen
 import com.mienaiknife.narra.ui.screens.FeedsScreen
 import com.mienaiknife.narra.ui.screens.HistoryScreen
 import com.mienaiknife.narra.ui.screens.HomeScreen
 import com.mienaiknife.narra.ui.screens.InboxScreen
 import com.mienaiknife.narra.ui.screens.LicensesScreen
+import com.mienaiknife.narra.ui.screens.PlaybackSettingsScreen
 import com.mienaiknife.narra.ui.screens.QueueScreen
 import com.mienaiknife.narra.ui.screens.ReaderScreen
 import com.mienaiknife.narra.ui.screens.SettingsScreen
 import com.mienaiknife.narra.ui.screens.UserInterfaceSettingsScreen
-import com.mienaiknife.narra.ui.screens.PlaceholderSettingsScreen
+import com.mienaiknife.narra.ui.screens.VoicesSettingsScreen
 import com.mienaiknife.narra.ui.theme.ThemeViewModel
 
 @Composable
 fun AppNavigation(themeViewModel: ThemeViewModel) {
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
-    val currentRoute = navBackStackEntry?.destination?.route
-    val isReaderScreen = currentRoute?.startsWith("reader/") == true
+    
+    val isReaderScreen = navBackStackEntry?.destination?.hasRoute<NavDestination.Reader>() == true
 
     Scaffold(
         bottomBar = {
@@ -72,7 +76,7 @@ fun AppNavigation(themeViewModel: ThemeViewModel) {
             ) {
                 Column {
                     MiniPlayer(onExpand = { articleId ->
-                        navController.navigate("reader/$articleId") {
+                        navController.navigate(NavDestination.Reader(articleId)) {
                             launchSingleTop = true
                         }
                     })
@@ -89,64 +93,59 @@ fun AppNavigation(themeViewModel: ThemeViewModel) {
         )
         NavHost(
             navController = navController,
-            startDestination = "home",
+            startDestination = NavDestination.Home,
             modifier = Modifier.padding(
                 start = if (isReaderScreen) 0.dp else innerPadding.calculateStartPadding(layoutDirection),
                 end = if (isReaderScreen) 0.dp else innerPadding.calculateEndPadding(layoutDirection),
                 bottom = bottomPadding
             )
         ) {
-            composable("home")    { HomeScreen(onArticleClick = { articleId -> navController.navigate("reader/$articleId") }) }
-            composable("queue")   { QueueScreen(navController, onArticleClick = { articleId -> navController.navigate("reader/$articleId") }) }
-            composable("history") { HistoryScreen(navController) }
-            composable("add")     { AddScreen(onArticleAdded = { navController.navigate("home") }) }
-            composable("inbox")   {
+            composable<NavDestination.Home> { HomeScreen(onArticleClick = { articleId -> navController.navigate(NavDestination.Reader(articleId)) }) }
+            composable<NavDestination.Queue> { QueueScreen(navController, onArticleClick = { articleId -> navController.navigate(NavDestination.Reader(articleId)) }) }
+            composable<NavDestination.History> { HistoryScreen(navController) }
+            composable<NavDestination.Add> { AddScreen(onArticleAdded = { navController.navigate(NavDestination.Home) }) }
+            composable<NavDestination.Inbox> {
                 InboxScreen(
                     navController = navController,
-                    onNavigateToFeeds = { navController.navigate("feeds") }
+                    onNavigateToFeeds = { navController.navigate(NavDestination.Feeds) }
                 )
             }
-            composable("feeds")   { FeedsScreen(navController) }
-            composable(
-                "feed/{feedTitle}",
-                arguments = listOf(navArgument("feedTitle") { type = NavType.StringType })
-            ) {
+            composable<NavDestination.Feeds> { FeedsScreen(navController) }
+            composable<NavDestination.Feed> {
                 FeedArticlesScreen(navController)
             }
-            composable("settings"){
+            composable<NavDestination.Settings> {
                 SettingsScreen(
                     themeViewModel = themeViewModel,
-                    onNavigateToUserInterface = { navController.navigate("settings/ui") },
-                    onNavigateToPlayback = { navController.navigate("settings/playback") },
-                    onNavigateToVoices = { navController.navigate("settings/voices") },
-                    onNavigateToDownloads = { navController.navigate("settings/downloads") },
-                    onNavigateToAbout = { navController.navigate("settings/about") }
+                    onNavigateToUserInterface = { navController.navigate(NavDestination.SettingsUi) },
+                    onNavigateToPlayback = { navController.navigate(NavDestination.SettingsPlayback) },
+                    onNavigateToVoices = { navController.navigate(NavDestination.SettingsVoices) },
+                    onNavigateToDownloads = { navController.navigate(NavDestination.SettingsDownloads) },
+                    onNavigateToAbout = { navController.navigate(NavDestination.SettingsAbout) }
                 )
             }
-            composable("settings/ui") {
+            composable<NavDestination.SettingsUi> {
                 UserInterfaceSettingsScreen(themeViewModel = themeViewModel, onBack = { navController.popBackStack() })
             }
-            composable("settings/playback") {
-                PlaceholderSettingsScreen("Playback", onBack = { navController.popBackStack() })
+            composable<NavDestination.SettingsPlayback> {
+                PlaybackSettingsScreen(onBack = { navController.popBackStack() })
             }
-            composable("settings/voices") {
-                PlaceholderSettingsScreen("Voices", onBack = { navController.popBackStack() })
+            composable<NavDestination.SettingsVoices> {
+                VoicesSettingsScreen(onBack = { navController.popBackStack() })
             }
-            composable("settings/downloads") {
-                PlaceholderSettingsScreen("Downloads", onBack = { navController.popBackStack() })
+            composable<NavDestination.SettingsDownloads> {
+                DownloadsSettingsScreen(onBack = { navController.popBackStack() })
             }
-            composable("settings/about") {
+            composable<NavDestination.SettingsAbout> {
                 AboutScreen(
                     onBack = { navController.popBackStack() },
-                    onNavigateToLicenses = { navController.navigate("settings/licenses") }
+                    onNavigateToLicenses = { navController.navigate(NavDestination.SettingsLicenses) }
                 )
             }
-            composable("settings/licenses") {
+            composable<NavDestination.SettingsLicenses> {
                 LicensesScreen(onBack = { navController.popBackStack() })
             }
-            composable(
-                "reader/{articleId}",
-                arguments = listOf(navArgument("articleId") { type = NavType.StringType }),
+            composable<NavDestination.Reader>(
                 enterTransition = {
                     slideInVertically(
                         initialOffsetY = { it },
@@ -165,10 +164,8 @@ fun AppNavigation(themeViewModel: ThemeViewModel) {
                         animationSpec = tween(400)
                     ) + fadeOut(animationSpec = tween(400))
                 }
-            ) { backStackEntry ->
-                val articleId = backStackEntry.arguments?.getString("articleId") ?: ""
+            ) {
                 ReaderScreen(
-                    articleId = articleId,
                     onBack = { navController.popBackStack() }
                 )
             }

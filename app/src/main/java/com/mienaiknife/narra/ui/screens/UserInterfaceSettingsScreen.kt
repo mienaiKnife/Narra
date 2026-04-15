@@ -36,13 +36,13 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.rememberNavController
 import com.mienaiknife.narra.ui.components.BottomNavBar
 import com.mienaiknife.narra.ui.theme.NarraTheme
@@ -51,9 +51,10 @@ import com.mienaiknife.narra.ui.theme.ThemeViewModel
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun UserInterfaceSettingsScreen(themeViewModel: ThemeViewModel, onBack: () -> Unit) {
-    val isDarkMode by themeViewModel.isDarkMode.collectAsState()
-    val isDynamicColor by themeViewModel.isDynamicColor.collectAsState()
-    val useSystemTheme by themeViewModel.useSystemTheme.collectAsState()
+    val uiState by themeViewModel.uiState.collectAsStateWithLifecycle()
+    val isDarkMode = uiState.isDarkMode
+    val isDynamicColor = uiState.isDynamicColor
+    val useSystemTheme = uiState.useSystemTheme
 
     Scaffold(
         topBar = {
@@ -80,18 +81,30 @@ fun UserInterfaceSettingsScreen(themeViewModel: ThemeViewModel, onBack: () -> Un
                 text = "Theme",
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.padding(vertical = 8.dp)
+                modifier = Modifier.padding(bottom = 8.dp)
             )
 
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = "Use system theme",
-                    style = MaterialTheme.typography.bodyLarge,
-                    modifier = Modifier.weight(1f)
-                )
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(end = 8.dp)
+                ) {
+                    Text(
+                        text = "Use system theme",
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                    Text(
+                        text = "Make Narra match your system theme",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
                 Switch(
                     checked = useSystemTheme,
                     onCheckedChange = { themeViewModel.setUseSystemTheme(it) },
@@ -107,15 +120,24 @@ fun UserInterfaceSettingsScreen(themeViewModel: ThemeViewModel, onBack: () -> Un
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 8.dp),
+                    .padding(vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = "Dark mode",
-                    style = MaterialTheme.typography.bodyLarge,
-                    modifier = Modifier.weight(1f),
-                    color = if (useSystemTheme) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f) else MaterialTheme.colorScheme.onSurface
-                )
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(end = 8.dp)
+                ) {
+                    Text(
+                        text = "Dark mode",
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                    Text(
+                        text = "Make Narra always use dark mode. If unchecked, make Narra always use light mode.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
                 Switch(
                     checked = isDarkMode,
                     onCheckedChange = { themeViewModel.setDarkMode(it) },
@@ -136,14 +158,24 @@ fun UserInterfaceSettingsScreen(themeViewModel: ThemeViewModel, onBack: () -> Un
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 8.dp),
+                    .padding(vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = "Dynamic colors",
-                    style = MaterialTheme.typography.bodyLarge,
-                    modifier = Modifier.weight(1f)
-                )
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(end = 8.dp)
+                ) {
+                    Text(
+                        text = "Dynamic colors",
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                    Text(
+                        text = "Make the theme match your wallpaper",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
                 Switch(
                     checked = isDynamicColor,
                     onCheckedChange = { themeViewModel.setDynamicColor(it) },

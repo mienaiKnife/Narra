@@ -16,17 +16,23 @@
 
 package com.mienaiknife.narra.ui.viewmodels
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.navigation.toRoute
+import com.mienaiknife.narra.NavDestination
 import com.mienaiknife.narra.data.models.Article
 import com.mienaiknife.narra.domain.repository.ContentRepository
 import com.mienaiknife.narra.ui.models.ContentBlock
 import com.mienaiknife.narra.ui.utils.HtmlParser
 import com.mienaiknife.narra.playback.PlaybackManager
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
@@ -34,27 +40,76 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+import kotlinx.coroutines.flow.combine
+
+data class ReaderUiState(
+    val article: Article? = null,
+    val blocks: List<ContentBlock> = emptyList(),
+    val isLoading: Boolean = false,
+    val isPlaying: Boolean = false,
+    val currentPosition: Long = 0L,
+    val duration: Long = 0L,
+    val playbackSpeed: Float = 1.0f,
+    val currentParagraphIndex: Int = 0,
+    val currentWordRange: IntRange? = null,
+    val fastForwardSkipTime: String = "30s",
+    val rewindSkipTime: String = "10s"
+)
+
 @HiltViewModel
 class ReaderViewModel @Inject constructor(
     private val repository: ContentRepository,
-    private val playbackManager: PlaybackManager
+    private val playbackManager: PlaybackManager,
+    savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
-    val article: StateFlow<Article?> = playbackManager.currentArticle
-    val isPlaying: StateFlow<Boolean> = playbackManager.isPlaying
-    val currentPosition: StateFlow<Long> = playbackManager.currentPosition
-    val duration: StateFlow<Long> = playbackManager.duration
-    val playbackSpeed: StateFlow<Float> = playbackManager.playbackSpeed
-    val currentParagraphIndex: StateFlow<Int> = playbackManager.currentParagraphIndex
-    val currentWordRange: StateFlow<IntRange?> = playbackManager.currentWordRange
+    private val articleId: String = savedStateHandle.toRoute<NavDestination.Reader>().articleId
+
+    private val _uiEvent = MutableSharedFlow<UiEvent>()
+    val uiEvent: SharedFlow<UiEvent> = _uiEvent.asSharedFlow()
+
+    sealed class UiEvent {
+        data class ShowSnackbar(val message: String) : UiEvent()
+    }
 
     private val _blocks = MutableStateFlow<List<ContentBlock>>(emptyList())
-    val blocks: StateFlow<List<ContentBlock>> = _blocks.asStateFlow()
-
     private val _isLoading = MutableStateFlow(false)
-    val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
+
+    val uiState: StateFlow<ReaderUiState> = combine(
+        playbackManager.currentArticle,
+        _blocks,
+        _isLoading,
+        playbackManager.isPlaying,
+        playbackManager.currentPosition,
+        playbackManager.duration,
+        playbackManager.playbackSpeed,
+        playbackManager.currentParagraphIndex,
+        playbackManager.currentWordRange,
+        playbackManager.settingsManager.fastForwardSkipTime,
+        playbackManager.settingsManager.rewindSkipTime
+    ) { flows ->
+        ReaderUiState(
+            article = flows[0] as Article?,
+            blocks = flows[1] as List<ContentBlock>,
+            isLoading = flows[2] as Boolean,
+            isPlaying = flows[3] as Boolean,
+            currentPosition = flows[4] as Long,
+            duration = flows[5] as Long,
+            playbackSpeed = flows[6] as Float,
+            currentParagraphIndex = flows[7] as Int,
+            currentWordRange = flows[8] as IntRange?,
+            fastForwardSkipTime = flows[9] as String,
+            rewindSkipTime = flows[10] as String
+        )
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = ReaderUiState(isLoading = true)
+    )
 
     init {
+        loadArticle(articleId)
+
         // Automatically update blocks when the article changes in the PlaybackManager
         playbackManager.currentArticle
             .onEach { art ->
@@ -76,7 +131,9 @@ class ReaderViewModel @Inject constructor(
             var articleData = repository.getArticleById(id)
             if (articleData != null) {
                 if (!articleData.isInQueue) {
-                    repository.addToQueue(id)
+                    repository.addToQueue(id).onFailure { error ->
+                        _uiEvent.emit(UiEvent.ShowSnackbar(error.message ?: "Failed to download article"))
+                    }
                     // Refresh data after adding to queue (which might have downloaded content)
                     articleData = repository.getArticleById(id)
                 }
@@ -101,10 +158,9 @@ class ReaderViewModel @Inject constructor(
     fun cycleSpeed() = playbackManager.cycleSpeed()
 
     fun toggleFavorite() {
-        article.value?.let { art ->
+        uiState.value.article?.let { art ->
             viewModelScope.launch {
                 repository.toggleFavorite(art.id)
-                // The article Flow in loadArticle will automatically emit the updated article
             }
         }
     }

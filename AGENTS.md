@@ -19,6 +19,7 @@ The following defines the current build target. Do not implement beyond this unl
 
 ## Planned Features (not yet in scope)
 Be aware these are coming so that current architectural decisions don't block them:
+- PDF file importing and parsing
 - Self-hosted AI TTS server support (e.g. Kokoro, Coqui, Piper via local API)
 - Additional cloud AI TTS providers
 - Builds for other platforms (e.g. desktop and iOS via Kotlin Multiplatform, or a separate app)

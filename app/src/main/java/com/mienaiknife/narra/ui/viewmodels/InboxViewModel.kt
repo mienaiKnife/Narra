@@ -24,14 +24,25 @@ import com.mienaiknife.narra.domain.repository.ContentRepository
 import com.mienaiknife.narra.playback.PlaybackManager
 import com.mienaiknife.narra.ui.utils.HtmlParser
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+
+data class InboxUiState(
+    val articles: List<Article> = emptyList(),
+    val isRefreshing: Boolean = false,
+    val sortOption: SortOption = SortOption.DATE_DESC,
+    val currentArticle: Article? = null,
+    val isPlaying: Boolean = false
+)
 
 @HiltViewModel
 class InboxViewModel @Inject constructor(
@@ -39,20 +50,30 @@ class InboxViewModel @Inject constructor(
     private val playbackManager: PlaybackManager
 ) : ViewModel() {
 
+    private val _uiEvent = MutableSharedFlow<UiEvent>()
+    val uiEvent: SharedFlow<UiEvent> = _uiEvent.asSharedFlow()
+
+    sealed class UiEvent {
+        data class ShowSnackbar(val message: String) : UiEvent()
+    }
+
     private val _isRefreshing = MutableStateFlow(false)
-    val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
-
     private val _sortOption = MutableStateFlow(SortOption.DATE_DESC)
-    val sortOption: StateFlow<SortOption> = _sortOption.asStateFlow()
 
-    val currentArticle = playbackManager.currentArticle
-    val isPlaying = playbackManager.isPlaying
-
-    val articles: StateFlow<List<Article>> = combine(
+    val uiState: StateFlow<InboxUiState> = combine(
         repository.getInboxArticles(),
-        _sortOption
-    ) { articles, sort ->
-        when (sort) {
+        _isRefreshing,
+        _sortOption,
+        playbackManager.currentArticle,
+        playbackManager.isPlaying
+    ) { flowArray ->
+        val articles = flowArray[0] as List<Article>
+        val isRefreshing = flowArray[1] as Boolean
+        val sort = flowArray[2] as SortOption
+        val currentArticle = flowArray[3] as? Article
+        val isPlaying = flowArray[4] as Boolean
+
+        val sortedArticles = when (sort) {
             SortOption.MANUAL -> articles
             SortOption.DATE_DESC -> articles.sortedByDescending { it.publishedTimestamp ?: 0L }
             SortOption.DATE_ASC -> articles.sortedBy { it.publishedTimestamp ?: Long.MAX_VALUE }
@@ -61,10 +82,17 @@ class InboxViewModel @Inject constructor(
             SortOption.SOURCE_ASC -> articles.sortedBy { it.source }
             SortOption.SOURCE_DESC -> articles.sortedByDescending { it.source }
         }
+        InboxUiState(
+            articles = sortedArticles,
+            isRefreshing = isRefreshing,
+            sortOption = sort,
+            currentArticle = currentArticle,
+            isPlaying = isPlaying
+        )
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
-        initialValue = emptyList()
+        initialValue = InboxUiState()
     )
 
     fun setSortOption(option: SortOption) {
@@ -88,7 +116,7 @@ class InboxViewModel @Inject constructor(
         if (!article.isInQueue) {
             addToQueue(article)
         } else {
-            if (currentArticle.value?.id == article.id) {
+            if (uiState.value.currentArticle?.id == article.id) {
                 playbackManager.togglePlayPause()
             } else {
                 val paragraphs = HtmlParser.parse(article.content).map { it.text.toString() }
@@ -97,24 +125,21 @@ class InboxViewModel @Inject constructor(
         }
     }
 
-    init {
-        refresh()
-    }
-
     fun refresh() {
         viewModelScope.launch {
             _isRefreshing.value = true
-            try {
-                repository.refreshFeeds()
-            } finally {
-                _isRefreshing.value = false
+            repository.refreshFeeds().onFailure { error ->
+                _uiEvent.emit(UiEvent.ShowSnackbar(error.message ?: "Failed to refresh feeds"))
             }
+            _isRefreshing.value = false
         }
     }
 
     fun addToQueue(article: Article) {
         viewModelScope.launch {
-            repository.addToQueue(article.id)
+            repository.addToQueue(article.id).onFailure { error ->
+                _uiEvent.emit(UiEvent.ShowSnackbar(error.message ?: "Failed to add to queue"))
+            }
         }
     }
 

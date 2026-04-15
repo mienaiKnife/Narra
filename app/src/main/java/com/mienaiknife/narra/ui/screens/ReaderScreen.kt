@@ -69,12 +69,13 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -82,6 +83,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.StrokeCap
@@ -103,7 +105,6 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.mienaiknife.narra.data.models.Article
 import com.mienaiknife.narra.data.models.SampleArticles
 import com.mienaiknife.narra.ui.models.ContentBlock
 import com.mienaiknife.narra.ui.theme.NarraTheme
@@ -113,46 +114,38 @@ import com.mienaiknife.narra.utils.DateUtils
 import kotlinx.coroutines.delay
 import java.util.Locale
 import com.mienaiknife.narra.ui.components.NarraScrollbar
-import java.util.concurrent.TimeUnit
+import com.mienaiknife.narra.ui.viewmodels.ReaderUiState
 @Composable
 fun ReaderScreen(
-    articleId: String,
     onBack: () -> Unit,
     viewModel: ReaderViewModel = hiltViewModel()
 ) {
-    val article by viewModel.article.collectAsState()
-    val blocks by viewModel.blocks.collectAsState()
-    val isLoading by viewModel.isLoading.collectAsState()
-    val isPlaying by viewModel.isPlaying.collectAsState()
-    val playbackSpeed by viewModel.playbackSpeed.collectAsState()
-    val currentPosition by viewModel.currentPosition.collectAsState()
-    val duration by viewModel.duration.collectAsState()
-    val currentParagraphIndex by viewModel.currentParagraphIndex.collectAsState()
-    val currentWordRange by viewModel.currentWordRange.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val snackbarHostState = remember { SnackbarHostState() }
 
-    LaunchedEffect(articleId) {
-        viewModel.loadArticle(articleId)
+    LaunchedEffect(Unit) {
+        viewModel.uiEvent.collect { event ->
+            when (event) {
+                is ReaderViewModel.UiEvent.ShowSnackbar -> {
+                    snackbarHostState.showSnackbar(event.message)
+                }
+            }
+        }
     }
 
-    Surface(
-        modifier = Modifier.fillMaxSize(),
-        color = MaterialTheme.colorScheme.background
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
     ) {
-        if (isLoading) {
+        if (uiState.isLoading) {
             Box(modifier = Modifier.fillMaxSize()) {
                 CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
             }
         } else {
-            article?.let {
+            uiState.article?.let {
                 ReaderContent(
-                    article = it,
-                    blocks = blocks,
-                    isPlaying = isPlaying,
-                    playbackSpeed = playbackSpeed,
-                    currentPosition = currentPosition,
-                    duration = duration,
-                    currentParagraphIndex = currentParagraphIndex,
-                    currentWordRange = currentWordRange,
+                    uiState = uiState,
                     onBack = onBack,
                     onTogglePlayPause = viewModel::togglePlayPause,
                     onSeekToWord = viewModel::seekToWord,
@@ -164,19 +157,19 @@ fun ReaderScreen(
                 )
             }
         }
+
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .navigationBarsPadding()
+        )
     }
 }
 
 @Composable
 fun ReaderContent(
-    article: Article,
-    blocks: List<ContentBlock>,
-    isPlaying: Boolean,
-    playbackSpeed: Float,
-    currentPosition: Long,
-    duration: Long,
-    currentParagraphIndex: Int,
-    currentWordRange: IntRange?,
+    uiState: com.mienaiknife.narra.ui.viewmodels.ReaderUiState,
     onBack: () -> Unit,
     onTogglePlayPause: () -> Unit,
     onSeekToWord: (Int, IntRange) -> Unit,
@@ -186,6 +179,17 @@ fun ReaderContent(
     onCycleSpeed: () -> Unit,
     onToggleFavorite: () -> Unit
 ) {
+    val article = uiState.article ?: return
+    val blocks = uiState.blocks
+    val isPlaying = uiState.isPlaying
+    val playbackSpeed = uiState.playbackSpeed
+    val currentPosition = uiState.currentPosition
+    val duration = uiState.duration
+    val currentParagraphIndex = uiState.currentParagraphIndex
+    val currentWordRange = uiState.currentWordRange
+    val fastForwardTime = uiState.fastForwardSkipTime
+    val rewindTime = uiState.rewindSkipTime
+
     var isControlsVisible by remember { mutableStateOf(true) }
     var lastInteractionTrigger by remember { mutableIntStateOf(0) }
     var isMenuExpanded by remember { mutableStateOf(false) }
@@ -652,7 +656,7 @@ fun ReaderContent(
                                     Icon(
                                         if (article.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                                         contentDescription = null,
-                                        tint = if (article.isFavorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                                        tint = if (article.isFavorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onBackground
                                     )
                                 }
                             )
@@ -704,7 +708,7 @@ fun ReaderContent(
                     modifier = Modifier
                         .fillMaxWidth()
                         .navigationBarsPadding()
-                        .padding(top = 0.dp, bottom = 30.dp)
+                        .padding(top = 0.dp, bottom = 16.dp)
                 ) {
                     // Progress Bar
                     val progress = if (duration > 0) currentPosition.toFloat() / duration else 0f
@@ -724,16 +728,16 @@ fun ReaderContent(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                            .padding(start = 16.dp, top = 8.dp, end = 16.dp),
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Text(
-                            text = formatTime(currentPosition),
+                            text = DateUtils.formatElapsedTime(currentPosition),
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Text(
-                            text = "-${formatTime(duration - currentPosition)}",
+                            text = "-${DateUtils.formatElapsedTime(duration - currentPosition)}",
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -743,16 +747,16 @@ fun ReaderContent(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 16.dp),
+                            .padding(horizontal = 8.dp),
                         horizontalArrangement = Arrangement.SpaceAround,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         // Speed Button
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            modifier = Modifier.width(48.dp)
-                        ) {
-                            IconButton(onClick = onCycleSpeed) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            IconButton(
+                                onClick = onCycleSpeed,
+                                modifier = Modifier.height(64.dp)
+                            ) {
                                 Icon(
                                     imageVector = Icons.Default.Speed,
                                     contentDescription = "Playback Speed",
@@ -763,65 +767,83 @@ fun ReaderContent(
                             Text(
                                 text = String.format(Locale.US, "%.1f", playbackSpeed),
                                 style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                                color = MaterialTheme.colorScheme.onBackground
+                                color = MaterialTheme.colorScheme.onBackground,
+                                modifier = Modifier.height(20.dp)
                             )
                         }
 
-                        // Rewind 15
-                        IconButton(onClick = onSkipBackward) {
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        // Rewind
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            IconButton(
+                                onClick = onSkipBackward,
+                                modifier = Modifier.height(64.dp)
+                            ) {
                                 Icon(
                                     imageVector = Icons.Default.FastRewind,
-                                    contentDescription = "Rewind 15 seconds",
+                                    contentDescription = "Rewind $rewindTime",
                                     modifier = Modifier.size(36.dp),
                                     tint = MaterialTheme.colorScheme.onBackground
                                 )
-                                Text(
-                                    text = "15",
-                                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 8.sp),
-                                    color = MaterialTheme.colorScheme.onBackground
-                                )
                             }
+                            Text(
+                                text = rewindTime,
+                                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                                color = MaterialTheme.colorScheme.onBackground,
+                                modifier = Modifier.height(20.dp)
+                            )
                         }
 
                         // Play/Pause
-                        IconButton(
-                            onClick = onTogglePlayPause,
-                            modifier = Modifier.size(64.dp)
-                        ) {
-                            Icon(
-                                imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                                contentDescription = if (isPlaying) "Pause" else "Play",
-                                modifier = Modifier.size(48.dp),
-                                tint = MaterialTheme.colorScheme.onBackground
-                            )
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            IconButton(
+                                onClick = onTogglePlayPause,
+                                modifier = Modifier.size(64.dp)
+                            ) {
+                                Icon(
+                                    imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                                    contentDescription = if (isPlaying) "Pause" else "Play",
+                                    modifier = Modifier.size(48.dp),
+                                    tint = MaterialTheme.colorScheme.onBackground
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(20.dp))
                         }
 
-                        // Forward 15
-                        IconButton(onClick = onSkipForward) {
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        // Forward
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            IconButton(
+                                onClick = onSkipForward,
+                                modifier = Modifier.height(64.dp)
+                            ) {
                                 Icon(
                                     imageVector = Icons.Default.FastForward,
-                                    contentDescription = "Forward 15 seconds",
+                                    contentDescription = "Fast forward $fastForwardTime",
                                     modifier = Modifier.size(36.dp),
                                     tint = MaterialTheme.colorScheme.onBackground
                                 )
-                                Text(
-                                    text = "15",
-                                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 8.sp),
-                                    color = MaterialTheme.colorScheme.onBackground
-                                )
                             }
+                            Text(
+                                text = fastForwardTime,
+                                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                                color = MaterialTheme.colorScheme.onBackground,
+                                modifier = Modifier.height(20.dp)
+                            )
                         }
 
                         // Next
-                        IconButton(onClick = onSkipNext) {
-                            Icon(
-                                imageVector = Icons.Default.SkipNext,
-                                contentDescription = "Next",
-                                modifier = Modifier.size(36.dp),
-                                tint = MaterialTheme.colorScheme.onBackground
-                            )
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            IconButton(
+                                onClick = onSkipNext,
+                                modifier = Modifier.height(64.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.SkipNext,
+                                    contentDescription = "Next",
+                                    modifier = Modifier.size(36.dp),
+                                    tint = MaterialTheme.colorScheme.onBackground
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(20.dp))
                         }
                     }
                 }
@@ -841,12 +863,6 @@ fun ReaderContent(
     }
 }
 
-private fun formatTime(millis: Long): String {
-    val minutes = TimeUnit.MILLISECONDS.toMinutes(millis)
-    val seconds = TimeUnit.MILLISECONDS.toSeconds(millis) % 60
-    return String.format(Locale.US, "%d:%02d", minutes, seconds)
-}
-
 @Preview(
     uiMode = Configuration.UI_MODE_NIGHT_YES,
     showBackground = true,
@@ -859,14 +875,16 @@ fun ReaderScreenPreview() {
     val blocks = remember(article.content) { HtmlParser.parse(article.content) }
     NarraTheme(darkTheme = true, dynamicColor = false) {
         ReaderContent(
-            article = article,
-            blocks = blocks,
-            isPlaying = false,
-            playbackSpeed = 1.0f,
-            currentPosition = 46000L,
-            duration = 180000L,
-            currentParagraphIndex = 0,
-            currentWordRange = 0..1,
+            uiState = ReaderUiState(
+                article = article,
+                blocks = blocks,
+                isPlaying = false,
+                playbackSpeed = 1.0f,
+                currentPosition = 46000L,
+                duration = 180000L,
+                currentParagraphIndex = 0,
+                currentWordRange = 0..1
+            ),
             onBack = {},
             onTogglePlayPause = {},
             onSeekToWord = { _, _ -> },

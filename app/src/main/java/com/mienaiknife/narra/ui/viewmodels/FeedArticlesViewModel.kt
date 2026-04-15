@@ -19,18 +19,29 @@ package com.mienaiknife.narra.ui.viewmodels
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.navigation.toRoute
+import com.mienaiknife.narra.NavDestination
 import com.mienaiknife.narra.data.models.Article
 import com.mienaiknife.narra.data.models.SortOption
 import com.mienaiknife.narra.domain.repository.ContentRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+
+data class FeedArticlesUiState(
+    val articles: List<Article> = emptyList(),
+    val sortOption: SortOption = SortOption.DATE_DESC,
+    val feedTitle: String = ""
+)
 
 @HiltViewModel
 class FeedArticlesViewModel @Inject constructor(
@@ -38,16 +49,22 @@ class FeedArticlesViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
-    val feedTitle: String = savedStateHandle.get<String>("feedTitle") ?: ""
+    private val _uiEvent = MutableSharedFlow<UiEvent>()
+    val uiEvent: SharedFlow<UiEvent> = _uiEvent.asSharedFlow()
+
+    sealed class UiEvent {
+        data class ShowSnackbar(val message: String) : UiEvent()
+    }
+
+    val feedTitle: String = savedStateHandle.toRoute<NavDestination.Feed>().feedTitle
 
     private val _sortOption = MutableStateFlow(SortOption.DATE_DESC)
-    val sortOption: StateFlow<SortOption> = _sortOption.asStateFlow()
 
-    val articles: StateFlow<List<Article>> = combine(
+    val uiState: StateFlow<FeedArticlesUiState> = combine(
         repository.getArticlesBySource(feedTitle),
         _sortOption
     ) { articles, sort ->
-        when (sort) {
+        val sortedArticles = when (sort) {
             SortOption.MANUAL -> articles
             SortOption.DATE_DESC -> articles.sortedByDescending { it.publishedTimestamp ?: 0L }
             SortOption.DATE_ASC -> articles.sortedBy { it.publishedTimestamp ?: Long.MAX_VALUE }
@@ -56,10 +73,15 @@ class FeedArticlesViewModel @Inject constructor(
             SortOption.SOURCE_ASC -> articles.sortedBy { it.source }
             SortOption.SOURCE_DESC -> articles.sortedByDescending { it.source }
         }
+        FeedArticlesUiState(
+            articles = sortedArticles,
+            sortOption = sort,
+            feedTitle = feedTitle
+        )
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
-        initialValue = emptyList()
+        initialValue = FeedArticlesUiState(feedTitle = feedTitle)
     )
 
     fun setSortOption(option: SortOption) {
@@ -81,7 +103,11 @@ class FeedArticlesViewModel @Inject constructor(
 
     fun addToQueue(article: Article) {
         viewModelScope.launch {
-            repository.addToQueue(article.id)
+            repository.addToQueue(article.id).onFailure { error ->
+                if (error.message == "No internet connection") {
+                    _uiEvent.emit(UiEvent.ShowSnackbar("Cannot download article without internet connection"))
+                }
+            }
         }
     }
 

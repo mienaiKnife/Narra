@@ -17,7 +17,7 @@
 package com.mienaiknife.narra.di
 
 import com.mienaiknife.narra.domain.TtsEngine
-import com.mienaiknife.narra.tts.android.AndroidTtsEngine
+import com.mienaiknife.narra.tts.common.DelegatingTtsEngine
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -31,6 +31,6 @@ abstract class TtsModule {
     @Binds
     @Singleton
     abstract fun bindTtsEngine(
-        androidTtsEngine: AndroidTtsEngine
+        delegatingTtsEngine: DelegatingTtsEngine
     ): TtsEngine
 }

@@ -31,14 +31,95 @@ class PlaybackSettingsManager @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
     private val chimeSoundKey = stringPreferencesKey("chime_sound")
+    private val fastForwardSkipTimeKey = stringPreferencesKey("fast_forward_skip_time")
+    private val rewindSkipTimeKey = stringPreferencesKey("rewind_skip_time")
+    private val pauseOnDisconnectKey = androidx.datastore.preferences.core.booleanPreferencesKey("pause_on_disconnect")
+    private val pauseForInterruptionsKey = androidx.datastore.preferences.core.booleanPreferencesKey("pause_for_interruptions")
+    private val autoPlayNextKey = androidx.datastore.preferences.core.booleanPreferencesKey("auto_play_next")
+    private val ttsEngineKey = stringPreferencesKey("tts_engine")
+    private val ttsModelIdKey = stringPreferencesKey("tts_model_id")
 
     val chimeSound: Flow<String> = context.dataStore.data.map { prefs ->
         prefs[chimeSoundKey] ?: "music_box_chime_positive"
     }
 
+    val fastForwardSkipTime: Flow<String> = context.dataStore.data.map { prefs ->
+        prefs[fastForwardSkipTimeKey] ?: "30s"
+    }
+
+    val rewindSkipTime: Flow<String> = context.dataStore.data.map { prefs ->
+        prefs[rewindSkipTimeKey] ?: "10s"
+    }
+
+    val pauseOnDisconnect: Flow<Boolean> = context.dataStore.data.map { prefs ->
+        prefs[pauseOnDisconnectKey] ?: true
+    }
+
+    val pauseForInterruptions: Flow<Boolean> = context.dataStore.data.map { prefs ->
+        prefs[pauseForInterruptionsKey] ?: true
+    }
+
+    val autoPlayNext: Flow<Boolean> = context.dataStore.data.map { prefs ->
+        prefs[autoPlayNextKey] ?: true
+    }
+
+    val ttsEngine: Flow<String> = context.dataStore.data.map { prefs ->
+        prefs[ttsEngineKey] ?: "android"
+    }
+
+    val ttsModelId: Flow<String?> = context.dataStore.data.map { prefs ->
+        prefs[ttsModelIdKey]
+    }
+
     suspend fun setChimeSound(soundName: String) {
         context.dataStore.edit { prefs ->
             prefs[chimeSoundKey] = soundName
+        }
+    }
+
+    suspend fun setFastForwardSkipTime(time: String) {
+        context.dataStore.edit { prefs ->
+            prefs[fastForwardSkipTimeKey] = time
+        }
+    }
+
+    suspend fun setRewindSkipTime(time: String) {
+        context.dataStore.edit { prefs ->
+            prefs[rewindSkipTimeKey] = time
+        }
+    }
+
+    suspend fun setPauseOnDisconnect(enabled: Boolean) {
+        context.dataStore.edit { prefs ->
+            prefs[pauseOnDisconnectKey] = enabled
+        }
+    }
+
+    suspend fun setPauseForInterruptions(enabled: Boolean) {
+        context.dataStore.edit { prefs ->
+            prefs[pauseForInterruptionsKey] = enabled
+        }
+    }
+
+    suspend fun setAutoPlayNext(enabled: Boolean) {
+        context.dataStore.edit { prefs ->
+            prefs[autoPlayNextKey] = enabled
+        }
+    }
+
+    suspend fun setTtsEngine(engine: String) {
+        context.dataStore.edit { prefs ->
+            prefs[ttsEngineKey] = engine
+        }
+    }
+
+    suspend fun setTtsModelId(modelId: String?) {
+        context.dataStore.edit { prefs ->
+            if (modelId == null) {
+                prefs.remove(ttsModelIdKey)
+            } else {
+                prefs[ttsModelIdKey] = modelId
+            }
         }
     }
 }

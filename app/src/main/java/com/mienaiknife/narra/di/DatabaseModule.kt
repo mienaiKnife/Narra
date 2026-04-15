@@ -21,6 +21,7 @@ import androidx.room.Room
 import com.mienaiknife.narra.data.local.AppDatabase
 import com.mienaiknife.narra.data.local.dao.ArticleDao
 import com.mienaiknife.narra.data.local.dao.FeedDao
+import com.mienaiknife.narra.data.local.dao.TtsModelDao
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -52,5 +53,10 @@ object DatabaseModule {
     @Provides
     fun provideFeedDao(database: AppDatabase): FeedDao {
         return database.feedDao()
+    }
+
+    @Provides
+    fun provideTtsModelDao(database: AppDatabase): TtsModelDao {
+        return database.ttsModelDao()
     }
 }

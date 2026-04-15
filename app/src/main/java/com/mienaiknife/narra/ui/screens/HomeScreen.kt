@@ -41,8 +41,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.StrokeCap
@@ -64,23 +64,17 @@ fun HomeScreen(
     onArticleClick: (String) -> Unit,
     viewModel: HomeViewModel = hiltViewModel()
 ) {
-    val articles by viewModel.articles.collectAsState()
-    val inboxArticles by viewModel.inboxArticles.collectAsState()
-    val favoriteArticles by viewModel.favoriteArticles.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     HomeScreenContent(
-        articles = articles,
-        inboxArticles = inboxArticles,
-        favoriteArticles = favoriteArticles,
+        uiState = uiState,
         onArticleClick = onArticleClick
     )
 }
 
 @Composable
 fun HomeScreenContent(
-    articles: List<Article>,
-    inboxArticles: List<Article>,
-    favoriteArticles: List<Article>,
+    uiState: com.mienaiknife.narra.ui.viewmodels.HomeUiState,
     onArticleClick: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -103,39 +97,33 @@ fun HomeScreenContent(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        if (articles.isNotEmpty() || inboxArticles.isNotEmpty() || favoriteArticles.isNotEmpty()) {
-            val continueListening = articles
-                .filter { (it.progress ?: 0f) > 0f && (it.progress ?: 0f) < 1f }
-                .sortedByDescending { it.publishedTimestamp ?: 0L }
-                .take(10)
-            val newFromFeeds = inboxArticles
-                .filter { (it.progress ?: 0f) < 1f }
-                .sortedByDescending { it.publishedTimestamp ?: 0L }
-                .take(5)
-            val favorites = favoriteArticles.take(10)
-
-            if (continueListening.isNotEmpty()) {
+        if (uiState.isLoading) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                androidx.compose.material3.CircularProgressIndicator()
+            }
+        } else if (uiState.continueListening.isNotEmpty() || uiState.newFromFeeds.isNotEmpty() || uiState.favoriteArticles.isNotEmpty()) {
+            if (uiState.continueListening.isNotEmpty()) {
                 ArticleCarousel(
                     title = "Continue listening",
-                    articles = continueListening,
+                    articles = uiState.continueListening,
                     onArticleClick = onArticleClick
                 )
                 Spacer(modifier = Modifier.height(24.dp))
             }
 
-            if (newFromFeeds.isNotEmpty()) {
+            if (uiState.newFromFeeds.isNotEmpty()) {
                 ArticleCarousel(
                     title = "New from your feeds",
-                    articles = newFromFeeds,
+                    articles = uiState.newFromFeeds,
                     onArticleClick = onArticleClick
                 )
                 Spacer(modifier = Modifier.height(24.dp))
             }
 
-            if (favorites.isNotEmpty()) {
+            if (uiState.favoriteArticles.isNotEmpty()) {
                 ArticleCarousel(
                     title = "Your favorites",
-                    articles = favorites,
+                    articles = uiState.favoriteArticles,
                     onArticleClick = onArticleClick
                 )
                 Spacer(modifier = Modifier.height(24.dp))
@@ -270,9 +258,11 @@ fun HomeScreenPreview() {
         ) { innerPadding ->
             Box(modifier = Modifier.padding(innerPadding)) {
                 HomeScreenContent(
-                    articles = mockArticles,
-                    inboxArticles = mockArticles.filter { it.isFromFeed },
-                    favoriteArticles = mockArticles.filter { it.isFavorite },
+                    uiState = com.mienaiknife.narra.ui.viewmodels.HomeUiState(
+                        continueListening = mockArticles.take(5),
+                        newFromFeeds = mockArticles.filter { it.isFromFeed }.take(5),
+                        favoriteArticles = mockArticles.filter { it.isFavorite }.take(5)
+                    ),
                     onArticleClick = {}
                 )
             }

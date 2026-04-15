@@ -29,7 +29,7 @@ interface ContentRepository {
     suspend fun getArticleById(id: String): Article?
     suspend fun downloadWebPage(url: String): Result<Article>
     suspend fun removeFromQueue(id: String)
-    suspend fun addToQueue(id: String)
+    suspend fun addToQueue(id: String): Result<Unit>
     suspend fun deleteArticle(id: String)
     suspend fun clearHistory()
     suspend fun clearInbox()
@@ -37,10 +37,14 @@ interface ContentRepository {
     suspend fun reorderQueue(fromIndex: Int, toIndex: Int)
     suspend fun updateQueueOrder(articleIds: List<String>)
     suspend fun subscribeToFeed(url: String): Result<String>
-    suspend fun refreshFeeds()
+    suspend fun refreshFeeds(): Result<Unit>
+    suspend fun deleteFeed(url: String)
+    suspend fun importEpub(inputStream: java.io.`InputStream`, title: String): Result<Unit>
     suspend fun markAsFinished(id: String)
     suspend fun markAsPlayed(id: String)
     suspend fun markAsUnplayed(id: String)
     suspend fun updateArticleProgress(id: String, progress: Float, paragraphIndex: Int, wordOffset: Int)
     suspend fun toggleFavorite(id: String)
+    suspend fun deleteAllMetadata()
+    suspend fun deleteAllFeeds()
 }

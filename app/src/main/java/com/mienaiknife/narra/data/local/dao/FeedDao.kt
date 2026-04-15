@@ -31,6 +31,12 @@ interface FeedDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertFeed(feed: FeedEntity)
 
+    @Query("SELECT * FROM feeds WHERE url = :url")
+    suspend fun getFeedByUrl(url: String): FeedEntity?
+
     @Query("DELETE FROM feeds WHERE url = :url")
     suspend fun deleteFeedByUrl(url: String)
+
+    @Query("DELETE FROM feeds")
+    suspend fun deleteAllFeeds()
 }

@@ -26,9 +26,17 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+
+data class HomeUiState(
+    val continueListening: List<Article> = emptyList(),
+    val newFromFeeds: List<Article> = emptyList(),
+    val favoriteArticles: List<Article> = emptyList(),
+    val isLoading: Boolean = false
+)
 
 @HiltViewModel
 class HomeViewModel @Inject constructor(
@@ -42,28 +50,43 @@ class HomeViewModel @Inject constructor(
         data class ShowSnackbar(val message: String) : UiEvent()
         object ArticleAdded : UiEvent()
         data class FeedSubscribed(val feedName: String) : UiEvent()
+        object EpubImported : UiEvent()
     }
 
-    val articles: StateFlow<List<Article>> = repository.getQueueArticles()
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
-            initialValue = emptyList()
+    val uiState: StateFlow<HomeUiState> = combine(
+        repository.getQueueArticles(),
+        repository.getInboxArticles(),
+        repository.getFavoriteArticles()
+    ) { queue, inbox, favorites ->
+        HomeUiState(
+            continueListening = queue
+                .filter { (it.progress ?: 0f) > 0f && (it.progress ?: 0f) < 1f }
+                .sortedByDescending { it.publishedTimestamp ?: 0L }
+                .take(10),
+            newFromFeeds = inbox
+                .filter { (it.progress ?: 0f) < 1f }
+                .sortedByDescending { it.publishedTimestamp ?: 0L }
+                .take(5),
+            favoriteArticles = favorites.take(10),
+            isLoading = false
         )
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = HomeUiState(isLoading = true)
+    )
 
-    val inboxArticles: StateFlow<List<Article>> = repository.getInboxArticles()
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
-            initialValue = emptyList()
-        )
-
-    val favoriteArticles: StateFlow<List<Article>> = repository.getFavoriteArticles()
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
-            initialValue = emptyList()
-        )
+    fun importEpub(inputStream: java.io.InputStream, title: String) {
+        viewModelScope.launch {
+            repository.importEpub(inputStream, title)
+                .onSuccess {
+                    _uiEvent.emit(UiEvent.EpubImported)
+                }
+                .onFailure {
+                    _uiEvent.emit(UiEvent.ShowSnackbar("Failed to import EPUB"))
+                }
+        }
+    }
 
     fun downloadArticle(url: String) {
         viewModelScope.launch {
@@ -72,10 +95,16 @@ class HomeViewModel @Inject constructor(
                     _uiEvent.emit(UiEvent.ArticleAdded)
                 }
                 .onFailure { error ->
-                    if (error.message == "Article already in queue") {
-                        _uiEvent.emit(UiEvent.ShowSnackbar("Article is already in your queue"))
-                    } else {
-                        _uiEvent.emit(UiEvent.ShowSnackbar("Failed to download article"))
+                    when (error.message) {
+                        "Article already in queue" -> {
+                            _uiEvent.emit(UiEvent.ShowSnackbar("Article is already in your queue"))
+                        }
+                        "No internet connection" -> {
+                            _uiEvent.emit(UiEvent.ShowSnackbar("Cannot download article without internet connection"))
+                        }
+                        else -> {
+                            _uiEvent.emit(UiEvent.ShowSnackbar("Failed to download article"))
+                        }
                     }
                 }
         }

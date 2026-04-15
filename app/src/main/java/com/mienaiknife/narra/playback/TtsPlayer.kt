@@ -65,7 +65,8 @@ import javax.inject.Singleton
 @Singleton
 class TtsPlayer @Inject constructor(
     @ApplicationContext private val context: Context,
-    private val ttsEngine: TtsEngine
+    private val ttsEngine: TtsEngine,
+    private val settingsManager: PlaybackSettingsManager
 ) : BasePlayer() {
 
     var onSkipNext: (() -> Unit)? = null
@@ -91,6 +92,9 @@ class TtsPlayer @Inject constructor(
     private var currentWordRange: IntRange? = null
     private var resumeWordOffset = 0
     private var isEngineSpeaking = false
+
+    private var _seekForwardIncrement = 30000L
+    private var _seekBackIncrement = 10000L
 
     private val audioFocusChangeListener = AudioManager.OnAudioFocusChangeListener { focusChange ->
         when (focusChange) {
@@ -217,6 +221,14 @@ class TtsPlayer @Inject constructor(
     }
 
     init {
+        settingsManager.fastForwardSkipTime.onEach { time ->
+            _seekForwardIncrement = time.removeSuffix("s").toLongOrNull()?.times(1000) ?: 30000L
+        }.launchIn(scope)
+
+        settingsManager.rewindSkipTime.onEach { time ->
+            _seekBackIncrement = time.removeSuffix("s").toLongOrNull()?.times(1000) ?: 10000L
+        }.launchIn(scope)
+
         ttsEngine.state.onEach { state ->
             when (state) {
                 is TtsState.Ready -> {
@@ -396,9 +408,9 @@ class TtsPlayer @Inject constructor(
 
     override fun isLoading(): Boolean = false
 
-    override fun getSeekBackIncrement(): Long = 10000L
+    override fun getSeekBackIncrement(): Long = _seekBackIncrement
 
-    override fun getSeekForwardIncrement(): Long = 30000L
+    override fun getSeekForwardIncrement(): Long = _seekForwardIncrement
 
     override fun getMaxSeekToPreviousPosition(): Long = 0
 

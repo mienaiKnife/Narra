@@ -29,6 +29,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
@@ -39,12 +40,11 @@ class ThemeManager(private val context: Context, private val scope: CoroutineSco
     private val useSystemThemeKey = booleanPreferencesKey("use_system_theme")
 
     private val _isDarkMode = MutableStateFlow(true)
-    val isDarkMode: StateFlow<Boolean> = _isDarkMode.asStateFlow()
-
     private val _isDynamicColor = MutableStateFlow(true)
-    val isDynamicColor: StateFlow<Boolean> = _isDynamicColor.asStateFlow()
-
     private val _useSystemTheme = MutableStateFlow(true)
+
+    val isDarkMode: StateFlow<Boolean> = _isDarkMode.asStateFlow()
+    val isDynamicColor: StateFlow<Boolean> = _isDynamicColor.asStateFlow()
     val useSystemTheme: StateFlow<Boolean> = _useSystemTheme.asStateFlow()
 
     init {
@@ -84,33 +84,33 @@ class ThemeManager(private val context: Context, private val scope: CoroutineSco
     }
 }
 
+data class ThemeUiState(
+    val isDarkMode: Boolean = true,
+    val isDynamicColor: Boolean = true,
+    val useSystemTheme: Boolean = true
+)
+
 open class ThemeViewModel : ViewModel() {
     private var themeManager: ThemeManager? = null
-    private val _isDarkMode = MutableStateFlow(true)
-    val isDarkMode: StateFlow<Boolean> = _isDarkMode.asStateFlow()
-
-    private val _isDynamicColor = MutableStateFlow(true)
-    val isDynamicColor: StateFlow<Boolean> = _isDynamicColor.asStateFlow()
-
-    private val _useSystemTheme = MutableStateFlow(true)
-    val useSystemTheme: StateFlow<Boolean> = _useSystemTheme.asStateFlow()
+    private val _uiState = MutableStateFlow(ThemeUiState())
+    val uiState: StateFlow<ThemeUiState> = _uiState.asStateFlow()
 
     open fun initialize(context: Context) {
         if (themeManager == null) {
             themeManager = ThemeManager(context, viewModelScope)
             viewModelScope.launch {
                 themeManager?.isDarkMode?.collect { isDark ->
-                    _isDarkMode.value = isDark
+                    _uiState.update { it.copy(isDarkMode = isDark) }
                 }
             }
             viewModelScope.launch {
                 themeManager?.isDynamicColor?.collect { isDynamic ->
-                    _isDynamicColor.value = isDynamic
+                    _uiState.update { it.copy(isDynamicColor = isDynamic) }
                 }
             }
             viewModelScope.launch {
                 themeManager?.useSystemTheme?.collect { useSystem ->
-                    _useSystemTheme.value = useSystem
+                    _uiState.update { it.copy(useSystemTheme = useSystem) }
                 }
             }
         }

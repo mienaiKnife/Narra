@@ -97,8 +97,6 @@ fun SettingsScreen(
             singleLine = true
         )
 
-        Spacer(modifier = Modifier.height(16.dp))
-
         val settingsItems = listOf(
             SettingsItem(
                 title = "User interface",

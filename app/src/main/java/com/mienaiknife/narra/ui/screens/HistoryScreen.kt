@@ -38,7 +38,13 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
@@ -46,6 +52,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
+import com.mienaiknife.narra.NavDestination
 import com.mienaiknife.narra.data.models.Article
 import com.mienaiknife.narra.data.models.SampleArticles
 import com.mienaiknife.narra.ui.components.BottomNavBar
@@ -59,19 +66,35 @@ fun HistoryScreen(
     navController: NavController,
     viewModel: HistoryViewModel = hiltViewModel()
 ) {
-    val articles by viewModel.articles.collectAsState()
-    val isRefreshing by viewModel.isRefreshing.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val snackbarHostState = remember { SnackbarHostState() }
 
-    HistoryScreenContent(
-        articles = articles,
-        isRefreshing = isRefreshing,
-        onBackClick = { navController.popBackStack() },
-        onAddToQueue = { viewModel.addToQueue(it) },
-        onArticleClick = { articleId -> navController.navigate("reader/$articleId") },
-        onMarkAsPlayedClick = { viewModel.togglePlayedStatus(it) },
-        onClearHistory = { viewModel.clearHistory() },
-        onRefresh = { viewModel.refresh() }
-    )
+    LaunchedEffect(Unit) {
+        viewModel.uiEvent.collect { event ->
+            when (event) {
+                is HistoryViewModel.UiEvent.ShowSnackbar -> {
+                    snackbarHostState.showSnackbar(event.message)
+                }
+            }
+        }
+    }
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        HistoryScreenContent(
+            articles = uiState.articles,
+            isRefreshing = uiState.isRefreshing,
+            onBackClick = { navController.popBackStack() },
+            onAddToQueue = { viewModel.addToQueue(it) },
+            onArticleClick = { articleId -> navController.navigate(NavDestination.Reader(articleId)) },
+            onMarkAsPlayedClick = { viewModel.togglePlayedStatus(it) },
+            onClearHistory = { viewModel.clearHistory() },
+            onRefresh = { viewModel.refresh() }
+        )
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier.align(Alignment.BottomCenter)
+        )
+    }
 }
 
 @Composable
@@ -153,7 +176,7 @@ fun HistoryScreenContent(
                             onClearHistory()
                         },
                         leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null) }
-                                        )
+                    )
                 }
             }
         }

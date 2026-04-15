@@ -17,18 +17,44 @@
 package com.mienaiknife.narra.ui.viewmodels
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.mienaiknife.narra.data.models.Article
 import com.mienaiknife.narra.playback.PlaybackManager
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
 import javax.inject.Inject
+
+data class PlaybackUiState(
+    val currentArticle: Article? = null,
+    val isPlaying: Boolean = false,
+    val currentPosition: Long = 0,
+    val duration: Long = 0
+)
 
 @HiltViewModel
 class PlaybackViewModel @Inject constructor(
     private val playbackManager: PlaybackManager
 ) : ViewModel() {
-    val currentArticle = playbackManager.currentArticle
-    val isPlaying = playbackManager.isPlaying
-    val currentPosition = playbackManager.currentPosition
-    val duration = playbackManager.duration
+    val uiState: StateFlow<PlaybackUiState> = combine(
+        playbackManager.currentArticle,
+        playbackManager.isPlaying,
+        playbackManager.currentPosition,
+        playbackManager.duration
+    ) { currentArticle, isPlaying, currentPosition, duration ->
+        PlaybackUiState(
+            currentArticle = currentArticle,
+            isPlaying = isPlaying,
+            currentPosition = currentPosition,
+            duration = duration
+        )
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = PlaybackUiState()
+    )
 
     fun togglePlayPause() = playbackManager.togglePlayPause()
 }

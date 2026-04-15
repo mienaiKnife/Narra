@@ -17,6 +17,9 @@
 package com.mienaiknife.narra.ui.screens
 
 import android.content.res.Configuration
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -50,6 +53,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -67,6 +72,18 @@ fun AddScreen(
     onArticleAdded: () -> Unit = {}
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
+    val context = LocalContext.current
+
+    val launcher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        uri?.let {
+            val inputStream = context.contentResolver.openInputStream(it)
+            if (inputStream != null) {
+                viewModel.importEpub(inputStream, "Imported EPUB")
+            }
+        }
+    }
 
     LaunchedEffect(viewModel.uiEvent) {
         viewModel.uiEvent.collectLatest { event ->
@@ -80,18 +97,23 @@ fun AddScreen(
                 is HomeViewModel.UiEvent.FeedSubscribed -> {
                     snackbarHostState.showSnackbar("Subscribed to ${event.feedName}")
                 }
+                is HomeViewModel.UiEvent.EpubImported -> {
+                    onArticleAdded()
+                }
             }
         }
     }
 
-    Scaffold(
-        snackbarHost = { SnackbarHost(snackbarHostState) }
-    ) { padding ->
+    Box(modifier = Modifier.fillMaxSize()) {
         AddScreenContent(
             onDownloadClick = { url -> viewModel.downloadArticle(UrlUtils.cleanUrl(url)) },
             onSubscribeClick = { url -> viewModel.subscribeToFeed(UrlUtils.cleanUrl(url)) },
-            onUploadClick = { /* TODO: Implement file upload */ },
-            modifier = Modifier.padding(padding)
+            onUploadClick = { launcher.launch("application/epub+zip") }
+        )
+
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier.align(Alignment.BottomCenter)
         )
     }
 }
@@ -104,6 +126,7 @@ fun AddScreenContent(
     modifier: Modifier = Modifier
 ) {
     var url by remember { mutableStateOf("") }
+    val focusManager = LocalFocusManager.current
 
     Column(
         modifier = modifier
@@ -148,6 +171,7 @@ fun AddScreenContent(
                     onClick = {
                         if (url.isNotBlank()) {
                             onDownloadClick(url)
+                            focusManager.clearFocus()
                         }
                     },
                     modifier = Modifier
@@ -179,6 +203,7 @@ fun AddScreenContent(
                     onClick = {
                         if (url.isNotBlank()) {
                             onSubscribeClick(url)
+                            focusManager.clearFocus()
                         }
                     },
                     modifier = Modifier

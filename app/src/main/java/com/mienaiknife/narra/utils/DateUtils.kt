@@ -22,6 +22,7 @@ import java.time.OffsetDateTime
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import java.util.concurrent.TimeUnit
 
 object DateUtils {
     private val outputWithYear = DateTimeFormatter.ofPattern("MMM d, yyyy", Locale.US)
@@ -84,5 +85,24 @@ object DateUtils {
             } catch (_: Exception) {}
         }
         return null
+    }
+
+    fun formatElapsedTime(millis: Long): String {
+        val hours = TimeUnit.MILLISECONDS.toHours(millis)
+        val minutes = TimeUnit.MILLISECONDS.toMinutes(millis) % 60
+        val seconds = TimeUnit.MILLISECONDS.toSeconds(millis) % 60
+        return if (hours > 0) {
+            String.format(Locale.US, "%d:%02d:%02d", hours, minutes, seconds)
+        } else {
+            String.format(Locale.US, "%d:%02d", minutes, seconds)
+        }
+    }
+
+    fun estimateReadingTimeMs(text: String?): Long {
+        if (text.isNullOrBlank()) return 0L
+        // Strip HTML tags roughly
+        val plainText = text.replace(Regex("<[^>]*>"), "")
+        val words = plainText.split(Regex("\\s+")).count { it.isNotBlank() }
+        return (words * 300L).coerceAtLeast(1000L)
     }
 }

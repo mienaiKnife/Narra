@@ -16,10 +16,22 @@
 
 package com.mienaiknife.narra.di
 
+import com.mienaiknife.narra.data.local.EpubDataSource
+import com.mienaiknife.narra.data.local.EpubDataSourceImpl
 import com.mienaiknife.narra.data.local.dao.ArticleDao
 import com.mienaiknife.narra.data.local.dao.FeedDao
+import com.mienaiknife.narra.data.local.dao.TtsModelDao
+import com.mienaiknife.narra.data.remote.RemoteFeedDataSource
+import com.mienaiknife.narra.data.remote.RemoteFeedDataSourceImpl
+import com.mienaiknife.narra.data.remote.WebDataSource
+import com.mienaiknife.narra.data.remote.WebDataSourceImpl
 import com.mienaiknife.narra.data.repositories.ContentRepositoryImpl
+import com.mienaiknife.narra.data.repositories.ModelRepositoryImpl
+import com.mienaiknife.narra.data.settings.DownloadSettingsManager
 import com.mienaiknife.narra.domain.repository.ContentRepository
+import com.mienaiknife.narra.domain.repository.ModelRepository
+import com.mienaiknife.narra.ui.utils.NetworkMonitor
+import com.mienaiknife.narra.ui.utils.NetworkMonitorImpl
 import com.prof18.rssparser.RssParser
 import com.prof18.rssparser.RssParserBuilder
 import dagger.Module
@@ -43,8 +55,42 @@ object RepositoryModule {
     fun provideContentRepository(
         articleDao: ArticleDao,
         feedDao: FeedDao,
-        rssParser: RssParser
+        webDataSource: WebDataSource,
+        remoteFeedDataSource: RemoteFeedDataSource,
+        epubDataSource: EpubDataSource,
+        networkMonitor: NetworkMonitor,
+        downloadSettingsManager: DownloadSettingsManager
     ): ContentRepository {
-        return ContentRepositoryImpl(articleDao, feedDao, rssParser)
+        return ContentRepositoryImpl(
+            articleDao,
+            feedDao,
+            webDataSource,
+            remoteFeedDataSource,
+            epubDataSource,
+            networkMonitor,
+            downloadSettingsManager
+        )
+    }
+
+    @Provides
+    @Singleton
+    fun provideModelRepository(modelRepositoryImpl: ModelRepositoryImpl): ModelRepository = modelRepositoryImpl
+
+    @Provides
+    @Singleton
+    fun provideWebDataSource(webDataSourceImpl: WebDataSourceImpl): WebDataSource = webDataSourceImpl
+
+    @Provides
+    @Singleton
+    fun provideRemoteFeedDataSource(remoteFeedDataSourceImpl: RemoteFeedDataSourceImpl): RemoteFeedDataSource = remoteFeedDataSourceImpl
+
+    @Provides
+    @Singleton
+    fun provideEpubDataSource(epubDataSourceImpl: EpubDataSourceImpl): EpubDataSource = epubDataSourceImpl
+
+    @Provides
+    @Singleton
+    fun provideNetworkMonitor(networkMonitorImpl: NetworkMonitorImpl): NetworkMonitor {
+        return networkMonitorImpl
     }
 }

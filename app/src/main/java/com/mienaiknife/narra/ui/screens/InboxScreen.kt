@@ -29,12 +29,15 @@ import androidx.compose.material3.*
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
+import com.mienaiknife.narra.NavDestination
 import com.mienaiknife.narra.data.models.Article
 import com.mienaiknife.narra.data.models.SampleArticles
 import com.mienaiknife.narra.data.models.SortOption
@@ -47,26 +50,42 @@ import com.mienaiknife.narra.ui.viewmodels.InboxViewModel
 
 @Composable
 fun InboxScreen(
-    navController: androidx.navigation.NavController,
+    navController: NavController,
     onNavigateToFeeds: () -> Unit,
     viewModel: InboxViewModel = hiltViewModel()
 ) {
-    val articles by viewModel.articles.collectAsState()
-    val isRefreshing by viewModel.isRefreshing.collectAsState()
-    val sortOption by viewModel.sortOption.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val snackbarHostState = remember { SnackbarHostState() }
 
-    InboxScreenContent(
-        articles = articles,
-        isRefreshing = isRefreshing,
-        sortOption = sortOption,
-        onAddToQueue = { viewModel.addToQueue(it) },
-        onArticleClick = { articleId -> navController.navigate("reader/$articleId") },
-        onMarkAsPlayedClick = { viewModel.togglePlayedStatus(it) },
-        onClearInbox = { viewModel.clearInbox() },
-        onRefresh = { viewModel.refresh() },
-        onSortOptionSelected = { viewModel.setSortOption(it) },
-        onEditFeeds = { navController.navigate("feeds") }
-    )
+    LaunchedEffect(Unit) {
+        viewModel.uiEvent.collect { event ->
+            when (event) {
+                is InboxViewModel.UiEvent.ShowSnackbar -> {
+                    snackbarHostState.showSnackbar(event.message)
+                }
+            }
+        }
+    }
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        InboxScreenContent(
+            articles = uiState.articles,
+            isRefreshing = uiState.isRefreshing,
+            sortOption = uiState.sortOption,
+            onAddToQueue = { viewModel.addToQueue(it) },
+            onArticleClick = { articleId -> navController.navigate(NavDestination.Reader(articleId)) },
+            onMarkAsPlayedClick = { viewModel.togglePlayedStatus(it) },
+            onClearInbox = { viewModel.clearInbox() },
+            onRefresh = { viewModel.refresh() },
+            onSortOptionSelected = { viewModel.setSortOption(it) },
+            onEditFeeds = onNavigateToFeeds
+        )
+
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier.align(Alignment.BottomCenter)
+        )
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -84,13 +103,16 @@ fun InboxScreenContent(
     onEditFeeds: () -> Unit = {}
 ) {
     var showMenu by remember { mutableStateOf(false) }
-    var showSortSheet by remember { mutableStateOf(false) }
+    val showSortSheet = remember { mutableStateOf(false) }
 
-    if (showSortSheet) {
+    if (showSortSheet.value) {
         SortBottomSheet(
             selectedOption = sortOption,
-            onOptionSelected = onSortOptionSelected,
-            onDismissRequest = { showSortSheet = false }
+            onOptionSelected = {
+                onSortOptionSelected(it)
+                showSortSheet.value = false
+            },
+            onDismissRequest = { showSortSheet.value = false }
         )
     }
 
@@ -137,7 +159,7 @@ fun InboxScreenContent(
                         text = { Text("Sort") },
                         onClick = {
                             showMenu = false
-                            showSortSheet = true
+                            showSortSheet.value = true
                         },
                         leadingIcon = { Icon(Icons.AutoMirrored.Filled.Sort, contentDescription = null) }
                     )

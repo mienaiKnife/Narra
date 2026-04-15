@@ -45,7 +45,7 @@ class PlaybackManager @Inject constructor(
     @ApplicationContext private val context: Context,
     private val ttsPlayer: TtsPlayer,
     private val repository: ContentRepository,
-    private val settingsManager: PlaybackSettingsManager
+    val settingsManager: PlaybackSettingsManager
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private val _currentArticle = MutableStateFlow<Article?>(null)
@@ -73,7 +73,7 @@ class PlaybackManager @Inject constructor(
 
     init {
         ttsPlayer.onSkipNext = { skipNext() }
-        ttsPlayer.onSkipPrevious = { skipBackward() }
+        ttsPlayer.onSkipPrevious = { skipPrevious() }
 
         ttsPlayer.addListener(object : Player.Listener {
             override fun onIsPlayingChanged(isPlaying: Boolean) {
@@ -97,7 +97,13 @@ class PlaybackManager @Inject constructor(
                 updateProgress()
 
                 if (playbackState == Player.STATE_ENDED) {
-                    playNextArticle()
+                    scope.launch {
+                        if (settingsManager.autoPlayNext.first()) {
+                            playNextArticle()
+                        } else {
+                            _isPlaying.value = false
+                        }
+                    }
                 }
             }
 
@@ -287,11 +293,15 @@ class PlaybackManager @Inject constructor(
         ttsPlayer.seekForward()
     }
 
+    fun skipBackward() {
+        ttsPlayer.seekBack()
+    }
+
     fun skipNext() {
         playNextArticle()
     }
 
-    fun skipBackward() {
+    fun skipPrevious() {
         val article = _currentArticle.value ?: return
         // If we are more than 3 seconds in, just restart current article
         if (ttsPlayer.currentPosition > 3000) {

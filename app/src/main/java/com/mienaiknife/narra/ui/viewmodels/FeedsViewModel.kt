@@ -32,6 +32,12 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+data class FeedsUiState(
+    val feeds: List<FeedEntity> = emptyList(),
+    val isRefreshing: Boolean = false,
+    val sortOption: SortOption = SortOption.TITLE_ASC
+)
+
 @HiltViewModel
 class FeedsViewModel @Inject constructor(
     private val feedDao: FeedDao,
@@ -39,16 +45,18 @@ class FeedsViewModel @Inject constructor(
 ) : ViewModel() {
 
     private val _isRefreshing = MutableStateFlow(false)
-    val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
-
     private val _sortOption = MutableStateFlow(SortOption.TITLE_ASC)
-    val sortOption: StateFlow<SortOption> = _sortOption.asStateFlow()
 
-    val feeds: StateFlow<List<FeedEntity>> = combine(
+    val uiState: StateFlow<FeedsUiState> = combine(
         feedDao.getAllFeeds(),
+        _isRefreshing,
         _sortOption
-    ) { feeds, sort ->
-        when (sort) {
+    ) { flowArray ->
+        val feeds = flowArray[0] as List<FeedEntity>
+        val isRefreshing = flowArray[1] as Boolean
+        val sort = flowArray[2] as SortOption
+
+        val sortedFeeds = when (sort) {
             SortOption.MANUAL -> feeds
             SortOption.DATE_DESC -> feeds.sortedByDescending { it.createdAt }
             SortOption.DATE_ASC -> feeds.sortedBy { it.createdAt }
@@ -57,10 +65,15 @@ class FeedsViewModel @Inject constructor(
             // For feeds, source sort doesn't make as much sense, but we can reuse the enum
             else -> feeds.sortedBy { it.title }
         }
+        FeedsUiState(
+            feeds = sortedFeeds,
+            isRefreshing = isRefreshing,
+            sortOption = sort
+        )
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
-        initialValue = emptyList()
+        initialValue = FeedsUiState()
     )
 
     fun setSortOption(option: SortOption) {
@@ -83,7 +96,7 @@ class FeedsViewModel @Inject constructor(
 
     fun deleteFeed(feed: FeedEntity) {
         viewModelScope.launch {
-            feedDao.deleteFeedByUrl(feed.url)
+            repository.deleteFeed(feed.url)
         }
     }
 

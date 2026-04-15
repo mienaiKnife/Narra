@@ -24,9 +24,12 @@ import com.mienaiknife.narra.playback.PlaybackManager
 import com.mienaiknife.narra.ui.utils.HtmlParser
 import com.mienaiknife.narra.data.models.SortOption
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
@@ -34,32 +37,48 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+data class QueueUiState(
+    val articles: List<Article> = emptyList(),
+    val isRefreshing: Boolean = false,
+    val sortOption: SortOption = SortOption.MANUAL,
+    val keepSorted: Boolean = false,
+    val currentArticle: Article? = null,
+    val isPlaying: Boolean = false
+)
+
 @HiltViewModel
 class QueueViewModel @Inject constructor(
     private val repository: ContentRepository,
     private val playbackManager: PlaybackManager
 ) : ViewModel() {
 
+    private val _uiEvent = MutableSharedFlow<UiEvent>()
+    val uiEvent: SharedFlow<UiEvent> = _uiEvent.asSharedFlow()
+
+    sealed class UiEvent {
+        data class ShowSnackbar(val message: String) : UiEvent()
+    }
+
     private val _isRefreshing = MutableStateFlow(false)
-    val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
-
     private val _sortOption = MutableStateFlow(SortOption.MANUAL)
-    val sortOption: StateFlow<SortOption> = _sortOption.asStateFlow()
-
     private val _keepSorted = MutableStateFlow(false)
-    val keepSorted: StateFlow<Boolean> = _keepSorted.asStateFlow()
 
-    val currentArticle = playbackManager.currentArticle
-    val isPlaying = playbackManager.isPlaying
-
-    // For now, the queue is just all articles. 
-    // In the future, this might filter for a specific "queue" status.
-    val articles: StateFlow<List<Article>> = combine(
+    val uiState: StateFlow<QueueUiState> = combine(
         repository.getQueueArticles(),
+        _isRefreshing,
         _sortOption,
-        _keepSorted
-    ) { articles, sort, keep ->
-        if (keep) {
+        _keepSorted,
+        playbackManager.currentArticle,
+        playbackManager.isPlaying
+    ) { flowArray ->
+        val articles = flowArray[0] as List<Article>
+        val isRefreshing = flowArray[1] as Boolean
+        val sort = flowArray[2] as SortOption
+        val keep = flowArray[3] as Boolean
+        val currentArticle = flowArray[4] as? Article
+        val isPlaying = flowArray[5] as Boolean
+
+        val sortedArticles = if (keep) {
             when (sort) {
                 SortOption.MANUAL -> articles
                 SortOption.DATE_DESC -> articles.sortedByDescending { it.publishedTimestamp ?: 0L }
@@ -72,10 +91,18 @@ class QueueViewModel @Inject constructor(
         } else {
             articles
         }
+        QueueUiState(
+            articles = sortedArticles,
+            isRefreshing = isRefreshing,
+            sortOption = sort,
+            keepSorted = keep,
+            currentArticle = currentArticle,
+            isPlaying = isPlaying
+        )
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
-        initialValue = emptyList()
+        initialValue = QueueUiState()
     )
 
     fun setSortOption(option: SortOption) {
@@ -124,7 +151,7 @@ class QueueViewModel @Inject constructor(
     }
 
     fun onPlayPauseClick(article: Article) {
-        if (currentArticle.value?.id == article.id) {
+        if (uiState.value.currentArticle?.id == article.id) {
             playbackManager.togglePlayPause()
         } else {
             val paragraphs = HtmlParser.parse(article.content).map { it.text.toString() }
@@ -142,11 +169,13 @@ class QueueViewModel @Inject constructor(
         viewModelScope.launch {
             if (article.progress == 1f) {
                 repository.markAsUnplayed(article.id)
-                repository.addToQueue(article.id)
+                repository.addToQueue(article.id).onFailure { error ->
+                    _uiEvent.emit(UiEvent.ShowSnackbar(error.message ?: "Failed to add to queue"))
+                }
             } else {
-                val isCurrentlyPlaying = currentArticle.value?.id == article.id
+                val isCurrentlyPlaying = uiState.value.currentArticle?.id == article.id
                 val nextArticle = if (isCurrentlyPlaying) {
-                    val currentList = articles.value
+                    val currentList = uiState.value.articles
                     val currentIndex = currentList.indexOfFirst { it.id == article.id }
                     if (currentIndex != -1 && currentIndex < currentList.size - 1) {
                         currentList[currentIndex + 1]
@@ -168,7 +197,9 @@ class QueueViewModel @Inject constructor(
 
     fun addToQueue(articleId: String) {
         viewModelScope.launch {
-            repository.addToQueue(articleId)
+            repository.addToQueue(articleId).onFailure { error ->
+                _uiEvent.emit(UiEvent.ShowSnackbar(error.message ?: "Failed to add to queue"))
+            }
         }
     }
 
@@ -189,11 +220,10 @@ class QueueViewModel @Inject constructor(
     fun refresh() {
         viewModelScope.launch {
             _isRefreshing.value = true
-            try {
-                repository.refreshFeeds()
-            } finally {
-                _isRefreshing.value = false
+            repository.refreshFeeds().onFailure { error ->
+                _uiEvent.emit(UiEvent.ShowSnackbar(error.message ?: "Failed to refresh feeds"))
             }
+            _isRefreshing.value = false
         }
     }
 }

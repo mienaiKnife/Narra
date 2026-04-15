@@ -40,9 +40,11 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import coil3.compose.AsyncImage
+import com.mienaiknife.narra.NavDestination
 import com.mienaiknife.narra.data.local.entities.FeedEntity
 import com.mienaiknife.narra.data.models.SortOption
 import com.mienaiknife.narra.ui.components.BottomNavBar
@@ -56,15 +58,13 @@ fun FeedsScreen(
     navController: NavController,
     viewModel: FeedsViewModel = hiltViewModel()
 ) {
-    val feeds by viewModel.feeds.collectAsState()
-    val isRefreshing by viewModel.isRefreshing.collectAsState()
-    val sortOption by viewModel.sortOption.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     FeedsScreenContent(
         navController = navController,
-        feeds = feeds,
-        isRefreshing = isRefreshing,
-        sortOption = sortOption,
+        feeds = uiState.feeds,
+        isRefreshing = uiState.isRefreshing,
+        sortOption = uiState.sortOption,
         onBackClick = { navController.popBackStack() },
         onDeleteFeed = { viewModel.deleteFeed(it) },
         onRefresh = { viewModel.refresh() },
@@ -201,7 +201,7 @@ fun FeedsScreenContent(
                             FeedItem(
                                 feed = feed,
                                 onClick = {
-                                    navController.navigate("feed/${feed.title}")
+                                    navController.navigate(NavDestination.Feed(feed.title))
                                 },
                                 onDeleteClick = { onDeleteFeed(feed) }
                             )

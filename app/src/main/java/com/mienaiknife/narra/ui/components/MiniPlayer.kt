@@ -40,8 +40,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -62,16 +62,13 @@ fun MiniPlayer(
     onExpand: (String) -> Unit,
     viewModel: PlaybackViewModel = hiltViewModel()
 ) {
-    val currentArticle by viewModel.currentArticle.collectAsState()
-    val isPlaying by viewModel.isPlaying.collectAsState()
-    val currentPosition by viewModel.currentPosition.collectAsState()
-    val duration by viewModel.duration.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     MiniPlayerContent(
-        article = currentArticle,
-        isPlaying = isPlaying,
-        currentPosition = currentPosition,
-        duration = duration,
+        article = uiState.currentArticle,
+        isPlaying = uiState.isPlaying,
+        currentPosition = uiState.currentPosition,
+        duration = uiState.duration,
         onExpand = onExpand,
         onTogglePlayPause = { viewModel.togglePlayPause() }
     )

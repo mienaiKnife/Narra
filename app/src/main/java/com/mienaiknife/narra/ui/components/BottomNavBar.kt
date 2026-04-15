@@ -29,20 +29,23 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.graphics.vector.ImageVector
 import android.content.res.Configuration
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.navigation.NavController
+import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.mienaiknife.narra.NavDestination
 import com.mienaiknife.narra.ui.theme.NarraTheme
 
-sealed class BottomNavItem(val route: String, val icon: ImageVector, val label: String) {
-    object Home    : BottomNavItem("home",    Icons.Filled.Home,    "Home")
-    object Queue   : BottomNavItem("queue",   Icons.AutoMirrored.Filled.PlaylistPlay, "Queue")
-    object Add     : BottomNavItem("add",     Icons.Filled.Add,     "Add")
-    object Inbox   : BottomNavItem("inbox",   Icons.Filled.Inbox,   "Inbox")
-    object Settings: BottomNavItem("settings", Icons.Filled.Settings, "Settings")
+sealed class BottomNavItem<T : Any>(val route: T, val icon: ImageVector, val label: String) {
+    data object Home    : BottomNavItem<NavDestination.Home>(NavDestination.Home,    Icons.Filled.Home,    "Home")
+    data object Queue   : BottomNavItem<NavDestination.Queue>(NavDestination.Queue,   Icons.AutoMirrored.Filled.PlaylistPlay, "Queue")
+    data object Add     : BottomNavItem<NavDestination.Add>(NavDestination.Add,     Icons.Filled.Add,     "Add")
+    data object Inbox   : BottomNavItem<NavDestination.Inbox>(NavDestination.Inbox,   Icons.Filled.Inbox,   "Inbox")
+    data object Settings: BottomNavItem<NavDestination.Settings>(NavDestination.Settings, Icons.Filled.Settings, "Settings")
 }
 
 @Composable
@@ -54,13 +57,22 @@ fun BottomNavBar(navController: NavController) {
         BottomNavItem.Inbox,
         BottomNavItem.Settings
     )
-    val currentRoute = navController.currentBackStackEntryAsState().value?.destination?.route
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+    val currentDestination = navBackStackEntry?.destination
 
     NavigationBar {
         items.forEach { item ->
             NavigationBarItem(
-                selected = currentRoute == item.route,
-                onClick = { navController.navigate(item.route) },
+                selected = currentDestination?.hasRoute(item.route::class) == true,
+                onClick = {
+                    navController.navigate(item.route) {
+                        popUpTo(navController.graph.startDestinationId) {
+                            saveState = true
+                        }
+                        launchSingleTop = true
+                        restoreState = true
+                    }
+                },
                 icon = { Icon(item.icon, contentDescription = item.label) },
                 label = { Text(item.label) },
                 colors = NavigationBarItemDefaults.colors(

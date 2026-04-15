@@ -20,13 +20,20 @@ import androidx.room.Database
 import androidx.room.RoomDatabase
 import com.mienaiknife.narra.data.local.dao.ArticleDao
 import com.mienaiknife.narra.data.local.dao.FeedDao
+import com.mienaiknife.narra.data.local.dao.TtsModelDao
 import com.mienaiknife.narra.data.local.entities.ArticleEntity
 import com.mienaiknife.narra.data.local.entities.FeedEntity
+import com.mienaiknife.narra.data.local.entities.TtsModelEntity
 
-@Database(entities = [ArticleEntity::class, FeedEntity::class], version = 5, exportSchema = false)
+@Database(
+    entities = [ArticleEntity::class, FeedEntity::class, TtsModelEntity::class],
+    version = 6,
+    exportSchema = false
+)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun articleDao(): ArticleDao
     abstract fun feedDao(): FeedDao
+    abstract fun ttsModelDao(): TtsModelDao
 
     companion object {
         const val DATABASE_NAME = "narra_db"

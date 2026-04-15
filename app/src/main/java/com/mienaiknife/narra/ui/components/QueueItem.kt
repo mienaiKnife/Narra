@@ -224,13 +224,21 @@ private fun QueueItemRow(
 
                 Spacer(modifier = Modifier.height(4.dp))
 
+                val totalDuration = remember(article.content) { DateUtils.estimateReadingTimeMs(article.content) }
                 val progress = article.progress ?: 0f
+                val currentPosition = (progress * totalDuration).toLong()
+                val remainingTime = totalDuration - currentPosition
+
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text(
-                        text = if (article.id == "3") "0:42" else if (article.id == "2") "0:46" else "5:07",
+                        text = if (progress > 0f && progress < 1f) {
+                            DateUtils.formatElapsedTime(currentPosition)
+                        } else {
+                            DateUtils.formatElapsedTime(totalDuration)
+                        },
                         style = MaterialTheme.typography.labelSmall,
                         color = if (article.progress == 1f) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f) else MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -253,7 +261,7 @@ private fun QueueItemRow(
                         Spacer(modifier = Modifier.width(8.dp))
 
                         Text(
-                            text = if (article.id == "2") "-0:46" else "-5:07",
+                            text = "-${DateUtils.formatElapsedTime(remainingTime)}",
                             style = MaterialTheme.typography.labelSmall,
                             color = if (article.progress == 1f) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f) else MaterialTheme.colorScheme.onSurfaceVariant,
                         )

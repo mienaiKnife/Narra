@@ -245,7 +245,7 @@ private fun BoxScope.ScrollbarContainer(
             .align(Alignment.CenterEnd)
             .graphicsLayer { this.alpha = alpha }
             .fillMaxHeight()
-            .width(32.dp)
+            .width(16.dp)
     ) {
         Box(
             modifier = Modifier

@@ -137,6 +137,13 @@ object HtmlParser {
             }
             is Element -> {
                 val tagName = node.tagName()
+                
+                // Skip non-content elements
+                if (tagName == "style" || tagName == "script" || tagName == "head" || 
+                    tagName == "link" || tagName == "meta" || tagName == "svg") {
+                    return
+                }
+
                 val style = getStyleForTag(tagName)
                 
                 if (tagName == "sup") {
@@ -158,9 +165,10 @@ object HtmlParser {
                     builder.pop()
                 }
                 
-                // Add newlines for block-level tags if they are nested within an inline context
+                // Add newlines for block-level tags to ensure separation if they are
+                // encountered in a context where they aren't already triggering a flush.
                 if (tagName == "br" || tagName == "p" || tagName == "div" || tagName == "li" || 
-                    tagName.startsWith("h") && tagName.length == 2) {
+                    tagName == "blockquote" || (tagName.startsWith("h") && tagName.length == 2)) {
                     builder.append("\n")
                 }
             }

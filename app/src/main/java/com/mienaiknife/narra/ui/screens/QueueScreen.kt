@@ -56,7 +56,7 @@ import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
@@ -64,6 +64,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
@@ -74,6 +75,7 @@ import androidx.compose.ui.zIndex
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
+import com.mienaiknife.narra.NavDestination
 import com.mienaiknife.narra.data.models.Article
 import com.mienaiknife.narra.data.models.SampleArticles
 import com.mienaiknife.narra.data.models.SortOption
@@ -83,7 +85,9 @@ import com.mienaiknife.narra.ui.components.QueueItem
 import com.mienaiknife.narra.ui.components.SortBottomSheet
 import com.mienaiknife.narra.ui.theme.NarraTheme
 import com.mienaiknife.narra.ui.viewmodels.QueueViewModel
+import com.mienaiknife.narra.utils.DateUtils
 import kotlinx.coroutines.launch
+import java.util.concurrent.TimeUnit
 
 @Composable
 fun QueueScreen(
@@ -91,51 +95,56 @@ fun QueueScreen(
     onArticleClick: (String) -> Unit,
     viewModel: QueueViewModel = hiltViewModel()
 ) {
-    val articles by viewModel.articles.collectAsState()
-    val isRefreshing by viewModel.isRefreshing.collectAsState()
-    val currentArticle by viewModel.currentArticle.collectAsState()
-    val isPlaying by viewModel.isPlaying.collectAsState()
-    val sortOption by viewModel.sortOption.collectAsState()
-    val keepSorted by viewModel.keepSorted.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
-    Scaffold(
-        snackbarHost = { SnackbarHost(snackbarHostState) },
-        modifier = Modifier.fillMaxSize()
-    ) { paddingValues ->
-        Box(modifier = Modifier.padding(paddingValues)) {
-            QueueScreenContent(
-                articles = articles,
-                isRefreshing = isRefreshing,
-                currentArticle = currentArticle,
-                isPlaying = isPlaying,
-                sortOption = sortOption,
-                keepSorted = keepSorted,
-                onArticleClick = onArticleClick,
-                onPlayPauseClick = { article -> viewModel.onPlayPauseClick(article) },
-                onMarkAsPlayedClick = { article -> viewModel.togglePlayedStatus(article) },
-                onRemoveFromQueue = { article ->
-                    viewModel.removeFromQueue(article)
-                    scope.launch {
-                        val result = snackbarHostState.showSnackbar(
-                            message = "Removed from queue",
-                            actionLabel = "Undo",
-                            duration = SnackbarDuration.Short
-                        )
-                        if (result == SnackbarResult.ActionPerformed) {
-                            viewModel.addToQueue(article.id)
-                        }
-                    }
-                },
-                onHistoryClick = { navController.navigate("history") },
-                onClearQueue = { viewModel.clearQueue() },
-                onRefresh = { viewModel.refresh() },
-                onSortOptionSelected = { viewModel.setSortOption(it) },
-                onKeepSortedChange = { viewModel.setKeepSorted(it) },
-                onReorder = { from, to -> viewModel.reorderQueue(from, to) }
-            )
+    LaunchedEffect(Unit) {
+        viewModel.uiEvent.collect { event ->
+            when (event) {
+                is QueueViewModel.UiEvent.ShowSnackbar -> {
+                    snackbarHostState.showSnackbar(event.message)
+                }
+            }
         }
+    }
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        QueueScreenContent(
+            articles = uiState.articles,
+            isRefreshing = uiState.isRefreshing,
+            currentArticle = uiState.currentArticle,
+            isPlaying = uiState.isPlaying,
+            sortOption = uiState.sortOption,
+            keepSorted = uiState.keepSorted,
+            onArticleClick = onArticleClick,
+            onPlayPauseClick = { article -> viewModel.onPlayPauseClick(article) },
+            onMarkAsPlayedClick = { article -> viewModel.togglePlayedStatus(article) },
+            onRemoveFromQueue = { article ->
+                viewModel.removeFromQueue(article)
+                scope.launch {
+                    val result = snackbarHostState.showSnackbar(
+                        message = "Removed from queue",
+                        actionLabel = "Undo",
+                        duration = SnackbarDuration.Short
+                    )
+                    if (result == SnackbarResult.ActionPerformed) {
+                        viewModel.addToQueue(article.id)
+                    }
+                }
+            },
+            onHistoryClick = { navController.navigate(NavDestination.History) },
+            onClearQueue = { viewModel.clearQueue() },
+            onRefresh = { viewModel.refresh() },
+            onSortOptionSelected = { viewModel.setSortOption(it) },
+            onKeepSortedChange = { viewModel.setKeepSorted(it) },
+            onReorder = { from, to -> viewModel.reorderQueue(from, to) }
+        )
+
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier.align(Alignment.BottomCenter)
+        )
     }
 }
 
@@ -165,6 +174,30 @@ fun QueueScreenContent(
 
     var draggedItemIndex by remember { mutableIntStateOf(-1) }
     var draggingOffset by remember { mutableFloatStateOf(0f) }
+
+    val totalRemainingTimeMs = remember(articles) {
+        articles.sumOf { article ->
+            val totalDuration = DateUtils.estimateReadingTimeMs(article.content)
+            val progress = article.progress ?: 0f
+            (totalDuration * (1f - progress)).toLong()
+        }
+    }
+
+    val totalHours = TimeUnit.MILLISECONDS.toHours(totalRemainingTimeMs)
+    val totalMinutes = TimeUnit.MILLISECONDS.toMinutes(totalRemainingTimeMs) % 60
+
+    val timeLeftText = buildString {
+        append("Time left: ")
+        if (totalHours > 0) {
+            append(totalHours)
+            append(" ")
+            append(if (totalHours == 1L) "hour" else "hours")
+            append(" and ")
+        }
+        append(totalMinutes)
+        append(" ")
+        append(if (totalMinutes == 1L) "minute" else "minutes")
+    }
 
     if (showSortSheet.value) {
         SortBottomSheet(
@@ -255,7 +288,13 @@ fun QueueScreenContent(
         }
 
         Text(
-            text = "${articles.size} ${if (articles.size == 1) "text" else "texts"}",
+            text = buildString {
+                append(articles.size)
+                append(" ")
+                append(if (articles.size == 1) "text" else "texts")
+                append(" • ")
+                append(timeLeftText)
+            },
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(horizontal = 16.dp)

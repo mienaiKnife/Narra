@@ -27,11 +27,13 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.*
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
+import com.mienaiknife.narra.NavDestination
 import com.mienaiknife.narra.data.models.Article
 import com.mienaiknife.narra.data.models.SortOption
 import com.mienaiknife.narra.ui.components.QueueItem
@@ -43,30 +45,42 @@ fun FeedArticlesScreen(
     navController: NavController,
     viewModel: FeedArticlesViewModel = hiltViewModel()
 ) {
-    val articles by viewModel.articles.collectAsState()
-    val sortOption by viewModel.sortOption.collectAsState()
-    val feedTitle = viewModel.feedTitle
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val snackbarHostState = remember { SnackbarHostState() }
 
-    FeedArticlesScreenContent(
-        feedTitle = feedTitle,
-        articles = articles,
-        sortOption = sortOption,
-        onBackClick = { navController.popBackStack() },
-        onArticleClick = { article ->
-            navController.navigate("reader/${article.id}")
-        },
-        onAddToQueue = { viewModel.addToQueue(it) },
-        onDeleteArticle = { viewModel.deleteArticle(it) },
-        onSortOptionSelected = { viewModel.setSortOption(it) }
-    )
+    LaunchedEffect(Unit) {
+        viewModel.uiEvent.collect { event ->
+            when (event) {
+                is FeedArticlesViewModel.UiEvent.ShowSnackbar -> {
+                    snackbarHostState.showSnackbar(event.message)
+                }
+            }
+        }
+    }
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        FeedArticlesScreenContent(
+            uiState = uiState,
+            onBackClick = { navController.popBackStack() },
+            onArticleClick = { article ->
+                navController.navigate(NavDestination.Reader(article.id))
+            },
+            onAddToQueue = { viewModel.addToQueue(it) },
+            onDeleteArticle = { viewModel.deleteArticle(it) },
+            onSortOptionSelected = { viewModel.setSortOption(it) }
+        )
+
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier.align(Alignment.BottomCenter)
+        )
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FeedArticlesScreenContent(
-    feedTitle: String,
-    articles: List<Article>,
-    sortOption: SortOption = SortOption.DATE_DESC,
+    uiState: com.mienaiknife.narra.ui.viewmodels.FeedArticlesUiState,
     onBackClick: () -> Unit,
     onArticleClick: (Article) -> Unit,
     onAddToQueue: (Article) -> Unit,
@@ -78,7 +92,7 @@ fun FeedArticlesScreenContent(
 
     if (showSortSheet) {
         SortBottomSheet(
-            selectedOption = sortOption,
+            selectedOption = uiState.sortOption,
             onOptionSelected = onSortOptionSelected,
             onDismissRequest = { showSortSheet = false }
         )
@@ -113,7 +127,7 @@ fun FeedArticlesScreenContent(
                 }
                 Spacer(modifier = Modifier.size(8.dp))
                 Text(
-                    text = feedTitle,
+                    text = uiState.feedTitle,
                     style = MaterialTheme.typography.headlineSmall,
                     color = MaterialTheme.colorScheme.onBackground,
                     maxLines = 1
@@ -153,7 +167,7 @@ fun FeedArticlesScreenContent(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        if (articles.isEmpty()) {
+        if (uiState.articles.isEmpty()) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -173,7 +187,7 @@ fun FeedArticlesScreenContent(
                 verticalArrangement = Arrangement.spacedBy(16.dp),
                 contentPadding = PaddingValues(bottom = 24.dp)
             ) {
-                items(articles) { article ->
+                items(uiState.articles) { article ->
                     QueueItem(
                         article = article,
                         isPlaying = false,
@@ -186,3 +200,4 @@ fun FeedArticlesScreenContent(
         }
     }
 }
+

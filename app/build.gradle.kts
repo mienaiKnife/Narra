@@ -19,6 +19,7 @@ plugins {
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt)
+    alias(libs.plugins.kotlin.serialization)
 }
 
 android {
@@ -76,11 +77,18 @@ dependencies {
     implementation(libs.androidx.compose.material3)
     implementation(libs.androidx.compose.material.icons.extended)
     implementation(libs.androidx.navigation.compose)
+    implementation(libs.kotlinx.serialization.json)
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.androidx.ui)
     implementation(libs.jsoup)
     implementation(libs.readability4j)
     implementation(libs.rssparser)
+    implementation(libs.epublib) {
+        exclude(group = "xmlpull", module = "xmlpull")
+        exclude(group = "net.sf.kxml", module = "kxml2")
+    }
+    implementation(libs.onnxruntime.android)
+    implementation(files("libs/sherpa-onnx.aar"))
     implementation(libs.room.runtime)
     implementation(libs.room.ktx)
     implementation(libs.androidx.compose.foundation)
@@ -90,6 +98,7 @@ dependencies {
     implementation(libs.androidx.hilt.navigation.compose)
     implementation(libs.androidx.media3.session)
     implementation(libs.androidx.media3.exoplayer)
+    implementation(libs.okhttp)
     implementation(libs.coil.compose)
     implementation(libs.coil.network)
     testImplementation(libs.junit)

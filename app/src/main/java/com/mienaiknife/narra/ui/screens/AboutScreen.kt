@@ -76,7 +76,6 @@ fun AboutScreen(onBack: () -> Unit, onNavigateToLicenses: () -> Unit) {
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .padding(horizontal = 16.dp)
         ) {
             item {
                 ListItem(

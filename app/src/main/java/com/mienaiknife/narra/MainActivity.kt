@@ -21,9 +21,9 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.mienaiknife.narra.ui.theme.NarraTheme
 import com.mienaiknife.narra.ui.theme.ThemeViewModel
 import dagger.hilt.android.AndroidEntryPoint
@@ -38,9 +38,10 @@ class MainActivity : ComponentActivity() {
         themeViewModel.initialize(this)
         enableEdgeToEdge()
         setContent {
-            val isDarkMode by themeViewModel.isDarkMode.collectAsState()
-            val isDynamicColor by themeViewModel.isDynamicColor.collectAsState()
-            val useSystemTheme by themeViewModel.useSystemTheme.collectAsState()
+            val uiState by themeViewModel.uiState.collectAsStateWithLifecycle()
+            val isDarkMode = uiState.isDarkMode
+            val isDynamicColor = uiState.isDynamicColor
+            val useSystemTheme = uiState.useSystemTheme
 
             val darkTheme = if (useSystemTheme) androidx.compose.foundation.isSystemInDarkTheme() else isDarkMode
 
