@@ -29,12 +29,6 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-data class VoicesSettingsUiState(
-    val availableModels: List<TtsModel> = emptyList(),
-    val selectedEngine: String = "android",
-    val selectedModelId: String? = null
-)
-
 @HiltViewModel
 class VoicesSettingsViewModel @Inject constructor(
     private val modelRepository: ModelRepository,

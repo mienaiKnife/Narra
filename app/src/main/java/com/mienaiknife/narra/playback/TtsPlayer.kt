@@ -64,9 +64,9 @@ import javax.inject.Singleton
 @UnstableApi
 @Singleton
 class TtsPlayer @Inject constructor(
-    @ApplicationContext private val context: Context,
+    @param:ApplicationContext private val context: Context,
     private val ttsEngine: TtsEngine,
-    private val settingsManager: PlaybackSettingsManager
+    settingsManager: PlaybackSettingsManager
 ) : BasePlayer() {
 
     var onSkipNext: (() -> Unit)? = null
@@ -85,7 +85,6 @@ class TtsPlayer @Inject constructor(
     private var _playbackSuppressionReason = PLAYBACK_SUPPRESSION_REASON_NONE
     private var _playerError: PlaybackException? = null
     private var _handleAudioFocus = true
-    private var _volume = 1.0f
 
     private var paragraphs: List<String> = emptyList()
     private var currentParagraphIndex = -1
@@ -243,9 +242,6 @@ class TtsPlayer @Inject constructor(
                             _playWhenReady = false
                             abandonAudioFocusInternal()
                             updatePlaybackState(STATE_ENDED)
-                        } else if (!isEngineSpeaking) {
-                            // This might be called after initialization or if the engine somehow stopped unexpectedly
-                            // speakCurrentFrom(currentParagraphIndex, resumeWordOffset)
                         }
                     }
                 }
@@ -501,12 +497,19 @@ class TtsPlayer @Inject constructor(
         if (wakeLock == null) {
             val powerManager = context.getSystemService(Context.POWER_SERVICE) as PowerManager
             wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "Narra:PlaybackWakeLock").apply {
-                acquire()
+                acquire(10 * 60 * 1000L /* 10 minutes */)
             }
         }
         if (wifiLock == null) {
             val wifiManager = context.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
-            wifiLock = wifiManager.createWifiLock(WifiManager.WIFI_MODE_FULL_HIGH_PERF, "Narra:PlaybackWifiLock").apply {
+            val lockMode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                @Suppress("DEPRECATION")
+                WifiManager.WIFI_MODE_FULL_HIGH_PERF
+            } else {
+                @Suppress("DEPRECATION")
+                WifiManager.WIFI_MODE_FULL_HIGH_PERF
+            }
+            wifiLock = wifiManager.createWifiLock(lockMode, "Narra:PlaybackWifiLock").apply {
                 acquire()
             }
         }
@@ -604,19 +607,19 @@ class TtsPlayer @Inject constructor(
     // Commands
     override fun getAvailableCommands(): Player.Commands = Player.Commands.Builder()
         .addAll(
-            Player.COMMAND_PLAY_PAUSE,
-            Player.COMMAND_STOP,
-            Player.COMMAND_SET_SPEED_AND_PITCH,
-            Player.COMMAND_GET_CURRENT_MEDIA_ITEM,
-            Player.COMMAND_GET_METADATA,
-            Player.COMMAND_GET_TIMELINE,
-            Player.COMMAND_SEEK_TO_NEXT,
-            Player.COMMAND_SEEK_TO_PREVIOUS,
-            Player.COMMAND_SEEK_TO_NEXT_MEDIA_ITEM,
-            Player.COMMAND_SEEK_TO_PREVIOUS_MEDIA_ITEM,
-            Player.COMMAND_SEEK_FORWARD,
-            Player.COMMAND_SEEK_BACK,
-            Player.COMMAND_SEEK_IN_CURRENT_MEDIA_ITEM
+            COMMAND_PLAY_PAUSE,
+            COMMAND_STOP,
+            COMMAND_SET_SPEED_AND_PITCH,
+            COMMAND_GET_CURRENT_MEDIA_ITEM,
+            COMMAND_GET_METADATA,
+            COMMAND_GET_TIMELINE,
+            COMMAND_SEEK_TO_NEXT,
+            COMMAND_SEEK_TO_PREVIOUS,
+            COMMAND_SEEK_TO_NEXT_MEDIA_ITEM,
+            COMMAND_SEEK_TO_PREVIOUS_MEDIA_ITEM,
+            COMMAND_SEEK_FORWARD,
+            COMMAND_SEEK_BACK,
+            COMMAND_SEEK_IN_CURRENT_MEDIA_ITEM
         ).build()
 
     // Required by BasePlayer
@@ -637,6 +640,8 @@ class TtsPlayer @Inject constructor(
     @Deprecated("Deprecated in Java")
     override fun setDeviceMuted(muted: Boolean) {}
     override fun setDeviceMuted(muted: Boolean, flags: Int) {}
+    override fun mute() {}
+    override fun unmute() {}
     override fun getVideoSize(): VideoSize = VideoSize.UNKNOWN
     override fun getCurrentCues(): CueGroup = CueGroup.EMPTY_TIME_ZERO
 
@@ -665,14 +670,6 @@ class TtsPlayer @Inject constructor(
 
     fun seekToPreviousInternal() {
         onSkipPrevious?.invoke()
-    }
-
-    fun seekForwardInternal() {
-        seekTo(currentPosition + seekForwardIncrement)
-    }
-
-    fun seekBackInternal() {
-        seekTo(currentPosition - seekBackIncrement)
     }
 
     fun seekToWord(paragraphIndex: Int, wordRange: IntRange, startPlaying: Boolean = true) {
@@ -743,9 +740,9 @@ class TtsPlayer @Inject constructor(
         resumeWordOffset = article.currentWordOffset.coerceAtLeast(0)
         
         listeners.forEach { 
-            it.onMediaItemTransition(_currentMediaItem, Player.MEDIA_ITEM_TRANSITION_REASON_PLAYLIST_CHANGED)
+            it.onMediaItemTransition(_currentMediaItem, MEDIA_ITEM_TRANSITION_REASON_PLAYLIST_CHANGED)
             it.onMediaMetadataChanged(mediaMetadata)
-            it.onTimelineChanged(currentTimeline, Player.TIMELINE_CHANGE_REASON_PLAYLIST_CHANGED)
+            it.onTimelineChanged(currentTimeline, TIMELINE_CHANGE_REASON_PLAYLIST_CHANGED)
         }
 
         setPlayWhenReady(playWhenReady)
@@ -755,7 +752,7 @@ class TtsPlayer @Inject constructor(
             it.onPositionDiscontinuity(
                 Player.PositionInfo(null, 0, null, 0, 0, 0, 0, 0, 0),
                 Player.PositionInfo(null, 0, null, 0, 0, currentParagraphIndex.toLong(), 0, 0, 0),
-                Player.DISCONTINUITY_REASON_AUTO_TRANSITION
+                DISCONTINUITY_REASON_AUTO_TRANSITION
             )
         }
 

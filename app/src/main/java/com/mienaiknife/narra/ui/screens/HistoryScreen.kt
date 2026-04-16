@@ -83,8 +83,10 @@ fun HistoryScreen(
         HistoryScreenContent(
             articles = uiState.articles,
             isRefreshing = uiState.isRefreshing,
+            isPlaying = uiState.isPlaying,
+            currentArticleId = uiState.currentArticle?.id,
             onBackClick = { navController.popBackStack() },
-            onAddToQueue = { viewModel.addToQueue(it) },
+            onPlayPauseClick = { viewModel.onPlayPauseClick(it) },
             onArticleClick = { articleId -> navController.navigate(NavDestination.Reader(articleId)) },
             onMarkAsPlayedClick = { viewModel.togglePlayedStatus(it) },
             onClearHistory = { viewModel.clearHistory() },
@@ -101,8 +103,10 @@ fun HistoryScreen(
 fun HistoryScreenContent(
     articles: List<Article>,
     isRefreshing: Boolean = false,
+    isPlaying: Boolean = false,
+    currentArticleId: String? = null,
     onBackClick: () -> Unit,
-    onAddToQueue: (Article) -> Unit,
+    onPlayPauseClick: (Article) -> Unit,
     onArticleClick: (String) -> Unit = {},
     onMarkAsPlayedClick: (Article) -> Unit = {},
     onClearHistory: () -> Unit = {},
@@ -199,10 +203,10 @@ fun HistoryScreenContent(
                     items(articles, key = { it.id }) { article ->
                         QueueItem(
                             article = article,
-                            isPlaying = false,
+                            isPlaying = isPlaying && currentArticleId == article.id,
                             modifier = Modifier.animateItem(),
                             onItemClick = { onArticleClick(article.id) },
-                            onPlayPauseClick = { onAddToQueue(article) },
+                            onPlayPauseClick = { onPlayPauseClick(article) },
                             onMarkAsPlayedClick = { onMarkAsPlayedClick(article) }
                         )
                     }
@@ -229,7 +233,7 @@ fun HistoryScreenPreview() {
                 HistoryScreenContent(
                     articles = listOf(SampleArticles.finishedArticle),
                     onBackClick = {},
-                    onAddToQueue = {}
+                    onPlayPauseClick = {}
                 )
             }
         }

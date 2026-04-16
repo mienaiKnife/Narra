@@ -37,12 +37,6 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-data class FeedArticlesUiState(
-    val articles: List<Article> = emptyList(),
-    val sortOption: SortOption = SortOption.DATE_DESC,
-    val feedTitle: String = ""
-)
-
 @HiltViewModel
 class FeedArticlesViewModel @Inject constructor(
     private val repository: ContentRepository,

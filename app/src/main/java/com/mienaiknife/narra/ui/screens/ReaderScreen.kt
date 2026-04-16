@@ -172,7 +172,7 @@ fun ReaderScreen(
 
 @Composable
 fun ReaderContent(
-    uiState: com.mienaiknife.narra.ui.viewmodels.ReaderUiState,
+    uiState: ReaderUiState,
     onBack: () -> Unit,
     onTogglePlayPause: () -> Unit,
     onSeekToWord: (Int, IntRange) -> Unit,

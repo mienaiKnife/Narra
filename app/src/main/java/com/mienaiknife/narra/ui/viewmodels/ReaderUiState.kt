@@ -14,16 +14,21 @@
  * limitations under the License.
  */
 
-package com.mienaiknife.narra.ui.utils
+package com.mienaiknife.narra.ui.viewmodels
 
-import android.content.Context
-import android.net.ConnectivityManager
-import android.net.NetworkCapabilities
-import dagger.hilt.android.qualifiers.ApplicationContext
-import javax.inject.Inject
-import javax.inject.Singleton
+import com.mienaiknife.narra.data.models.Article
+import com.mienaiknife.narra.ui.models.ContentBlock
 
-interface NetworkMonitor {
-    fun isOnline(): Boolean
-    fun isOnWifi(): Boolean
-}
+data class ReaderUiState(
+    val article: Article? = null,
+    val blocks: List<ContentBlock> = emptyList(),
+    val isLoading: Boolean = false,
+    val isPlaying: Boolean = false,
+    val currentPosition: Long = 0L,
+    val duration: Long = 0L,
+    val playbackSpeed: Float = 1.0f,
+    val currentParagraphIndex: Int = 0,
+    val currentWordRange: IntRange? = null,
+    val fastForwardSkipTime: String = "30s",
+    val rewindSkipTime: String = "10s"
+)

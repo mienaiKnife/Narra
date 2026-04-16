@@ -14,16 +14,17 @@
  * limitations under the License.
  */
 
-package com.mienaiknife.narra.ui.utils
+package com.mienaiknife.narra.domain
 
-import android.content.Context
-import android.net.ConnectivityManager
-import android.net.NetworkCapabilities
-import dagger.hilt.android.qualifiers.ApplicationContext
-import javax.inject.Inject
-import javax.inject.Singleton
-
-interface NetworkMonitor {
-    fun isOnline(): Boolean
-    fun isOnWifi(): Boolean
+sealed class TtsState {
+    object Idle : TtsState()
+    object Initializing : TtsState()
+    object Ready : TtsState()
+    data class Speaking(
+        val utteranceId: String,
+        val start: Int = 0,
+        val end: Int = 0,
+        val frame: Int = 0
+    ) : TtsState()
+    data class Error(val message: String) : TtsState()
 }

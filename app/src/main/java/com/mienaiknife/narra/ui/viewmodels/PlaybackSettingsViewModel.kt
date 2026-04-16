@@ -28,14 +28,6 @@ import javax.inject.Inject
 
 import kotlinx.coroutines.flow.combine
 
-data class PlaybackSettingsUiState(
-    val fastForwardSkipTime: String = "30s",
-    val rewindSkipTime: String = "10s",
-    val pauseOnDisconnect: Boolean = true,
-    val pauseForInterruptions: Boolean = true,
-    val autoPlayNext: Boolean = true
-)
-
 @HiltViewModel
 class PlaybackSettingsViewModel @Inject constructor(
     private val settingsManager: PlaybackSettingsManager

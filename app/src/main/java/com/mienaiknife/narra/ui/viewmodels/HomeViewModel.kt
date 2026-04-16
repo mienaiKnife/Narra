@@ -31,13 +31,6 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-data class HomeUiState(
-    val continueListening: List<Article> = emptyList(),
-    val newFromFeeds: List<Article> = emptyList(),
-    val favoriteArticles: List<Article> = emptyList(),
-    val isLoading: Boolean = false
-)
-
 @HiltViewModel
 class HomeViewModel @Inject constructor(
     private val repository: ContentRepository

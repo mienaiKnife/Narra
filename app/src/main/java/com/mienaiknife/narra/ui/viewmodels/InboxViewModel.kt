@@ -36,14 +36,6 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-data class InboxUiState(
-    val articles: List<Article> = emptyList(),
-    val isRefreshing: Boolean = false,
-    val sortOption: SortOption = SortOption.DATE_DESC,
-    val currentArticle: Article? = null,
-    val isPlaying: Boolean = false
-)
-
 @HiltViewModel
 class InboxViewModel @Inject constructor(
     private val repository: ContentRepository,

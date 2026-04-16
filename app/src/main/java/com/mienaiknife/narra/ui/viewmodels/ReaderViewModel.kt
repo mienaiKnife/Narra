@@ -42,20 +42,6 @@ import javax.inject.Inject
 
 import kotlinx.coroutines.flow.combine
 
-data class ReaderUiState(
-    val article: Article? = null,
-    val blocks: List<ContentBlock> = emptyList(),
-    val isLoading: Boolean = false,
-    val isPlaying: Boolean = false,
-    val currentPosition: Long = 0L,
-    val duration: Long = 0L,
-    val playbackSpeed: Float = 1.0f,
-    val currentParagraphIndex: Int = 0,
-    val currentWordRange: IntRange? = null,
-    val fastForwardSkipTime: String = "30s",
-    val rewindSkipTime: String = "10s"
-)
-
 @HiltViewModel
 class ReaderViewModel @Inject constructor(
     private val repository: ContentRepository,

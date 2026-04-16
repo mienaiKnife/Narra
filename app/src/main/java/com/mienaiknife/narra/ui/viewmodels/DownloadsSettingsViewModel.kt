@@ -29,10 +29,6 @@ import javax.inject.Inject
 
 import kotlinx.coroutines.flow.map
 
-data class DownloadsSettingsUiState(
-    val downloadOverWifiOnly: Boolean = true
-)
-
 @HiltViewModel
 class DownloadsSettingsViewModel @Inject constructor(
     private val downloadSettingsManager: DownloadSettingsManager,

@@ -18,9 +18,11 @@ package com.mienaiknife.narra.service
 
 import android.app.PendingIntent
 import android.content.Intent
+import androidx.annotation.OptIn
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.Player
+import androidx.media3.common.util.UnstableApi
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
 import com.mienaiknife.narra.MainActivity
@@ -29,6 +31,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 
 @AndroidEntryPoint
+@OptIn(UnstableApi::class)
 class PlaybackService : MediaSessionService() {
 
     @Inject
@@ -57,6 +60,7 @@ class PlaybackService : MediaSessionService() {
         mediaSession = MediaSession.Builder(this, ttsPlayer)
             .setSessionActivity(pendingIntent)
             .setCallback(object : MediaSession.Callback {
+                @Deprecated("Use onConnect to configure available commands")
                 @Suppress("DEPRECATION")
                 override fun onPlayerCommandRequest(
                     session: MediaSession,
@@ -71,6 +75,12 @@ class PlaybackService : MediaSessionService() {
                         Player.COMMAND_SEEK_TO_PREVIOUS,
                         Player.COMMAND_SEEK_TO_PREVIOUS_MEDIA_ITEM -> {
                             ttsPlayer.seekToPreviousInternal()
+                        }
+                        Player.COMMAND_SEEK_FORWARD -> {
+                            ttsPlayer.seekForward()
+                        }
+                        Player.COMMAND_SEEK_BACK -> {
+                            ttsPlayer.seekBack()
                         }
                     }
                     return super.onPlayerCommandRequest(session, controller, playerCommand)

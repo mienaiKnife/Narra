@@ -21,6 +21,8 @@ import android.media.MediaPlayer
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.common.Timeline
+import androidx.annotation.OptIn
+import androidx.media3.common.util.UnstableApi
 import com.mienaiknife.narra.data.models.Article
 import com.mienaiknife.narra.domain.TtsState
 import com.mienaiknife.narra.domain.repository.ContentRepository
@@ -42,9 +44,10 @@ import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.coroutines.resume
 
+@OptIn(UnstableApi::class)
 @Singleton
 class PlaybackManager @Inject constructor(
-    @ApplicationContext private val context: Context,
+    @param:ApplicationContext private val context: Context,
     private val ttsPlayer: TtsPlayer,
     private val repository: ContentRepository,
     val settingsManager: PlaybackSettingsManager
@@ -244,7 +247,7 @@ class PlaybackManager @Inject constructor(
             val resId = context.resources.getIdentifier(soundName, "raw", context.packageName)
             if (resId != 0) {
                 val mediaPlayer = MediaPlayer.create(context, resId) ?: return
-                kotlinx.coroutines.suspendCancellableCoroutine<Unit> { continuation ->
+                kotlinx.coroutines.suspendCancellableCoroutine { continuation ->
                     mediaPlayer.setOnCompletionListener { 
                         it.release()
                         if (continuation.isActive) continuation.resume(Unit)

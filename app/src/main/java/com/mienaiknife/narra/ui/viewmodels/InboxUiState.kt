@@ -14,16 +14,15 @@
  * limitations under the License.
  */
 
-package com.mienaiknife.narra.ui.utils
+package com.mienaiknife.narra.ui.viewmodels
 
-import android.content.Context
-import android.net.ConnectivityManager
-import android.net.NetworkCapabilities
-import dagger.hilt.android.qualifiers.ApplicationContext
-import javax.inject.Inject
-import javax.inject.Singleton
+import com.mienaiknife.narra.data.models.Article
+import com.mienaiknife.narra.data.models.SortOption
 
-interface NetworkMonitor {
-    fun isOnline(): Boolean
-    fun isOnWifi(): Boolean
-}
+data class InboxUiState(
+    val articles: List<Article> = emptyList(),
+    val isRefreshing: Boolean = false,
+    val sortOption: SortOption = SortOption.DATE_DESC,
+    val currentArticle: Article? = null,
+    val isPlaying: Boolean = false
+)

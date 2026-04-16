@@ -27,13 +27,6 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import javax.inject.Inject
 
-data class PlaybackUiState(
-    val currentArticle: Article? = null,
-    val isPlaying: Boolean = false,
-    val currentPosition: Long = 0,
-    val duration: Long = 0
-)
-
 @HiltViewModel
 class PlaybackViewModel @Inject constructor(
     private val playbackManager: PlaybackManager

@@ -14,16 +14,13 @@
  * limitations under the License.
  */
 
-package com.mienaiknife.narra.ui.utils
+package com.mienaiknife.narra.ui.viewmodels
 
-import android.content.Context
-import android.net.ConnectivityManager
-import android.net.NetworkCapabilities
-import dagger.hilt.android.qualifiers.ApplicationContext
-import javax.inject.Inject
-import javax.inject.Singleton
+import com.mienaiknife.narra.data.models.Article
 
-interface NetworkMonitor {
-    fun isOnline(): Boolean
-    fun isOnWifi(): Boolean
-}
+data class HomeUiState(
+    val continueListening: List<Article> = emptyList(),
+    val newFromFeeds: List<Article> = emptyList(),
+    val favoriteArticles: List<Article> = emptyList(),
+    val isLoading: Boolean = false
+)

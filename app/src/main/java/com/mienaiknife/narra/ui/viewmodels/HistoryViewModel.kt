@@ -35,13 +35,6 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-data class HistoryUiState(
-    val articles: List<Article> = emptyList(),
-    val isRefreshing: Boolean = false,
-    val currentArticle: Article? = null,
-    val isPlaying: Boolean = false
-)
-
 @HiltViewModel
 class HistoryViewModel @Inject constructor(
     private val repository: ContentRepository,

@@ -32,12 +32,6 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-data class FeedsUiState(
-    val feeds: List<FeedEntity> = emptyList(),
-    val isRefreshing: Boolean = false,
-    val sortOption: SortOption = SortOption.TITLE_ASC
-)
-
 @HiltViewModel
 class FeedsViewModel @Inject constructor(
     private val feedDao: FeedDao,

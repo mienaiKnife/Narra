@@ -37,15 +37,6 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-data class QueueUiState(
-    val articles: List<Article> = emptyList(),
-    val isRefreshing: Boolean = false,
-    val sortOption: SortOption = SortOption.MANUAL,
-    val keepSorted: Boolean = false,
-    val currentArticle: Article? = null,
-    val isPlaying: Boolean = false
-)
-
 @HiltViewModel
 class QueueViewModel @Inject constructor(
     private val repository: ContentRepository,

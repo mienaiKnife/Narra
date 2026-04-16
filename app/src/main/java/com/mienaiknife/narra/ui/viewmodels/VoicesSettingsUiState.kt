@@ -14,16 +14,12 @@
  * limitations under the License.
  */
 
-package com.mienaiknife.narra.ui.utils
+package com.mienaiknife.narra.ui.viewmodels
 
-import android.content.Context
-import android.net.ConnectivityManager
-import android.net.NetworkCapabilities
-import dagger.hilt.android.qualifiers.ApplicationContext
-import javax.inject.Inject
-import javax.inject.Singleton
+import com.mienaiknife.narra.domain.models.TtsModel
 
-interface NetworkMonitor {
-    fun isOnline(): Boolean
-    fun isOnWifi(): Boolean
-}
+data class VoicesSettingsUiState(
+    val availableModels: List<TtsModel> = emptyList(),
+    val selectedEngine: String = "android",
+    val selectedModelId: String? = null
+)
