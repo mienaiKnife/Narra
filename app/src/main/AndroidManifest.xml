@@ -48,6 +48,9 @@
             android:enabled="true"
             android:exported="false"
             android:foregroundServiceType="mediaPlayback">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="This app uses a foreground service to play text-to-speech audio of articles and EPUBs, allowing users to listen in the background." />
             <intent-filter>
                 <action android:name="androidx.media3.session.MediaSessionService" />
                 <action android:name="android.intent.action.MEDIA_BUTTON" />

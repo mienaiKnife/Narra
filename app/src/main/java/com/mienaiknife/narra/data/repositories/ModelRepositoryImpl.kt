@@ -25,7 +25,6 @@ import com.mienaiknife.narra.domain.repository.ModelRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
@@ -37,7 +36,7 @@ import javax.inject.Singleton
 
 @Singleton
 class ModelRepositoryImpl @Inject constructor(
-    @ApplicationContext private val context: Context,
+    @param:ApplicationContext private val context: Context,
     private val ttsModelDao: TtsModelDao,
     private val okHttpClient: OkHttpClient
 ) : ModelRepository {
@@ -161,7 +160,7 @@ class ModelRepositoryImpl @Inject constructor(
         okHttpClient.newCall(request).execute().use { response ->
             if (!response.isSuccessful) throw Exception("Failed to download file: ${response.code}")
             
-            val body = response.body ?: throw Exception("Response body is null")
+            val body = response.body
             val contentLength = body.contentLength()
             
             body.byteStream().use { inputStream ->

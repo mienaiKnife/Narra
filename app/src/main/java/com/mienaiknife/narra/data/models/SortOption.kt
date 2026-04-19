@@ -16,12 +16,12 @@
 
 package com.mienaiknife.narra.data.models
 
-enum class SortOption(val label: String) {
-    MANUAL("Manual"),
-    DATE_DESC("Newest first"),
-    DATE_ASC("Oldest first"),
-    TITLE_ASC("Title (A-Z)"),
-    TITLE_DESC("Title (Z-A)"),
-    SOURCE_ASC("Source (A-Z)"),
-    SOURCE_DESC("Source (Z-A)")
+enum class SortOption {
+    MANUAL,
+    DATE_DESC,
+    DATE_ASC,
+    TITLE_ASC,
+    TITLE_DESC,
+    SOURCE_ASC,
+    SOURCE_DESC
 }

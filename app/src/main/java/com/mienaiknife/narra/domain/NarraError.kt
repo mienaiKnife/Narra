@@ -18,22 +18,22 @@ package com.mienaiknife.narra.domain
 
 sealed class NarraError : Throwable() {
     sealed class Network : NarraError() {
-        object NoConnection : Network()
-        object Timeout : Network()
+        class NoConnection : Network()
+        class Timeout : Network()
         data class ServerError(val code: Int, override val message: String?) : Network()
-        object WifiRequired : Network()
+        class WifiRequired : Network()
     }
 
     sealed class Content : NarraError() {
-        object EmptyContent : Content()
-        object ParsingFailed : Content()
-        object ArticleAlreadyInQueue : Content()
-        object NotFound : Content()
-        object InvalidFeed : Content()
+        class EmptyContent : Content()
+        class ParsingFailed : Content()
+        class ArticleAlreadyInQueue : Content()
+        class NotFound : Content()
+        class InvalidFeed : Content()
     }
 
     sealed class Storage : NarraError() {
-        object DiskFull : Storage()
+        class DiskFull : Storage()
         data class AccessDenied(override val message: String?) : Storage()
     }
 

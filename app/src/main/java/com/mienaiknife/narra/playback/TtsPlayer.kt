@@ -672,6 +672,14 @@ class TtsPlayer @Inject constructor(
         onSkipPrevious?.invoke()
     }
 
+    fun seekToParagraph(index: Int) {
+        if (index in paragraphs.indices) {
+            val text = paragraphs[index]
+            val word = Regex("\\w+").find(text)?.range ?: (0 until 0)
+            seekToWord(index, word, _playWhenReady)
+        }
+    }
+
     fun seekToWord(paragraphIndex: Int, wordRange: IntRange, startPlaying: Boolean = true) {
         if (paragraphIndex in paragraphs.indices) {
             currentParagraphIndex = paragraphIndex

@@ -23,11 +23,12 @@ import com.mienaiknife.narra.domain.repository.ContentRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import java.io.InputStream
+import java.io.OutputStream
 import javax.inject.Inject
-
-import kotlinx.coroutines.flow.map
 
 @HiltViewModel
 class DownloadsSettingsViewModel @Inject constructor(
@@ -58,6 +59,41 @@ class DownloadsSettingsViewModel @Inject constructor(
     fun deleteAllFeeds() {
         viewModelScope.launch {
             contentRepository.deleteAllFeeds()
+        }
+    }
+
+    fun deleteDatabase() {
+        viewModelScope.launch {
+            contentRepository.deleteAllMetadata()
+            contentRepository.deleteAllFeeds()
+        }
+    }
+
+    fun importOpml(inputStream: InputStream?) {
+        if (inputStream == null) return
+        viewModelScope.launch {
+            contentRepository.importOpml(inputStream)
+        }
+    }
+
+    fun exportOpml(outputStream: OutputStream?) {
+        if (outputStream == null) return
+        viewModelScope.launch {
+            contentRepository.exportOpml(outputStream)
+        }
+    }
+
+    fun backupDatabase(outputStream: OutputStream?) {
+        if (outputStream == null) return
+        viewModelScope.launch {
+            contentRepository.backupDatabase(outputStream)
+        }
+    }
+
+    fun restoreDatabase(inputStream: InputStream?) {
+        if (inputStream == null) return
+        viewModelScope.launch {
+            contentRepository.restoreDatabase(inputStream)
         }
     }
 }

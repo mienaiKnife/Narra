@@ -16,7 +16,10 @@
 
 package com.mienaiknife.narra.data.repositories
 
+import android.content.Context
+import com.mienaiknife.narra.data.local.AppDatabase
 import com.mienaiknife.narra.data.local.EpubDataSource
+import com.mienaiknife.narra.data.local.OpmlDataSource
 import com.mienaiknife.narra.data.local.dao.ArticleDao
 import com.mienaiknife.narra.data.local.dao.FeedDao
 import com.mienaiknife.narra.data.local.entities.ArticleEntity
@@ -32,14 +35,19 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
-import java.util.UUID
+import java.io.File
+import java.io.FileInputStream
+import java.io.FileOutputStream
 
 class ContentRepositoryImpl(
+    private val context: Context,
+    private val appDatabase: AppDatabase,
     private val articleDao: ArticleDao,
     private val feedDao: FeedDao,
     private val webDataSource: WebDataSource,
     private val remoteFeedDataSource: RemoteFeedDataSource,
     private val epubDataSource: EpubDataSource,
+    private val opmlDataSource: OpmlDataSource,
     private val networkMonitor: NetworkMonitor,
     private val downloadSettingsManager: DownloadSettingsManager
 ) : ContentRepository {
@@ -99,12 +107,12 @@ class ContentRepositoryImpl(
 
     private suspend fun checkConnection(): Result<Unit> {
         if (!networkMonitor.isOnline()) {
-            return Result.failure(Exception("No internet connection"))
+            return Result.failure(com.mienaiknife.narra.domain.NarraError.Network.NoConnection())
         }
 
         val wifiOnly = downloadSettingsManager.downloadOverWifiOnly.first()
         if (wifiOnly && !networkMonitor.isOnWifi()) {
-            return Result.failure(Exception("Mobile downloads are disabled in settings"))
+            return Result.failure(com.mienaiknife.narra.domain.NarraError.Network.WifiRequired())
         }
 
         return Result.success(Unit)
@@ -118,7 +126,7 @@ class ContentRepositoryImpl(
 
         val existingArticle = articleDao.getArticleByUrl(url)
         if (existingArticle != null && existingArticle.isInQueue) {
-            return@withContext Result.failure(Exception("Article already in queue"))
+            return@withContext Result.failure(com.mienaiknife.narra.domain.NarraError.Content.ArticleAlreadyInQueue())
         }
 
         webDataSource.downloadArticle(url).mapCatching { remoteArticle ->
@@ -165,14 +173,13 @@ class ContentRepositoryImpl(
     }
 
     override suspend fun addToQueue(id: String): Result<Unit> {
-        val article = articleDao.getArticleById(id) ?: return Result.failure(Exception("Article not found"))
-        return if (article.content.isNullOrEmpty()) {
-            val url = article.url ?: return Result.failure(Exception("Article has no content or URL"))
-            downloadWebPage(url).map { Unit }
-        } else {
-            articleDao.addToQueue(id)
-            Result.success(Unit)
+        val article = articleDao.getArticleById(id) ?: return Result.failure(com.mienaiknife.narra.domain.NarraError.Content.NotFound())
+        if (article.content.isNullOrEmpty()) {
+            val url = article.url ?: return Result.failure(com.mienaiknife.narra.domain.NarraError.Content.EmptyContent())
+            return downloadWebPage(url).map { }
         }
+        articleDao.addToQueue(id)
+        return Result.success(Unit)
     }
 
     override suspend fun clearHistory() {
@@ -310,6 +317,65 @@ class ContentRepositoryImpl(
                 )
                 articleDao.insertArticle(articleEntity)
             }
+        }
+    }
+
+    override suspend fun importOpml(inputStream: java.io.InputStream): Result<Int> = withContext(Dispatchers.IO) {
+        opmlDataSource.parseOpml(inputStream).map { feeds ->
+            var count = 0
+            feeds.forEach { feed ->
+                if (feedDao.getFeedByUrl(feed.url) == null) {
+                    feedDao.insertFeed(feed)
+                    count++
+                }
+            }
+            count
+        }
+    }
+
+    override suspend fun exportOpml(outputStream: java.io.OutputStream): Result<Unit> = withContext(Dispatchers.IO) {
+        try {
+            val feeds = feedDao.getAllFeeds().first()
+            opmlDataSource.generateOpml(outputStream, feeds)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    override suspend fun backupDatabase(outputStream: java.io.OutputStream): Result<Unit> = withContext(Dispatchers.IO) {
+        try {
+            appDatabase.close()
+            val dbFile = context.getDatabasePath(AppDatabase.DATABASE_NAME)
+            if (dbFile.exists()) {
+                FileInputStream(dbFile).use { input ->
+                    input.copyTo(outputStream)
+                }
+                Result.success(Unit)
+            } else {
+                Result.failure(Exception("Database file not found"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    override suspend fun restoreDatabase(inputStream: java.io.InputStream): Result<Unit> = withContext(Dispatchers.IO) {
+        try {
+            appDatabase.close()
+            val dbFile = context.getDatabasePath(AppDatabase.DATABASE_NAME)
+            
+            // Delete sidecar files if they exist to prevent corruption with the new database file
+            val walFile = File(dbFile.path + "-wal")
+            val shmFile = File(dbFile.path + "-shm")
+            if (walFile.exists()) walFile.delete()
+            if (shmFile.exists()) shmFile.delete()
+
+            FileOutputStream(dbFile).use { output ->
+                inputStream.copyTo(output)
+            }
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
         }
     }
 

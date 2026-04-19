@@ -60,7 +60,7 @@ data class TtsModelEntity(
                     val parts = it.split(":")
                     parts[0].trim('"') to parts[1].trim('"')
                 }
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             emptyMap()
         }
     }

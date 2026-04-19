@@ -18,7 +18,6 @@ package com.mienaiknife.narra.ui.viewmodels
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.mienaiknife.narra.domain.models.TtsModel
 import com.mienaiknife.narra.domain.repository.ModelRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import com.mienaiknife.narra.playback.PlaybackSettingsManager

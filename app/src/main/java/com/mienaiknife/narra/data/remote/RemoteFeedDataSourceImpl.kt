@@ -33,7 +33,7 @@ class RemoteFeedDataSourceImpl @Inject constructor(
             var targetUrl = url
             var channel = try {
                 rssParser.getRssChannel(targetUrl)
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 null
             }
 
@@ -53,7 +53,7 @@ class RemoteFeedDataSourceImpl @Inject constructor(
             }
 
             if (channel == null) {
-                return Result.failure(Exception("Could not find a valid RSS feed at $url"))
+                return Result.failure(com.mienaiknife.narra.domain.NarraError.Content.InvalidFeed())
             }
 
             var imageUrl = channel.image?.url
@@ -73,7 +73,7 @@ class RemoteFeedDataSourceImpl @Inject constructor(
                     if (imageUrl.isEmpty()) {
                         imageUrl = null
                     }
-                } catch (e: Exception) {
+                } catch (_: Exception) {
                     // Ignore favicon fetching errors
                 }
             }

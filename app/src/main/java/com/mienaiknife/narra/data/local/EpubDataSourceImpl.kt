@@ -82,7 +82,7 @@ class EpubDataSourceImpl @Inject constructor() : EpubDataSource {
             }
             Result.success(articles)
         } catch (e: Exception) {
-            Result.failure(e)
+            Result.failure(com.mienaiknife.narra.domain.NarraError.Unknown(e))
         }
     }
 }

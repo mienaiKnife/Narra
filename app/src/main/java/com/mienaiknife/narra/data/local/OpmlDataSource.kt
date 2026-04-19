@@ -14,24 +14,13 @@
  * limitations under the License.
  */
 
-package com.mienaiknife.narra.di
+package com.mienaiknife.narra.data.local
 
-import com.mienaiknife.narra.domain.TtsEngine
-import com.mienaiknife.narra.tts.common.DelegatingTtsEngine
-import dagger.Binds
-import dagger.Module
-import dagger.hilt.InstallIn
-import dagger.hilt.components.SingletonComponent
-import javax.inject.Singleton
+import com.mienaiknife.narra.data.local.entities.FeedEntity
+import java.io.InputStream
+import java.io.OutputStream
 
-@Module
-@InstallIn(SingletonComponent::class)
-@Suppress("unused")
-abstract class TtsModule {
-
-    @Binds
-    @Singleton
-    abstract fun bindTtsEngine(
-        delegatingTtsEngine: DelegatingTtsEngine
-    ): TtsEngine
+interface OpmlDataSource {
+    suspend fun parseOpml(inputStream: InputStream): Result<List<FeedEntity>>
+    suspend fun generateOpml(outputStream: OutputStream, feeds: List<FeedEntity>): Result<Unit>
 }

@@ -47,7 +47,7 @@ import javax.inject.Singleton
 
 @Singleton
 class SherpaTtsEngine @Inject constructor(
-    @ApplicationContext private val context: Context,
+    @param:ApplicationContext private val context: Context,
     private val modelRepository: ModelRepository,
     private val settingsManager: PlaybackSettingsManager
 ) : TtsEngine {
@@ -72,7 +72,29 @@ class SherpaTtsEngine @Inject constructor(
     private var currentModelId: String? = null
 
     data class UtteranceRequest(val text: String, val utteranceId: String)
-    data class SynthesizedAudio(val samples: FloatArray, val sampleRate: Int, val utteranceId: String, val text: String)
+    data class SynthesizedAudio(val samples: FloatArray, val sampleRate: Int, val utteranceId: String, val text: String) {
+        override fun equals(other: Any?): Boolean {
+            if (this === other) return true
+            if (javaClass != other?.javaClass) return false
+
+            other as SynthesizedAudio
+
+            if (!samples.contentEquals(other.samples)) return false
+            if (sampleRate != other.sampleRate) return false
+            if (utteranceId != other.utteranceId) return false
+            if (text != other.text) return false
+
+            return true
+        }
+
+        override fun hashCode(): Int {
+            var result = samples.contentHashCode()
+            result = 31 * result + sampleRate
+            result = 31 * result + utteranceId.hashCode()
+            result = 31 * result + text.hashCode()
+            return result
+        }
+    }
 
     init {
         scope.launch {
@@ -94,8 +116,8 @@ class SherpaTtsEngine @Inject constructor(
                 playbackJob?.cancel()
                 
                 // Clear queues
-                while (utteranceQueue.tryReceive().isSuccess) {}
-                while (synthesizedQueue.tryReceive().isSuccess) {}
+                while (utteranceQueue.tryReceive().isSuccess) { /* consume */ }
+                while (synthesizedQueue.tryReceive().isSuccess) { /* consume */ }
 
                 tts?.release()
                 tts = null
@@ -308,7 +330,7 @@ class SherpaTtsEngine @Inject constructor(
                     offset += written
                     
                     val currentHead = playbackHeadPosition
-                    val playedFrames = (currentHead - startHeadPosition).toInt().coerceAtLeast(0)
+                    val playedFrames = (currentHead - startHeadPosition).coerceAtLeast(0)
                     
                     // Throttle state updates to avoid overwhelming the UI
                     if (offset % 4000 == 0 || offset >= totalSamples) {
@@ -333,7 +355,7 @@ class SherpaTtsEngine @Inject constructor(
                         audio.utteranceId,
                         0,
                         audio.text.length,
-                        (playbackHeadPosition - startHeadPosition).toInt()
+                        playbackHeadPosition - startHeadPosition
                     )
                     kotlinx.coroutines.delay(30)
                 }
@@ -356,8 +378,8 @@ class SherpaTtsEngine @Inject constructor(
     }
 
     override fun stop() {
-        while (utteranceQueue.tryReceive().isSuccess) {}
-        while (synthesizedQueue.tryReceive().isSuccess) {}
+        while (utteranceQueue.tryReceive().isSuccess) { /* consume */ }
+        while (synthesizedQueue.tryReceive().isSuccess) { /* consume */ }
         
         audioTrack?.stop()
         audioTrack?.flush()
@@ -368,7 +390,7 @@ class SherpaTtsEngine @Inject constructor(
         playbackSpeed = speed
         try {
             audioTrack?.playbackParams = audioTrack?.playbackParams?.setSpeed(speed) ?: return
-        } catch (e: Exception) {
+        } catch (_: Exception) {
         }
     }
 

@@ -47,10 +47,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.compose.rememberNavController
 import coil3.compose.AsyncImage
 import com.mienaiknife.narra.data.models.Article
@@ -84,7 +85,6 @@ fun HomeScreenContent(
         modifier = modifier
             .fillMaxSize()
             .statusBarsPadding()
-            .verticalScroll(scrollState)
     ) {
         Spacer(modifier = Modifier.height(24.dp))
 
@@ -98,46 +98,61 @@ fun HomeScreenContent(
         Spacer(modifier = Modifier.height(24.dp))
 
         if (uiState.isLoading) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
                 androidx.compose.material3.CircularProgressIndicator()
             }
         } else if (uiState.continueListening.isNotEmpty() || uiState.newFromFeeds.isNotEmpty() || uiState.favoriteArticles.isNotEmpty()) {
-            if (uiState.continueListening.isNotEmpty()) {
-                ArticleCarousel(
-                    title = "Continue listening",
-                    articles = uiState.continueListening,
-                    onArticleClick = onArticleClick
-                )
-                Spacer(modifier = Modifier.height(24.dp))
-            }
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+                    .verticalScroll(scrollState)
+            ) {
+                if (uiState.continueListening.isNotEmpty()) {
+                    ArticleCarousel(
+                        title = "Continue listening",
+                        articles = uiState.continueListening,
+                        onArticleClick = onArticleClick
+                    )
+                    Spacer(modifier = Modifier.height(24.dp))
+                }
 
-            if (uiState.newFromFeeds.isNotEmpty()) {
-                ArticleCarousel(
-                    title = "New from your feeds",
-                    articles = uiState.newFromFeeds,
-                    onArticleClick = onArticleClick
-                )
-                Spacer(modifier = Modifier.height(24.dp))
-            }
+                if (uiState.newFromFeeds.isNotEmpty()) {
+                    ArticleCarousel(
+                        title = "New from your feeds",
+                        articles = uiState.newFromFeeds,
+                        onArticleClick = onArticleClick
+                    )
+                    Spacer(modifier = Modifier.height(24.dp))
+                }
 
-            if (uiState.favoriteArticles.isNotEmpty()) {
-                ArticleCarousel(
-                    title = "Your favorites",
-                    articles = uiState.favoriteArticles,
-                    onArticleClick = onArticleClick
-                )
-                Spacer(modifier = Modifier.height(24.dp))
+                if (uiState.favoriteArticles.isNotEmpty()) {
+                    ArticleCarousel(
+                        title = "Your favorites",
+                        articles = uiState.favoriteArticles,
+                        onArticleClick = onArticleClick
+                    )
+                    Spacer(modifier = Modifier.height(24.dp))
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
             }
         } else {
-            Text(
-                text = "No texts yet. Add some from the Add screen!",
-                modifier = Modifier.padding(16.dp),
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth(),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "No texts yet. Add some from the Add screen!",
+                    modifier = Modifier.padding(16.dp),
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center
+                )
+            }
         }
-
-        Spacer(modifier = Modifier.height(16.dp))
     }
 }
 

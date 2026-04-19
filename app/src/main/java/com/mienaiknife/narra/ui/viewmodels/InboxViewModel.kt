@@ -30,7 +30,6 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -58,13 +57,7 @@ class InboxViewModel @Inject constructor(
         _sortOption,
         playbackManager.currentArticle,
         playbackManager.isPlaying
-    ) { flowArray ->
-        val articles = flowArray[0] as List<Article>
-        val isRefreshing = flowArray[1] as Boolean
-        val sort = flowArray[2] as SortOption
-        val currentArticle = flowArray[3] as? Article
-        val isPlaying = flowArray[4] as Boolean
-
+    ) { articles, isRefreshing, sort, currentArticle, isPlaying ->
         val sortedArticles = when (sort) {
             SortOption.MANUAL -> articles
             SortOption.DATE_DESC -> articles.sortedByDescending { it.publishedTimestamp ?: 0L }
@@ -101,19 +94,6 @@ class InboxViewModel @Inject constructor(
             _sortOption.value = next
         } else {
             _sortOption.value = option
-        }
-    }
-
-    fun onPlayPauseClick(article: Article) {
-        if (!article.isInQueue) {
-            addToQueue(article)
-        } else {
-            if (uiState.value.currentArticle?.id == article.id) {
-                playbackManager.togglePlayPause()
-            } else {
-                val blocks = HtmlParser.parse(article.content)
-                playbackManager.setCurrentArticle(article, blocks)
-            }
         }
     }
 

@@ -18,7 +18,6 @@ package com.mienaiknife.narra.ui.viewmodels
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.mienaiknife.narra.data.models.Article
 import com.mienaiknife.narra.domain.repository.ContentRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -100,12 +99,6 @@ class HomeViewModel @Inject constructor(
                         }
                     }
                 }
-        }
-    }
-
-    fun deleteArticle(id: String) {
-        viewModelScope.launch {
-            repository.removeFromQueue(id)
         }
     }
 

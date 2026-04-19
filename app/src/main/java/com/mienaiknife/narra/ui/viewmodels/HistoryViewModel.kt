@@ -29,7 +29,6 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -55,12 +54,7 @@ class HistoryViewModel @Inject constructor(
         _isRefreshing,
         playbackManager.currentArticle,
         playbackManager.isPlaying
-    ) { flowArray ->
-        val articles = flowArray[0] as List<Article>
-        val isRefreshing = flowArray[1] as Boolean
-        val currentArticle = flowArray[2] as? Article
-        val isPlaying = flowArray[3] as Boolean
-
+    ) { articles, isRefreshing, currentArticle, isPlaying ->
         HistoryUiState(
             articles = articles,
             isRefreshing = isRefreshing,

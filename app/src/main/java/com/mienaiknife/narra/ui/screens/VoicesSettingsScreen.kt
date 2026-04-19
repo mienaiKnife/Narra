@@ -28,7 +28,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
@@ -43,9 +43,11 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.ListItem
+import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -57,6 +59,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
@@ -198,18 +201,28 @@ fun VoicesSettingsContent(
                     modifier = Modifier.padding(top = 8.dp, bottom = 8.dp)
                 )
 
-                LazyColumn(
-                    modifier = Modifier.weight(1f)
+                Surface(
+                    color = MaterialTheme.colorScheme.surfaceContainer,
+                    shape = MaterialTheme.shapes.medium,
+                    modifier = Modifier.weight(1f, fill = false)
                 ) {
-                    items(uiState.availableModels) { model ->
-                        TtsModelItem(
-                            model = model,
-                            isSelected = uiState.selectedModelId == model.id,
-                            onSelect = { onSelectModel(model.id) },
-                            onDownload = { onDownloadModel(model.id) },
-                            onDelete = { onDeleteModel(model.id) }
-                        )
-                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                    LazyColumn {
+                        itemsIndexed(uiState.availableModels) { index, model ->
+                            TtsModelItem(
+                                model = model,
+                                isSelected = uiState.selectedModelId == model.id,
+                                onSelect = { onSelectModel(model.id) },
+                                onDownload = { onDownloadModel(model.id) },
+                                onDelete = { onDeleteModel(model.id) },
+                                containerColor = Color.Transparent
+                            )
+                            if (index < uiState.availableModels.lastIndex) {
+                                HorizontalDivider(
+                                    modifier = Modifier.padding(horizontal = 16.dp),
+                                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -223,12 +236,16 @@ fun TtsModelItem(
     isSelected: Boolean,
     onSelect: () -> Unit,
     onDownload: () -> Unit,
-    onDelete: () -> Unit
+    onDelete: () -> Unit,
+    containerColor: Color = MaterialTheme.colorScheme.surfaceContainer
 ) {
     val isDownloading = model.progress > 0f && model.progress < 1f
 
     ListItem(
         modifier = Modifier.clickable(enabled = model.isDownloaded && !isDownloading) { onSelect() },
+        colors = ListItemDefaults.colors(
+            containerColor = containerColor
+        ),
         headlineContent = {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
@@ -258,8 +275,14 @@ fun TtsModelItem(
                     Spacer(modifier = Modifier.height(8.dp))
                     LinearProgressIndicator(
                         progress = { model.progress },
-                        modifier = Modifier.fillMaxWidth(),
-                        strokeCap = StrokeCap.Round
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(5.dp),
+                        color = MaterialTheme.colorScheme.primary,
+                        trackColor = MaterialTheme.colorScheme.primaryContainer,
+                        strokeCap = StrokeCap.Butt,
+                        gapSize = 5.dp,
+                        drawStopIndicator = {}
                     )
                 }
             }

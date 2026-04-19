@@ -133,7 +133,7 @@ fun UserInterfaceSettingsScreen(themeViewModel: ThemeViewModel, onBack: () -> Un
                         style = MaterialTheme.typography.bodyLarge
                     )
                     Text(
-                        text = "Make Narra always use dark mode. If unchecked, make Narra always use light mode.",
+                        text = "Make Narra always use dark mode. If unchecked, Narra will use use light mode.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )

@@ -28,7 +28,7 @@ import javax.inject.Singleton
 
 @Singleton
 class PlaybackSettingsManager @Inject constructor(
-    @ApplicationContext private val context: Context
+    @param:ApplicationContext private val context: Context
 ) {
     private val chimeSoundKey = stringPreferencesKey("chime_sound")
     private val fastForwardSkipTimeKey = stringPreferencesKey("fast_forward_skip_time")
@@ -69,12 +69,6 @@ class PlaybackSettingsManager @Inject constructor(
 
     val ttsModelId: Flow<String?> = context.dataStore.data.map { prefs ->
         prefs[ttsModelIdKey]
-    }
-
-    suspend fun setChimeSound(soundName: String) {
-        context.dataStore.edit { prefs ->
-            prefs[chimeSoundKey] = soundName
-        }
     }
 
     suspend fun setFastForwardSkipTime(time: String) {

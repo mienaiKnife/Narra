@@ -16,7 +16,7 @@
 
 package com.mienaiknife.narra.ui.utils
 
-import android.net.Uri
+import androidx.core.net.toUri
 
 object UrlUtils {
     private val TRACKING_PARAMS = listOf(
@@ -50,7 +50,7 @@ object UrlUtils {
 
     fun cleanUrl(url: String): String {
         return try {
-            val uri = Uri.parse(url)
+            val uri = url.toUri()
             if (uri.isOpaque) return url
 
             val builder = uri.buildUpon().clearQuery()
@@ -64,7 +64,7 @@ object UrlUtils {
             }
             
             builder.build().toString()
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             url
         }
     }

@@ -30,7 +30,6 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
@@ -56,18 +55,13 @@ class QueueViewModel @Inject constructor(
 
     val uiState: StateFlow<QueueUiState> = combine(
         repository.getQueueArticles(),
-        _isRefreshing,
-        _sortOption,
-        _keepSorted,
+        combine(_isRefreshing, _sortOption, _keepSorted) { refreshing, sort, keep ->
+            Triple(refreshing, sort, keep)
+        },
         playbackManager.currentArticle,
         playbackManager.isPlaying
-    ) { flowArray ->
-        val articles = flowArray[0] as List<Article>
-        val isRefreshing = flowArray[1] as Boolean
-        val sort = flowArray[2] as SortOption
-        val keep = flowArray[3] as Boolean
-        val currentArticle = flowArray[4] as? Article
-        val isPlaying = flowArray[5] as Boolean
+    ) { articles, settings, currentArticle, isPlaying ->
+        val (isRefreshing, sort, keep) = settings
 
         val sortedArticles = if (keep) {
             when (sort) {

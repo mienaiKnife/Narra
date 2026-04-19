@@ -16,7 +16,7 @@
 
 package com.mienaiknife.narra.ui.utils
 
-import android.net.Uri
+import androidx.core.net.toUri
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
@@ -185,7 +185,7 @@ object HtmlParser {
 
     private fun normalizeWhitespace(text: String): String {
         return text.replace('\u00A0', ' ')
-            .replace(Regex("[ \\t]+"), " ")
+            .replace(Regex("\\s+"), " ")
     }
 
     private fun getStyleForTag(tagName: String): SpanStyle? {
@@ -268,10 +268,10 @@ private fun isUrlLike(text: String): Boolean {
 
 private fun simplifyUrl(url: String): String {
     return try {
-        val uri = Uri.parse(url)
+        val uri = url.toUri()
         val host = uri.host ?: return url
         host.removePrefix("www.")
-    } catch (e: Exception) {
+    } catch (_: Exception) {
         url
     }
 }

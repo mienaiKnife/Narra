@@ -103,7 +103,9 @@ fun BoxScope.NarraScrollbar(
         }
     }
 
-    val totalItems = lazyListState.layoutInfo.totalItemsCount
+    val totalItems by remember {
+        derivedStateOf { lazyListState.layoutInfo.totalItemsCount }
+    }
 
     ScrollbarContainer(
         alpha = alpha,

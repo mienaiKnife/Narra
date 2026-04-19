@@ -16,6 +16,7 @@
 
 package com.mienaiknife.narra.playback
 
+import com.mienaiknife.narra.R
 import android.content.Context
 import android.media.MediaPlayer
 import androidx.media3.common.MediaItem
@@ -244,7 +245,10 @@ class PlaybackManager @Inject constructor(
     private suspend fun playChime() {
         try {
             val soundName = settingsManager.chimeSound.first()
-            val resId = context.resources.getIdentifier(soundName, "raw", context.packageName)
+            val resId = when (soundName) {
+                "music_box_chime_positive" -> R.raw.music_box_chime_positive
+                else -> 0
+            }
             if (resId != 0) {
                 val mediaPlayer = MediaPlayer.create(context, resId) ?: return
                 kotlinx.coroutines.suspendCancellableCoroutine { continuation ->
@@ -292,7 +296,7 @@ class PlaybackManager @Inject constructor(
     fun seekToParagraph(index: Int) {
         _currentParagraphIndex.value = index
         _currentWordRange.value = null
-        // TODO: Logic to seek TTS to specific paragraph
+        ttsPlayer.seekToParagraph(index)
     }
 
     fun seekToWord(paragraphIndex: Int, wordRange: IntRange) {

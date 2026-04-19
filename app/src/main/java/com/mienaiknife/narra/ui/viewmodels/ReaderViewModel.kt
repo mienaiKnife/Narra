@@ -33,7 +33,6 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
@@ -61,6 +60,7 @@ class ReaderViewModel @Inject constructor(
     private val _blocks = MutableStateFlow<List<ContentBlock>>(emptyList())
     private val _isLoading = MutableStateFlow(false)
 
+    @Suppress("UNCHECKED_CAST")
     val uiState: StateFlow<ReaderUiState> = combine(
         playbackManager.currentArticle,
         _blocks,
@@ -135,8 +135,6 @@ class ReaderViewModel @Inject constructor(
     }
 
     fun togglePlayPause() = playbackManager.togglePlayPause()
-    fun seekTo(position: Long) = playbackManager.seekTo(position)
-    fun seekToParagraph(index: Int) = playbackManager.seekToParagraph(index)
     fun seekToWord(paragraphIndex: Int, wordRange: IntRange) = playbackManager.seekToWord(paragraphIndex, wordRange)
     fun skipForward() = playbackManager.skipForward()
     fun skipBackward() = playbackManager.skipBackward()

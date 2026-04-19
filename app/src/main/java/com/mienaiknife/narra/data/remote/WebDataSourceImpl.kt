@@ -38,7 +38,7 @@ class WebDataSourceImpl @Inject constructor() : WebDataSource {
             val parsedArticle = readability4J.parse()
 
             if (parsedArticle.content == null) {
-                return Result.failure(Exception("Failed to extract content from $url"))
+                return Result.failure(com.mienaiknife.narra.domain.NarraError.Content.ParsingFailed())
             }
 
             val publishedAt = extractPublishedDate(doc)
@@ -46,9 +46,9 @@ class WebDataSourceImpl @Inject constructor() : WebDataSource {
 
             val article = Article(
                 id = UUID.randomUUID().toString(),
-                title = parsedArticle.title ?: doc.title() ?: "Untitled",
-                source = doc.location()?.let { 
-                    try { java.net.URL(it).host } catch (e: Exception) { null }
+                title = (parsedArticle.title ?: doc.title()).ifEmpty { "Untitled" },
+                source = doc.location().let { 
+                    try { java.net.URL(it).host } catch (_: Exception) { null }
                 } ?: "Web",
                 content = parsedArticle.content ?: "",
                 publishedAt = publishedAt,
@@ -59,8 +59,12 @@ class WebDataSourceImpl @Inject constructor() : WebDataSource {
             )
 
             Result.success(article)
+        } catch (e: org.jsoup.HttpStatusException) {
+            Result.failure(com.mienaiknife.narra.domain.NarraError.Network.ServerError(e.statusCode, e.message))
+        } catch (e: java.net.SocketTimeoutException) {
+            Result.failure(com.mienaiknife.narra.domain.NarraError.Network.Timeout())
         } catch (e: Exception) {
-            Result.failure(e)
+            Result.failure(com.mienaiknife.narra.domain.NarraError.Unknown(e))
         }
     }
 
@@ -72,7 +76,7 @@ class WebDataSourceImpl @Inject constructor() : WebDataSource {
                 val json = Json.parseToJsonElement(tag.data())
                 val date = findKeyInJson(json, "datePublished") ?: findKeyInJson(json, "dateCreated")
                 if (date != null) return date
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 // Ignore malformed JSON-LD
             }
         }
@@ -95,7 +99,7 @@ class WebDataSourceImpl @Inject constructor() : WebDataSource {
                 val json = Json.parseToJsonElement(tag.data())
                 val image = findKeyInJson(json, "image")
                 if (image != null) return image
-            } catch (e: Exception) {
+            } catch (_: Exception) {
             }
         }
 
@@ -109,10 +113,10 @@ class WebDataSourceImpl @Inject constructor() : WebDataSource {
         return when (element) {
             is JsonObject -> {
                 element[key]?.jsonPrimitive?.content
-                    ?: element.values.asSequence().mapNotNull { findKeyInJson(it, key) }.firstOrNull()
+                    ?: element.values.firstNotNullOfOrNull { findKeyInJson(it, key) }
             }
             is kotlinx.serialization.json.JsonArray -> {
-                element.asSequence().mapNotNull { findKeyInJson(it, key) }.firstOrNull()
+                element.firstNotNullOfOrNull { findKeyInJson(it, key) }
             }
             else -> null
         }

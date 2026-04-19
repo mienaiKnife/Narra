@@ -26,7 +26,6 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -34,7 +33,7 @@ import javax.inject.Inject
 
 @HiltViewModel
 class FeedsViewModel @Inject constructor(
-    private val feedDao: FeedDao,
+    feedDao: FeedDao,
     private val repository: ContentRepository
 ) : ViewModel() {
 
@@ -45,11 +44,7 @@ class FeedsViewModel @Inject constructor(
         feedDao.getAllFeeds(),
         _isRefreshing,
         _sortOption
-    ) { flowArray ->
-        val feeds = flowArray[0] as List<FeedEntity>
-        val isRefreshing = flowArray[1] as Boolean
-        val sort = flowArray[2] as SortOption
-
+    ) { feeds, isRefreshing, sort ->
         val sortedFeeds = when (sort) {
             SortOption.MANUAL -> feeds
             SortOption.DATE_DESC -> feeds.sortedByDescending { it.createdAt }

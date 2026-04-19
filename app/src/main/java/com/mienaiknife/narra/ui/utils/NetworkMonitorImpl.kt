@@ -25,7 +25,7 @@ import javax.inject.Singleton
 
 @Singleton
 class NetworkMonitorImpl @Inject constructor(
-    @ApplicationContext private val context: Context
+    @param:ApplicationContext private val context: Context
 ) : NetworkMonitor {
     override fun isOnline(): Boolean {
         val connectivityManager =

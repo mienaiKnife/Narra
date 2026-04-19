@@ -18,9 +18,10 @@ package com.mienaiknife.narra.di
 
 import com.mienaiknife.narra.data.local.EpubDataSource
 import com.mienaiknife.narra.data.local.EpubDataSourceImpl
+import com.mienaiknife.narra.data.local.OpmlDataSource
+import com.mienaiknife.narra.data.local.OpmlDataSourceImpl
 import com.mienaiknife.narra.data.local.dao.ArticleDao
 import com.mienaiknife.narra.data.local.dao.FeedDao
-import com.mienaiknife.narra.data.local.dao.TtsModelDao
 import com.mienaiknife.narra.data.remote.RemoteFeedDataSource
 import com.mienaiknife.narra.data.remote.RemoteFeedDataSourceImpl
 import com.mienaiknife.narra.data.remote.WebDataSource
@@ -53,20 +54,26 @@ object RepositoryModule {
     @Provides
     @Singleton
     fun provideContentRepository(
+        @dagger.hilt.android.qualifiers.ApplicationContext context: android.content.Context,
+        database: com.mienaiknife.narra.data.local.AppDatabase,
         articleDao: ArticleDao,
         feedDao: FeedDao,
         webDataSource: WebDataSource,
         remoteFeedDataSource: RemoteFeedDataSource,
         epubDataSource: EpubDataSource,
+        opmlDataSource: OpmlDataSource,
         networkMonitor: NetworkMonitor,
         downloadSettingsManager: DownloadSettingsManager
     ): ContentRepository {
         return ContentRepositoryImpl(
+            context,
+            database,
             articleDao,
             feedDao,
             webDataSource,
             remoteFeedDataSource,
             epubDataSource,
+            opmlDataSource,
             networkMonitor,
             downloadSettingsManager
         )
@@ -87,6 +94,10 @@ object RepositoryModule {
     @Provides
     @Singleton
     fun provideEpubDataSource(epubDataSourceImpl: EpubDataSourceImpl): EpubDataSource = epubDataSourceImpl
+
+    @Provides
+    @Singleton
+    fun provideOpmlDataSource(opmlDataSourceImpl: OpmlDataSourceImpl): OpmlDataSource = opmlDataSourceImpl
 
     @Provides
     @Singleton

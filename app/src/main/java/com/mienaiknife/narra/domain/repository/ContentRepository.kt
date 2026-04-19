@@ -39,7 +39,9 @@ interface ContentRepository {
     suspend fun subscribeToFeed(url: String): Result<String>
     suspend fun refreshFeeds(): Result<Unit>
     suspend fun deleteFeed(url: String)
-    suspend fun importEpub(inputStream: java.io.`InputStream`, title: String): Result<Unit>
+    suspend fun importEpub(inputStream: java.io.InputStream, title: String): Result<Unit>
+    suspend fun importOpml(inputStream: java.io.InputStream): Result<Int>
+    suspend fun exportOpml(outputStream: java.io.OutputStream): Result<Unit>
     suspend fun markAsFinished(id: String)
     suspend fun markAsPlayed(id: String)
     suspend fun markAsUnplayed(id: String)
@@ -47,4 +49,6 @@ interface ContentRepository {
     suspend fun toggleFavorite(id: String)
     suspend fun deleteAllMetadata()
     suspend fun deleteAllFeeds()
+    suspend fun backupDatabase(outputStream: java.io.OutputStream): Result<Unit>
+    suspend fun restoreDatabase(inputStream: java.io.InputStream): Result<Unit>
 }

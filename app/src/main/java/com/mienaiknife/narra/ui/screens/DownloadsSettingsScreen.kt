@@ -17,6 +17,8 @@
 package com.mienaiknife.narra.ui.screens
 
 import android.content.res.Configuration
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -40,11 +42,16 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.unit.dp
 import androidx.navigation.compose.rememberNavController
-import androidx.compose.runtime.collectAsState
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.mienaiknife.narra.ui.components.BottomNavBar
 import com.mienaiknife.narra.ui.theme.NarraTheme
 import com.mienaiknife.narra.ui.viewmodels.DownloadsSettingsViewModel
@@ -58,12 +65,81 @@ fun DownloadsSettingsScreen(
     viewModel: DownloadsSettingsViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+
+    val importLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        uri?.let {
+            context.contentResolver.openInputStream(it)?.use { inputStream ->
+                viewModel.importOpml(inputStream)
+            }
+        }
+    }
+
+    val exportLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("application/xml")
+    ) { uri ->
+        uri?.let {
+            context.contentResolver.openOutputStream(it)?.use { outputStream ->
+                viewModel.exportOpml(outputStream)
+            }
+        }
+    }
+
+    val backupLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("application/octet-stream")
+    ) { uri ->
+        uri?.let {
+            context.contentResolver.openOutputStream(it)?.use { outputStream ->
+                viewModel.backupDatabase(outputStream)
+            }
+        }
+    }
+
+    val restoreLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        uri?.let {
+            context.contentResolver.openInputStream(it)?.use { inputStream ->
+                viewModel.restoreDatabase(inputStream)
+            }
+        }
+    }
+
+    var showDeleteConfirm by remember { mutableStateOf(false) }
+
+    if (showDeleteConfirm) {
+        AlertDialog(
+            onDismissRequest = { showDeleteConfirm = false },
+            title = { Text("Delete Database") },
+            text = { Text("Are you sure you want to delete all your data? This cannot be undone.") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.deleteDatabase()
+                        showDeleteConfirm = false
+                    }
+                ) {
+                    Text("Delete", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteConfirm = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
 
     DownloadsSettingsContent(
         uiState = uiState,
         onDownloadOverWifiOnlyChange = { viewModel.setDownloadOverWifiOnly(it) },
-        onDeleteAllMetadata = { viewModel.deleteAllMetadata() },
-        onDeleteAllFeeds = { viewModel.deleteAllFeeds() },
+        onImportOpml = { importLauncher.launch(arrayOf("application/xml", "text/xml", "application/octet-stream", "*/*")) },
+        onExportOpml = { exportLauncher.launch("narra-subscriptions.opml") },
+        onBackupDatabase = { backupLauncher.launch("narra-backup.db") },
+        onRestoreDatabase = { restoreLauncher.launch(arrayOf("application/octet-stream", "*/*")) },
+        onDeleteDatabase = { showDeleteConfirm = true },
         onBack = onBack
     )
 }
@@ -73,8 +149,11 @@ fun DownloadsSettingsScreen(
 fun DownloadsSettingsContent(
     uiState: DownloadsSettingsUiState,
     onDownloadOverWifiOnlyChange: (Boolean) -> Unit,
-    onDeleteAllMetadata: () -> Unit,
-    onDeleteAllFeeds: () -> Unit,
+    onImportOpml: () -> Unit,
+    onExportOpml: () -> Unit,
+    onBackupDatabase: () -> Unit,
+    onRestoreDatabase: () -> Unit,
+    onDeleteDatabase: () -> Unit,
     onBack: () -> Unit
 ) {
     Scaffold(
@@ -136,32 +215,55 @@ fun DownloadsSettingsContent(
                 )
             }
 
-
-
             Text(
-                text = "Storage",
+                text = "Portability",
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.padding(top = 24.dp, bottom = 8.dp)
             )
 
             Text(
-                text = "Delete all book and article metadata",
+                text = "Import subscriptions (OPML)",
                 style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.error,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable { onDeleteAllMetadata() }
+                    .clickable { onImportOpml() }
                     .padding(vertical = 8.dp)
             )
 
             Text(
-                text = "Delete all feeds",
+                text = "Export subscriptions (OPML)",
+                style = MaterialTheme.typography.bodyLarge,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onExportOpml() }
+                    .padding(vertical = 8.dp)
+            )
+
+            Text(
+                text = "Backup database",
+                style = MaterialTheme.typography.bodyLarge,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onBackupDatabase() }
+                    .padding(vertical = 8.dp)
+            )
+
+            Text(
+                text = "Restore database",
+                style = MaterialTheme.typography.bodyLarge,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onRestoreDatabase() }
+                    .padding(vertical = 8.dp)
+            )
+            Text(
+                text = "Delete database",
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.error,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable { onDeleteAllFeeds() }
+                    .clickable { onDeleteDatabase() }
                     .padding(vertical = 8.dp)
             )
         }
@@ -180,8 +282,11 @@ fun DownloadsSettingsScreenPreview() {
                 DownloadsSettingsContent(
                     uiState = DownloadsSettingsUiState(),
                     onDownloadOverWifiOnlyChange = {},
-                    onDeleteAllMetadata = {},
-                    onDeleteAllFeeds = {},
+                    onImportOpml = {},
+                    onExportOpml = {},
+                    onBackupDatabase = {},
+                    onRestoreDatabase = {},
+                    onDeleteDatabase = {},
                     onBack = {}
                 )
             }

@@ -31,7 +31,7 @@ import javax.inject.Singleton
 
 @Singleton
 class AndroidTtsEngine @Inject constructor(
-    @ApplicationContext private val context: Context
+    @param:ApplicationContext private val context: Context
 ) : TtsEngine {
 
     private val _state = MutableStateFlow<TtsState>(TtsState.Initializing)

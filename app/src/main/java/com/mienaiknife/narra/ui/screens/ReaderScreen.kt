@@ -91,6 +91,7 @@ import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.SpanStyle
@@ -105,7 +106,7 @@ import androidx.compose.ui.unit.sp
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.compose.ui.draw.clip
 import coil3.compose.AsyncImage
 import com.mienaiknife.narra.data.models.SampleArticles
@@ -275,6 +276,8 @@ fun ReaderContent(
         }
 
         var currentWordYIndex by remember(article.id) { mutableIntStateOf(-1) }
+        val density = LocalDensity.current
+        val verticalPaddingPx = with(density) { 4.dp.toPx() }
         
         // Listen for manual scroll interactions
         val isDragged by scrollState.interactionSource.collectIsDraggedAsState()
@@ -287,14 +290,14 @@ fun ReaderContent(
         }
 
         // Auto-scroll to current paragraph when it changes, if following is enabled
-        LaunchedEffect(currentParagraphIndex, currentWordYInItem, isFollowing) {
+        LaunchedEffect(currentParagraphIndex, currentWordYInItem, currentWordRange, isFollowing) {
             if (isFollowing) {
                 val layoutInfo = scrollState.layoutInfo
                 val viewportHeight = layoutInfo.viewportSize.height
                 if (viewportHeight > 0) {
                     val visibleItem = layoutInfo.visibleItemsInfo.find { it.index == currentParagraphIndex }
                     
-                    // Target the exact middle of the screen (0.5) as requested.
+                    // Target the exact middle of the screen (0.5)
                     val targetViewportY = viewportHeight * 0.5f
 
                     if (visibleItem != null && currentWordYIndex == currentParagraphIndex) {
@@ -372,26 +375,18 @@ fun ReaderContent(
                                 )
                             }
 
-                        if (isCurrentParagraph) {
-                            // Highlight current paragraph
-                            addStyle(
-                                SpanStyle(background = colorScheme.primary.copy(alpha = 0.2f)),
-                                0,
-                                text.length
-                            )
-
-                            // Highlight current word with delay
-                            delayedWordRange?.let { range ->
-                                if (range.first in 0 until text.length) {
-                                    addStyle(
-                                        SpanStyle(
-                                            background = colorScheme.primary.copy(alpha = 0.5f),
-                                            color = colorScheme.onSurface
-                                        ),
-                                        range.first,
-                                        (range.last + 1).coerceAtMost(text.length)
-                                    )
-                                }
+                        val highlightRange = delayedWordRange ?: currentWordRange
+                        if (isCurrentParagraph && highlightRange != null) {
+                            // Highlight current word
+                            if (highlightRange.first in 0 until text.length) {
+                                addStyle(
+                                    SpanStyle(
+                                        background = colorScheme.primary.copy(alpha = 0.4f),
+                                        color = colorScheme.onSurface
+                                    ),
+                                    highlightRange.first,
+                                    (highlightRange.last + 1).coerceAtMost(text.length)
+                                )
                             }
                         }
 
@@ -462,11 +457,13 @@ fun ReaderContent(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(IntrinsicSize.Min)
+                            .clip(MaterialTheme.shapes.small)
                             .then(
                                 if (isCurrentParagraph) Modifier.background(
-                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.05f)
+                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
                                 ) else Modifier
                             )
+                            .padding(vertical = 4.dp)
                     ) {
                         Box(
                             modifier = Modifier
@@ -485,7 +482,56 @@ fun ReaderContent(
                                 if (isCurrentParagraph && currentWordRange != null) {
                                     if (currentWordRange.first in 0 until lr.layoutInput.text.length) {
                                         val boundingBox = lr.getBoundingBox(currentWordRange.first)
-                                        currentWordYInItem = boundingBox.center.y
+                                        currentWordYInItem = boundingBox.center.y + verticalPaddingPx
+                                        currentWordYIndex = index
+                                    }
+                                }
+                            },
+                            modifier = Modifier
+                                .weight(1f)
+                                .pointerInput(annotatedString) {
+                                detectTapGestures { pos ->
+                                    layoutResult?.getOffsetForPosition(pos)?.let { offset ->
+                                        annotatedString.getStringAnnotations(
+                                            tag = "word",
+                                            start = offset,
+                                            end = offset
+                                        )
+                                            .firstOrNull()?.let { annotation ->
+                                                val parts = annotation.item.split("|")
+                                                val pIdx = parts[0].toInt()
+                                                val start = parts[1].toInt()
+                                                val end = parts[2].toInt()
+                                                onSeekToWord(pIdx, start until end)
+                                                isFollowing = true
+                                            }
+                                    }
+                                }
+                            }
+                        )
+                    }
+                } else {
+                    var layoutResult by remember { mutableStateOf<TextLayoutResult?>(null) }
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(MaterialTheme.shapes.small)
+                            .then(
+                                if (isCurrentParagraph) Modifier.background(
+                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+                                ) else Modifier
+                            )
+                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                    ) {
+                        Text(
+                            text = annotatedString,
+                            style = baseStyle,
+                            onTextLayout = { lr ->
+                                layoutResult = lr
+                                if (isCurrentParagraph && currentWordRange != null) {
+                                    if (currentWordRange.first in 0 until lr.layoutInput.text.length) {
+                                        val boundingBox = lr.getBoundingBox(currentWordRange.first)
+                                        currentWordYInItem = boundingBox.center.y + verticalPaddingPx
                                         currentWordYIndex = index
                                     }
                                 }
@@ -511,41 +557,6 @@ fun ReaderContent(
                             }
                         )
                     }
-                } else {
-                    var layoutResult by remember { mutableStateOf<TextLayoutResult?>(null) }
-                    Text(
-                        text = annotatedString,
-                        style = baseStyle,
-                        onTextLayout = { lr ->
-                            layoutResult = lr
-                            if (isCurrentParagraph && currentWordRange != null) {
-                                if (currentWordRange.first in 0 until lr.layoutInput.text.length) {
-                                    val boundingBox = lr.getBoundingBox(currentWordRange.first)
-                                    currentWordYInItem = boundingBox.center.y
-                                    currentWordYIndex = index
-                                }
-                            }
-                        },
-                        modifier = Modifier.pointerInput(annotatedString) {
-                            detectTapGestures { pos ->
-                                layoutResult?.getOffsetForPosition(pos)?.let { offset ->
-                                    annotatedString.getStringAnnotations(
-                                        tag = "word",
-                                        start = offset,
-                                        end = offset
-                                    )
-                                        .firstOrNull()?.let { annotation ->
-                                            val parts = annotation.item.split("|")
-                                            val pIdx = parts[0].toInt()
-                                            val start = parts[1].toInt()
-                                            val end = parts[2].toInt()
-                                            onSeekToWord(pIdx, start until end)
-                                            isFollowing = true
-                                        }
-                                }
-                            }
-                        }
-                    )
                 }
                 Spacer(modifier = Modifier.height(16.dp))
             }
@@ -899,12 +910,12 @@ fun ReaderScreenPreview() {
             uiState = ReaderUiState(
                 article = article,
                 blocks = blocks,
-                isPlaying = false,
+                isPlaying = true,
                 playbackSpeed = 1.0f,
                 currentPosition = 46000L,
                 duration = 180000L,
-                currentParagraphIndex = 0,
-                currentWordRange = 0..1
+                currentParagraphIndex = 1,
+                currentWordRange = 330..334
             ),
             onBack = {},
             onTogglePlayPause = {},

@@ -19,15 +19,13 @@ package com.mienaiknife.narra.data.models
 object SampleArticles {
     val sampleArticle1 = Article(
         id = "1",
-        title = "Why training AI can't be IP theft",
-        source = "blog.giovanh.com",
-        publishedAt = "Apr 3, 2025",
+        title = "Technically Radical: On The Unrecognized Potential of Tech Workers and Hackers",
+        source = "wedontagree.net",
+        publishedAt = "Aug 1, 2025",
         content = """
-            AI is a huge subject, so it’s hard to boil my thoughts down into any single digestible take. That’s probably a good thing. As a rule, if you can fit your understanding of something complex into a tweet, you’re usually wrong. So I’m continuing to divide and conquer here, eat the elephant one bite at a time, etc.
-
-            Right now I want to address one specific question: whether people have the right to train AI in the first place. The argument that they do not¹ goes like this:
-
-            > When a corporation trains generative AI they have unfairly used other people’s work without consent or compensation to create a new product they own. Worse, the new product directly competes with the original workers. Since the corporations didn’t own the original material and weren’t granted any specific rights to use it for training, they do not have the right to train with it. When the
+            <blockquote>They're so thoroughly hypnotized by the short-term victory of global capitalism that they can't surf the new paradigm, look to the longer term.<br/><br/>— Charles Stross, Accelerando</blockquote>
+            <blockquote>One obvious role for a radical intellectual is to do precisely that: look at those who are creating viable alternatives, try to figure out what might be the larger implications of what they are (already) doing, and then offer those ideas back [to the world], not as prescriptions, but as contributions, possibilities—as gifts.<br/><br/>— David Graeber, Fragments of an Anarchist Anthropology</blockquote>
+            <p>Over 2024, we saw major tech investors and company owners overtly turn toward the right, overtly backing Donald Trump in his electoral campaign. This group of individuals, which commentators have taken to calling the “Tech Right”, are motivated by various concerns like the attempts by the Biden administration to regulate them and a general backlash against “wokeness”. Representative individuals and their respective justifications can be found in things like Marc Andreessen's essay The Techno-Optimist Manifesto or books like Balaji Srinivasan’s The Network State, and Alexander Karp and Nicholas Zamiska’s The Technological Republic.</p>
         """.trimIndent(),
         progress = 0.8f,
         isFavorite = false,

@@ -14,7 +14,8 @@ The following defines the current build target. Do not implement beyond this unl
 - A listening queue/playlist UI similar to a podcast app
 - TTS playback using Android's built-in TTS engine (android.speech.tts)
 - On-device AI TTS using Sherpa-ONNX (models downloaded at runtime, not bundled)
-- Basic AI TTS support for at least one cloud provider (e.g. OpenAI or Google Cloud TTS)
+- OPML export and import for feed list portability
+- File-based backup and restore (no account required)
 - Foreground service for background audio playback with media session controls
 
 ## Planned Features (not yet in scope)

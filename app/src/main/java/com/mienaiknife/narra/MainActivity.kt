@@ -28,29 +28,15 @@ import com.mienaiknife.narra.ui.theme.NarraTheme
 import com.mienaiknife.narra.ui.theme.ThemeViewModel
 import dagger.hilt.android.AndroidEntryPoint
 
-import com.mienaiknife.narra.data.repositories.TestArticlePopulator
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import javax.inject.Inject
-
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     private val themeViewModel: ThemeViewModel by viewModels()
-
-    @Inject
-    lateinit var testArticlePopulator: TestArticlePopulator
 
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()
         super.onCreate(savedInstanceState)
         themeViewModel.initialize(this)
         enableEdgeToEdge()
-
-        // Temporarily populate test data
-        CoroutineScope(Dispatchers.IO).launch {
-            testArticlePopulator.populate()
-        }
 
         setContent {
             val uiState by themeViewModel.uiState.collectAsStateWithLifecycle()

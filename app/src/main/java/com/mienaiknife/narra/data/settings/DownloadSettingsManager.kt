@@ -28,7 +28,7 @@ import javax.inject.Singleton
 
 @Singleton
 class DownloadSettingsManager @Inject constructor(
-    @ApplicationContext private val context: Context
+    @param:ApplicationContext private val context: Context
 ) {
     private val downloadOverWifiOnlyKey = booleanPreferencesKey("download_over_wifi_only")
 

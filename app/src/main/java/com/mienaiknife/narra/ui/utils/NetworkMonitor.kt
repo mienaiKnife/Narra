@@ -16,13 +16,6 @@
 
 package com.mienaiknife.narra.ui.utils
 
-import android.content.Context
-import android.net.ConnectivityManager
-import android.net.NetworkCapabilities
-import dagger.hilt.android.qualifiers.ApplicationContext
-import javax.inject.Inject
-import javax.inject.Singleton
-
 interface NetworkMonitor {
     fun isOnline(): Boolean
     fun isOnWifi(): Boolean
