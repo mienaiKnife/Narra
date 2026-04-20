@@ -16,6 +16,7 @@
 
 package com.mienaiknife.narra.data.local
 
+import android.content.Context
 import com.mienaiknife.narra.data.models.Article
 import java.io.InputStream
 
@@ -23,5 +24,5 @@ interface EpubDataSource {
     /**
      * Parses an EPUB file and returns a list of Article objects (one per chapter/spine item).
      */
-    suspend fun parseEpub(inputStream: InputStream, fallbackTitle: String): Result<List<Article>>
+    suspend fun parseEpub(context: Context, inputStream: InputStream, fallbackTitle: String): Result<List<Article>>
 }

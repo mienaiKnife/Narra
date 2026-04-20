@@ -331,7 +331,6 @@ fun QueueScreenContent(
                                 .zIndex(zIndex)
                                 .animateItem()
                                 .fillMaxWidth(),
-                            onItemClick = { onArticleClick(article.id) },
                             onPlayPauseClick = { onPlayPauseClick(article) },
                             onMarkAsPlayedClick = { onMarkAsPlayedClick(article) },
                             onRemoveClick = { onRemoveFromQueue(article) },

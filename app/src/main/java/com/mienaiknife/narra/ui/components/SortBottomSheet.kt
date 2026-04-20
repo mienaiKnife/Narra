@@ -31,6 +31,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -45,6 +46,8 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.mienaiknife.narra.data.models.SortOption
@@ -105,13 +108,7 @@ fun SortBottomSheetContent(
                     onOptionSelected(SortOption.DATE_DESC)
                 },
                 icon = if (dateActive) {
-                    {
-                        Icon(
-                            imageVector = if (selectedOption == SortOption.DATE_ASC) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
-                            contentDescription = null,
-                            modifier = Modifier.size(18.dp)
-                        )
-                    }
+                    if (selectedOption == SortOption.DATE_ASC) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown
                 } else null,
                 modifier = Modifier.weight(1f)
             )
@@ -122,13 +119,7 @@ fun SortBottomSheetContent(
                     onOptionSelected(SortOption.TITLE_ASC)
                 },
                 icon = if (titleActive) {
-                    {
-                        Icon(
-                            imageVector = if (selectedOption == SortOption.TITLE_ASC) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
-                            contentDescription = null,
-                            modifier = Modifier.size(18.dp)
-                        )
-                    }
+                    if (selectedOption == SortOption.TITLE_ASC) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown
                 } else null,
                 modifier = Modifier.weight(1f)
             )
@@ -139,13 +130,7 @@ fun SortBottomSheetContent(
                     onOptionSelected(SortOption.SOURCE_ASC)
                 },
                 icon = if (sourceActive) {
-                    {
-                        Icon(
-                            imageVector = if (selectedOption == SortOption.SOURCE_ASC) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
-                            contentDescription = null,
-                            modifier = Modifier.size(18.dp)
-                        )
-                    }
+                    if (selectedOption == SortOption.SOURCE_ASC) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown
                 } else null,
                 modifier = Modifier.weight(1f)
             )
@@ -187,19 +172,22 @@ private fun SortButton(
     isActive: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    icon: @Composable (() -> Unit)? = null
+    icon: ImageVector? = null
 ) {
+    val contentPadding = ButtonDefaults.TextButtonContentPadding
     if (isActive) {
         Button(
             onClick = onClick,
-            modifier = modifier
+            modifier = modifier,
+            contentPadding = contentPadding
         ) {
             SortButtonContent(text, icon)
         }
     } else {
         OutlinedButton(
             onClick = onClick,
-            modifier = modifier
+            modifier = modifier,
+            contentPadding = contentPadding
         ) {
             SortButtonContent(text, icon)
         }
@@ -209,16 +197,26 @@ private fun SortButton(
 @Composable
 private fun SortButtonContent(
     text: String,
-    icon: @Composable (() -> Unit)? = null
+    icon: ImageVector? = null
 ) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Center
     ) {
-        Text(text)
+        Text(
+            text = text,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            style = MaterialTheme.typography.labelLarge,
+            modifier = if (icon != null) Modifier.weight(1f, fill = false) else Modifier
+        )
         if (icon != null) {
             Spacer(Modifier.width(4.dp))
-            icon()
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                modifier = Modifier.size(18.dp)
+            )
         }
     }
 }
@@ -229,15 +227,15 @@ private fun SortButtonContent(
     backgroundColor = 0xFF191919
 )
 @Composable
-private fun SortBottomSheetQueuePreview() {
+private fun SortBottomSheetComparisonPreview() {
     NarraTheme(darkTheme = true, dynamicColor = false) {
-        Surface {
-            SortBottomSheetContent(
-                selectedOption = SortOption.DATE_DESC,
-                onOptionSelected = {},
-                isQueue = true,
-                keepSorted = false
-            )
+        Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            Surface {
+                SortBottomSheetContent(
+                    selectedOption = SortOption.DATE_DESC,
+                    onOptionSelected = {},
+                )
+            }
         }
     }
 }

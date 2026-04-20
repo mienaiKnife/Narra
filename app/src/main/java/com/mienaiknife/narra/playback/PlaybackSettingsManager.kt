@@ -38,6 +38,9 @@ class PlaybackSettingsManager @Inject constructor(
     private val autoPlayNextKey = androidx.datastore.preferences.core.booleanPreferencesKey("auto_play_next")
     private val ttsEngineKey = stringPreferencesKey("tts_engine")
     private val ttsModelIdKey = stringPreferencesKey("tts_model_id")
+    private val sherpaSpeedKey = androidx.datastore.preferences.core.floatPreferencesKey("sherpa_speed")
+    private val sherpaNoiseScaleKey = androidx.datastore.preferences.core.floatPreferencesKey("sherpa_noise_scale")
+    private val sherpaLengthScaleKey = androidx.datastore.preferences.core.floatPreferencesKey("sherpa_length_scale")
 
     val chimeSound: Flow<String> = context.dataStore.data.map { prefs ->
         prefs[chimeSoundKey] ?: "music_box_chime_positive"
@@ -69,6 +72,18 @@ class PlaybackSettingsManager @Inject constructor(
 
     val ttsModelId: Flow<String?> = context.dataStore.data.map { prefs ->
         prefs[ttsModelIdKey]
+    }
+
+    val sherpaSpeed: Flow<Float> = context.dataStore.data.map { prefs ->
+        prefs[sherpaSpeedKey] ?: 1.0f
+    }
+
+    val sherpaNoiseScale: Flow<Float> = context.dataStore.data.map { prefs ->
+        prefs[sherpaNoiseScaleKey] ?: 0.667f
+    }
+
+    val sherpaLengthScale: Flow<Float> = context.dataStore.data.map { prefs ->
+        prefs[sherpaLengthScaleKey] ?: 1.0f
     }
 
     suspend fun setFastForwardSkipTime(time: String) {
@@ -114,6 +129,24 @@ class PlaybackSettingsManager @Inject constructor(
             } else {
                 prefs[ttsModelIdKey] = modelId
             }
+        }
+    }
+
+    suspend fun setSherpaSpeed(speed: Float) {
+        context.dataStore.edit { prefs ->
+            prefs[sherpaSpeedKey] = speed
+        }
+    }
+
+    suspend fun setSherpaNoiseScale(noiseScale: Float) {
+        context.dataStore.edit { prefs ->
+            prefs[sherpaNoiseScaleKey] = noiseScale
+        }
+    }
+
+    suspend fun setSherpaLengthScale(lengthScale: Float) {
+        context.dataStore.edit { prefs ->
+            prefs[sherpaLengthScaleKey] = lengthScale
         }
     }
 }

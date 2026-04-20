@@ -18,6 +18,7 @@ package com.mienaiknife.narra.ui.viewmodels
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.mienaiknife.narra.domain.models.TtsModel
 import com.mienaiknife.narra.domain.repository.ModelRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import com.mienaiknife.narra.playback.PlaybackSettingsManager
@@ -45,9 +46,18 @@ class VoicesSettingsViewModel @Inject constructor(
     val uiState: StateFlow<VoicesSettingsUiState> = combine(
         modelRepository.getAvailableModels(),
         settingsManager.ttsEngine,
-        settingsManager.ttsModelId
-    ) { models, engine, modelId ->
-        VoicesSettingsUiState(models, engine, modelId)
+        settingsManager.ttsModelId,
+        settingsManager.sherpaSpeed,
+        settingsManager.sherpaNoiseScale,
+        settingsManager.sherpaLengthScale
+    ) { args ->
+        val models = args[0] as List<TtsModel>
+        val engine = args[1] as String
+        val modelId = args[2] as String?
+        val speed = args[3] as Float
+        val noiseScale = args[4] as Float
+        val lengthScale = args[5] as Float
+        VoicesSettingsUiState(models, engine, modelId, speed, noiseScale, lengthScale)
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
@@ -75,6 +85,24 @@ class VoicesSettingsViewModel @Inject constructor(
     fun deleteModel(modelId: String) {
         viewModelScope.launch {
             modelRepository.deleteModel(modelId)
+        }
+    }
+
+    fun setSherpaSpeed(speed: Float) {
+        viewModelScope.launch {
+            settingsManager.setSherpaSpeed(speed)
+        }
+    }
+
+    fun setSherpaNoiseScale(noiseScale: Float) {
+        viewModelScope.launch {
+            settingsManager.setSherpaNoiseScale(noiseScale)
+        }
+    }
+
+    fun setSherpaLengthScale(lengthScale: Float) {
+        viewModelScope.launch {
+            settingsManager.setSherpaLengthScale(lengthScale)
         }
     }
 }

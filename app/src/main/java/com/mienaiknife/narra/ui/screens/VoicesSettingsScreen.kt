@@ -19,13 +19,18 @@ package com.mienaiknife.narra.ui.screens
 import android.content.Intent
 import android.content.res.Configuration
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -47,10 +52,9 @@ import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -73,7 +77,6 @@ import com.mienaiknife.narra.ui.components.BottomNavBar
 import com.mienaiknife.narra.ui.theme.NarraTheme
 import com.mienaiknife.narra.ui.viewmodels.VoicesSettingsViewModel
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun VoicesSettingsScreen(
     onBack: () -> Unit,
@@ -81,30 +84,17 @@ fun VoicesSettingsScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Voices") },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background
-                )
-            )
-        }
-    ) { innerPadding ->
-        VoicesSettingsContent(
-            uiState = uiState,
-            modifier = Modifier.padding(innerPadding),
-            onSetEngine = viewModel::setEngine,
-            onSelectModel = viewModel::selectModel,
-            onDownloadModel = viewModel::downloadModel,
-            onDeleteModel = viewModel::deleteModel
-        )
-    }
+    VoicesSettingsContent(
+        uiState = uiState,
+        onSetEngine = viewModel::setEngine,
+        onSelectModel = viewModel::selectModel,
+        onDownloadModel = viewModel::downloadModel,
+        onDeleteModel = viewModel::deleteModel,
+        onSetSherpaSpeed = viewModel::setSherpaSpeed,
+        onSetSherpaNoiseScale = viewModel::setSherpaNoiseScale,
+        onSetSherpaLengthScale = viewModel::setSherpaLengthScale,
+        onBack = onBack
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -115,7 +105,11 @@ fun VoicesSettingsContent(
     onSetEngine: (String) -> Unit,
     onSelectModel: (String?) -> Unit,
     onDownloadModel: (String) -> Unit,
-    onDeleteModel: (String) -> Unit
+    onDeleteModel: (String) -> Unit,
+    onSetSherpaSpeed: (Float) -> Unit,
+    onSetSherpaNoiseScale: (Float) -> Unit,
+    onSetSherpaLengthScale: (Float) -> Unit,
+    onBack: () -> Unit
 ) {
     val context = LocalContext.current
     val engines = listOf("Android's native TTS", "On-device AI (Sherpa-ONNX)", "Cloud AI providers")
@@ -132,103 +126,187 @@ fun VoicesSettingsContent(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .padding(horizontal = 16.dp)
+            .statusBarsPadding()
     ) {
-        Text(
-            text = "Engine selection",
-            style = MaterialTheme.typography.titleSmall,
-            color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.padding(vertical = 8.dp)
-        )
+        Spacer(modifier = Modifier.height(24.dp))
 
-        ExposedDropdownMenuBox(
-            expanded = expanded,
-            onExpandedChange = { expanded = !expanded },
-            modifier = Modifier.fillMaxWidth()
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            OutlinedTextField(
-                value = selectedEngineName,
-                onValueChange = {},
-                readOnly = true,
-                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-                modifier = Modifier
-                    .menuAnchor(type = ExposedDropdownMenuAnchorType.PrimaryNotEditable, enabled = true)
-                    .fillMaxWidth(),
-                colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors()
-            )
-            ExposedDropdownMenu(
-                expanded = expanded,
-                onDismissRequest = { expanded = false }
-            ) {
-                engines.forEachIndexed { index, engine ->
-                    DropdownMenuItem(
-                        text = { Text(engine) },
-                        onClick = {
-                            onSetEngine(engineValues[index])
-                            expanded = false
-                        },
-                        contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
-                    )
-                }
+            IconButton(onClick = onBack) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = "Back",
+                    modifier = Modifier.size(32.dp),
+                    tint = MaterialTheme.colorScheme.onBackground
+                )
             }
+            Spacer(modifier = Modifier.size(8.dp))
+            Text(
+                text = "Voices",
+                style = MaterialTheme.typography.headlineLarge,
+                color = MaterialTheme.colorScheme.onBackground
+            )
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(24.dp))
 
-        when (uiState.selectedEngine) {
-            "android" -> {
-                Text(
-                    text = "Open Android's TTS settings",
-                    style = MaterialTheme.typography.bodyLarge,
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 16.dp)
+        ) {
+            Text(
+                text = "Engine selection",
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(vertical = 8.dp)
+            )
+
+            ExposedDropdownMenuBox(
+                expanded = expanded,
+                onExpandedChange = { expanded = !expanded },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                OutlinedTextField(
+                    value = selectedEngineName,
+                    onValueChange = {},
+                    readOnly = true,
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 16.dp)
-                        .clickable {
-                            try {
-                                context.startActivity(Intent("com.android.settings.TTS_SETTINGS"))
-                            } catch (_: Exception) {
-                                // Fallback or handle error
-                            }
-                        }
+                        .menuAnchor(type = ExposedDropdownMenuAnchorType.PrimaryNotEditable, enabled = true)
+                        .fillMaxWidth(),
+                    colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors()
                 )
+                ExposedDropdownMenu(
+                    expanded = expanded,
+                    onDismissRequest = { expanded = false }
+                ) {
+                    engines.forEachIndexed { index, engine ->
+                        DropdownMenuItem(
+                            text = { Text(engine) },
+                            onClick = {
+                                onSetEngine(engineValues[index])
+                                expanded = false
+                            },
+                            contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
+                        )
+                    }
+                }
             }
 
-            "ondevice" -> {
-                Text(
-                    text = "Voice data",
-                    style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(top = 8.dp, bottom = 8.dp)
-                )
+            Spacer(modifier = Modifier.height(16.dp))
 
-                Surface(
-                    color = MaterialTheme.colorScheme.surfaceContainer,
-                    shape = MaterialTheme.shapes.medium,
-                    modifier = Modifier.weight(1f, fill = false)
-                ) {
-                    LazyColumn {
-                        itemsIndexed(uiState.availableModels) { index, model ->
-                            TtsModelItem(
-                                model = model,
-                                isSelected = uiState.selectedModelId == model.id,
-                                onSelect = { onSelectModel(model.id) },
-                                onDownload = { onDownloadModel(model.id) },
-                                onDelete = { onDeleteModel(model.id) },
-                                containerColor = Color.Transparent
-                            )
-                            if (index < uiState.availableModels.lastIndex) {
-                                HorizontalDivider(
-                                    modifier = Modifier.padding(horizontal = 16.dp),
-                                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+            when (uiState.selectedEngine) {
+                "android" -> {
+                    Text(
+                        text = "Open Android's TTS settings",
+                        style = MaterialTheme.typography.bodyLarge,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 16.dp)
+                            .clickable {
+                                try {
+                                    context.startActivity(Intent("com.android.settings.TTS_SETTINGS"))
+                                } catch (_: Exception) {
+                                    // Fallback or handle error
+                                }
+                            }
+                    )
+                }
+
+                "ondevice" -> {
+                    Text(
+                        text = "Voice data",
+                        style = MaterialTheme.typography.titleSmall,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(top = 8.dp, bottom = 8.dp)
+                    )
+
+                    Surface(
+                        color = MaterialTheme.colorScheme.surfaceContainer,
+                        shape = MaterialTheme.shapes.medium,
+                        modifier = Modifier.weight(1f, fill = false)
+                    ) {
+                        LazyColumn {
+                            itemsIndexed(uiState.availableModels) { index, model ->
+                                TtsModelItem(
+                                    model = model,
+                                    isSelected = uiState.selectedModelId == model.id,
+                                    onSelect = { onSelectModel(model.id) },
+                                    onDownload = { onDownloadModel(model.id) },
+                                    onDelete = { onDeleteModel(model.id) },
+                                    containerColor = Color.Transparent
                                 )
+                                if (index < uiState.availableModels.lastIndex) {
+                                    HorizontalDivider(
+                                        modifier = Modifier.padding(horizontal = 16.dp),
+                                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                                    )
+                                }
                             }
                         }
+                    }
+
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    Text(
+                        text = "Voice settings",
+                        style = MaterialTheme.typography.titleSmall,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(vertical = 8.dp)
+                    )
+
+                    Column(modifier = Modifier.padding(horizontal = 8.dp)) {
+                        Text(
+                            text = "Speed: ${"%.2f".format(uiState.sherpaSpeed)}x",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onBackground
+                        )
+                        Slider(
+                            value = uiState.sherpaSpeed,
+                            onValueChange = onSetSherpaSpeed,
+                            valueRange = 0.5f..2.0f,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        Text(
+                            text = "Noise Scale (Expressiveness): ${"%.3f".format(uiState.sherpaNoiseScale)}",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onBackground
+                        )
+                        Slider(
+                            value = uiState.sherpaNoiseScale,
+                            onValueChange = onSetSherpaNoiseScale,
+                            valueRange = 0.0f..1.0f,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        Text(
+                            text = "Length Scale: ${"%.2f".format(uiState.sherpaLengthScale)}",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onBackground
+                        )
+                        Slider(
+                            value = uiState.sherpaLengthScale,
+                            onValueChange = onSetSherpaLengthScale,
+                            valueRange = 0.5f..2.0f,
+                            modifier = Modifier.fillMaxWidth()
+                        )
                     }
                 }
             }
         }
     }
 }
+
 
 @Composable
 fun TtsModelItem(
@@ -242,7 +320,9 @@ fun TtsModelItem(
     val isDownloading = model.progress > 0f && model.progress < 1f
 
     ListItem(
-        modifier = Modifier.clickable(enabled = model.isDownloaded && !isDownloading) { onSelect() },
+        modifier = Modifier
+            .height(IntrinsicSize.Min)
+            .clickable(enabled = model.isDownloaded && !isDownloading) { onSelect() },
         colors = ListItemDefaults.colors(
             containerColor = containerColor
         ),
@@ -288,26 +368,33 @@ fun TtsModelItem(
             }
         },
         trailingContent = {
-            when {
-                model.isDownloaded -> {
-                    IconButton(onClick = onDelete) {
-                        Icon(
-                            imageVector = Icons.Default.Delete,
-                            contentDescription = "Delete model",
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+            Box(
+                modifier = Modifier.fillMaxHeight(),
+                contentAlignment = Alignment.Center
+            ) {
+                when {
+                    model.isDownloaded -> {
+                        IconButton(onClick = onDelete) {
+                            Icon(
+                                imageVector = Icons.Default.Delete,
+                                contentDescription = "Delete model",
+                                tint = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
                     }
-                }
-                isDownloading -> {
-                    // Redundant circular indicator removed for cleaner UI during download
-                }
-                else -> {
-                    IconButton(onClick = onDownload) {
-                        Icon(
-                            imageVector = Icons.Default.Download,
-                            contentDescription = "Download model",
-                            tint = MaterialTheme.colorScheme.primary
-                        )
+
+                    isDownloading -> {
+                        // Redundant circular indicator removed for cleaner UI during download
+                    }
+
+                    else -> {
+                        IconButton(onClick = onDownload) {
+                            Icon(
+                                imageVector = Icons.Default.Download,
+                                contentDescription = "Download model",
+                                tint = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
                     }
                 }
             }
@@ -315,7 +402,6 @@ fun TtsModelItem(
     )
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Preview(uiMode = Configuration.UI_MODE_NIGHT_YES, showBackground = true)
 @Composable
 fun VoicesSettingsScreenPreview() {
@@ -323,20 +409,40 @@ fun VoicesSettingsScreenPreview() {
     val mockUiState = VoicesSettingsUiState(
         availableModels = listOf(
             TtsModel(
-                id = "1",
-                name = "English (US) - VITS",
+                id = "vits-piper-en_US-amy-low",
+                name = "Amy (English, US)",
                 language = "en-US",
-                description = "High quality VITS model",
+                description = "Low quality, fast American English female voice",
                 type = TtsModelType.VITS,
                 modelUrl = "",
                 tokensUrl = "",
                 isDownloaded = true
             ),
             TtsModel(
-                id = "2",
-                name = "English (UK) - Matcha",
-                language = "en-GB",
-                description = "Fast Matcha model",
+                id = "vits-piper-en_US-ryan-medium",
+                name = "Ryan (English, US)",
+                language = "en-US",
+                description = "Medium quality American English male voice",
+                type = TtsModelType.VITS,
+                modelUrl = "",
+                tokensUrl = "",
+                isDownloaded = false
+            ),
+            TtsModel(
+                id = "kokoro-en-v0_19",
+                name = "Kokoro (English)",
+                language = "en",
+                description = "High quality Kokoro TTS model",
+                type = TtsModelType.KOKORO,
+                modelUrl = "",
+                tokensUrl = "",
+                isDownloaded = false
+            ),
+            TtsModel(
+                id = "matcha-en-ljspeech",
+                name = "Matcha (English)",
+                language = "en",
+                description = "High quality Matcha TTS model",
                 type = TtsModelType.MATCHA,
                 modelUrl = "",
                 tokensUrl = "",
@@ -345,31 +451,26 @@ fun VoicesSettingsScreenPreview() {
             )
         ),
         selectedEngine = "ondevice",
-        selectedModelId = "1"
+        selectedModelId = "vits-piper-en_US-amy-low"
     )
 
     NarraTheme(darkTheme = true, dynamicColor = false) {
         Scaffold(
-            topBar = {
-                TopAppBar(
-                    title = { Text("Voices") },
-                    navigationIcon = {
-                        IconButton(onClick = {}) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                        }
-                    }
-                )
-            },
             bottomBar = { BottomNavBar(navController) }
         ) { innerPadding ->
-            VoicesSettingsContent(
-                uiState = mockUiState,
-                modifier = Modifier.padding(innerPadding),
-                onSetEngine = {},
-                onSelectModel = {},
-                onDownloadModel = {},
-                onDeleteModel = {}
-            )
+            Box(modifier = Modifier.padding(innerPadding)) {
+                VoicesSettingsContent(
+                    uiState = mockUiState,
+                    onSetEngine = {},
+                    onSelectModel = {},
+                    onDownloadModel = {},
+                    onDeleteModel = {},
+                    onSetSherpaSpeed = {},
+                    onSetSherpaNoiseScale = {},
+                    onSetSherpaLengthScale = {},
+                    onBack = {}
+                )
+            }
         }
     }
 }

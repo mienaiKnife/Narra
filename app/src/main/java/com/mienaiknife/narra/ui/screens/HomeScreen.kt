@@ -208,9 +208,10 @@ fun ArticleCard(
                     .background(MaterialTheme.colorScheme.surfaceContainer),
                 contentAlignment = Alignment.Center
             ) {
-                article.imageUrl?.let { imageUrl ->
+                val imageUrl = article.imageUrl ?: article.feedImageUrl ?: article.url?.let { "https://www.google.com/s2/favicons?domain=$it&sz=128" }
+                imageUrl?.let { url ->
                     AsyncImage(
-                        model = imageUrl,
+                        model = url,
                         contentDescription = null,
                         modifier = Modifier.fillMaxSize(),
                         contentScale = ContentScale.Crop,

@@ -205,7 +205,6 @@ fun HistoryScreenContent(
                             article = article,
                             isPlaying = isPlaying && currentArticleId == article.id,
                             modifier = Modifier.animateItem(),
-                            onItemClick = { onArticleClick(article.id) },
                             onPlayPauseClick = { onPlayPauseClick(article) },
                             onMarkAsPlayedClick = { onMarkAsPlayedClick(article) }
                         )

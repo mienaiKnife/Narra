@@ -608,6 +608,7 @@ class TtsPlayer @Inject constructor(
     override fun getAvailableCommands(): Player.Commands = Player.Commands.Builder()
         .addAll(
             COMMAND_PLAY_PAUSE,
+            COMMAND_PREPARE,
             COMMAND_STOP,
             COMMAND_SET_SPEED_AND_PITCH,
             COMMAND_GET_CURRENT_MEDIA_ITEM,
@@ -675,7 +676,7 @@ class TtsPlayer @Inject constructor(
     fun seekToParagraph(index: Int) {
         if (index in paragraphs.indices) {
             val text = paragraphs[index]
-            val word = Regex("\\w+").find(text)?.range ?: (0 until 0)
+            val word = Regex("\\w+").find(text)?.range ?: (0..0)
             seekToWord(index, word, _playWhenReady)
         }
     }

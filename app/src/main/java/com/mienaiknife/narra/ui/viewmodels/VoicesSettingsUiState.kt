@@ -21,5 +21,8 @@ import com.mienaiknife.narra.domain.models.TtsModel
 data class VoicesSettingsUiState(
     val availableModels: List<TtsModel> = emptyList(),
     val selectedEngine: String = "android",
-    val selectedModelId: String? = null
+    val selectedModelId: String? = null,
+    val sherpaSpeed: Float = 1.0f,
+    val sherpaNoiseScale: Float = 0.667f,
+    val sherpaLengthScale: Float = 1.0f
 )

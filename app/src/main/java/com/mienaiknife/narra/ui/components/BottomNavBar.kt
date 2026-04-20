@@ -62,8 +62,32 @@ fun BottomNavBar(navController: NavController) {
 
     NavigationBar {
         items.forEach { item ->
+            val isSelected = when (item) {
+                BottomNavItem.Settings -> {
+                    listOf(
+                        NavDestination.Settings::class,
+                        NavDestination.SettingsUi::class,
+                        NavDestination.SettingsPlayback::class,
+                        NavDestination.SettingsVoices::class,
+                        NavDestination.SettingsDownloads::class,
+                        NavDestination.SettingsAbout::class,
+                        NavDestination.SettingsLicenses::class
+                    ).any { currentDestination?.hasRoute(it) == true }
+                }
+
+                BottomNavItem.Inbox -> {
+                    listOf(
+                        NavDestination.Inbox::class,
+                        NavDestination.Feeds::class,
+                        NavDestination.Feed::class
+                    ).any { currentDestination?.hasRoute(it) == true }
+                }
+
+                else -> currentDestination?.hasRoute(item.route::class) == true
+            }
+
             NavigationBarItem(
-                selected = currentDestination?.hasRoute(item.route::class) == true,
+                selected = isSelected,
                 onClick = {
                     navController.navigate(item.route) {
                         popUpTo(navController.graph.startDestinationId) {

@@ -41,6 +41,7 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.flow.combine
 import java.io.File
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -98,23 +99,32 @@ class SherpaTtsEngine @Inject constructor(
 
     init {
         scope.launch {
-            settingsManager.ttsModelId.collectLatest { modelId ->
-                if (modelId != currentModelId) {
-                    currentModelId = modelId
-                    initializeEngine(modelId)
-                }
+            combine(
+                settingsManager.ttsModelId,
+                settingsManager.sherpaNoiseScale,
+                settingsManager.sherpaLengthScale
+            ) { modelId, noiseScale, lengthScale ->
+                Triple(modelId, noiseScale, lengthScale)
+            }.collectLatest { (modelId, noiseScale, lengthScale) ->
+                initializeEngine(modelId, noiseScale, lengthScale)
+            }
+        }
+
+        scope.launch {
+            settingsManager.sherpaSpeed.collect { speed ->
+                setPlaybackSpeed(speed)
             }
         }
     }
 
-    private suspend fun initializeEngine(modelId: String?) {
+    private suspend fun initializeEngine(modelId: String?, noiseScale: Float, lengthScale: Float) {
         withContext(Dispatchers.IO) {
             _state.value = TtsState.Initializing
             try {
                 // Stop any current synthesis/playback loops
                 synthesisJob?.cancel()
                 playbackJob?.cancel()
-                
+
                 // Clear queues
                 while (utteranceQueue.tryReceive().isSuccess) { /* consume */ }
                 while (synthesizedQueue.tryReceive().isSuccess) { /* consume */ }
@@ -127,15 +137,16 @@ class SherpaTtsEngine @Inject constructor(
                     return@withContext
                 }
 
+                val models = modelRepository.getAvailableModels().first()
+                val modelMetadata = models.find { it.id == modelId }
                 val modelPath = modelRepository.getModelPath(modelId)
-                val modelMetadata = modelRepository.getAvailableModels().first().find { it.id == modelId }
-                
+
                 if (modelPath == null || modelMetadata == null) {
                     _state.value = TtsState.Error("Model files not found")
                     return@withContext
                 }
 
-                val modelConfig = createModelConfig(modelMetadata, modelPath)
+                val modelConfig = createModelConfig(modelMetadata, modelPath, noiseScale, lengthScale)
                 val config = OfflineTtsConfig(
                     model = modelConfig,
                     ruleFsts = "",
@@ -143,7 +154,7 @@ class SherpaTtsEngine @Inject constructor(
                     maxNumSentences = 1,
                     silenceScale = 0.2f
                 )
-                
+
                 tts = OfflineTts(context.assets, config)
                 _state.value = TtsState.Ready
                 startLoops()
@@ -154,7 +165,12 @@ class SherpaTtsEngine @Inject constructor(
         }
     }
 
-    private fun createModelConfig(model: TtsModel, modelPath: String): OfflineTtsModelConfig {
+    private fun createModelConfig(
+        model: TtsModel,
+        modelPath: String,
+        noiseScale: Float,
+        lengthScale: Float
+    ): OfflineTtsModelConfig {
         var vits = OfflineTtsVitsModelConfig()
         var matcha = OfflineTtsMatchaModelConfig()
         var kokoro = OfflineTtsKokoroModelConfig()
@@ -162,7 +178,7 @@ class SherpaTtsEngine @Inject constructor(
         var kitten = OfflineTtsKittenModelConfig()
         var pocket = OfflineTtsPocketModelConfig()
         var supertonic = OfflineTtsSupertonicModelConfig()
-        
+
         when (model.type) {
             TtsModelType.VITS -> {
                 vits = OfflineTtsVitsModelConfig(
@@ -170,11 +186,12 @@ class SherpaTtsEngine @Inject constructor(
                     lexicon = "",
                     tokens = File(modelPath, "tokens.txt").absolutePath,
                     dataDir = modelPath,
-                    noiseScale = 0.667f,
+                    noiseScale = noiseScale,
                     noiseScaleW = 0.8f,
-                    lengthScale = 1.0f
+                    lengthScale = lengthScale
                 )
             }
+
             TtsModelType.MATCHA -> {
                 matcha = OfflineTtsMatchaModelConfig(
                     acousticModel = File(modelPath, "model.onnx").absolutePath,
@@ -182,19 +199,21 @@ class SherpaTtsEngine @Inject constructor(
                     lexicon = "",
                     tokens = File(modelPath, "tokens.txt").absolutePath,
                     dataDir = modelPath,
-                    noiseScale = 1.0f,
-                    lengthScale = 1.0f
+                    noiseScale = noiseScale,
+                    lengthScale = lengthScale
                 )
             }
+
             TtsModelType.KOKORO -> {
                 kokoro = OfflineTtsKokoroModelConfig(
                     model = File(modelPath, "model.onnx").absolutePath,
                     voices = File(modelPath, "voices.bin").absolutePath,
                     tokens = File(modelPath, "tokens.txt").absolutePath,
                     dataDir = modelPath,
-                    lengthScale = 1.0f
+                    lengthScale = lengthScale
                 )
             }
+
             TtsModelType.ZIPVOICE -> {
                 zipvoice = OfflineTtsZipVoiceModelConfig(
                     encoder = File(modelPath, "encoder.onnx").absolutePath,
@@ -209,7 +228,7 @@ class SherpaTtsEngine @Inject constructor(
                     voices = File(modelPath, "voices.bin").absolutePath,
                     tokens = File(modelPath, "tokens.txt").absolutePath,
                     dataDir = modelPath,
-                    lengthScale = 1.0f
+                    lengthScale = lengthScale
                 )
             }
             TtsModelType.POCKET -> {

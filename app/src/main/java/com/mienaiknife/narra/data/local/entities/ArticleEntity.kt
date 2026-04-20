@@ -42,7 +42,7 @@ data class ArticleEntity(
     val createdAt: Long = System.currentTimeMillis()
 )
 
-fun ArticleEntity.toDomainModel(): Article {
+fun ArticleEntity.toDomainModel(feedImageUrl: String? = null): Article {
     return Article(
         id = id,
         title = title,
@@ -50,6 +50,7 @@ fun ArticleEntity.toDomainModel(): Article {
         publishedAt = publishedAt,
         content = content ?: "",
         imageUrl = imageUrl,
+        feedImageUrl = feedImageUrl,
         url = url,
         progress = progress,
         currentParagraphIndex = currentParagraphIndex,

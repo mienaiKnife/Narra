@@ -26,7 +26,7 @@ import javax.inject.Inject
 
 class EpubDataSourceImpl @Inject constructor() : EpubDataSource {
 
-    override suspend fun parseEpub(inputStream: InputStream, fallbackTitle: String): Result<List<Article>> {
+    override suspend fun parseEpub(context: android.content.Context, inputStream: InputStream, fallbackTitle: String): Result<List<Article>> {
         return try {
             val book = EpubReader().readEpub(inputStream)
             val bookTitle = book.metadata.firstTitle ?: fallbackTitle
@@ -47,6 +47,18 @@ class EpubDataSourceImpl @Inject constructor() : EpubDataSource {
                 }
             }
             walkToc(book.tableOfContents.tocReferences)
+
+            val coverImageResource = book.coverImage
+            val coverImageUrl = coverImageResource?.let { resource ->
+                val fileName = "cover_${bookTitle.hashCode()}.png"
+                val file = java.io.File(context.cacheDir, fileName)
+                if (!file.exists()) {
+                    java.io.FileOutputStream(file).use { out ->
+                        out.write(resource.data)
+                    }
+                }
+                file.absolutePath
+            }
 
             val articles = spineReferences.mapIndexedNotNull { index, spineReference ->
                 val resource = spineReference.resource
@@ -70,7 +82,7 @@ class EpubDataSourceImpl @Inject constructor() : EpubDataSource {
                         title = chapterTitle.trim(),
                         source = bookTitle,
                         content = cleanText,
-                        imageUrl = null, // Could extract cover image later
+                        imageUrl = coverImageUrl,
                         url = "epub://${bookTitle.hashCode()}/$index",
                         isInQueue = true,
                         queueOrder = index,

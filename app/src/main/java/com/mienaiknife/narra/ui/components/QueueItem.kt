@@ -53,7 +53,6 @@ fun QueueItem(
     article: Article,
     isPlaying: Boolean,
     modifier: Modifier = Modifier,
-    onItemClick: () -> Unit = {},
     onPlayPauseClick: () -> Unit = {},
     onRemoveClick: () -> Unit = {},
     onAddToQueueClick: () -> Unit = {},
@@ -66,7 +65,6 @@ fun QueueItem(
         QueueItemRow(
             article = article,
             isPlaying = isPlaying,
-            onItemClick = onItemClick,
             onLongClick = { showMenu = true },
             onPlayPauseClick = onPlayPauseClick,
             dragModifier = dragModifier
@@ -133,7 +131,6 @@ private fun QueueItemRow(
     article: Article,
     isPlaying: Boolean,
     modifier: Modifier = Modifier,
-    onItemClick: () -> Unit = {},
     onLongClick: () -> Unit = {},
     onPlayPauseClick: () -> Unit = {},
     dragModifier: Modifier? = null
@@ -166,7 +163,7 @@ private fun QueueItemRow(
             modifier = Modifier
                 .weight(1f)
                 .combinedClickable(
-                    onClick = onItemClick,
+                    onClick = {},
                     onLongClick = onLongClick
                 ),
             verticalAlignment = Alignment.CenterVertically
@@ -179,9 +176,10 @@ private fun QueueItemRow(
                     .background(MaterialTheme.colorScheme.surfaceContainer),
                 contentAlignment = Alignment.Center
             ) {
-                article.imageUrl?.let { imageUrl ->
+                val imageUrl = article.imageUrl ?: article.feedImageUrl ?: article.url?.let { "https://www.google.com/s2/favicons?domain=$it&sz=128" }
+                imageUrl?.let { url ->
                     AsyncImage(
-                        model = imageUrl,
+                        model = url,
                         contentDescription = null,
                         modifier = Modifier.fillMaxSize(),
                         contentScale = ContentScale.Crop,

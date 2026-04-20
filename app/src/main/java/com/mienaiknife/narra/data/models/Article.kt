@@ -23,6 +23,7 @@ data class Article(
     val publishedAt: String? = null,
     val content: String = "",
     val imageUrl: String? = null,
+    val feedImageUrl: String? = null,
     val url: String? = null,
     val progress: Float? = null,
     val currentParagraphIndex: Int = 0,

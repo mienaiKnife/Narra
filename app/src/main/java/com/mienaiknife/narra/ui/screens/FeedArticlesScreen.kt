@@ -191,7 +191,6 @@ fun FeedArticlesScreenContent(
                     QueueItem(
                         article = article,
                         isPlaying = false,
-                        onItemClick = { onArticleClick(article) },
                         onAddToQueueClick = { onAddToQueue(article) },
                         onRemoveClick = { onDeleteArticle(article) }
                     )

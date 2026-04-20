@@ -225,7 +225,6 @@ fun InboxScreenContent(
                                 article = article,
                                 isPlaying = false,
                                 modifier = Modifier.animateItem(),
-                                onItemClick = { onArticleClick(article.id) },
                                 onPlayPauseClick = { onAddToQueue(article) },
                                 onAddToQueueClick = { onAddToQueue(article) },
                                 onMarkAsPlayedClick = { onMarkAsPlayedClick(article) }
