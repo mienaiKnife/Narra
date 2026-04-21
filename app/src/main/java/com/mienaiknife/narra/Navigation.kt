@@ -98,18 +98,26 @@ fun AppNavigation(themeViewModel: ThemeViewModel) {
             )
         ) {
             composable<NavDestination.Home> { HomeScreen(onArticleClick = { articleId -> navController.navigate(NavDestination.Reader(articleId)) }) }
-            composable<NavDestination.Queue> { QueueScreen(navController, onArticleClick = { articleId -> navController.navigate(NavDestination.Reader(articleId)) }) }
-            composable<NavDestination.History> { HistoryScreen(navController) }
+            composable<NavDestination.Queue> { 
+                QueueScreen(onNavigateToHistory = { navController.navigate(NavDestination.History) }) 
+            }
+            composable<NavDestination.History> { 
+                HistoryScreen(onBack = { navController.popBackStack() }) 
+            }
             composable<NavDestination.Add> { AddScreen(onArticleAdded = { navController.navigate(NavDestination.Home) }) }
             composable<NavDestination.Inbox> {
                 InboxScreen(
-                    navController = navController,
                     onNavigateToFeeds = { navController.navigate(NavDestination.Feeds) }
                 )
             }
-            composable<NavDestination.Feeds> { FeedsScreen(navController) }
+            composable<NavDestination.Feeds> { 
+                FeedsScreen(
+                    onNavigateToFeed = { feedTitle -> navController.navigate(NavDestination.Feed(feedTitle)) },
+                    onBack = { navController.popBackStack() }
+                ) 
+            }
             composable<NavDestination.Feed> {
-                FeedArticlesScreen(navController)
+                FeedArticlesScreen(onBack = { navController.popBackStack() })
             }
             composable<NavDestination.Settings> {
                 SettingsScreen(

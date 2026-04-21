@@ -35,9 +35,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
-import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
-import com.mienaiknife.narra.NavDestination
 import com.mienaiknife.narra.data.models.Article
 import com.mienaiknife.narra.data.models.SampleArticles
 import com.mienaiknife.narra.data.models.SortOption
@@ -50,7 +48,6 @@ import com.mienaiknife.narra.ui.viewmodels.InboxViewModel
 
 @Composable
 fun InboxScreen(
-    navController: NavController,
     onNavigateToFeeds: () -> Unit,
     viewModel: InboxViewModel = hiltViewModel()
 ) {
@@ -72,12 +69,14 @@ fun InboxScreen(
             articles = uiState.articles,
             isRefreshing = uiState.isRefreshing,
             sortOption = uiState.sortOption,
+            showPlayed = uiState.showPlayed,
+            downloadingArticleIds = uiState.downloadingArticleIds,
             onAddToQueue = { viewModel.addToQueue(it) },
-            onArticleClick = { articleId -> navController.navigate(NavDestination.Reader(articleId)) },
             onMarkAsPlayedClick = { viewModel.togglePlayedStatus(it) },
             onClearInbox = { viewModel.clearInbox() },
             onRefresh = { viewModel.refresh() },
             onSortOptionSelected = { viewModel.setSortOption(it) },
+            onShowPlayedChange = { viewModel.setShowPlayed(it) },
             onEditFeeds = onNavigateToFeeds
         )
 
@@ -94,12 +93,14 @@ fun InboxScreenContent(
     articles: List<Article>,
     isRefreshing: Boolean = false,
     sortOption: SortOption = SortOption.DATE_DESC,
+    showPlayed: Boolean = false,
+    downloadingArticleIds: Set<String> = emptySet(),
     onAddToQueue: (Article) -> Unit,
-    onArticleClick: (String) -> Unit = {},
     onMarkAsPlayedClick: (Article) -> Unit = {},
     onClearInbox: () -> Unit = {},
     onRefresh: () -> Unit = {},
     onSortOptionSelected: (SortOption) -> Unit = {},
+    onShowPlayedChange: (Boolean) -> Unit = {},
     onEditFeeds: () -> Unit = {}
 ) {
     var showMenu by remember { mutableStateOf(false) }
@@ -112,6 +113,8 @@ fun InboxScreenContent(
                 onSortOptionSelected(it)
                 showSortSheet.value = false
             },
+            showPlayed = showPlayed,
+            onShowPlayedChange = onShowPlayedChange,
             onDismissRequest = { showSortSheet.value = false }
         )
     }
@@ -224,6 +227,7 @@ fun InboxScreenContent(
                             QueueItem(
                                 article = article,
                                 isPlaying = false,
+                                isDownloading = downloadingArticleIds.contains(article.id),
                                 modifier = Modifier.animateItem(),
                                 onPlayPauseClick = { onAddToQueue(article) },
                                 onAddToQueueClick = { onAddToQueue(article) },

@@ -15,5 +15,6 @@
   limitations under the License.
   -->
 <resources>
+    <!-- TODO: Move hardcoded text strings here -->
     <string name="app_name">Narra</string>
 </resources>

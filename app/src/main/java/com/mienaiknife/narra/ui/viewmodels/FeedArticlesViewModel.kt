@@ -52,30 +52,43 @@ class FeedArticlesViewModel @Inject constructor(
     val feedTitle: String = savedStateHandle.toRoute<NavDestination.Feed>().feedTitle
 
     private val _sortOption = MutableStateFlow(SortOption.DATE_DESC)
+    private val _showPlayed = MutableStateFlow(false)
+
+    private val _downloadingArticleIds = MutableStateFlow<Set<String>>(emptySet())
 
     val uiState: StateFlow<FeedArticlesUiState> = combine(
         repository.getArticlesBySource(feedTitle),
-        _sortOption
-    ) { articles, sort ->
+        _sortOption,
+        _showPlayed,
+        _downloadingArticleIds
+    ) { articles, sort, showPlayed, downloadingIds ->
+        val filteredArticles = if (showPlayed) articles else articles.filter { (it.progress ?: 0f) < 1f }
         val sortedArticles = when (sort) {
-            SortOption.MANUAL -> articles
-            SortOption.DATE_DESC -> articles.sortedByDescending { it.publishedTimestamp ?: 0L }
-            SortOption.DATE_ASC -> articles.sortedBy { it.publishedTimestamp ?: Long.MAX_VALUE }
-            SortOption.TITLE_ASC -> articles.sortedBy { it.title }
-            SortOption.TITLE_DESC -> articles.sortedByDescending { it.title }
-            SortOption.SOURCE_ASC -> articles.sortedBy { it.source }
-            SortOption.SOURCE_DESC -> articles.sortedByDescending { it.source }
+            SortOption.MANUAL -> filteredArticles
+            SortOption.DATE_DESC -> filteredArticles.sortedByDescending { it.publishedTimestamp ?: 0L }
+            SortOption.DATE_ASC -> filteredArticles.sortedBy { it.publishedTimestamp ?: Long.MAX_VALUE }
+            SortOption.TITLE_ASC -> filteredArticles.sortedBy { it.title }
+            SortOption.TITLE_DESC -> filteredArticles.sortedByDescending { it.title }
+            SortOption.SOURCE_ASC -> filteredArticles.sortedBy { it.source }
+            SortOption.SOURCE_DESC -> filteredArticles.sortedByDescending { it.source }
         }
         FeedArticlesUiState(
             articles = sortedArticles,
             sortOption = sort,
-            feedTitle = feedTitle
+            showPlayed = showPlayed,
+            feedTitle = feedTitle,
+            downloadingArticleIds = downloadingIds
         )
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
         initialValue = FeedArticlesUiState(feedTitle = feedTitle)
     )
+
+    fun setShowPlayed(show: Boolean) {
+        _showPlayed.value = show
+    }
+
 
     fun setSortOption(option: SortOption) {
         if (_sortOption.value == option) {
@@ -96,10 +109,15 @@ class FeedArticlesViewModel @Inject constructor(
 
     fun addToQueue(article: Article) {
         viewModelScope.launch {
+            if (article.content.isEmpty()) {
+                _downloadingArticleIds.value += article.id
+            }
             repository.addToQueue(article.id).onFailure { error ->
                 if (error.message == "No internet connection") {
                     _uiEvent.emit(UiEvent.ShowSnackbar("Cannot download article without internet connection"))
                 }
+            }.also {
+                _downloadingArticleIds.value -= article.id
             }
         }
     }

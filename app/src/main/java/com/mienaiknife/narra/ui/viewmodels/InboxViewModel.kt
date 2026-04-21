@@ -50,35 +50,56 @@ class InboxViewModel @Inject constructor(
 
     private val _isRefreshing = MutableStateFlow(false)
     private val _sortOption = MutableStateFlow(SortOption.DATE_DESC)
+    private val _showPlayed = MutableStateFlow(false)
+
+    private val _downloadingArticleIds = MutableStateFlow<Set<String>>(emptySet())
 
     val uiState: StateFlow<InboxUiState> = combine(
         repository.getInboxArticles(),
         _isRefreshing,
         _sortOption,
+        _showPlayed,
+        _downloadingArticleIds,
         playbackManager.currentArticle,
         playbackManager.isPlaying
-    ) { articles, isRefreshing, sort, currentArticle, isPlaying ->
+    ) { args: Array<Any?> ->
+        val articles = args[0] as List<Article>
+        val isRefreshing = args[1] as Boolean
+        val sort = args[2] as SortOption
+        val showPlayed = args[3] as Boolean
+        val downloadingIds = args[4] as Set<String>
+        val currentArticle = args[5] as Article?
+        val isPlaying = args[6] as Boolean
+
+        val filteredArticles = if (showPlayed) articles else articles.filter { (it.progress ?: 0f) < 1f }
         val sortedArticles = when (sort) {
-            SortOption.MANUAL -> articles
-            SortOption.DATE_DESC -> articles.sortedByDescending { it.publishedTimestamp ?: 0L }
-            SortOption.DATE_ASC -> articles.sortedBy { it.publishedTimestamp ?: Long.MAX_VALUE }
-            SortOption.TITLE_ASC -> articles.sortedBy { it.title }
-            SortOption.TITLE_DESC -> articles.sortedByDescending { it.title }
-            SortOption.SOURCE_ASC -> articles.sortedBy { it.source }
-            SortOption.SOURCE_DESC -> articles.sortedByDescending { it.source }
+            SortOption.MANUAL -> filteredArticles
+            SortOption.DATE_DESC -> filteredArticles.sortedByDescending { it.publishedTimestamp ?: 0L }
+            SortOption.DATE_ASC -> filteredArticles.sortedBy { it.publishedTimestamp ?: Long.MAX_VALUE }
+            SortOption.TITLE_ASC -> filteredArticles.sortedBy { it.title }
+            SortOption.TITLE_DESC -> filteredArticles.sortedByDescending { it.title }
+            SortOption.SOURCE_ASC -> filteredArticles.sortedBy { it.source }
+            SortOption.SOURCE_DESC -> filteredArticles.sortedByDescending { it.source }
         }
         InboxUiState(
             articles = sortedArticles,
             isRefreshing = isRefreshing,
             sortOption = sort,
+            showPlayed = showPlayed,
             currentArticle = currentArticle,
-            isPlaying = isPlaying
+            isPlaying = isPlaying,
+            downloadingArticleIds = downloadingIds
         )
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
         initialValue = InboxUiState()
     )
+
+    fun setShowPlayed(show: Boolean) {
+        _showPlayed.value = show
+    }
+
 
     fun setSortOption(option: SortOption) {
         if (_sortOption.value == option) {
@@ -109,8 +130,13 @@ class InboxViewModel @Inject constructor(
 
     fun addToQueue(article: Article) {
         viewModelScope.launch {
+            if (article.content.isEmpty()) {
+                _downloadingArticleIds.value += article.id
+            }
             repository.addToQueue(article.id).onFailure { error ->
                 _uiEvent.emit(UiEvent.ShowSnackbar(error.message ?: "Failed to add to queue"))
+            }.also {
+                _downloadingArticleIds.value -= article.id
             }
         }
     }

@@ -32,8 +32,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
-import androidx.navigation.NavController
-import com.mienaiknife.narra.NavDestination
 import com.mienaiknife.narra.data.models.Article
 import com.mienaiknife.narra.data.models.SortOption
 import com.mienaiknife.narra.ui.components.QueueItem
@@ -42,7 +40,7 @@ import com.mienaiknife.narra.ui.viewmodels.FeedArticlesViewModel
 
 @Composable
 fun FeedArticlesScreen(
-    navController: NavController,
+    onBack: () -> Unit,
     viewModel: FeedArticlesViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -61,13 +59,11 @@ fun FeedArticlesScreen(
     Box(modifier = Modifier.fillMaxSize()) {
         FeedArticlesScreenContent(
             uiState = uiState,
-            onBackClick = { navController.popBackStack() },
-            onArticleClick = { article ->
-                navController.navigate(NavDestination.Reader(article.id))
-            },
+            onBackClick = onBack,
             onAddToQueue = { viewModel.addToQueue(it) },
             onDeleteArticle = { viewModel.deleteArticle(it) },
-            onSortOptionSelected = { viewModel.setSortOption(it) }
+            onSortOptionSelected = { viewModel.setSortOption(it) },
+            onShowPlayedChange = { viewModel.setShowPlayed(it) }
         )
 
         SnackbarHost(
@@ -82,10 +78,10 @@ fun FeedArticlesScreen(
 fun FeedArticlesScreenContent(
     uiState: com.mienaiknife.narra.ui.viewmodels.FeedArticlesUiState,
     onBackClick: () -> Unit,
-    onArticleClick: (Article) -> Unit,
     onAddToQueue: (Article) -> Unit,
     onDeleteArticle: (Article) -> Unit,
-    onSortOptionSelected: (SortOption) -> Unit = {}
+    onSortOptionSelected: (SortOption) -> Unit = {},
+    onShowPlayedChange: (Boolean) -> Unit = {}
 ) {
     var showMenu by remember { mutableStateOf(false) }
     var showSortSheet by remember { mutableStateOf(false) }
@@ -94,6 +90,8 @@ fun FeedArticlesScreenContent(
         SortBottomSheet(
             selectedOption = uiState.sortOption,
             onOptionSelected = onSortOptionSelected,
+            showPlayed = uiState.showPlayed,
+            onShowPlayedChange = onShowPlayedChange,
             onDismissRequest = { showSortSheet = false }
         )
     }
@@ -191,6 +189,7 @@ fun FeedArticlesScreenContent(
                     QueueItem(
                         article = article,
                         isPlaying = false,
+                        isDownloading = article.id in uiState.downloadingArticleIds,
                         onAddToQueueClick = { onAddToQueue(article) },
                         onRemoveClick = { onDeleteArticle(article) }
                     )

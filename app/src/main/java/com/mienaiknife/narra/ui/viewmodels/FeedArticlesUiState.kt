@@ -22,5 +22,7 @@ import com.mienaiknife.narra.data.models.SortOption
 data class FeedArticlesUiState(
     val articles: List<Article> = emptyList(),
     val sortOption: SortOption = SortOption.DATE_DESC,
-    val feedTitle: String = ""
+    val showPlayed: Boolean = false,
+    val feedTitle: String = "",
+    val downloadingArticleIds: Set<String> = emptySet()
 )

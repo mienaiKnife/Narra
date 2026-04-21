@@ -81,6 +81,16 @@ class PlaybackManager @Inject constructor(
         ttsPlayer.onSkipNext = { skipNext() }
         ttsPlayer.onSkipPrevious = { skipPrevious() }
 
+        scope.launch {
+            settingsManager.lastArticleId.first()?.let { id ->
+                val article = repository.getArticleById(id)
+                if (article != null) {
+                    val blocks = HtmlParser.parse(article.content)
+                    setCurrentArticle(article, blocks, playWhenReady = false)
+                }
+            }
+        }
+
         ttsPlayer.addListener(object : Player.Listener {
             override fun onIsPlayingChanged(isPlaying: Boolean) {
                 _isPlaying.value = isPlaying
@@ -160,6 +170,9 @@ class PlaybackManager @Inject constructor(
             val isTransition = _currentArticle.value != null
             
             _currentArticle.value = article
+            scope.launch {
+                settingsManager.setLastArticleId(article.id)
+            }
             _duration.value = 0L // TTS doesn't have fixed duration
             _currentPosition.value = 0L
             _currentParagraphIndex.value = 0

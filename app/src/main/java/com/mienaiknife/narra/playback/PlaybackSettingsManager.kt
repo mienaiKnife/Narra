@@ -36,8 +36,10 @@ class PlaybackSettingsManager @Inject constructor(
     private val pauseOnDisconnectKey = androidx.datastore.preferences.core.booleanPreferencesKey("pause_on_disconnect")
     private val pauseForInterruptionsKey = androidx.datastore.preferences.core.booleanPreferencesKey("pause_for_interruptions")
     private val autoPlayNextKey = androidx.datastore.preferences.core.booleanPreferencesKey("auto_play_next")
+    private val lastArticleIdKey = stringPreferencesKey("last_article_id")
     private val ttsEngineKey = stringPreferencesKey("tts_engine")
     private val ttsModelIdKey = stringPreferencesKey("tts_model_id")
+    private val ttsSpeakerIdKey = androidx.datastore.preferences.core.intPreferencesKey("tts_speaker_id")
     private val sherpaSpeedKey = androidx.datastore.preferences.core.floatPreferencesKey("sherpa_speed")
     private val sherpaNoiseScaleKey = androidx.datastore.preferences.core.floatPreferencesKey("sherpa_noise_scale")
     private val sherpaLengthScaleKey = androidx.datastore.preferences.core.floatPreferencesKey("sherpa_length_scale")
@@ -66,12 +68,20 @@ class PlaybackSettingsManager @Inject constructor(
         prefs[autoPlayNextKey] ?: true
     }
 
+    val lastArticleId: Flow<String?> = context.dataStore.data.map { prefs ->
+        prefs[lastArticleIdKey]
+    }
+
     val ttsEngine: Flow<String> = context.dataStore.data.map { prefs ->
         prefs[ttsEngineKey] ?: "android"
     }
 
     val ttsModelId: Flow<String?> = context.dataStore.data.map { prefs ->
         prefs[ttsModelIdKey]
+    }
+
+    val ttsSpeakerId: Flow<Int> = context.dataStore.data.map { prefs ->
+        prefs[ttsSpeakerIdKey] ?: 0
     }
 
     val sherpaSpeed: Flow<Float> = context.dataStore.data.map { prefs ->
@@ -116,6 +126,16 @@ class PlaybackSettingsManager @Inject constructor(
         }
     }
 
+    suspend fun setLastArticleId(articleId: String?) {
+        context.dataStore.edit { prefs ->
+            if (articleId == null) {
+                prefs.remove(lastArticleIdKey)
+            } else {
+                prefs[lastArticleIdKey] = articleId
+            }
+        }
+    }
+
     suspend fun setTtsEngine(engine: String) {
         context.dataStore.edit { prefs ->
             prefs[ttsEngineKey] = engine
@@ -129,6 +149,12 @@ class PlaybackSettingsManager @Inject constructor(
             } else {
                 prefs[ttsModelIdKey] = modelId
             }
+        }
+    }
+
+    suspend fun setTtsSpeakerId(speakerId: Int) {
+        context.dataStore.edit { prefs ->
+            prefs[ttsSpeakerIdKey] = speakerId
         }
     }
 

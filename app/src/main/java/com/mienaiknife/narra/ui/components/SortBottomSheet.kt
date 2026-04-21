@@ -62,6 +62,8 @@ fun SortBottomSheet(
     isQueue: Boolean = false,
     keepSorted: Boolean = false,
     onKeepSortedChange: (Boolean) -> Unit = {},
+    showPlayed: Boolean = false,
+    onShowPlayedChange: ((Boolean) -> Unit)? = null,
     sheetState: SheetState = rememberModalBottomSheetState()
 ) {
     ModalBottomSheet(
@@ -73,7 +75,9 @@ fun SortBottomSheet(
             onOptionSelected = onOptionSelected,
             isQueue = isQueue,
             keepSorted = keepSorted,
-            onKeepSortedChange = onKeepSortedChange
+            onKeepSortedChange = onKeepSortedChange,
+            showPlayed = showPlayed,
+            onShowPlayedChange = onShowPlayedChange
         )
     }
 }
@@ -85,6 +89,8 @@ fun SortBottomSheetContent(
     isQueue: Boolean = false,
     keepSorted: Boolean = false,
     onKeepSortedChange: (Boolean) -> Unit = {},
+    showPlayed: Boolean = false,
+    onShowPlayedChange: ((Boolean) -> Unit)? = null,
 ) {
     Column(
         modifier = Modifier
@@ -154,6 +160,34 @@ fun SortBottomSheetContent(
                 Switch(
                     checked = keepSorted,
                     onCheckedChange = onKeepSortedChange,
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = MaterialTheme.colorScheme.primary,
+                        checkedTrackColor = MaterialTheme.colorScheme.primaryContainer,
+                        uncheckedThumbColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                        uncheckedTrackColor = MaterialTheme.colorScheme.surfaceContainer
+                    )
+                )
+            }
+        }
+
+        if (onShowPlayedChange != null) {
+            Spacer(modifier = Modifier.height(if (isQueue) 0.dp else 16.dp))
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onShowPlayedChange(!showPlayed) }
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Show played",
+                    style = MaterialTheme.typography.bodyLarge
+                )
+                Switch(
+                    checked = showPlayed,
+                    onCheckedChange = onShowPlayedChange,
                     colors = SwitchDefaults.colors(
                         checkedThumbColor = MaterialTheme.colorScheme.primary,
                         checkedTrackColor = MaterialTheme.colorScheme.primaryContainer,

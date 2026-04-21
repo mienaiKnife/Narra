@@ -70,7 +70,7 @@ class ModelRepositoryImpl @Inject constructor(
         val defaultModels = listOf(
             TtsModel(
                 id = "vits-piper-en_US-amy-low",
-                name = "Amy (English, US)",
+                name = "Piper Amy (English, US)",
                 language = "en-US",
                 description = "Low quality, fast American English female voice",
                 type = TtsModelType.VITS,
@@ -80,7 +80,7 @@ class ModelRepositoryImpl @Inject constructor(
             ),
             TtsModel(
                 id = "vits-piper-en_US-ryan-medium",
-                name = "Ryan (English, US)",
+                name = "Piper Ryan (English, US)",
                 language = "en-US",
                 description = "Medium quality American English male voice",
                 type = TtsModelType.VITS,
@@ -92,7 +92,7 @@ class ModelRepositoryImpl @Inject constructor(
                 id = "kokoro-en-v0_19",
                 name = "Kokoro (English)",
                 language = "en",
-                description = "High quality Kokoro TTS model",
+                description = "High quality multi-voice Kokoro TTS",
                 type = TtsModelType.KOKORO,
                 modelUrl = "https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/model-small.onnx",
                 tokensUrl = "https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/tokens.txt",

@@ -25,5 +25,6 @@ data class QueueUiState(
     val sortOption: SortOption = SortOption.MANUAL,
     val keepSorted: Boolean = false,
     val currentArticle: Article? = null,
-    val isPlaying: Boolean = false
+    val isPlaying: Boolean = false,
+    val downloadingArticleIds: Set<String> = emptySet()
 )

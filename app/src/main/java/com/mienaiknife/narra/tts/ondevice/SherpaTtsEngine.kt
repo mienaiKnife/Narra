@@ -97,6 +97,8 @@ class SherpaTtsEngine @Inject constructor(
         }
     }
 
+    private var currentSpeakerId: Int? = null
+
     init {
         scope.launch {
             combine(
@@ -107,6 +109,12 @@ class SherpaTtsEngine @Inject constructor(
                 Triple(modelId, noiseScale, lengthScale)
             }.collectLatest { (modelId, noiseScale, lengthScale) ->
                 initializeEngine(modelId, noiseScale, lengthScale)
+            }
+        }
+
+        scope.launch {
+            settingsManager.ttsSpeakerId.collect { speakerId ->
+                currentSpeakerId = speakerId
             }
         }
 
@@ -277,7 +285,7 @@ class SherpaTtsEngine @Inject constructor(
             for (request in utteranceQueue) {
                 val engine = tts ?: continue
                 try {
-                    val audio = engine.generate(request.text)
+                    val audio = engine.generate(request.text, currentSpeakerId ?: 0)
                     synthesizedQueue.send(SynthesizedAudio(audio.samples, audio.sampleRate, request.utteranceId, request.text))
                 } catch (e: Exception) {
                     Log.e("SherpaTtsEngine", "Synthesis failed", e)
@@ -407,9 +415,16 @@ class SherpaTtsEngine @Inject constructor(
 
     override fun setPlaybackSpeed(speed: Float) {
         playbackSpeed = speed
-        try {
-            audioTrack?.playbackParams = audioTrack?.playbackParams?.setSpeed(speed) ?: return
-        } catch (_: Exception) {
+        scope.launch(Dispatchers.Main) {
+            try {
+                audioTrack?.let { track ->
+                    if (track.state == AudioTrack.STATE_INITIALIZED) {
+                        track.playbackParams = track.playbackParams.setSpeed(speed)
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e("SherpaTtsEngine", "Failed to set playback speed", e)
+            }
         }
     }
 
@@ -420,7 +435,17 @@ class SherpaTtsEngine @Inject constructor(
 
     override fun setVolume(volume: Float) {
         this.volume = volume
-        audioTrack?.setVolume(volume)
+        scope.launch(Dispatchers.Main) {
+            try {
+                audioTrack?.let { track ->
+                    if (track.state == AudioTrack.STATE_INITIALIZED) {
+                        track.setVolume(volume)
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e("SherpaTtsEngine", "Failed to set volume", e)
+            }
+        }
     }
 
     override fun release() {

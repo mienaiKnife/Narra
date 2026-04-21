@@ -32,8 +32,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
@@ -53,6 +53,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -88,9 +89,9 @@ fun VoicesSettingsScreen(
         uiState = uiState,
         onSetEngine = viewModel::setEngine,
         onSelectModel = viewModel::selectModel,
+        onSetSpeakerId = viewModel::setSpeakerId,
         onDownloadModel = viewModel::downloadModel,
         onDeleteModel = viewModel::deleteModel,
-        onSetSherpaSpeed = viewModel::setSherpaSpeed,
         onSetSherpaNoiseScale = viewModel::setSherpaNoiseScale,
         onSetSherpaLengthScale = viewModel::setSherpaLengthScale,
         onBack = onBack
@@ -104,24 +105,32 @@ fun VoicesSettingsContent(
     modifier: Modifier = Modifier,
     onSetEngine: (String) -> Unit,
     onSelectModel: (String?) -> Unit,
+    onSetSpeakerId: (Int) -> Unit,
     onDownloadModel: (String) -> Unit,
     onDeleteModel: (String) -> Unit,
-    onSetSherpaSpeed: (Float) -> Unit,
     onSetSherpaNoiseScale: (Float) -> Unit,
     onSetSherpaLengthScale: (Float) -> Unit,
     onBack: () -> Unit
 ) {
     val context = LocalContext.current
-    val engines = listOf("Android's native TTS", "On-device AI (Sherpa-ONNX)", "Cloud AI providers")
-    val engineValues = listOf("android", "ondevice", "cloud")
+    val engines = listOf("Android's native TTS", "On-device AI (Sherpa-ONNX)")
+    val engineValues = listOf("android", "ondevice")
     var expanded by remember { mutableStateOf(false) }
+
+    val kokoroVoices = listOf(
+        "Heart (Female)" to 0,
+        "Bella (Female)" to 1,
+        "Michael (Male)" to 6
+    )
+    var kokoroExpanded by remember { mutableStateOf(false) }
 
     val selectedEngineName = when (uiState.selectedEngine) {
         "android" -> engines[0]
         "ondevice" -> engines[1]
-        "cloud" -> engines[2]
         else -> engines[0]
     }
+
+    val scrollState = rememberScrollState()
 
     Column(
         modifier = modifier
@@ -158,6 +167,7 @@ fun VoicesSettingsContent(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(horizontal = 16.dp)
+                .verticalScroll(scrollState)
         ) {
             Text(
                 text = "Engine selection",
@@ -219,6 +229,10 @@ fun VoicesSettingsContent(
                 }
 
                 "ondevice" -> {
+                    val sliderColors = SliderDefaults.colors(
+                        activeTrackColor = MaterialTheme.colorScheme.primary,
+                        inactiveTrackColor = MaterialTheme.colorScheme.primaryContainer,
+                    )
                     Text(
                         text = "Voice data",
                         style = MaterialTheme.typography.titleSmall,
@@ -229,10 +243,10 @@ fun VoicesSettingsContent(
                     Surface(
                         color = MaterialTheme.colorScheme.surfaceContainer,
                         shape = MaterialTheme.shapes.medium,
-                        modifier = Modifier.weight(1f, fill = false)
+                        modifier = Modifier.fillMaxWidth()
                     ) {
-                        LazyColumn {
-                            itemsIndexed(uiState.availableModels) { index, model ->
+                        Column {
+                            uiState.availableModels.forEachIndexed { index, model ->
                                 TtsModelItem(
                                     model = model,
                                     isSelected = uiState.selectedModelId == model.id,
@@ -251,6 +265,52 @@ fun VoicesSettingsContent(
                         }
                     }
 
+                    val selectedModel = uiState.availableModels.find { it.id == uiState.selectedModelId }
+                    if (selectedModel?.type == TtsModelType.KOKORO) {
+                        Spacer(modifier = Modifier.height(24.dp))
+
+                        Text(
+                            text = "Kokoro Voice",
+                            style = MaterialTheme.typography.titleSmall,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.padding(vertical = 8.dp)
+                        )
+
+                        val currentVoice = kokoroVoices.find { it.second == uiState.selectedSpeakerId }?.first ?: "Unknown"
+
+                        ExposedDropdownMenuBox(
+                            expanded = kokoroExpanded,
+                            onExpandedChange = { kokoroExpanded = !kokoroExpanded },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            OutlinedTextField(
+                                value = currentVoice,
+                                onValueChange = {},
+                                readOnly = true,
+                                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = kokoroExpanded) },
+                                modifier = Modifier
+                                    .menuAnchor(type = ExposedDropdownMenuAnchorType.PrimaryNotEditable, enabled = true)
+                                    .fillMaxWidth(),
+                                colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors()
+                            )
+                            ExposedDropdownMenu(
+                                expanded = kokoroExpanded,
+                                onDismissRequest = { kokoroExpanded = false }
+                            ) {
+                                kokoroVoices.forEach { (name, id) ->
+                                    DropdownMenuItem(
+                                        text = { Text(name) },
+                                        onClick = {
+                                            onSetSpeakerId(id)
+                                            kokoroExpanded = false
+                                        },
+                                        contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
+                                    )
+                                }
+                            }
+                        }
+                    }
+
                     Spacer(modifier = Modifier.height(24.dp))
 
                     Text(
@@ -262,20 +322,6 @@ fun VoicesSettingsContent(
 
                     Column(modifier = Modifier.padding(horizontal = 8.dp)) {
                         Text(
-                            text = "Speed: ${"%.2f".format(uiState.sherpaSpeed)}x",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onBackground
-                        )
-                        Slider(
-                            value = uiState.sherpaSpeed,
-                            onValueChange = onSetSherpaSpeed,
-                            valueRange = 0.5f..2.0f,
-                            modifier = Modifier.fillMaxWidth()
-                        )
-
-                        Spacer(modifier = Modifier.height(8.dp))
-
-                        Text(
                             text = "Noise Scale (Expressiveness): ${"%.3f".format(uiState.sherpaNoiseScale)}",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onBackground
@@ -284,7 +330,15 @@ fun VoicesSettingsContent(
                             value = uiState.sherpaNoiseScale,
                             onValueChange = onSetSherpaNoiseScale,
                             valueRange = 0.0f..1.0f,
-                            modifier = Modifier.fillMaxWidth()
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = sliderColors,
+                            track = { sliderState ->
+                                SliderDefaults.Track(
+                                    sliderState = sliderState,
+                                    colors = sliderColors,
+                                    drawStopIndicator = null
+                                )
+                            }
                         )
 
                         Spacer(modifier = Modifier.height(8.dp))
@@ -298,8 +352,17 @@ fun VoicesSettingsContent(
                             value = uiState.sherpaLengthScale,
                             onValueChange = onSetSherpaLengthScale,
                             valueRange = 0.5f..2.0f,
-                            modifier = Modifier.fillMaxWidth()
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = sliderColors,
+                            track = { sliderState ->
+                                SliderDefaults.Track(
+                                    sliderState = sliderState,
+                                    colors = sliderColors,
+                                    drawStopIndicator = null
+                                )
+                            }
                         )
+                        Spacer(modifier = Modifier.height(16.dp))
                     }
                 }
             }
@@ -410,7 +473,7 @@ fun VoicesSettingsScreenPreview() {
         availableModels = listOf(
             TtsModel(
                 id = "vits-piper-en_US-amy-low",
-                name = "Amy (English, US)",
+                name = "Piper Amy (English, US)",
                 language = "en-US",
                 description = "Low quality, fast American English female voice",
                 type = TtsModelType.VITS,
@@ -420,20 +483,10 @@ fun VoicesSettingsScreenPreview() {
             ),
             TtsModel(
                 id = "vits-piper-en_US-ryan-medium",
-                name = "Ryan (English, US)",
+                name = "Piper Ryan (English, US)",
                 language = "en-US",
                 description = "Medium quality American English male voice",
                 type = TtsModelType.VITS,
-                modelUrl = "",
-                tokensUrl = "",
-                isDownloaded = false
-            ),
-            TtsModel(
-                id = "kokoro-en-v0_19",
-                name = "Kokoro (English)",
-                language = "en",
-                description = "High quality Kokoro TTS model",
-                type = TtsModelType.KOKORO,
                 modelUrl = "",
                 tokensUrl = "",
                 isDownloaded = false
@@ -463,9 +516,9 @@ fun VoicesSettingsScreenPreview() {
                     uiState = mockUiState,
                     onSetEngine = {},
                     onSelectModel = {},
+                    onSetSpeakerId = {},
                     onDownloadModel = {},
                     onDeleteModel = {},
-                    onSetSherpaSpeed = {},
                     onSetSherpaNoiseScale = {},
                     onSetSherpaLengthScale = {},
                     onBack = {}

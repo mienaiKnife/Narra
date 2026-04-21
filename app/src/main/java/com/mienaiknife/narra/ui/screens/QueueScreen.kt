@@ -73,9 +73,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
-import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
-import com.mienaiknife.narra.NavDestination
 import com.mienaiknife.narra.data.models.Article
 import com.mienaiknife.narra.data.models.SampleArticles
 import com.mienaiknife.narra.data.models.SortOption
@@ -91,8 +89,7 @@ import java.util.concurrent.TimeUnit
 
 @Composable
 fun QueueScreen(
-    navController: NavController,
-    onArticleClick: (String) -> Unit,
+    onNavigateToHistory: () -> Unit,
     viewModel: QueueViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -117,7 +114,7 @@ fun QueueScreen(
             isPlaying = uiState.isPlaying,
             sortOption = uiState.sortOption,
             keepSorted = uiState.keepSorted,
-            onArticleClick = onArticleClick,
+            downloadingArticleIds = uiState.downloadingArticleIds,
             onPlayPauseClick = { article -> viewModel.onPlayPauseClick(article) },
             onMarkAsPlayedClick = { article -> viewModel.togglePlayedStatus(article) },
             onRemoveFromQueue = { article ->
@@ -133,7 +130,7 @@ fun QueueScreen(
                     }
                 }
             },
-            onHistoryClick = { navController.navigate(NavDestination.History) },
+            onHistoryClick = onNavigateToHistory,
             onClearQueue = { viewModel.clearQueue() },
             onRefresh = { viewModel.refresh() },
             onSortOptionSelected = { viewModel.setSortOption(it) },
@@ -157,7 +154,7 @@ fun QueueScreenContent(
     isPlaying: Boolean = false,
     sortOption: SortOption = SortOption.DATE_DESC,
     keepSorted: Boolean = false,
-    onArticleClick: (String) -> Unit = {},
+    downloadingArticleIds: Set<String> = emptySet(),
     onPlayPauseClick: (Article) -> Unit = {},
     onMarkAsPlayedClick: (Article) -> Unit = {},
     onRemoveFromQueue: (Article) -> Unit = {},
@@ -326,6 +323,7 @@ fun QueueScreenContent(
                         QueueItem(
                             article = article,
                             isPlaying = isPlaying && currentArticle?.id == article.id,
+                            isDownloading = downloadingArticleIds.contains(article.id),
                             modifier = Modifier
                                 .offset { offset }
                                 .zIndex(zIndex)

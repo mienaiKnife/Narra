@@ -52,15 +52,17 @@ class QueueViewModel @Inject constructor(
     private val _isRefreshing = MutableStateFlow(false)
     private val _sortOption = MutableStateFlow(SortOption.MANUAL)
     private val _keepSorted = MutableStateFlow(false)
+    private val _downloadingArticleIds = MutableStateFlow<Set<String>>(emptySet())
 
     val uiState: StateFlow<QueueUiState> = combine(
         repository.getQueueArticles(),
         combine(_isRefreshing, _sortOption, _keepSorted) { refreshing, sort, keep ->
             Triple(refreshing, sort, keep)
         },
+        _downloadingArticleIds,
         playbackManager.currentArticle,
         playbackManager.isPlaying
-    ) { articles, settings, currentArticle, isPlaying ->
+    ) { articles, settings, downloadingIds, currentArticle, isPlaying ->
         val (isRefreshing, sort, keep) = settings
 
         val sortedArticles = if (keep) {
@@ -82,7 +84,8 @@ class QueueViewModel @Inject constructor(
             sortOption = sort,
             keepSorted = keep,
             currentArticle = currentArticle,
-            isPlaying = isPlaying
+            isPlaying = isPlaying,
+            downloadingArticleIds = downloadingIds
         )
     }.stateIn(
         scope = viewModelScope,
@@ -182,8 +185,11 @@ class QueueViewModel @Inject constructor(
 
     fun addToQueue(articleId: String) {
         viewModelScope.launch {
+            _downloadingArticleIds.value += articleId
             repository.addToQueue(articleId).onFailure { error ->
                 _uiEvent.emit(UiEvent.ShowSnackbar(error.message ?: "Failed to add to queue"))
+            }.also {
+                _downloadingArticleIds.value -= articleId
             }
         }
     }

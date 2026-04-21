@@ -48,18 +48,21 @@ class HistoryViewModel @Inject constructor(
     }
 
     private val _isRefreshing = MutableStateFlow(false)
+    private val _downloadingArticleIds = MutableStateFlow<Set<String>>(emptySet())
 
     val uiState: StateFlow<HistoryUiState> = combine(
         repository.getHistoryArticles(),
         _isRefreshing,
+        _downloadingArticleIds,
         playbackManager.currentArticle,
         playbackManager.isPlaying
-    ) { articles, isRefreshing, currentArticle, isPlaying ->
+    ) { articles, isRefreshing, downloadingIds, currentArticle, isPlaying ->
         HistoryUiState(
             articles = articles,
             isRefreshing = isRefreshing,
             currentArticle = currentArticle,
-            isPlaying = isPlaying
+            isPlaying = isPlaying,
+            downloadingArticleIds = downloadingIds
         )
     }.stateIn(
         scope = viewModelScope,
@@ -82,8 +85,13 @@ class HistoryViewModel @Inject constructor(
 
     fun addToQueue(article: Article) {
         viewModelScope.launch {
+            if (article.content.isEmpty()) {
+                _downloadingArticleIds.value += article.id
+            }
             repository.addToQueue(article.id).onFailure { error ->
                 _uiEvent.emit(UiEvent.ShowSnackbar(error.message ?: "Failed to add to queue"))
+            }.also {
+                _downloadingArticleIds.value -= article.id
             }
         }
     }

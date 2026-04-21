@@ -50,9 +50,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
-import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
-import com.mienaiknife.narra.NavDestination
 import com.mienaiknife.narra.data.models.Article
 import com.mienaiknife.narra.data.models.SampleArticles
 import com.mienaiknife.narra.ui.components.BottomNavBar
@@ -63,7 +61,7 @@ import com.mienaiknife.narra.ui.viewmodels.HistoryViewModel
 
 @Composable
 fun HistoryScreen(
-    navController: NavController,
+    onBack: () -> Unit,
     viewModel: HistoryViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -85,9 +83,9 @@ fun HistoryScreen(
             isRefreshing = uiState.isRefreshing,
             isPlaying = uiState.isPlaying,
             currentArticleId = uiState.currentArticle?.id,
-            onBackClick = { navController.popBackStack() },
+            downloadingArticleIds = uiState.downloadingArticleIds,
+            onBackClick = onBack,
             onPlayPauseClick = { viewModel.onPlayPauseClick(it) },
-            onArticleClick = { articleId -> navController.navigate(NavDestination.Reader(articleId)) },
             onMarkAsPlayedClick = { viewModel.togglePlayedStatus(it) },
             onClearHistory = { viewModel.clearHistory() },
             onRefresh = { viewModel.refresh() }
@@ -105,9 +103,9 @@ fun HistoryScreenContent(
     isRefreshing: Boolean = false,
     isPlaying: Boolean = false,
     currentArticleId: String? = null,
+    downloadingArticleIds: Set<String> = emptySet(),
     onBackClick: () -> Unit,
     onPlayPauseClick: (Article) -> Unit,
-    onArticleClick: (String) -> Unit = {},
     onMarkAsPlayedClick: (Article) -> Unit = {},
     onClearHistory: () -> Unit = {},
     onRefresh: () -> Unit = {}
@@ -204,6 +202,7 @@ fun HistoryScreenContent(
                         QueueItem(
                             article = article,
                             isPlaying = isPlaying && currentArticleId == article.id,
+                            isDownloading = downloadingArticleIds.contains(article.id),
                             modifier = Modifier.animateItem(),
                             onPlayPauseClick = { onPlayPauseClick(article) },
                             onMarkAsPlayedClick = { onMarkAsPlayedClick(article) }

@@ -47,6 +47,7 @@ class VoicesSettingsViewModel @Inject constructor(
         modelRepository.getAvailableModels(),
         settingsManager.ttsEngine,
         settingsManager.ttsModelId,
+        settingsManager.ttsSpeakerId,
         settingsManager.sherpaSpeed,
         settingsManager.sherpaNoiseScale,
         settingsManager.sherpaLengthScale
@@ -54,10 +55,11 @@ class VoicesSettingsViewModel @Inject constructor(
         val models = args[0] as List<TtsModel>
         val engine = args[1] as String
         val modelId = args[2] as String?
-        val speed = args[3] as Float
-        val noiseScale = args[4] as Float
-        val lengthScale = args[5] as Float
-        VoicesSettingsUiState(models, engine, modelId, speed, noiseScale, lengthScale)
+        val speakerId = args[3] as Int
+        val speed = args[4] as Float
+        val noiseScale = args[5] as Float
+        val lengthScale = args[6] as Float
+        VoicesSettingsUiState(models, engine, modelId, speakerId, speed, noiseScale, lengthScale)
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
@@ -73,6 +75,12 @@ class VoicesSettingsViewModel @Inject constructor(
     fun selectModel(modelId: String?) {
         viewModelScope.launch {
             settingsManager.setTtsModelId(modelId)
+        }
+    }
+
+    fun setSpeakerId(speakerId: Int) {
+        viewModelScope.launch {
+            settingsManager.setTtsSpeakerId(speakerId)
         }
     }
 

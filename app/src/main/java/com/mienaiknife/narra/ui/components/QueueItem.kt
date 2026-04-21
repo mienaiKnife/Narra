@@ -53,6 +53,7 @@ fun QueueItem(
     article: Article,
     isPlaying: Boolean,
     modifier: Modifier = Modifier,
+    isDownloading: Boolean = false,
     onPlayPauseClick: () -> Unit = {},
     onRemoveClick: () -> Unit = {},
     onAddToQueueClick: () -> Unit = {},
@@ -65,8 +66,11 @@ fun QueueItem(
         QueueItemRow(
             article = article,
             isPlaying = isPlaying,
+            isDownloading = isDownloading,
             onLongClick = { showMenu = true },
-            onPlayPauseClick = onPlayPauseClick,
+            onPlayPauseClick = {
+                if (article.isInQueue) onPlayPauseClick() else onAddToQueueClick()
+            },
             dragModifier = dragModifier
         )
 
@@ -131,6 +135,7 @@ private fun QueueItemRow(
     article: Article,
     isPlaying: Boolean,
     modifier: Modifier = Modifier,
+    isDownloading: Boolean = false,
     onLongClick: () -> Unit = {},
     onPlayPauseClick: () -> Unit = {},
     dragModifier: Modifier? = null
@@ -144,7 +149,7 @@ private fun QueueItemRow(
         if (dragModifier != null && article.isInQueue) {
             Box(
                 modifier = Modifier
-                    .size(width = 48.dp, height = 48.dp)
+                    .size(width = 32.dp, height = 48.dp)
                     .then(dragModifier),
                 contentAlignment = Alignment.Center
             ) {
@@ -191,7 +196,10 @@ private fun QueueItemRow(
             Spacer(modifier = Modifier.width(12.dp))
 
             Column(
-                modifier = Modifier.weight(1f)
+                modifier = Modifier
+                    .weight(1f)
+                    .heightIn(min = 64.dp),
+                verticalArrangement = Arrangement.Center
             ) {
                 val sourceText = buildString {
                     val formattedDate = DateUtils.formatPublishedDate(article.publishedAt)
@@ -219,58 +227,52 @@ private fun QueueItemRow(
                     overflow = TextOverflow.Ellipsis
                 )
 
-                Spacer(modifier = Modifier.height(4.dp))
-
                 val totalDuration = remember(article.content) { DateUtils.estimateReadingTimeMs(article.content) }
                 val progress = article.progress ?: 0f
                 val currentPosition = (progress * totalDuration).toLong()
                 val remainingTime = totalDuration - currentPosition
 
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text(
-                        text = if (progress > 0f && progress < 1f) {
-                            DateUtils.formatElapsedTime(currentPosition)
-                        } else {
-                            DateUtils.formatElapsedTime(totalDuration)
-                        },
-                        style = MaterialTheme.typography.labelSmall,
-                        color = if (article.progress == 1f) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f) else MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-
-                    if (progress > 0f && progress < 1f) {
-                        Spacer(modifier = Modifier.width(8.dp))
-
-                        LinearProgressIndicator(
-                            progress = { progress },
-                            modifier = Modifier
-                                .weight(1f)
-                                .height(5.dp)
-                                .clip(RoundedCornerShape(2.dp)),
-                            color = MaterialTheme.colorScheme.primary,
-                            trackColor = MaterialTheme.colorScheme.primaryContainer,
-                            gapSize = 5.dp,
-                            drawStopIndicator = {}
-                        )
-
-                        Spacer(modifier = Modifier.width(8.dp))
-
+                if (totalDuration > 0) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
                         Text(
-                            text = "-${DateUtils.formatElapsedTime(remainingTime)}",
+                            text = if (progress > 0f && progress < 1f) {
+                                DateUtils.formatElapsedTime(currentPosition)
+                            } else {
+                                DateUtils.formatElapsedTime(totalDuration)
+                            },
                             style = MaterialTheme.typography.labelSmall,
                             color = if (article.progress == 1f) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f) else MaterialTheme.colorScheme.onSurfaceVariant,
                         )
-                    } else if (progress == 1f) {
-                        Text(
-                            text = " • Played",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-                        )
-                        Spacer(modifier = Modifier.weight(1f))
-                    } else {
-                        Spacer(modifier = Modifier.weight(1f))
+
+                        if (progress > 0f && progress < 1f) {
+                            Spacer(modifier = Modifier.width(8.dp))
+
+                            LinearProgressIndicator(
+                                progress = { progress },
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(5.dp)
+                                    .clip(RoundedCornerShape(2.dp)),
+                                color = MaterialTheme.colorScheme.primary,
+                                trackColor = MaterialTheme.colorScheme.primaryContainer,
+                                gapSize = 5.dp,
+                                drawStopIndicator = {}
+                            )
+
+                            Spacer(modifier = Modifier.width(8.dp))
+
+                            Text(
+                                text = "-${DateUtils.formatElapsedTime(remainingTime)}",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = if (article.progress == 1f) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f) else MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        } else {
+                            Spacer(modifier = Modifier.weight(1f))
+                        }
                     }
                 }
             }
@@ -280,7 +282,8 @@ private fun QueueItemRow(
 
         IconButton(
             onClick = onPlayPauseClick,
-            modifier = Modifier.padding(end = 8.dp)
+            modifier = Modifier.padding(end = 8.dp),
+            enabled = !isDownloading
         ) {
             val (icon, contentDescription) = when {
                 !article.isInQueue -> Icons.AutoMirrored.Outlined.PlaylistAdd to "Add to playlist"
@@ -298,12 +301,20 @@ private fun QueueItemRow(
                     ),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = contentDescription,
-                    modifier = Modifier.size(24.dp),
-                    tint = MaterialTheme.colorScheme.onSurface
-                )
+                if (isDownloading) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(28.dp),
+                        strokeWidth = 2.dp,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                } else {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = contentDescription,
+                        modifier = Modifier.size(24.dp),
+                        tint = MaterialTheme.colorScheme.onSurface
+                    )
+                }
             }
         }
     }
