@@ -23,7 +23,7 @@ data class TtsModel(
     val description: String,
     val type: TtsModelType,
     val modelUrl: String,
-    val tokensUrl: String,
+    val tokensUrl: String = "",
     val extraUrls: Map<String, String> = emptyMap(),
     val dataDir: String? = null,
     val sizeBytes: Long = 0,

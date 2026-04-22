@@ -31,6 +31,8 @@ object NetworkModule {
     @Singleton
     fun provideOkHttpClient(): OkHttpClient {
         return OkHttpClient.Builder()
+            .followRedirects(true)
+            .followSslRedirects(true)
             .build()
     }
 }

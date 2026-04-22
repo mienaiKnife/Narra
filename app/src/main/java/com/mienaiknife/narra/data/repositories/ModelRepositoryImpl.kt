@@ -29,7 +29,10 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import org.apache.commons.compress.archivers.tar.TarArchiveInputStream
+import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream
 import java.io.File
+import java.io.FileInputStream
 import java.io.FileOutputStream
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -56,14 +59,12 @@ class ModelRepositoryImpl @Inject constructor(
     }
 
     /**
-     * Ensures that the default models are present in the database.
+     * Ensures that the default models are present in the database and updated if needed.
      * Should be called during app startup or when entering the voices settings.
      */
-    suspend fun ensureDefaultModelsInitialized() = withContext(Dispatchers.IO) {
-        val count = ttsModelDao.getModelCount()
-        if (count == 0) {
-            initializeDefaultModels()
-        }
+    override suspend fun ensureDefaultModelsInitialized() = withContext(Dispatchers.IO) {
+        ttsModelDao.deleteStaleKokoroModels()
+        initializeDefaultModels()
     }
 
     private suspend fun initializeDefaultModels() {
@@ -74,8 +75,7 @@ class ModelRepositoryImpl @Inject constructor(
                 language = "en-US",
                 description = "Low quality, fast American English female voice",
                 type = TtsModelType.VITS,
-                modelUrl = "https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/vits-piper-en_US-amy-low.onnx",
-                tokensUrl = "https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/tokens.txt",
+                modelUrl = "https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/vits-piper-en_US-amy-low.tar.bz2",
                 sizeBytes = 28000000 
             ),
             TtsModel(
@@ -84,8 +84,7 @@ class ModelRepositoryImpl @Inject constructor(
                 language = "en-US",
                 description = "Medium quality American English male voice",
                 type = TtsModelType.VITS,
-                modelUrl = "https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/vits-piper-en_US-ryan-medium.onnx",
-                tokensUrl = "https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/tokens.txt",
+                modelUrl = "https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/vits-piper-en_US-ryan-medium.tar.bz2",
                 sizeBytes = 60000000 
             ),
             TtsModel(
@@ -94,25 +93,34 @@ class ModelRepositoryImpl @Inject constructor(
                 language = "en",
                 description = "High quality multi-voice Kokoro TTS",
                 type = TtsModelType.KOKORO,
-                modelUrl = "https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/model-small.onnx",
-                tokensUrl = "https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/tokens.txt",
+                modelUrl = "https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/kokoro-en-v0_19.tar.bz2",
                 extraUrls = mapOf("voices.bin" to "https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/voices.bin"),
                 sizeBytes = 80000000
             ),
             TtsModel(
-                id = "matcha-en-ljspeech",
-                name = "Matcha (English)",
-                language = "en",
+                id = "matcha-icefall-en_US-ljspeech",
+                name = "Matcha Icefall (English)",
+                language = "en-US",
                 description = "High quality Matcha TTS model",
                 type = TtsModelType.MATCHA,
-                modelUrl = "https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/matcha-en-ljspeech.onnx",
-                tokensUrl = "https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/tokens.txt",
-                extraUrls = mapOf("vocoder.onnx" to "https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/hifigan_v2.onnx"),
+                modelUrl = "https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/matcha-icefall-en_US-ljspeech.tar.bz2",
+                extraUrls = mapOf("vocoder.onnx" to "https://github.com/k2-fsa/sherpa-onnx/releases/download/vocoder-models/vocos-22khz-univ.onnx"),
                 sizeBytes = 150000000
             )
         )
         defaultModels.forEach { model ->
-            ttsModelDao.insertModel(TtsModelEntity.fromDomain(model))
+            val existing = ttsModelDao.getModelById(model.id)
+            if (existing != null) {
+                // Update only the metadata, preserve download status and dataDir
+                val updated = TtsModelEntity.fromDomain(model).copy(
+                    isDownloaded = existing.isDownloaded,
+                    progress = existing.progress,
+                    dataDir = existing.dataDir
+                )
+                ttsModelDao.insertModel(updated)
+            } else {
+                ttsModelDao.insertModel(TtsModelEntity.fromDomain(model))
+            }
         }
     }
 
@@ -126,29 +134,64 @@ class ModelRepositoryImpl @Inject constructor(
         }
 
         try {
-            val filesToDownload = mutableListOf<Pair<String, String>>()
-            filesToDownload.add(model.modelUrl to "model.onnx")
-            filesToDownload.add(model.tokensUrl to "tokens.txt")
-            model.extraUrls.forEach { (fileName, url) ->
-                filesToDownload.add(url to fileName)
+            val isArchive = model.modelUrl.endsWith(".tar.bz2")
+            val extraFiles = model.extraUrls.toList()
+            // Archives contain everything (model + tokens). Non-archives might need tokens separately.
+            val totalSteps = if (isArchive) {
+                1 + extraFiles.size
+            } else {
+                1 + (if (model.tokensUrl.isNotEmpty()) 1 else 0) + extraFiles.size
             }
+            var currentStep = 0
 
-            val totalFiles = filesToDownload.size
-            filesToDownload.forEachIndexed { index, (url, fileName) ->
-                val targetFile = File(targetDir, fileName)
-                downloadFile(url, targetFile) { fileProgress ->
-                    val overallProgress = (index + fileProgress) / totalFiles
-                    // Update progress in DB every ~1% to avoid excessive DB writes
-                    if (overallProgress - model.progress > 0.01f || overallProgress >= 0.99f) {
+            if (isArchive) {
+                val archiveFile = File(targetDir, "archive.tar.bz2")
+                android.util.Log.d("ModelRepository", "Downloading archive: ${model.modelUrl}")
+                downloadFile(model.modelUrl, archiveFile) { progress ->
+                    val overallProgress = (currentStep + progress) / totalSteps
+                    // Ensure progress is at least slightly above 0 so UI shows progress bar
+                    ttsModelDao.updateProgress(modelId, overallProgress.coerceAtLeast(0.01f))
+                }
+                android.util.Log.d("ModelRepository", "Extracting archive...")
+                extractTarBz2(archiveFile, targetDir)
+                archiveFile.delete()
+                
+                android.util.Log.d("ModelRepository", "Moving model files...")
+                findAndMoveModelFiles(targetDir)
+                currentStep++
+            } else {
+                val targetFile = File(targetDir, "model.onnx")
+                downloadFile(model.modelUrl, targetFile) { progress ->
+                    val overallProgress = (currentStep + progress) / totalSteps
+                    ttsModelDao.updateProgress(modelId, overallProgress)
+                }
+                currentStep++
+
+                if (model.tokensUrl.isNotEmpty()) {
+                    val tokensFile = File(targetDir, "tokens.txt")
+                    downloadFile(model.tokensUrl, tokensFile) { progress ->
+                        val overallProgress = (currentStep + progress) / totalSteps
                         ttsModelDao.updateProgress(modelId, overallProgress)
                     }
+                    currentStep++
                 }
+            }
+
+            // Download extra files (like voices.bin or vocoder.onnx)
+            extraFiles.forEach { (fileName, url) ->
+                val targetFile = File(targetDir, fileName)
+                downloadFile(url, targetFile) { progress ->
+                    val overallProgress = (currentStep + progress) / totalSteps
+                    ttsModelDao.updateProgress(modelId, overallProgress)
+                }
+                currentStep++
             }
 
             ttsModelDao.updateProgress(modelId, 1.0f)
             ttsModelDao.updateDownloadStatus(modelId, true, targetDir.absolutePath)
             Result.success(Unit)
         } catch (e: Exception) {
+            android.util.Log.e("ModelRepository", "Failed to download model $modelId", e)
             ttsModelDao.updateProgress(modelId, 0f)
             targetDir.deleteRecursively()
             Result.failure(e)
@@ -156,12 +199,17 @@ class ModelRepositoryImpl @Inject constructor(
     }
 
     private suspend fun downloadFile(url: String, targetFile: File, onProgress: suspend (Float) -> Unit = {}) {
-        val request = Request.Builder().url(url).build()
+        val request = Request.Builder()
+            .url(url)
+            .header("User-Agent", "Narra/1.0")
+            .build()
         okHttpClient.newCall(request).execute().use { response ->
-            if (!response.isSuccessful) throw Exception("Failed to download file: ${response.code}")
+            if (!response.isSuccessful) throw Exception("Failed to download file: ${response.code} ${response.message}")
             
-            val body = response.body
+            val body = response.body ?: throw Exception("Response body is null")
             val contentLength = body.contentLength()
+            
+            android.util.Log.d("ModelRepository", "Downloading $url, size: $contentLength")
             
             body.byteStream().use { inputStream ->
                 FileOutputStream(targetFile).use { outputStream ->
@@ -174,10 +222,72 @@ class ModelRepositoryImpl @Inject constructor(
                         totalBytesRead += bytesRead
                         if (contentLength > 0) {
                             onProgress(totalBytesRead.toFloat() / contentLength)
+                        } else {
+                            // If content length is unknown, we can't show accurate progress,
+                            // but we can still signal that activity is happening.
+                            // We use a small fake progress to keep the UI in "downloading" state.
+                            onProgress(0.01f) 
                         }
                     }
                 }
             }
+            android.util.Log.d("ModelRepository", "Finished downloading $url")
+        }
+    }
+
+    private fun extractTarBz2(archiveFile: File, targetDir: File) {
+        FileInputStream(archiveFile).use { fis ->
+            BZip2CompressorInputStream(fis).use { bzis ->
+                TarArchiveInputStream(bzis).use { tais ->
+                    var entry = tais.nextEntry
+                    while (entry != null) {
+                        if (!entry.isDirectory) {
+                            val curFile = File(targetDir, entry.name)
+                            curFile.parentFile?.mkdirs()
+                            FileOutputStream(curFile).use { fos ->
+                                tais.copyTo(fos)
+                            }
+                        }
+                        entry = tais.nextEntry
+                    }
+                }
+            }
+        }
+    }
+
+    private fun findAndMoveModelFiles(targetDir: File) {
+        // 1. Flatten all files to the root directory
+        targetDir.walkTopDown().filter { it.isFile }.forEach { file ->
+            val destFile = File(targetDir, file.name)
+            if (file.absolutePath != destFile.absolutePath) {
+                file.copyTo(destFile, overwrite = true)
+            }
+        }
+
+        // 2. Clean up all subdirectories
+        targetDir.listFiles()?.forEach { file ->
+            if (file.isDirectory) {
+                file.deleteRecursively()
+            }
+        }
+
+        // 3. Standardize the main model name if necessary.
+        // Some models (like VITS/Matcha/Kokoro) expect a 'model.onnx', while others 
+        // (like ZipVoice/Pocket/Supertonic) use specific filenames for multiple components.
+        val rootFiles = targetDir.listFiles()?.filter { it.isFile } ?: emptyList()
+        val specialOnnxNames = listOf(
+            "vocoder.onnx", "encoder.onnx", "decoder.onnx",
+            "lm_flow.onnx", "lm_main.onnx", "text_conditioner.onnx",
+            "duration_predictor.onnx", "text_encoder.onnx", "vector_estimator.onnx", "unicode_indexer.onnx"
+        )
+
+        val genericOnnxFiles = rootFiles.filter {
+            it.name.endsWith(".onnx") && it.name !in specialOnnxNames && it.name != "model.onnx"
+        }
+
+        // If there's exactly one generic .onnx file and no 'model.onnx' exists, rename it to 'model.onnx'
+        if (genericOnnxFiles.size == 1 && rootFiles.none { it.name == "model.onnx" }) {
+            genericOnnxFiles[0].renameTo(File(targetDir, "model.onnx"))
         }
     }
 

@@ -125,7 +125,7 @@ fun InboxScreenContent(
             .statusBarsPadding()
             .background(MaterialTheme.colorScheme.background)
     ) {
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
         Row(
             modifier = Modifier
@@ -136,7 +136,7 @@ fun InboxScreenContent(
         ) {
             Text(
                 text = "Inbox",
-                style = MaterialTheme.typography.headlineLarge,
+                style = MaterialTheme.typography.headlineSmall,
                 color = MaterialTheme.colorScheme.onBackground
             )
             Box {
@@ -156,7 +156,12 @@ fun InboxScreenContent(
                     DropdownMenuItem(
                         text = { Text("Search") },
                         onClick = { showMenu = false },
-                        leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) }
+                        leadingIcon = {
+                            Icon(
+                                Icons.Default.Search, contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onBackground
+                            )
+                        }
                     )
                     DropdownMenuItem(
                         text = { Text("Sort") },
@@ -164,7 +169,12 @@ fun InboxScreenContent(
                             showMenu = false
                             showSortSheet.value = true
                         },
-                        leadingIcon = { Icon(Icons.AutoMirrored.Filled.Sort, contentDescription = null) }
+                        leadingIcon = {
+                            Icon(
+                                Icons.AutoMirrored.Filled.Sort, contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onBackground
+                            )
+                        }
                     )
                     DropdownMenuItem(
                         text = { Text("Refresh") },
@@ -172,7 +182,12 @@ fun InboxScreenContent(
                             showMenu = false
                             onRefresh()
                         },
-                        leadingIcon = { Icon(Icons.Default.Refresh, contentDescription = null) }
+                        leadingIcon = {
+                            Icon(
+                                Icons.Default.Refresh, contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onBackground
+                            )
+                        }
                     )
                     DropdownMenuItem(
                         text = { Text("Clear") },
@@ -180,7 +195,12 @@ fun InboxScreenContent(
                             showMenu = false
                             onClearInbox()
                         },
-                        leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null) }
+                        leadingIcon = {
+                            Icon(
+                                Icons.Default.Delete, contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onBackground
+                            )
+                        }
                     )
                     DropdownMenuItem(
                         text = { Text("Edit feeds") },
@@ -188,13 +208,18 @@ fun InboxScreenContent(
                             showMenu = false
                             onEditFeeds()
                         },
-                        leadingIcon = { Icon(Icons.Default.RssFeed, contentDescription = null) }
+                        leadingIcon = {
+                            Icon(
+                                Icons.Default.RssFeed, contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onBackground
+                            )
+                        }
                     )
                 }
             }
         }
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
         PullToRefreshBox(
             isRefreshing = isRefreshing,

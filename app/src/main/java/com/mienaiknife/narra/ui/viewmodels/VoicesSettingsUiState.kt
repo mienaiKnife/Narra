@@ -16,6 +16,7 @@
 
 package com.mienaiknife.narra.ui.viewmodels
 
+import com.mienaiknife.narra.domain.TtsState
 import com.mienaiknife.narra.domain.models.TtsModel
 
 data class VoicesSettingsUiState(
@@ -25,5 +26,6 @@ data class VoicesSettingsUiState(
     val selectedSpeakerId: Int = 0,
     val sherpaSpeed: Float = 1.0f,
     val sherpaNoiseScale: Float = 0.667f,
-    val sherpaLengthScale: Float = 1.0f
+    val sherpaLengthScale: Float = 1.0f,
+    val engineState: TtsState = TtsState.Idle
 )

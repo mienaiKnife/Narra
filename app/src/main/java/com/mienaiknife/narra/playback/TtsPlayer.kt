@@ -228,20 +228,31 @@ class TtsPlayer @Inject constructor(
             _seekBackIncrement = time.removeSuffix("s").toLongOrNull()?.times(1000) ?: 10000L
         }.launchIn(scope)
 
+        settingsManager.ttsSpeakerId.onEach {
+            if (isEngineSpeaking && _playWhenReady) {
+                resumeInternal()
+            }
+        }.launchIn(scope)
+
         ttsEngine.state.onEach { state ->
             when (state) {
                 is TtsState.Ready -> {
+                    val wasSpeaking = isEngineSpeaking
                     isEngineSpeaking = false
                     updatePlaybackState(STATE_READY)
                     
                     // If we are supposed to be playing but the engine stopped (e.g. finished an article or initialization)
                     if (_playWhenReady && currentParagraphIndex >= 0 && currentParagraphIndex < paragraphs.size) {
-                        // Check if we reached the end of the last paragraph
-                        if (currentParagraphIndex == paragraphs.size - 1) {
+                        // If we were speaking and reached the end of the last paragraph, it's a natural end.
+                        // But if we weren't speaking (e.g. engine just initialized), we should start/resume.
+                        if (currentParagraphIndex == paragraphs.size - 1 && wasSpeaking) {
                             // Finished article
                             _playWhenReady = false
                             abandonAudioFocusInternal()
                             updatePlaybackState(STATE_ENDED)
+                        } else if (!wasSpeaking) {
+                            // Engine just became ready (e.g. after model switch or init), so resume synthesis
+                            resumeInternal()
                         }
                     }
                 }

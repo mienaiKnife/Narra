@@ -18,6 +18,8 @@ package com.mienaiknife.narra.ui.viewmodels
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.mienaiknife.narra.domain.TtsEngine
+import com.mienaiknife.narra.domain.TtsState
 import com.mienaiknife.narra.domain.models.TtsModel
 import com.mienaiknife.narra.domain.repository.ModelRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -32,14 +34,13 @@ import javax.inject.Inject
 @HiltViewModel
 class VoicesSettingsViewModel @Inject constructor(
     private val modelRepository: ModelRepository,
-    private val settingsManager: PlaybackSettingsManager
+    private val settingsManager: PlaybackSettingsManager,
+    private val ttsEngine: TtsEngine
 ) : ViewModel() {
 
     init {
         viewModelScope.launch {
-            if (modelRepository is com.mienaiknife.narra.data.repositories.ModelRepositoryImpl) {
-                modelRepository.ensureDefaultModelsInitialized()
-            }
+            modelRepository.ensureDefaultModelsInitialized()
         }
     }
 
@@ -50,7 +51,8 @@ class VoicesSettingsViewModel @Inject constructor(
         settingsManager.ttsSpeakerId,
         settingsManager.sherpaSpeed,
         settingsManager.sherpaNoiseScale,
-        settingsManager.sherpaLengthScale
+        settingsManager.sherpaLengthScale,
+        ttsEngine.state
     ) { args ->
         val models = args[0] as List<TtsModel>
         val engine = args[1] as String
@@ -59,7 +61,8 @@ class VoicesSettingsViewModel @Inject constructor(
         val speed = args[4] as Float
         val noiseScale = args[5] as Float
         val lengthScale = args[6] as Float
-        VoicesSettingsUiState(models, engine, modelId, speakerId, speed, noiseScale, lengthScale)
+        val engineState = args[7] as TtsState
+        VoicesSettingsUiState(models, engine, modelId, speakerId, speed, noiseScale, lengthScale, engineState)
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),

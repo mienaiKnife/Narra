@@ -37,11 +37,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import com.mienaiknife.narra.data.models.Article
 import com.mienaiknife.narra.data.models.SampleArticles
@@ -218,10 +216,7 @@ private fun QueueItemRow(
                 )
                 Text(
                     text = article.title,
-                    style = MaterialTheme.typography.bodyLarge.copy(
-                        fontWeight = FontWeight.SemiBold,
-                        lineHeight = 20.sp
-                    ),
+                    style = MaterialTheme.typography.bodyMedium,
                     color = if (article.progress == 1f) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f) else MaterialTheme.colorScheme.onSurface,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis
@@ -282,7 +277,7 @@ private fun QueueItemRow(
 
         IconButton(
             onClick = onPlayPauseClick,
-            modifier = Modifier.padding(end = 8.dp),
+            modifier = Modifier.padding(end = 16.dp),
             enabled = !isDownloading
         ) {
             val (icon, contentDescription) = when {
@@ -333,6 +328,7 @@ fun QueueItemPreview() {
             QueueItem(
                 article = SampleArticles.sampleArticle1,
                 isPlaying = false,
+                dragModifier = Modifier
             )
         }
     }

@@ -226,7 +226,7 @@ fun QueueScreenContent(
         ) {
             Text(
                 text = "Queue",
-                style = MaterialTheme.typography.headlineLarge,
+                style = MaterialTheme.typography.headlineSmall,
                 color = MaterialTheme.colorScheme.onBackground
             )
             Box {
@@ -246,7 +246,12 @@ fun QueueScreenContent(
                     DropdownMenuItem(
                         text = { Text("Search") },
                         onClick = { showMenu = false },
-                        leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) }
+                        leadingIcon = {
+                            Icon(
+                                Icons.Default.Search, contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onBackground
+                            )
+                        }
                     )
                     DropdownMenuItem(
                         text = { Text("Sort") },
@@ -254,7 +259,12 @@ fun QueueScreenContent(
                             showMenu = false
                             showSortSheet.value = true
                         },
-                        leadingIcon = { Icon(Icons.AutoMirrored.Filled.Sort, contentDescription = null) }
+                        leadingIcon = {
+                            Icon(
+                                Icons.AutoMirrored.Filled.Sort, contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onBackground
+                            )
+                        }
                     )
                     DropdownMenuItem(
                         text = { Text("Refresh") },
@@ -262,7 +272,12 @@ fun QueueScreenContent(
                             showMenu = false
                             onRefresh()
                         },
-                        leadingIcon = { Icon(Icons.Default.Refresh, contentDescription = null) }
+                        leadingIcon = {
+                            Icon(
+                                Icons.Default.Refresh, contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onBackground
+                            )
+                        }
                     )
                     DropdownMenuItem(
                         text = { Text("History") },
@@ -270,7 +285,12 @@ fun QueueScreenContent(
                             showMenu = false
                             onHistoryClick()
                         },
-                        leadingIcon = { Icon(Icons.Default.History, contentDescription = null) }
+                        leadingIcon = {
+                            Icon(
+                                Icons.Default.History, contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onBackground
+                            )
+                        }
                     )
                     DropdownMenuItem(
                         text = { Text("Clear") },
@@ -278,7 +298,12 @@ fun QueueScreenContent(
                             showMenu = false
                             onClearQueue()
                         },
-                        leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null) }
+                        leadingIcon = {
+                            Icon(
+                                Icons.Default.Delete, contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onBackground
+                            )
+                        }
                     )
                 }
             }
@@ -297,7 +322,7 @@ fun QueueScreenContent(
             modifier = Modifier.padding(horizontal = 16.dp)
         )
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
         PullToRefreshBox(
             isRefreshing = isRefreshing,

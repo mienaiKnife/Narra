@@ -19,6 +19,7 @@ package com.mienaiknife.narra.ui.viewmodels
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mienaiknife.narra.domain.repository.ContentRepository
+import com.mienaiknife.narra.domain.repository.ModelRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -32,8 +33,15 @@ import javax.inject.Inject
 
 @HiltViewModel
 class HomeViewModel @Inject constructor(
-    private val repository: ContentRepository
+    private val repository: ContentRepository,
+    private val modelRepository: ModelRepository
 ) : ViewModel() {
+
+    init {
+        viewModelScope.launch {
+            modelRepository.ensureDefaultModelsInitialized()
+        }
+    }
 
     private val _uiEvent = MutableSharedFlow<UiEvent>()
     val uiEvent: SharedFlow<UiEvent> = _uiEvent.asSharedFlow()

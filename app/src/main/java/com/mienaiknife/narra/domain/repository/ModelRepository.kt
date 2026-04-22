@@ -42,4 +42,9 @@ interface ModelRepository {
      * @param modelId The ID of the model.
      */
     suspend fun getModelPath(modelId: String): String?
+
+    /**
+     * Ensures that the default models are present in the database and updated if needed.
+     */
+    suspend fun ensureDefaultModelsInitialized()
 }

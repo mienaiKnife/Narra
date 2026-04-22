@@ -38,10 +38,13 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import java.io.File
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -66,14 +69,24 @@ class SherpaTtsEngine @Inject constructor(
     private var audioContentType = AudioAttributes.CONTENT_TYPE_SPEECH
 
     private val utteranceQueue = Channel<UtteranceRequest>(Channel.UNLIMITED)
-    private val synthesizedQueue = Channel<SynthesizedAudio>(Channel.BUFFERED)
+    private val synthesizedQueue = Channel<SynthesizedAudio>(2)
     
     private var synthesisJob: Job? = null
     private var playbackJob: Job? = null
     private var currentModelId: String? = null
+    private var lastNoiseScale: Float = -1f
+    private var lastLengthScale: Float = -1f
+    private var currentModelType: TtsModelType? = null
+    private var currentSessionId: Int = 0
 
-    data class UtteranceRequest(val text: String, val utteranceId: String)
-    data class SynthesizedAudio(val samples: FloatArray, val sampleRate: Int, val utteranceId: String, val text: String) {
+    data class UtteranceRequest(val text: String, val utteranceId: String, val sessionId: Int)
+    data class SynthesizedAudio(
+        val samples: FloatArray,
+        val sampleRate: Int,
+        val utteranceId: String,
+        val text: String,
+        val sessionId: Int
+    ) {
         override fun equals(other: Any?): Boolean {
             if (this === other) return true
             if (javaClass != other?.javaClass) return false
@@ -84,6 +97,7 @@ class SherpaTtsEngine @Inject constructor(
             if (sampleRate != other.sampleRate) return false
             if (utteranceId != other.utteranceId) return false
             if (text != other.text) return false
+            if (sessionId != other.sessionId) return false
 
             return true
         }
@@ -93,6 +107,7 @@ class SherpaTtsEngine @Inject constructor(
             result = 31 * result + sampleRate
             result = 31 * result + utteranceId.hashCode()
             result = 31 * result + text.hashCode()
+            result = 31 * result + sessionId
             return result
         }
     }
@@ -107,14 +122,27 @@ class SherpaTtsEngine @Inject constructor(
                 settingsManager.sherpaLengthScale
             ) { modelId, noiseScale, lengthScale ->
                 Triple(modelId, noiseScale, lengthScale)
-            }.collectLatest { (modelId, noiseScale, lengthScale) ->
+            }
+            .distinctUntilChanged()
+            .collectLatest { (modelId, noiseScale, lengthScale) ->
+                // Delay for scales to avoid rapid re-init while sliding
+                if (modelId == currentModelId) {
+                    delay(500)
+                }
                 initializeEngine(modelId, noiseScale, lengthScale)
             }
         }
 
         scope.launch {
             settingsManager.ttsSpeakerId.collect { speakerId ->
-                currentSpeakerId = speakerId
+                if (currentSpeakerId != speakerId) {
+                    currentSpeakerId = speakerId
+                    // For Kokoro, we can change speaker without re-init, 
+                    // but we might want to restart current synthesis to apply it immediately
+                    if (currentModelType == TtsModelType.KOKORO && _state.value is TtsState.Speaking) {
+                        // Optional: restart current paragraph synthesis
+                    }
+                }
             }
         }
 
@@ -126,16 +154,30 @@ class SherpaTtsEngine @Inject constructor(
     }
 
     private suspend fun initializeEngine(modelId: String?, noiseScale: Float, lengthScale: Float) {
+        val models = modelRepository.getAvailableModels().first()
+        val modelMetadata = models.find { it.id == modelId }
+        val modelType = modelMetadata?.type
+
+        if (modelId == currentModelId &&
+            (modelType == TtsModelType.KOKORO || noiseScale == lastNoiseScale) &&
+            lengthScale == lastLengthScale && tts != null
+        ) {
+            return
+        }
+
         withContext(Dispatchers.IO) {
             _state.value = TtsState.Initializing
             try {
-                // Stop any current synthesis/playback loops
-                synthesisJob?.cancel()
-                playbackJob?.cancel()
+                synchronized(this@SherpaTtsEngine) {
+                    currentSessionId++
+                    // Stop any current synthesis/playback loops
+                    synthesisJob?.cancel()
+                    playbackJob?.cancel()
 
-                // Clear queues
-                while (utteranceQueue.tryReceive().isSuccess) { /* consume */ }
-                while (synthesizedQueue.tryReceive().isSuccess) { /* consume */ }
+                    // Clear queues
+                    while (utteranceQueue.tryReceive().isSuccess) { /* consume */ }
+                    while (synthesizedQueue.tryReceive().isSuccess) { /* consume */ }
+                }
 
                 tts?.release()
                 tts = null
@@ -164,6 +206,10 @@ class SherpaTtsEngine @Inject constructor(
                 )
 
                 tts = OfflineTts(context.assets, config)
+                currentModelId = modelId
+                currentModelType = modelType
+                lastNoiseScale = noiseScale
+                lastLengthScale = lengthScale
                 _state.value = TtsState.Ready
                 startLoops()
             } catch (e: Exception) {
@@ -283,10 +329,20 @@ class SherpaTtsEngine @Inject constructor(
 
         synthesisJob = scope.launch(Dispatchers.Default) {
             for (request in utteranceQueue) {
+                if (request.sessionId != currentSessionId) continue
                 val engine = tts ?: continue
                 try {
                     val audio = engine.generate(request.text, currentSpeakerId ?: 0)
-                    synthesizedQueue.send(SynthesizedAudio(audio.samples, audio.sampleRate, request.utteranceId, request.text))
+                    if (request.sessionId != currentSessionId) continue
+                    synthesizedQueue.send(
+                        SynthesizedAudio(
+                            audio.samples,
+                            audio.sampleRate,
+                            request.utteranceId,
+                            request.text,
+                            request.sessionId
+                        )
+                    )
                 } catch (e: Exception) {
                     Log.e("SherpaTtsEngine", "Synthesis failed", e)
                 }
@@ -295,6 +351,7 @@ class SherpaTtsEngine @Inject constructor(
 
         playbackJob = scope.launch(Dispatchers.Default) {
             for (audio in synthesizedQueue) {
+                if (audio.sessionId != currentSessionId) continue
                 playAudio(audio)
             }
         }
@@ -347,7 +404,9 @@ class SherpaTtsEngine @Inject constructor(
                 var offset = 0
                 val totalSamples = samples.size
                 
-                while (offset < totalSamples) {
+                while (offset < totalSamples && scope.isActive) {
+                    if (audio.sessionId != currentSessionId) break
+                    
                     val toWrite = totalSamples - offset
                     val written = write(samples, offset, toWrite, AudioTrack.WRITE_NON_BLOCKING)
                     if (written < 0) {
@@ -377,7 +436,10 @@ class SherpaTtsEngine @Inject constructor(
                 
                 // Wait for the remainder of the audio to finish playing
                 val expectedEndHeadPosition = startHeadPosition + totalSamples
-                while (playbackHeadPosition < expectedEndHeadPosition && playState == AudioTrack.PLAYSTATE_PLAYING) {
+                while (playbackHeadPosition < expectedEndHeadPosition && 
+                    playState == AudioTrack.PLAYSTATE_PLAYING &&
+                    scope.isActive &&
+                    audio.sessionId == currentSessionId) {
                     _state.value = TtsState.Speaking(
                         audio.utteranceId,
                         0,
@@ -401,16 +463,30 @@ class SherpaTtsEngine @Inject constructor(
     }
 
     override fun enqueue(text: String, utteranceId: String) {
-        utteranceQueue.trySend(UtteranceRequest(text, utteranceId))
+        utteranceQueue.trySend(UtteranceRequest(text, utteranceId, currentSessionId))
     }
 
     override fun stop() {
-        while (utteranceQueue.tryReceive().isSuccess) { /* consume */ }
-        while (synthesizedQueue.tryReceive().isSuccess) { /* consume */ }
+        synchronized(this) {
+            currentSessionId++
+            while (utteranceQueue.tryReceive().isSuccess) { /* consume */ }
+            while (synthesizedQueue.tryReceive().isSuccess) { /* consume */ }
+        }
         
-        audioTrack?.stop()
-        audioTrack?.flush()
-        _state.value = TtsState.Ready
+        try {
+            audioTrack?.let { track ->
+                if (track.state == AudioTrack.STATE_INITIALIZED) {
+                    track.stop()
+                    track.flush()
+                }
+            }
+        } catch (e: Exception) {
+            Log.e("SherpaTtsEngine", "Error stopping AudioTrack", e)
+        }
+
+        if (_state.value !is TtsState.Initializing) {
+            _state.value = TtsState.Ready
+        }
     }
 
     override fun setPlaybackSpeed(speed: Float) {

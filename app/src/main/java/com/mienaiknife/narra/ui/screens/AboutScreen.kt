@@ -21,15 +21,21 @@ import android.content.pm.PackageManager
 import android.content.res.Configuration
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Info
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
@@ -37,9 +43,8 @@ import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -50,38 +55,57 @@ import androidx.navigation.compose.rememberNavController
 import com.mienaiknife.narra.ui.components.BottomNavBar
 import com.mienaiknife.narra.ui.theme.NarraTheme
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AboutScreen(onBack: () -> Unit, onNavigateToLicenses: () -> Unit) {
     val context = LocalContext.current
     val uriHandler = LocalUriHandler.current
     val versionName = getVersionName(context)
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("About Narra") },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .statusBarsPadding()
+    ) {
+        Spacer(modifier = Modifier.height(24.dp))
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(onClick = onBack) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = "Back",
+                    modifier = Modifier.size(32.dp),
+                    tint = MaterialTheme.colorScheme.onBackground
                 )
+            }
+            Text(
+                text = "About Narra",
+                style = MaterialTheme.typography.headlineSmall,
+                color = MaterialTheme.colorScheme.onBackground
             )
         }
-    ) { innerPadding ->
+
+        Spacer(modifier = Modifier.height(16.dp))
+
         LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
+            modifier = Modifier.fillMaxSize()
         ) {
             item {
                 ListItem(
                     headlineContent = { Text("Version") },
                     supportingContent = { Text(versionName) },
-                    leadingContent = { Icon(Icons.Default.Info, contentDescription = null) },
+                    leadingContent = {
+                        Icon(
+                            Icons.Default.Info,
+                            contentDescription = null,
+                            modifier = Modifier.size(24.dp),
+                            tint = MaterialTheme.colorScheme.onBackground
+                        )
+                    },
                     colors = ListItemDefaults.colors(containerColor = Color.Transparent)
                 )
 
@@ -91,7 +115,14 @@ fun AboutScreen(onBack: () -> Unit, onNavigateToLicenses: () -> Unit) {
                 ListItem(
                     headlineContent = { Text("Code repository") },
                     supportingContent = { Text("Report bugs, suggest features") },
-                    leadingContent = { Icon(Icons.Default.Code, contentDescription = null) },
+                    leadingContent = {
+                        Icon(
+                            Icons.Default.Code,
+                            contentDescription = null,
+                            modifier = Modifier.size(24.dp),
+                            tint = MaterialTheme.colorScheme.onBackground
+                        )
+                    },
                     modifier = Modifier.clickable {
                         // TODO: Open repository URL
                     },
@@ -103,7 +134,14 @@ fun AboutScreen(onBack: () -> Unit, onNavigateToLicenses: () -> Unit) {
                 ListItem(
                     headlineContent = { Text("Licenses") },
                     supportingContent = { Text("Open source software used in Narra") },
-                    leadingContent = { Icon(Icons.Default.Description, contentDescription = null) },
+                    leadingContent = {
+                        Icon(
+                            Icons.Default.Description,
+                            contentDescription = null,
+                            modifier = Modifier.size(24.dp),
+                            tint = MaterialTheme.colorScheme.onBackground
+                        )
+                    },
                     modifier = Modifier.clickable {
                         onNavigateToLicenses()
                     },
@@ -115,7 +153,14 @@ fun AboutScreen(onBack: () -> Unit, onNavigateToLicenses: () -> Unit) {
             item {
                 ListItem(
                     headlineContent = { Text("Privacy policy") },
-                    leadingContent = { Icon(Icons.Default.Info, contentDescription = null) },
+                    leadingContent = {
+                        Icon(
+                            Icons.Default.Info,
+                            contentDescription = null,
+                            modifier = Modifier.size(24.dp),
+                            tint = MaterialTheme.colorScheme.onBackground
+                        )
+                    },
                     modifier = Modifier.clickable {
                         // TODO: Open privacy policy URL
                     },
@@ -145,7 +190,7 @@ private fun getVersionName(context: Context): String {
     return try {
         val packageInfo = context.packageManager.getPackageInfo(context.packageName, 0)
         packageInfo.versionName ?: "Unknown"
-    } catch (e: PackageManager.NameNotFoundException) {
+    } catch (_: PackageManager.NameNotFoundException) {
         "Unknown"
     }
 }

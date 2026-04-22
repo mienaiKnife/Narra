@@ -73,6 +73,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.mienaiknife.narra.domain.models.TtsModelType
 import com.mienaiknife.narra.ui.viewmodels.VoicesSettingsUiState
 import androidx.navigation.compose.rememberNavController
+import com.mienaiknife.narra.domain.TtsState
 import com.mienaiknife.narra.domain.models.TtsModel
 import com.mienaiknife.narra.ui.components.BottomNavBar
 import com.mienaiknife.narra.ui.theme.NarraTheme
@@ -118,10 +119,18 @@ fun VoicesSettingsContent(
     var expanded by remember { mutableStateOf(false) }
 
     val kokoroVoices = listOf(
-        "Heart (Female)" to 0,
+        "Amelie (Female)" to 5,
         "Bella (Female)" to 1,
-        "Michael (Male)" to 6
-    )
+        "Michael (Male)" to 6,
+        "Sarah (Female)" to 2,
+        "Nicole (Female)" to 3,
+        "Sky (Female)" to 4,
+        "George (Male)" to 7,
+        "Lewis (Male)" to 8,
+        "Alice (Female)" to 9,
+        "Lily (Female)" to 10,
+        "Julia (Female)" to 0
+    ).sortedBy { it.first }
     var kokoroExpanded by remember { mutableStateOf(false) }
 
     val selectedEngineName = when (uiState.selectedEngine) {
@@ -130,6 +139,7 @@ fun VoicesSettingsContent(
         else -> engines[0]
     }
 
+    val isInitializing = uiState.engineState is TtsState.Initializing
     val scrollState = rememberScrollState()
 
     Column(
@@ -137,7 +147,14 @@ fun VoicesSettingsContent(
             .fillMaxSize()
             .statusBarsPadding()
     ) {
-        Spacer(modifier = Modifier.height(24.dp))
+        if (isInitializing) {
+            LinearProgressIndicator(
+                modifier = Modifier.fillMaxWidth(),
+                color = MaterialTheme.colorScheme.primary,
+                trackColor = MaterialTheme.colorScheme.primaryContainer
+            )
+        }
+        Spacer(modifier = Modifier.height(16.dp))
 
         Row(
             modifier = Modifier
@@ -153,10 +170,9 @@ fun VoicesSettingsContent(
                     tint = MaterialTheme.colorScheme.onBackground
                 )
             }
-            Spacer(modifier = Modifier.size(8.dp))
             Text(
                 text = "Voices",
-                style = MaterialTheme.typography.headlineLarge,
+                style = MaterialTheme.typography.headlineSmall,
                 color = MaterialTheme.colorScheme.onBackground
             )
         }
@@ -177,17 +193,18 @@ fun VoicesSettingsContent(
             )
 
             ExposedDropdownMenuBox(
-                expanded = expanded,
-                onExpandedChange = { expanded = !expanded },
+                expanded = expanded && !isInitializing,
+                onExpandedChange = { if (!isInitializing) expanded = !expanded },
                 modifier = Modifier.fillMaxWidth()
             ) {
                 OutlinedTextField(
                     value = selectedEngineName,
                     onValueChange = {},
                     readOnly = true,
+                    enabled = !isInitializing,
                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
                     modifier = Modifier
-                        .menuAnchor(type = ExposedDropdownMenuAnchorType.PrimaryNotEditable, enabled = true)
+                        .menuAnchor(type = ExposedDropdownMenuAnchorType.PrimaryNotEditable, enabled = !isInitializing)
                         .fillMaxWidth(),
                     colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors()
                 )
@@ -250,10 +267,11 @@ fun VoicesSettingsContent(
                                 TtsModelItem(
                                     model = model,
                                     isSelected = uiState.selectedModelId == model.id,
-                                    onSelect = { onSelectModel(model.id) },
+                                    onSelect = { if (!isInitializing) onSelectModel(model.id) },
                                     onDownload = { onDownloadModel(model.id) },
                                     onDelete = { onDeleteModel(model.id) },
-                                    containerColor = Color.Transparent
+                                    containerColor = Color.Transparent,
+                                    enabled = !isInitializing
                                 )
                                 if (index < uiState.availableModels.lastIndex) {
                                     HorizontalDivider(
@@ -279,17 +297,18 @@ fun VoicesSettingsContent(
                         val currentVoice = kokoroVoices.find { it.second == uiState.selectedSpeakerId }?.first ?: "Unknown"
 
                         ExposedDropdownMenuBox(
-                            expanded = kokoroExpanded,
-                            onExpandedChange = { kokoroExpanded = !kokoroExpanded },
+                            expanded = kokoroExpanded && !isInitializing,
+                            onExpandedChange = { if (!isInitializing) kokoroExpanded = !kokoroExpanded },
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             OutlinedTextField(
                                 value = currentVoice,
                                 onValueChange = {},
                                 readOnly = true,
+                                enabled = !isInitializing,
                                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = kokoroExpanded) },
                                 modifier = Modifier
-                                    .menuAnchor(type = ExposedDropdownMenuAnchorType.PrimaryNotEditable, enabled = true)
+                                    .menuAnchor(type = ExposedDropdownMenuAnchorType.PrimaryNotEditable, enabled = !isInitializing)
                                     .fillMaxWidth(),
                                 colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors()
                             )
@@ -329,6 +348,7 @@ fun VoicesSettingsContent(
                         Slider(
                             value = uiState.sherpaNoiseScale,
                             onValueChange = onSetSherpaNoiseScale,
+                            enabled = !isInitializing,
                             valueRange = 0.0f..1.0f,
                             modifier = Modifier.fillMaxWidth(),
                             colors = sliderColors,
@@ -351,6 +371,7 @@ fun VoicesSettingsContent(
                         Slider(
                             value = uiState.sherpaLengthScale,
                             onValueChange = onSetSherpaLengthScale,
+                            enabled = !isInitializing,
                             valueRange = 0.5f..2.0f,
                             modifier = Modifier.fillMaxWidth(),
                             colors = sliderColors,
@@ -378,14 +399,15 @@ fun TtsModelItem(
     onSelect: () -> Unit,
     onDownload: () -> Unit,
     onDelete: () -> Unit,
-    containerColor: Color = MaterialTheme.colorScheme.surfaceContainer
+    containerColor: Color = MaterialTheme.colorScheme.surfaceContainer,
+    enabled: Boolean = true
 ) {
     val isDownloading = model.progress > 0f && model.progress < 1f
 
     ListItem(
         modifier = Modifier
             .height(IntrinsicSize.Min)
-            .clickable(enabled = model.isDownloaded && !isDownloading) { onSelect() },
+            .clickable(enabled = model.isDownloaded && !isDownloading && enabled) { onSelect() },
         colors = ListItemDefaults.colors(
             containerColor = containerColor
         ),

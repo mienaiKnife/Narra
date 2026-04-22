@@ -89,7 +89,10 @@ fun FeedsScreenContent(
     if (showSortSheet) {
         SortBottomSheet(
             selectedOption = sortOption,
-            onOptionSelected = onSortOptionSelected,
+            onOptionSelected = {
+                onSortOptionSelected(it)
+                showSortSheet = false
+            },
             onDismissRequest = { showSortSheet = false }
         )
     }
@@ -100,7 +103,7 @@ fun FeedsScreenContent(
             .statusBarsPadding()
             .background(MaterialTheme.colorScheme.background)
     ) {
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
         Row(
             modifier = Modifier
@@ -109,7 +112,10 @@ fun FeedsScreenContent(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Row(
+                modifier = Modifier.weight(1f),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 IconButton(onClick = onBackClick) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
@@ -118,10 +124,9 @@ fun FeedsScreenContent(
                         tint = MaterialTheme.colorScheme.onBackground
                     )
                 }
-                Spacer(modifier = Modifier.size(8.dp))
                 Text(
                     text = "Feeds",
-                    style = MaterialTheme.typography.headlineLarge,
+                    style = MaterialTheme.typography.headlineSmall,
                     color = MaterialTheme.colorScheme.onBackground
                 )
             }
@@ -143,7 +148,12 @@ fun FeedsScreenContent(
                     DropdownMenuItem(
                         text = { Text("Search") },
                         onClick = { showMenu = false },
-                        leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) }
+                        leadingIcon = {
+                            Icon(
+                                Icons.Default.Search, contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onBackground
+                            )
+                        }
                     )
                     DropdownMenuItem(
                         text = { Text("Sort") },
@@ -151,7 +161,12 @@ fun FeedsScreenContent(
                             showMenu = false
                             showSortSheet = true
                         },
-                        leadingIcon = { Icon(Icons.AutoMirrored.Filled.Sort, contentDescription = null) }
+                        leadingIcon = {
+                            Icon(
+                                Icons.AutoMirrored.Filled.Sort, contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onBackground
+                            )
+                        }
                     )
                     DropdownMenuItem(
                         text = { Text("Refresh") },
@@ -159,13 +174,18 @@ fun FeedsScreenContent(
                             showMenu = false
                             onRefresh()
                         },
-                        leadingIcon = { Icon(Icons.Default.Refresh, contentDescription = null) }
+                        leadingIcon = {
+                            Icon(
+                                Icons.Default.Refresh, contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onBackground
+                            )
+                        }
                     )
                 }
             }
         }
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
         PullToRefreshBox(
             isRefreshing = isRefreshing,

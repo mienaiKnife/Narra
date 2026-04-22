@@ -119,6 +119,13 @@ import kotlinx.coroutines.delay
 import java.util.Locale
 import com.mienaiknife.narra.ui.components.NarraScrollbar
 import com.mienaiknife.narra.ui.viewmodels.ReaderUiState
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.ListItem
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.material3.ExperimentalMaterial3Api
 @Composable
 fun ReaderScreen(
     onBack: () -> Unit,
@@ -157,7 +164,9 @@ fun ReaderScreen(
                     onSkipBackward = viewModel::skipBackward,
                     onSkipNext = viewModel::skipNext,
                     onCycleSpeed = viewModel::cycleSpeed,
-                    onToggleFavorite = viewModel::toggleFavorite
+                    onToggleFavorite = viewModel::toggleFavorite,
+                    onSetSleepTimer = viewModel::setSleepTimer,
+                    onSetSearchQuery = viewModel::setSearchQuery
                 )
             }
         }
@@ -171,6 +180,7 @@ fun ReaderScreen(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ReaderContent(
     uiState: ReaderUiState,
@@ -181,7 +191,9 @@ fun ReaderContent(
     onSkipBackward: () -> Unit,
     onSkipNext: () -> Unit,
     onCycleSpeed: () -> Unit,
-    onToggleFavorite: () -> Unit
+    onToggleFavorite: () -> Unit,
+    onSetSleepTimer: (Int?) -> Unit,
+    onSetSearchQuery: (String) -> Unit
 ) {
     val article = uiState.article ?: return
     val blocks = uiState.blocks
@@ -193,10 +205,15 @@ fun ReaderContent(
     val currentWordRange = uiState.currentWordRange
     val fastForwardTime = uiState.fastForwardSkipTime
     val rewindTime = uiState.rewindSkipTime
+    val sleepTimerMillis = uiState.sleepTimerMillisLeft
+    val searchQuery = uiState.searchQuery
+    val searchResults = uiState.searchResults
 
     var isControlsVisible by remember { mutableStateOf(true) }
     var lastInteractionTrigger by remember { mutableIntStateOf(0) }
     var isMenuExpanded by remember { mutableStateOf(false) }
+    var isSleepTimerSheetVisible by remember { mutableStateOf(false) }
+    var isSearchSheetVisible by remember { mutableStateOf(false) }
 
     val scrollState = rememberLazyListState(
         initialFirstVisibleItemIndex = currentParagraphIndex
@@ -669,12 +686,13 @@ fun ReaderContent(
                                 text = { Text("Search") },
                                 onClick = {
                                     isMenuExpanded = false
-                                    /* TODO */
+                                    isSearchSheetVisible = true
                                 },
                                 leadingIcon = {
                                     Icon(
                                         Icons.Default.Search,
-                                        contentDescription = null
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.onBackground
                                     )
                                 }
                             )
@@ -692,16 +710,22 @@ fun ReaderContent(
                                     )
                                 }
                             )
+                            val sleepTimerText = if (sleepTimerMillis != null && sleepTimerMillis > 0) {
+                                "Sleep timer (${DateUtils.formatElapsedTime(sleepTimerMillis)})"
+                            } else {
+                                "Sleep timer"
+                            }
                             DropdownMenuItem(
-                                text = { Text("Sleep timer") },
+                                text = { Text(sleepTimerText) },
                                 onClick = {
                                     isMenuExpanded = false
-                                    /* TODO */
+                                    isSleepTimerSheetVisible = true
                                 },
                                 leadingIcon = {
                                     Icon(
                                         Icons.Default.Timer,
-                                        contentDescription = null
+                                        contentDescription = null,
+                                        tint = if (sleepTimerMillis != null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onBackground
                                     )
                                 }
                             )
@@ -715,7 +739,8 @@ fun ReaderContent(
                                 leadingIcon = {
                                     Icon(
                                         Icons.AutoMirrored.Filled.OpenInNew,
-                                        contentDescription = null
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.onBackground
                                     )
                                 }
                             )
@@ -892,6 +917,122 @@ fun ReaderContent(
                 lastInteractionTrigger++
             }
         )
+
+        if (isSleepTimerSheetVisible) {
+            ModalBottomSheet(
+                onDismissRequest = { isSleepTimerSheetVisible = false },
+                sheetState = rememberModalBottomSheetState()
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .navigationBarsPadding()
+                        .padding(bottom = 32.dp)
+                ) {
+                    Text(
+                        text = "Sleep Timer",
+                        style = MaterialTheme.typography.titleLarge,
+                        modifier = Modifier.padding(16.dp)
+                    )
+                    
+                    val options = listOf(
+                        "Off" to null,
+                        "5 minutes" to 5,
+                        "15 minutes" to 15,
+                        "30 minutes" to 30,
+                        "45 minutes" to 45,
+                        "1 hour" to 60
+                    )
+                    
+                    options.forEach { (label, minutes) ->
+                        ListItem(
+                            headlineContent = { Text(label) },
+                            modifier = Modifier.pointerInput(Unit) {
+                                detectTapGestures {
+                                    onSetSleepTimer(minutes)
+                                    isSleepTimerSheetVisible = false
+                                }
+                            }
+                        )
+                    }
+                }
+            }
+        }
+
+        if (isSearchSheetVisible) {
+            ModalBottomSheet(
+                onDismissRequest = { 
+                    isSearchSheetVisible = false
+                    onSetSearchQuery("")
+                },
+                sheetState = rememberModalBottomSheetState(),
+                modifier = Modifier.fillMaxHeight(0.8f)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .navigationBarsPadding()
+                ) {
+                    OutlinedTextField(
+                        value = searchQuery,
+                        onValueChange = onSetSearchQuery,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        placeholder = { Text("Search in article...") },
+                        leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                        trailingIcon = {
+                            if (searchQuery.isNotEmpty()) {
+                                IconButton(onClick = { onSetSearchQuery("") }) {
+                                    Icon(Icons.Default.Close, contentDescription = "Clear")
+                                }
+                            }
+                        },
+                        singleLine = true
+                    )
+                    
+                    HorizontalDivider()
+                    
+                    LazyColumn(modifier = Modifier.weight(1f)) {
+                        itemsIndexed(searchResults) { _, result ->
+                            ListItem(
+                                headlineContent = {
+                                    Text(
+                                        text = result.previewText,
+                                        maxLines = 2,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                },
+                                overlineContent = {
+                                    Text("Paragraph ${result.paragraphIndex + 1}")
+                                },
+                                modifier = Modifier.pointerInput(Unit) {
+                                    detectTapGestures {
+                                        onSeekToWord(result.paragraphIndex, result.wordRange)
+                                        isFollowing = true
+                                        isSearchSheetVisible = false
+                                        onSetSearchQuery("")
+                                    }
+                                }
+                            )
+                        }
+                        
+                        if (searchQuery.length >= 2 && searchResults.isEmpty()) {
+                            item {
+                                Text(
+                                    text = "No results found",
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(32.dp),
+                                    textAlign = TextAlign.Center,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -924,7 +1065,9 @@ fun ReaderScreenPreview() {
             onSkipBackward = {},
             onSkipNext = {},
             onCycleSpeed = {},
-            onToggleFavorite = {}
+            onToggleFavorite = {},
+            onSetSleepTimer = {},
+            onSetSearchQuery = {}
         )
     }
 }

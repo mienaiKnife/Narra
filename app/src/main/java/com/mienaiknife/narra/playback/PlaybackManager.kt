@@ -75,6 +75,10 @@ class PlaybackManager @Inject constructor(
     private val _currentWordRange = MutableStateFlow<IntRange?>(null)
     val currentWordRange: StateFlow<IntRange?> = _currentWordRange.asStateFlow()
 
+    private val _sleepTimerMillisLeft = MutableStateFlow<Long?>(null)
+    val sleepTimerMillisLeft: StateFlow<Long?> = _sleepTimerMillisLeft.asStateFlow()
+
+    private var sleepTimerJob: kotlinx.coroutines.Job? = null
     private var transitionJob: kotlinx.coroutines.Job? = null
 
     init {
@@ -400,5 +404,23 @@ class PlaybackManager @Inject constructor(
         }
         _playbackSpeed.value = nextSpeed
         ttsPlayer.setPlaybackSpeed(nextSpeed)
+    }
+
+    fun setSleepTimer(minutes: Int?) {
+        sleepTimerJob?.cancel()
+        if (minutes == null) {
+            _sleepTimerMillisLeft.value = null
+            return
+        }
+
+        _sleepTimerMillisLeft.value = minutes * 60 * 1000L
+        sleepTimerJob = scope.launch {
+            while ((_sleepTimerMillisLeft.value ?: 0) > 0) {
+                delay(1000)
+                _sleepTimerMillisLeft.value = (_sleepTimerMillisLeft.value ?: 0) - 1000
+            }
+            _sleepTimerMillisLeft.value = 0
+            ttsPlayer.pause()
+        }
     }
 }

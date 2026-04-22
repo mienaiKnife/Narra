@@ -16,6 +16,7 @@
 
 package com.mienaiknife.narra.ui.screens
 
+import android.content.res.Configuration
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -27,15 +28,21 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.*
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.compose.rememberNavController
 import com.mienaiknife.narra.data.models.Article
 import com.mienaiknife.narra.data.models.SortOption
+import com.mienaiknife.narra.ui.components.BottomNavBar
 import com.mienaiknife.narra.ui.components.QueueItem
 import com.mienaiknife.narra.ui.components.SortBottomSheet
+import com.mienaiknife.narra.ui.theme.NarraTheme
+import com.mienaiknife.narra.ui.viewmodels.FeedArticlesUiState
 import com.mienaiknife.narra.ui.viewmodels.FeedArticlesViewModel
 
 @Composable
@@ -76,7 +83,7 @@ fun FeedArticlesScreen(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FeedArticlesScreenContent(
-    uiState: com.mienaiknife.narra.ui.viewmodels.FeedArticlesUiState,
+    uiState: FeedArticlesUiState,
     onBackClick: () -> Unit,
     onAddToQueue: (Article) -> Unit,
     onDeleteArticle: (Article) -> Unit,
@@ -84,15 +91,15 @@ fun FeedArticlesScreenContent(
     onShowPlayedChange: (Boolean) -> Unit = {}
 ) {
     var showMenu by remember { mutableStateOf(false) }
-    var showSortSheet by remember { mutableStateOf(false) }
+    val showSortSheet = remember { mutableStateOf(false) }
 
-    if (showSortSheet) {
+    if (showSortSheet.value) {
         SortBottomSheet(
             selectedOption = uiState.sortOption,
             onOptionSelected = onSortOptionSelected,
             showPlayed = uiState.showPlayed,
             onShowPlayedChange = onShowPlayedChange,
-            onDismissRequest = { showSortSheet = false }
+            onDismissRequest = { showSortSheet.value = false }
         )
     }
 
@@ -102,7 +109,7 @@ fun FeedArticlesScreenContent(
             .statusBarsPadding()
             .background(MaterialTheme.colorScheme.background)
     ) {
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
         Row(
             modifier = Modifier
@@ -123,12 +130,12 @@ fun FeedArticlesScreenContent(
                         tint = MaterialTheme.colorScheme.onBackground
                     )
                 }
-                Spacer(modifier = Modifier.size(8.dp))
                 Text(
                     text = uiState.feedTitle,
                     style = MaterialTheme.typography.headlineSmall,
                     color = MaterialTheme.colorScheme.onBackground,
-                    maxLines = 1
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
 
@@ -149,21 +156,31 @@ fun FeedArticlesScreenContent(
                     DropdownMenuItem(
                         text = { Text("Search") },
                         onClick = { showMenu = false },
-                        leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) }
+                        leadingIcon = {
+                            Icon(
+                                Icons.Default.Search, contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onBackground
+                            )
+                        }
                     )
                     DropdownMenuItem(
                         text = { Text("Sort") },
                         onClick = {
                             showMenu = false
-                            showSortSheet = true
+                            showSortSheet.value = true
                         },
-                        leadingIcon = { Icon(Icons.AutoMirrored.Filled.Sort, contentDescription = null) }
+                        leadingIcon = {
+                            Icon(
+                                Icons.AutoMirrored.Filled.Sort, contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onBackground
+                            )
+                        }
                     )
                 }
             }
         }
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
         if (uiState.articles.isEmpty()) {
             Box(
@@ -194,6 +211,51 @@ fun FeedArticlesScreenContent(
                         onRemoveClick = { onDeleteArticle(article) }
                     )
                 }
+            }
+        }
+    }
+}
+
+@Preview(uiMode = Configuration.UI_MODE_NIGHT_YES, showBackground = true)
+@Composable
+fun FeedArticlesScreenPreview() {
+    val navController = rememberNavController()
+    val sampleArticles = listOf(
+        Article(
+            id = "1",
+            title = "Apple announces new M4 Pro and M4 Max chips",
+            source = "The Verge",
+            publishedAt = "2 hours ago"
+        ),
+        Article(
+            id = "2",
+            title = "Android 15 is here: everything you need to know",
+            source = "Android Central",
+            publishedAt = "5 hours ago"
+        ),
+        Article(
+            id = "3",
+            title = "Google Search is getting a major AI overhaul",
+            source = "9to5Google",
+            publishedAt = "1 day ago"
+        )
+    )
+    val uiState = FeedArticlesUiState(
+        articles = sampleArticles,
+        feedTitle = "The Verge"
+    )
+
+    NarraTheme(darkTheme = true, dynamicColor = false) {
+        Scaffold(
+            bottomBar = { BottomNavBar(navController) }
+        ) { innerPadding ->
+            Box(modifier = Modifier.padding(innerPadding)) {
+                FeedArticlesScreenContent(
+                    uiState = uiState,
+                    onBackClick = {},
+                    onAddToQueue = {},
+                    onDeleteArticle = {}
+                )
             }
         }
     }

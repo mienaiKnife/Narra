@@ -30,5 +30,14 @@ data class ReaderUiState(
     val currentParagraphIndex: Int = 0,
     val currentWordRange: IntRange? = null,
     val fastForwardSkipTime: String = "30s",
-    val rewindSkipTime: String = "10s"
+    val rewindSkipTime: String = "10s",
+    val sleepTimerMillisLeft: Long? = null,
+    val searchQuery: String = "",
+    val searchResults: List<SearchResult> = emptyList()
+)
+
+data class SearchResult(
+    val paragraphIndex: Int,
+    val wordRange: IntRange,
+    val previewText: String
 )

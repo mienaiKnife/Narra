@@ -59,6 +59,7 @@ class ReaderViewModel @Inject constructor(
 
     private val _blocks = MutableStateFlow<List<ContentBlock>>(emptyList())
     private val _isLoading = MutableStateFlow(false)
+    private val _searchQuery = MutableStateFlow("")
 
     @Suppress("UNCHECKED_CAST")
     val uiState: StateFlow<ReaderUiState> = combine(
@@ -72,11 +73,36 @@ class ReaderViewModel @Inject constructor(
         playbackManager.currentParagraphIndex,
         playbackManager.currentWordRange,
         playbackManager.settingsManager.fastForwardSkipTime,
-        playbackManager.settingsManager.rewindSkipTime
+        playbackManager.settingsManager.rewindSkipTime,
+        playbackManager.sleepTimerMillisLeft,
+        _searchQuery
     ) { flows ->
+        val blocks = flows[1] as List<ContentBlock>
+        val query = flows[12] as String
+        val searchResults = if (query.length >= 2) {
+            blocks.flatMapIndexed { index, block ->
+                val text = block.text.text
+                val results = mutableListOf<SearchResult>()
+                var startIndex = 0
+                while (startIndex < text.length) {
+                    val found = text.indexOf(query, startIndex, ignoreCase = true)
+                    if (found == -1) break
+                    results.add(
+                        SearchResult(
+                            paragraphIndex = index,
+                            wordRange = found until (found + query.length),
+                            previewText = text // Could be truncated
+                        )
+                    )
+                    startIndex = found + query.length
+                }
+                results
+            }
+        } else emptyList()
+
         ReaderUiState(
             article = flows[0] as Article?,
-            blocks = flows[1] as List<ContentBlock>,
+            blocks = blocks,
             isLoading = flows[2] as Boolean,
             isPlaying = flows[3] as Boolean,
             currentPosition = flows[4] as Long,
@@ -85,7 +111,10 @@ class ReaderViewModel @Inject constructor(
             currentParagraphIndex = flows[7] as Int,
             currentWordRange = flows[8] as IntRange?,
             fastForwardSkipTime = flows[9] as String,
-            rewindSkipTime = flows[10] as String
+            rewindSkipTime = flows[10] as String,
+            sleepTimerMillisLeft = flows[11] as Long?,
+            searchQuery = query,
+            searchResults = searchResults
         )
     }.stateIn(
         scope = viewModelScope,
@@ -140,6 +169,8 @@ class ReaderViewModel @Inject constructor(
     fun skipBackward() = playbackManager.skipBackward()
     fun skipNext() = playbackManager.skipNext()
     fun cycleSpeed() = playbackManager.cycleSpeed()
+    fun setSleepTimer(minutes: Int?) = playbackManager.setSleepTimer(minutes)
+    fun setSearchQuery(query: String) { _searchQuery.value = query }
 
     fun toggleFavorite() {
         uiState.value.article?.let { art ->

@@ -107,25 +107,25 @@ fun DownloadsSettingsScreen(
         }
     }
 
-    var showDeleteConfirm by remember { mutableStateOf(false) }
+    val showDeleteConfirm = remember { mutableStateOf(false) }
 
-    if (showDeleteConfirm) {
+    if (showDeleteConfirm.value) {
         AlertDialog(
-            onDismissRequest = { showDeleteConfirm = false },
+            onDismissRequest = { showDeleteConfirm.value = false },
             title = { Text("Delete Database") },
             text = { Text("Are you sure you want to delete all your data? This cannot be undone.") },
             confirmButton = {
                 TextButton(
                     onClick = {
                         viewModel.deleteDatabase()
-                        showDeleteConfirm = false
+                        showDeleteConfirm.value = false
                     }
                 ) {
                     Text("Delete", color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showDeleteConfirm = false }) {
+                TextButton(onClick = { showDeleteConfirm.value = false }) {
                     Text("Cancel")
                 }
             }
@@ -139,7 +139,7 @@ fun DownloadsSettingsScreen(
         onExportOpml = { exportLauncher.launch("narra-subscriptions.opml") },
         onBackupDatabase = { backupLauncher.launch("narra-backup.db") },
         onRestoreDatabase = { restoreLauncher.launch(arrayOf("application/octet-stream", "*/*")) },
-        onDeleteDatabase = { showDeleteConfirm = true },
+        onDeleteDatabase = { showDeleteConfirm.value = true },
         onBack = onBack
     )
 }
@@ -160,7 +160,7 @@ fun DownloadsSettingsContent(
             .fillMaxSize()
             .statusBarsPadding()
     ) {
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
         Row(
             modifier = Modifier
@@ -176,15 +176,14 @@ fun DownloadsSettingsContent(
                     tint = MaterialTheme.colorScheme.onBackground
                 )
             }
-            Spacer(modifier = Modifier.size(8.dp))
             Text(
                 text = "Downloads",
-                style = MaterialTheme.typography.headlineLarge,
+                style = MaterialTheme.typography.headlineSmall,
                 color = MaterialTheme.colorScheme.onBackground
             )
         }
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
         Column(
             modifier = Modifier

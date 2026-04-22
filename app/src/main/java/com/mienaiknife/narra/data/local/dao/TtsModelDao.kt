@@ -45,4 +45,7 @@ interface TtsModelDao {
 
     @Query("DELETE FROM tts_models WHERE id = :id")
     suspend fun deleteModel(id: String)
+
+    @Query("DELETE FROM tts_models WHERE type = 'KOKORO' AND id != 'kokoro-en-v0_19'")
+    suspend fun deleteStaleKokoroModels()
 }

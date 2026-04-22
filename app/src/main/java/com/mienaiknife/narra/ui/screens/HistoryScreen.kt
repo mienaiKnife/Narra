@@ -118,7 +118,7 @@ fun HistoryScreenContent(
             .statusBarsPadding()
             .background(MaterialTheme.colorScheme.background)
     ) {
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
         Row(
             modifier = Modifier
@@ -127,7 +127,10 @@ fun HistoryScreenContent(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Row(
+                modifier = Modifier.weight(1f),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 IconButton(onClick = onBackClick) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
@@ -136,10 +139,9 @@ fun HistoryScreenContent(
                         tint = MaterialTheme.colorScheme.onBackground
                     )
                 }
-                Spacer(modifier = Modifier.size(8.dp))
                 Text(
                     text = "History",
-                    style = MaterialTheme.typography.headlineLarge,
+                    style = MaterialTheme.typography.headlineSmall,
                     color = MaterialTheme.colorScheme.onBackground
                 )
             }
@@ -161,7 +163,12 @@ fun HistoryScreenContent(
                     DropdownMenuItem(
                         text = { Text("Search") },
                         onClick = { showMenu = false },
-                        leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) }
+                        leadingIcon = {
+                            Icon(
+                                Icons.Default.Search, contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onBackground
+                            )
+                        }
                     )
                     DropdownMenuItem(
                         text = { Text("Refresh") },
@@ -169,7 +176,12 @@ fun HistoryScreenContent(
                             showMenu = false
                             onRefresh()
                         },
-                        leadingIcon = { Icon(Icons.Default.Refresh, contentDescription = null) }
+                        leadingIcon = {
+                            Icon(
+                                Icons.Default.Refresh, contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onBackground
+                            )
+                        }
                     )
                     DropdownMenuItem(
                         text = { Text("Clear") },
@@ -177,13 +189,18 @@ fun HistoryScreenContent(
                             showMenu = false
                             onClearHistory()
                         },
-                        leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null) }
+                        leadingIcon = {
+                            Icon(
+                                Icons.Default.Delete, contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onBackground
+                            )
+                        }
                     )
                 }
             }
         }
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
         PullToRefreshBox(
             isRefreshing = isRefreshing,
