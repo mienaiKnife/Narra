@@ -28,7 +28,8 @@ import kotlinx.coroutines.launch
 data class ThemeUiState(
     val isDarkMode: Boolean = true,
     val isDynamicColor: Boolean = true,
-    val useSystemTheme: Boolean = true
+    val useSystemTheme: Boolean = true,
+    val readerFontFamily: String = "Roboto"
 )
 
 open class ThemeViewModel : ViewModel() {
@@ -54,6 +55,11 @@ open class ThemeViewModel : ViewModel() {
                     _uiState.update { it.copy(useSystemTheme = useSystem) }
                 }
             }
+            viewModelScope.launch {
+                themeManager?.readerFontFamily?.collect { fontFamily ->
+                    _uiState.update { it.copy(readerFontFamily = fontFamily) }
+                }
+            }
         }
     }
 
@@ -67,5 +73,9 @@ open class ThemeViewModel : ViewModel() {
 
     fun setUseSystemTheme(enabled: Boolean) {
         themeManager?.setUseSystemTheme(enabled)
+    }
+
+    fun setReaderFontFamily(fontFamily: String) {
+        themeManager?.setReaderFontFamily(fontFamily)
     }
 }

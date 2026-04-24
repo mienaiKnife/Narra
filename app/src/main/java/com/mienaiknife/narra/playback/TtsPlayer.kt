@@ -47,6 +47,7 @@ import androidx.media3.common.text.CueGroup
 import androidx.media3.common.util.Size
 import androidx.media3.common.util.UnstableApi
 import com.mienaiknife.narra.domain.TtsEngine
+import java.util.concurrent.CopyOnWriteArrayList
 import com.mienaiknife.narra.domain.TtsState
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
@@ -75,7 +76,7 @@ class TtsPlayer @Inject constructor(
     val engineState: kotlinx.coroutines.flow.StateFlow<TtsState> = ttsEngine.state
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
-    private val listeners = mutableListOf<Player.Listener>()
+    private val listeners = CopyOnWriteArrayList<Player.Listener>()
     private val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
     
     private var _playWhenReady = false
@@ -213,6 +214,9 @@ class TtsPlayer @Inject constructor(
 
     private fun resumeInternal() {
         if (currentParagraphIndex >= 0 && paragraphs.isNotEmpty()) {
+            // Force STATE_READY if we have content, even if the engine is still initializing.
+            // This is essential for Media3 to enter foreground correctly.
+            updatePlaybackState(STATE_READY)
             val index = currentParagraphIndex.coerceAtLeast(0)
             resumeWordOffset = currentWordRange?.first ?: 0
             speakCurrentFrom(index, resumeWordOffset)
@@ -258,7 +262,11 @@ class TtsPlayer @Inject constructor(
                 }
                 is TtsState.Speaking -> {
                     isEngineSpeaking = true
-                    updatePlaybackState(STATE_READY)
+                    // Ensure we transition to STATE_READY first if we were buffering/idle
+                    // to ensure MediaSession handles foreground transition correctly.
+                    if (_playbackState != STATE_READY) {
+                        updatePlaybackState(STATE_READY)
+                    }
                     val index = state.utteranceId.toIntOrNull()
                     if (index != null) {
                         if (index != currentParagraphIndex) {
@@ -286,7 +294,11 @@ class TtsPlayer @Inject constructor(
                     }
                 }
                 is TtsState.Initializing -> {
-                    updatePlaybackState(STATE_BUFFERING)
+                    // We stay in current state if we are already READY to avoid
+                    // dropping out of foreground during model switches.
+                    if (_playbackState != STATE_READY) {
+                        updatePlaybackState(STATE_BUFFERING)
+                    }
                 }
                 is TtsState.Error -> {
                     _playerError = PlaybackException(
@@ -394,10 +406,17 @@ class TtsPlayer @Inject constructor(
     override fun removeMediaItems(fromIndex: Int, toIndex: Int) {}
 
     override fun prepare() {
-        if (ttsEngine.state.value is TtsState.Initializing) {
-            updatePlaybackState(STATE_BUFFERING)
+        // If we have content, we should transition to READY or BUFFERING immediately
+        // to signal to the MediaSession that we are an active player.
+        if (paragraphs.isNotEmpty()) {
+            if (ttsEngine.state.value is TtsState.Initializing) {
+                updatePlaybackState(STATE_BUFFERING)
+            } else {
+                updatePlaybackState(STATE_READY)
+            }
         } else {
-            updatePlaybackState(STATE_READY)
+            // Wait for content
+            updatePlaybackState(STATE_BUFFERING)
         }
     }
 
@@ -625,6 +644,10 @@ class TtsPlayer @Inject constructor(
             COMMAND_GET_CURRENT_MEDIA_ITEM,
             COMMAND_GET_METADATA,
             COMMAND_GET_TIMELINE,
+            COMMAND_GET_AUDIO_ATTRIBUTES,
+            COMMAND_GET_TRACKS,
+            COMMAND_GET_DEVICE_VOLUME,
+            COMMAND_GET_VOLUME,
             COMMAND_SEEK_TO_NEXT,
             COMMAND_SEEK_TO_PREVIOUS,
             COMMAND_SEEK_TO_NEXT_MEDIA_ITEM,
@@ -659,6 +682,27 @@ class TtsPlayer @Inject constructor(
 
     // Navigation
     override fun seekTo(mediaItemIndex: Int, positionMs: Long, seekCommand: Int, isAutoSeek: Boolean) {
+        when (seekCommand) {
+            COMMAND_SEEK_TO_NEXT, COMMAND_SEEK_TO_NEXT_MEDIA_ITEM -> {
+                onSkipNext?.invoke()
+                return
+            }
+            COMMAND_SEEK_TO_PREVIOUS, COMMAND_SEEK_TO_PREVIOUS_MEDIA_ITEM -> {
+                onSkipPrevious?.invoke()
+                return
+            }
+            COMMAND_SEEK_FORWARD -> {
+                val nextPos = currentPosition + _seekForwardIncrement
+                seekTo(nextPos)
+                return
+            }
+            COMMAND_SEEK_BACK -> {
+                val nextPos = (currentPosition - _seekBackIncrement).coerceAtLeast(0)
+                seekTo(nextPos)
+                return
+            }
+        }
+
         val index = (positionMs / 1000).toInt()
         val remainder = positionMs % 1000
         if (index in paragraphs.indices) {
@@ -677,11 +721,11 @@ class TtsPlayer @Inject constructor(
     
     // Internal handlers for navigation commands
     fun seekToNextInternal() {
-        onSkipNext?.invoke()
+        seekToNext()
     }
 
     fun seekToPreviousInternal() {
-        onSkipPrevious?.invoke()
+        seekToPrevious()
     }
 
     fun seekToParagraph(index: Int) {

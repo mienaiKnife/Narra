@@ -17,6 +17,7 @@
 package com.mienaiknife.narra.ui.screens
 
 import android.content.res.Configuration
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
@@ -67,13 +68,17 @@ fun DownloadsSettingsScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
+    uiState.message?.let {
+        Toast.makeText(context, it, Toast.LENGTH_SHORT).show()
+        viewModel.clearMessage()
+    }
+
     val importLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
     ) { uri ->
         uri?.let {
-            context.contentResolver.openInputStream(it)?.use { inputStream ->
-                viewModel.importOpml(inputStream)
-            }
+            val inputStream = context.contentResolver.openInputStream(it)
+            viewModel.importOpml(inputStream)
         }
     }
 
@@ -81,9 +86,8 @@ fun DownloadsSettingsScreen(
         contract = ActivityResultContracts.CreateDocument("application/xml")
     ) { uri ->
         uri?.let {
-            context.contentResolver.openOutputStream(it)?.use { outputStream ->
-                viewModel.exportOpml(outputStream)
-            }
+            val outputStream = context.contentResolver.openOutputStream(it)
+            viewModel.exportOpml(outputStream)
         }
     }
 
@@ -91,9 +95,8 @@ fun DownloadsSettingsScreen(
         contract = ActivityResultContracts.CreateDocument("application/octet-stream")
     ) { uri ->
         uri?.let {
-            context.contentResolver.openOutputStream(it)?.use { outputStream ->
-                viewModel.backupDatabase(outputStream)
-            }
+            val outputStream = context.contentResolver.openOutputStream(it)
+            viewModel.backupDatabase(outputStream)
         }
     }
 
@@ -101,9 +104,8 @@ fun DownloadsSettingsScreen(
         contract = ActivityResultContracts.OpenDocument()
     ) { uri ->
         uri?.let {
-            context.contentResolver.openInputStream(it)?.use { inputStream ->
-                viewModel.restoreDatabase(inputStream)
-            }
+            val inputStream = context.contentResolver.openInputStream(it)
+            viewModel.restoreDatabase(inputStream)
         }
     }
 

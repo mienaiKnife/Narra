@@ -21,9 +21,10 @@ import androidx.lifecycle.viewModelScope
 import com.mienaiknife.narra.data.settings.DownloadSettingsManager
 import com.mienaiknife.narra.domain.repository.ContentRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.io.InputStream
@@ -36,13 +37,18 @@ class DownloadsSettingsViewModel @Inject constructor(
     private val contentRepository: ContentRepository
 ) : ViewModel() {
 
-    val uiState: StateFlow<DownloadsSettingsUiState> = downloadSettingsManager.downloadOverWifiOnly
-        .map { DownloadsSettingsUiState(it) }
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
-            initialValue = DownloadsSettingsUiState()
-        )
+    private val _message = MutableStateFlow<String?>(null)
+
+    val uiState: StateFlow<DownloadsSettingsUiState> = combine(
+        downloadSettingsManager.downloadOverWifiOnly,
+        _message
+    ) { wifiOnly, message ->
+        DownloadsSettingsUiState(wifiOnly, message)
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = DownloadsSettingsUiState()
+    )
 
     fun setDownloadOverWifiOnly(enabled: Boolean) {
         viewModelScope.launch {
@@ -72,28 +78,64 @@ class DownloadsSettingsViewModel @Inject constructor(
     fun importOpml(inputStream: InputStream?) {
         if (inputStream == null) return
         viewModelScope.launch {
-            contentRepository.importOpml(inputStream)
+            inputStream.use {
+                contentRepository.importOpml(it)
+                    .onSuccess { count ->
+                        _message.value = "Imported $count feeds"
+                    }
+                    .onFailure { error ->
+                        _message.value = "Import failed: ${error.message}"
+                    }
+            }
         }
     }
 
     fun exportOpml(outputStream: OutputStream?) {
         if (outputStream == null) return
         viewModelScope.launch {
-            contentRepository.exportOpml(outputStream)
+            outputStream.use {
+                contentRepository.exportOpml(it)
+                    .onSuccess {
+                        _message.value = "Exported subscriptions"
+                    }
+                    .onFailure { error ->
+                        _message.value = "Export failed: ${error.message}"
+                    }
+            }
         }
     }
 
     fun backupDatabase(outputStream: OutputStream?) {
         if (outputStream == null) return
         viewModelScope.launch {
-            contentRepository.backupDatabase(outputStream)
+            outputStream.use {
+                contentRepository.backupDatabase(it)
+                    .onSuccess {
+                        _message.value = "Backup created"
+                    }
+                    .onFailure { error ->
+                        _message.value = "Backup failed: ${error.message}"
+                    }
+            }
         }
     }
 
     fun restoreDatabase(inputStream: InputStream?) {
         if (inputStream == null) return
         viewModelScope.launch {
-            contentRepository.restoreDatabase(inputStream)
+            inputStream.use {
+                contentRepository.restoreDatabase(it)
+                    .onSuccess {
+                        _message.value = "Database restored. Restart app."
+                    }
+                    .onFailure { error ->
+                        _message.value = "Restore failed: ${error.message}"
+                    }
+            }
         }
+    }
+
+    fun clearMessage() {
+        _message.value = null
     }
 }

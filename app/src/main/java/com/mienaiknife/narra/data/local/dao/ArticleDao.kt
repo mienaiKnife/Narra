@@ -21,28 +21,40 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Update
+import androidx.room.Transaction
 import com.mienaiknife.narra.data.local.entities.ArticleEntity
+import com.mienaiknife.narra.data.local.entities.ArticleWithFeed
 import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface ArticleDao {
+    @Transaction
     @Query("SELECT * FROM articles WHERE isInQueue = 1 ORDER BY queueOrder ASC, COALESCE(publishedTimestamp, createdAt) ASC")
-    fun getQueueArticles(): Flow<List<ArticleEntity>>
+    fun getQueueArticles(): Flow<List<ArticleWithFeed>>
 
+    @Transaction
     @Query("SELECT * FROM articles WHERE isInQueue = 0 AND finishedAt IS NOT NULL ORDER BY finishedAt DESC")
-    fun getHistoryArticles(): Flow<List<ArticleEntity>>
+    fun getHistoryArticles(): Flow<List<ArticleWithFeed>>
 
+    @Transaction
     @Query("SELECT * FROM articles ORDER BY COALESCE(publishedTimestamp, createdAt) DESC")
-    fun getAllArticles(): Flow<List<ArticleEntity>>
+    fun getAllArticles(): Flow<List<ArticleWithFeed>>
 
+    @Transaction
     @Query("SELECT * FROM articles WHERE isFromFeed = 1 AND isInQueue = 0 ORDER BY COALESCE(publishedTimestamp, createdAt) DESC")
-    fun getInboxArticles(): Flow<List<ArticleEntity>>
+    fun getInboxArticles(): Flow<List<ArticleWithFeed>>
 
+    @Transaction
     @Query("SELECT * FROM articles WHERE isFavorite = 1 ORDER BY createdAt DESC")
-    fun getFavoriteArticles(): Flow<List<ArticleEntity>>
+    fun getFavoriteArticles(): Flow<List<ArticleWithFeed>>
 
+    @Transaction
     @Query("SELECT * FROM articles WHERE source = :source ORDER BY COALESCE(publishedTimestamp, createdAt) DESC")
-    fun getArticlesBySource(source: String): Flow<List<ArticleEntity>>
+    fun getArticlesBySource(source: String): Flow<List<ArticleWithFeed>>
+
+    @Transaction
+    @Query("SELECT * FROM articles WHERE id = :id")
+    suspend fun getArticleWithFeedById(id: String): ArticleWithFeed?
 
     @Query("SELECT * FROM articles WHERE id = :id")
     suspend fun getArticleById(id: String): ArticleEntity?
@@ -97,4 +109,7 @@ interface ArticleDao {
 
     @Query("DELETE FROM articles WHERE source = :source AND isFromFeed = 1 AND isInQueue = 0")
     suspend fun deleteArticlesBySourceFromInbox(source: String)
+
+    @Query("UPDATE articles SET duration = :duration WHERE id = :id")
+    suspend fun updateArticleDuration(id: String, duration: Long)
 }

@@ -78,6 +78,13 @@ class QueueViewModel @Inject constructor(
         } else {
             articles
         }
+
+        val totalRemainingTimeMs = sortedArticles.sumOf { article ->
+            val duration = article.duration ?: 0L
+            val progress = article.progress ?: 0f
+            (duration * (1f - progress)).toLong()
+        }
+
         QueueUiState(
             articles = sortedArticles,
             isRefreshing = isRefreshing,
@@ -85,7 +92,8 @@ class QueueViewModel @Inject constructor(
             keepSorted = keep,
             currentArticle = currentArticle,
             isPlaying = isPlaying,
-            downloadingArticleIds = downloadingIds
+            downloadingArticleIds = downloadingIds,
+            totalRemainingTimeMs = totalRemainingTimeMs
         )
     }.stateIn(
         scope = viewModelScope,

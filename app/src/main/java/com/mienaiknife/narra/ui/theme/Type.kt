@@ -18,9 +18,23 @@ package com.mienaiknife.narra.ui.theme
 
 import androidx.compose.material3.Typography
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
+import com.mienaiknife.narra.R
+
+val OpenDyslexic3 = FontFamily(
+    Font(R.font.opendyslexic3_regular, FontWeight.Normal),
+    Font(R.font.opendyslexic3_bold, FontWeight.Bold)
+)
+
+fun getFontFamily(name: String): FontFamily {
+    return when (name) {
+        "OpenDyslexic3" -> OpenDyslexic3
+        else -> FontFamily.Default
+    }
+}
 
 // Set of Material typography styles to start with
 val Typography = Typography(

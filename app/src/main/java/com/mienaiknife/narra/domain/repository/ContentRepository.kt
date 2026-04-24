@@ -45,7 +45,7 @@ interface ContentRepository {
     suspend fun markAsFinished(id: String)
     suspend fun markAsPlayed(id: String)
     suspend fun markAsUnplayed(id: String)
-    suspend fun updateArticleProgress(id: String, progress: Float, paragraphIndex: Int, wordOffset: Int)
+    suspend fun updateArticleProgress(id: String, progress: Float, paragraphIndex: Int, wordOffset: Int, duration: Long? = null)
     suspend fun toggleFavorite(id: String)
     suspend fun deleteAllMetadata()
     suspend fun deleteAllFeeds()

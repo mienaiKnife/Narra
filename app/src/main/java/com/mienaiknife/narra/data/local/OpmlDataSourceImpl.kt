@@ -16,40 +16,46 @@
 
 package com.mienaiknife.narra.data.local
 
-import android.util.Xml
 import com.mienaiknife.narra.data.local.entities.FeedEntity
-import org.xmlpull.v1.XmlPullParser
+import org.w3c.dom.Element
 import java.io.InputStream
 import java.io.OutputStream
 import javax.inject.Inject
+import javax.xml.parsers.DocumentBuilderFactory
+import javax.xml.transform.OutputKeys
+import javax.xml.transform.TransformerFactory
+import javax.xml.transform.dom.DOMSource
+import javax.xml.transform.stream.StreamResult
 
 class OpmlDataSourceImpl @Inject constructor() : OpmlDataSource {
 
     override suspend fun parseOpml(inputStream: InputStream): Result<List<FeedEntity>> {
         return try {
             val feeds = mutableListOf<FeedEntity>()
-            val parser = Xml.newPullParser()
-            parser.setFeature(XmlPullParser.FEATURE_PROCESS_NAMESPACES, false)
-            parser.setInput(inputStream, null)
-
-            var eventType = parser.eventType
-            while (eventType != XmlPullParser.END_DOCUMENT) {
-                if (eventType == XmlPullParser.START_TAG && parser.name == "outline") {
-                    val xmlUrl = parser.getAttributeValue(null, "xmlUrl")
-                    val title = parser.getAttributeValue(null, "title") 
-                        ?: parser.getAttributeValue(null, "text")
-                        ?: "Untitled"
-                    
-                    if (xmlUrl != null) {
-                        feeds.add(
-                            FeedEntity(
-                                url = xmlUrl,
-                                title = title
-                            )
-                        )
-                    }
+            val factory = DocumentBuilderFactory.newInstance()
+            val builder = factory.newDocumentBuilder()
+            val doc = builder.parse(inputStream)
+            
+            val outlines = doc.getElementsByTagName("outline")
+            for (i in 0 until outlines.length) {
+                val node = outlines.item(i) as Element
+                val xmlUrl = node.getAttribute("xmlUrl")
+                val title = if (node.hasAttribute("title")) {
+                    node.getAttribute("title")
+                } else if (node.hasAttribute("text")) {
+                    node.getAttribute("text")
+                } else {
+                    "Untitled"
                 }
-                eventType = parser.next()
+                
+                if (xmlUrl.isNotEmpty()) {
+                    feeds.add(
+                        FeedEntity(
+                            url = xmlUrl,
+                            title = title
+                        )
+                    )
+                }
             }
             Result.success(feeds)
         } catch (e: Exception) {
@@ -59,33 +65,41 @@ class OpmlDataSourceImpl @Inject constructor() : OpmlDataSource {
 
     override suspend fun generateOpml(outputStream: OutputStream, feeds: List<FeedEntity>): Result<Unit> {
         return try {
-            val serializer = Xml.newSerializer()
-            serializer.setOutput(outputStream, "UTF-8")
-            serializer.startDocument("UTF-8", true)
-            serializer.setFeature("http://xmlpull.org/v1/doc/features.html#indent-output", true)
+            val factory = DocumentBuilderFactory.newInstance()
+            val builder = factory.newDocumentBuilder()
+            val doc = builder.newDocument()
             
-            serializer.startTag(null, "opml")
-            serializer.attribute(null, "version", "2.0")
+            val opml = doc.createElement("opml")
+            opml.setAttribute("version", "2.0")
+            doc.appendChild(opml)
             
-            serializer.startTag(null, "head")
-            serializer.startTag(null, "title")
-            serializer.text("Narra Subscriptions")
-            serializer.endTag(null, "title")
-            serializer.endTag(null, "head")
+            val head = doc.createElement("head")
+            val title = doc.createElement("title")
+            title.appendChild(doc.createTextNode("Narra Subscriptions"))
+            head.appendChild(title)
+            opml.appendChild(head)
             
-            serializer.startTag(null, "body")
+            val body = doc.createElement("body")
             for (feed in feeds) {
-                serializer.startTag(null, "outline")
-                serializer.attribute(null, "type", "rss")
-                serializer.attribute(null, "text", feed.title)
-                serializer.attribute(null, "title", feed.title)
-                serializer.attribute(null, "xmlUrl", feed.url)
-                serializer.endTag(null, "outline")
+                val outline = doc.createElement("outline")
+                outline.setAttribute("type", "rss")
+                outline.setAttribute("text", feed.title)
+                outline.setAttribute("title", feed.title)
+                outline.setAttribute("xmlUrl", feed.url)
+                body.appendChild(outline)
             }
-            serializer.endTag(null, "body")
+            opml.appendChild(body)
             
-            serializer.endTag(null, "opml")
-            serializer.endDocument()
+            val transformerFactory = TransformerFactory.newInstance()
+            val transformer = transformerFactory.newTransformer()
+            transformer.setOutputProperty(OutputKeys.INDENT, "yes")
+            transformer.setOutputProperty(OutputKeys.ENCODING, "UTF-8")
+            transformer.setOutputProperty("{http://xml.apache.org/xslt}indent-amount", "4")
+            
+            val source = DOMSource(doc)
+            val result = StreamResult(outputStream)
+            transformer.transform(source, result)
+
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)

@@ -35,14 +35,17 @@ class ThemeManager(private val context: Context, private val scope: CoroutineSco
     private val darkModeKey = booleanPreferencesKey("dark_mode")
     private val dynamicColorKey = booleanPreferencesKey("dynamic_color")
     private val useSystemThemeKey = booleanPreferencesKey("use_system_theme")
+    private val readerFontFamilyKey = androidx.datastore.preferences.core.stringPreferencesKey("reader_font_family")
 
     private val _isDarkMode = MutableStateFlow(true)
     private val _isDynamicColor = MutableStateFlow(true)
     private val _useSystemTheme = MutableStateFlow(true)
+    private val _readerFontFamily = MutableStateFlow("Roboto")
 
     val isDarkMode: StateFlow<Boolean> = _isDarkMode.asStateFlow()
     val isDynamicColor: StateFlow<Boolean> = _isDynamicColor.asStateFlow()
     val useSystemTheme: StateFlow<Boolean> = _useSystemTheme.asStateFlow()
+    val readerFontFamily: StateFlow<String> = _readerFontFamily.asStateFlow()
 
     init {
         scope.launch {
@@ -50,6 +53,7 @@ class ThemeManager(private val context: Context, private val scope: CoroutineSco
             _isDarkMode.value = prefs[darkModeKey] ?: true
             _isDynamicColor.value = prefs[dynamicColorKey] ?: true
             _useSystemTheme.value = prefs[useSystemThemeKey] ?: true
+            _readerFontFamily.value = prefs[readerFontFamilyKey] ?: "Roboto"
         }
     }
 
@@ -77,6 +81,15 @@ class ThemeManager(private val context: Context, private val scope: CoroutineSco
                 prefs[useSystemThemeKey] = enabled
             }
             _useSystemTheme.value = enabled
+        }
+    }
+
+    fun setReaderFontFamily(fontFamily: String) {
+        scope.launch {
+            context.dataStore.edit { prefs ->
+                prefs[readerFontFamilyKey] = fontFamily
+            }
+            _readerFontFamily.value = fontFamily
         }
     }
 }

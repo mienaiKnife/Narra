@@ -16,8 +16,10 @@
 
 package com.mienaiknife.narra.playback
 
+import androidx.core.content.ContextCompat
 import com.mienaiknife.narra.R
 import android.content.Context
+import android.content.Intent
 import android.media.MediaPlayer
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
@@ -27,6 +29,7 @@ import androidx.media3.common.util.UnstableApi
 import com.mienaiknife.narra.data.models.Article
 import com.mienaiknife.narra.domain.TtsState
 import com.mienaiknife.narra.domain.repository.ContentRepository
+import com.mienaiknife.narra.service.PlaybackService
 import com.mienaiknife.narra.ui.models.ContentBlock
 import com.mienaiknife.narra.ui.utils.HtmlParser
 import com.mienaiknife.narra.ui.utils.toSpeakableText
@@ -119,7 +122,7 @@ class PlaybackManager @Inject constructor(
                 if (playbackState == Player.STATE_ENDED) {
                     scope.launch {
                         if (settingsManager.autoPlayNext.first()) {
-                            playNextArticle()
+                            playNextArticle(isAutomatic = true)
                         } else {
                             _isPlaying.value = false
                         }
@@ -163,15 +166,20 @@ class PlaybackManager @Inject constructor(
                 article.id,
                 progress,
                 if (playbackState == Player.STATE_ENDED) 0 else currentPara,
-                currentWordOffset
+                currentWordOffset,
+                duration
             )
         }
     }
 
-    fun setCurrentArticle(article: Article, blocks: List<ContentBlock>, playWhenReady: Boolean = true) {
+    fun setCurrentArticle(
+        article: Article,
+        blocks: List<ContentBlock>,
+        playWhenReady: Boolean = true,
+        isAutomatic: Boolean = false
+    ) {
         if (_currentArticle.value?.id != article.id) {
             transitionJob?.cancel()
-            val isTransition = _currentArticle.value != null
             
             _currentArticle.value = article
             scope.launch {
@@ -188,40 +196,51 @@ class PlaybackManager @Inject constructor(
                     else -> block.text.toSpeakableText()
                 }
             }
+
+            // Ensure PlaybackService is running so MediaSession is active
+            try {
+                ContextCompat.startForegroundService(context, Intent(context, PlaybackService::class.java))
+            } catch (e: Exception) {
+                android.util.Log.e("PlaybackManager", "Failed to start PlaybackService", e)
+            }
             
-            if (isTransition && playWhenReady) {
+            if (isAutomatic && playWhenReady) {
                 // Prepare TtsPlayer with the new article but don't start playing yet
                 ttsPlayer.speak(article, ttsTexts, playWhenReady = false)
 
                 transitionJob = scope.launch {
-                    // Request audio focus before playing chime and announcement
-                    ttsPlayer.requestAudioFocus()
+                    val playChimeAndTitle = settingsManager.playChimeAndTitle.first()
 
-                    playChime()
-                    // Small delay to let the chime breathe
-                    delay(300)
-                    
-                    // Announcements usually sound better at normal speed even if the article is fast
-                    val currentSpeed = _playbackSpeed.value
-                    if (currentSpeed != 1.0f) ttsPlayer.setPlaybackSpeed(1.0f)
-                    
-                    ttsPlayer.speakAnnouncement("Now playing: ${article.title}")
-                    
-                    // Wait for the announcement to start and then finish
-                    withTimeoutOrNull(5000) {
-                        // Wait for Speaking state with "announcement" ID
-                        ttsPlayer.engineState.first { 
-                            it is TtsState.Speaking && it.utteranceId == "announcement" 
+                    if (playChimeAndTitle) {
+                        // Request audio focus before playing chime and announcement
+                        ttsPlayer.requestAudioFocus()
+
+                        playChime()
+                        // Small delay to let the chime breathe
+                        delay(300)
+
+                        // Announcements usually sound better at normal speed even if the article is fast
+                        val currentSpeed = _playbackSpeed.value
+                        if (currentSpeed != 1.0f) ttsPlayer.setPlaybackSpeed(1.0f)
+
+                        ttsPlayer.speakAnnouncement("Now playing: ${article.title}")
+
+                        // Wait for the announcement to start and then finish
+                        withTimeoutOrNull(5000) {
+                            // Wait for Speaking state with "announcement" ID
+                            ttsPlayer.engineState.first {
+                                it is TtsState.Speaking && it.utteranceId == "announcement"
+                            }
+                            // Then wait for it to be Ready (meaning it finished)
+                            ttsPlayer.engineState.first { it is TtsState.Ready }
                         }
-                        // Then wait for it to be Ready (meaning it finished)
-                        ttsPlayer.engineState.first { it is TtsState.Ready }
-                    }
-                    
-                    delay(500) // Brief pause after announcement
-                    
-                    // Restore speed for the actual content
-                    if (currentSpeed != 1.0f) {
-                        ttsPlayer.setPlaybackSpeed(currentSpeed)
+
+                        delay(500) // Brief pause after announcement
+
+                        // Restore speed for the actual content
+                        if (currentSpeed != 1.0f) {
+                            ttsPlayer.setPlaybackSpeed(currentSpeed)
+                        }
                     }
                     
                     // Now start the actual article content
@@ -233,7 +252,7 @@ class PlaybackManager @Inject constructor(
         }
     }
 
-    private fun playNextArticle() {
+    private fun playNextArticle(isAutomatic: Boolean = false) {
         val finishedArticle = _currentArticle.value ?: return
         scope.launch {
             // Find the next article in the queue
@@ -250,7 +269,7 @@ class PlaybackManager @Inject constructor(
             if (nextArticle != null) {
                 repository.markAsFinished(finishedArticle.id)
                 val blocks = HtmlParser.parse(nextArticle.content)
-                setCurrentArticle(nextArticle, blocks)
+                setCurrentArticle(nextArticle, blocks, isAutomatic = isAutomatic)
             } else {
                 repository.markAsFinished(finishedArticle.id)
                 _currentArticle.value = null
@@ -264,6 +283,7 @@ class PlaybackManager @Inject constructor(
             val soundName = settingsManager.chimeSound.first()
             val resId = when (soundName) {
                 "music_box_chime_positive" -> R.raw.music_box_chime_positive
+                "vibraphone_chime_positive" -> R.raw.vibraphone_chime_positive
                 else -> 0
             }
             if (resId != 0) {
@@ -301,7 +321,18 @@ class PlaybackManager @Inject constructor(
             transitionJob?.cancel()
             ttsPlayer.pause()
         } else {
-            ttsPlayer.play()
+            // Ensure PlaybackService is running when starting playback
+            try {
+                ContextCompat.startForegroundService(context, Intent(context, PlaybackService::class.java))
+            } catch (e: Exception) {
+                android.util.Log.e("PlaybackManager", "Failed to start PlaybackService", e)
+            }
+            
+            scope.launch {
+                // Small delay to ensure the service is started and connected
+                delay(100)
+                ttsPlayer.play()
+            }
         }
     }
 

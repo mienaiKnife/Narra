@@ -30,13 +30,10 @@ import com.mienaiknife.narra.data.remote.WebDataSource
 import com.mienaiknife.narra.data.settings.DownloadSettingsManager
 import com.mienaiknife.narra.domain.repository.ContentRepository
 import com.mienaiknife.narra.ui.utils.NetworkMonitor
+import com.mienaiknife.narra.utils.DateUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -57,107 +54,43 @@ class ContentRepositoryImpl(
 ) : ContentRepository {
 
     override fun getAllArticles(): Flow<List<Article>> {
-        return articleDao.getAllArticles().flatMapLatest { entities ->
-            val feedUrls = entities.filter { it.isFromFeed && it.url != null }.map { it.url!! }
-            if (feedUrls.isEmpty()) {
-                flowOf(entities.map { it.toDomainModel() })
-            } else {
-                combine(feedUrls.distinct().map { url -> flow { emit(feedDao.getFeedByUrl(url)) } }) { feeds ->
-                    entities.map { entity ->
-                        val feed = feeds.filterNotNull().find { it.url == entity.url }
-                        entity.toDomainModel(feed?.imageUrl)
-                    }
-                }
-            }
+        return articleDao.getAllArticles().map { entities ->
+            entities.map { it.toDomainModel() }
         }
     }
 
     override fun getArticlesBySource(source: String): Flow<List<Article>> {
-        return articleDao.getArticlesBySource(source).flatMapLatest { entities ->
-            val feedUrls = entities.filter { it.isFromFeed && it.url != null }.map { it.url!! }
-            if (feedUrls.isEmpty()) {
-                flowOf(entities.map { it.toDomainModel() })
-            } else {
-                combine(feedUrls.distinct().map { url -> flow { emit(feedDao.getFeedByUrl(url)) } }) { feeds ->
-                    entities.map { entity ->
-                        val feed = feeds.filterNotNull().find { it.url == entity.url }
-                        entity.toDomainModel(feed?.imageUrl)
-                    }
-                }
-            }
+        return articleDao.getArticlesBySource(source).map { entities ->
+            entities.map { it.toDomainModel() }
         }
     }
 
     override fun getQueueArticles(): Flow<List<Article>> {
-        return articleDao.getQueueArticles().flatMapLatest { entities ->
-            val feedUrls = entities.filter { it.isFromFeed && it.url != null }.map { it.url!! }
-            if (feedUrls.isEmpty()) {
-                flowOf(entities.map { it.toDomainModel() })
-            } else {
-                combine(feedUrls.distinct().map { url -> flow { emit(feedDao.getFeedByUrl(url)) } }) { feeds ->
-                    entities.map { entity ->
-                        val feed = feeds.filterNotNull().find { it.url == entity.url }
-                        entity.toDomainModel(feed?.imageUrl)
-                    }
-                }
-            }
+        return articleDao.getQueueArticles().map { entities ->
+            entities.map { it.toDomainModel() }
         }
     }
 
     override fun getHistoryArticles(): Flow<List<Article>> {
-        return articleDao.getHistoryArticles().flatMapLatest { entities ->
-            val feedUrls = entities.filter { it.isFromFeed && it.url != null }.map { it.url!! }
-            if (feedUrls.isEmpty()) {
-                flowOf(entities.map { it.toDomainModel() })
-            } else {
-                combine(feedUrls.distinct().map { url -> flow { emit(feedDao.getFeedByUrl(url)) } }) { feeds ->
-                    entities.map { entity ->
-                        val feed = feeds.filterNotNull().find { it.url == entity.url }
-                        entity.toDomainModel(feed?.imageUrl)
-                    }
-                }
-            }
+        return articleDao.getHistoryArticles().map { entities ->
+            entities.map { it.toDomainModel() }
         }
     }
 
     override fun getInboxArticles(): Flow<List<Article>> {
-        return articleDao.getInboxArticles().flatMapLatest { entities ->
-            val feedUrls = entities.filter { it.isFromFeed && it.url != null }.map { it.url!! }
-            if (feedUrls.isEmpty()) {
-                flowOf(entities.map { it.toDomainModel() })
-            } else {
-                combine(feedUrls.distinct().map { url -> flow { emit(feedDao.getFeedByUrl(url)) } }) { feeds ->
-                    entities.map { entity ->
-                        val feed = feeds.filterNotNull().find { it.url == entity.url }
-                        entity.toDomainModel(feed?.imageUrl)
-                    }
-                }
-            }
+        return articleDao.getInboxArticles().map { entities ->
+            entities.map { it.toDomainModel() }
         }
     }
 
     override fun getFavoriteArticles(): Flow<List<Article>> {
-        return articleDao.getFavoriteArticles().flatMapLatest { entities ->
-            val feedUrls = entities.filter { it.isFromFeed && it.url != null }.map { it.url!! }
-            if (feedUrls.isEmpty()) {
-                flowOf(entities.map { it.toDomainModel() })
-            } else {
-                combine(feedUrls.distinct().map { url -> flow { emit(feedDao.getFeedByUrl(url)) } }) { feeds ->
-                    entities.map { entity ->
-                        val feed = feeds.filterNotNull().find { it.url == entity.url }
-                        entity.toDomainModel(feed?.imageUrl)
-                    }
-                }
-            }
+        return articleDao.getFavoriteArticles().map { entities ->
+            entities.map { it.toDomainModel() }
         }
     }
 
     override suspend fun getArticleById(id: String): Article? {
-        val entity = articleDao.getArticleById(id) ?: return null
-        val feedImageUrl = if (entity.isFromFeed && entity.url != null) {
-            feedDao.getFeedByUrl(entity.url)?.imageUrl
-        } else null
-        return entity.toDomainModel(feedImageUrl)
+        return articleDao.getArticleWithFeedById(id)?.toDomainModel()
     }
 
     override suspend fun toggleFavorite(id: String) {
@@ -207,11 +140,13 @@ class ContentRepositoryImpl(
                 excerpt = remoteArticle.publishedAt, // Using publishedAt as excerpt if available from WebDataSource
                 imageUrl = remoteArticle.imageUrl,
                 url = url,
+                feedUrl = remoteArticle.feedUrl,
                 progress = 0f,
                 currentParagraphIndex = 0,
                 currentWordOffset = 0,
                 publishedAt = remoteArticle.publishedAt,
                 publishedTimestamp = remoteArticle.publishedTimestamp,
+                duration = DateUtils.estimateReadingTimeMs(remoteArticle.content),
                 isInQueue = true,
                 queueOrder = nextOrder,
                 createdAt = System.currentTimeMillis(),
@@ -274,7 +209,7 @@ class ContentRepositoryImpl(
         articleDao.markAsUnplayed(id)
     }
 
-    override suspend fun updateArticleProgress(id: String, progress: Float, paragraphIndex: Int, wordOffset: Int) {
+    override suspend fun updateArticleProgress(id: String, progress: Float, paragraphIndex: Int, wordOffset: Int, duration: Long?) {
         if (progress >= 1f) {
             articleDao.markAsFinished(id)
         } else {
@@ -282,7 +217,8 @@ class ContentRepositoryImpl(
                 articleDao.insertArticle(article.copy(
                     progress = progress,
                     currentParagraphIndex = paragraphIndex,
-                    currentWordOffset = wordOffset
+                    currentWordOffset = wordOffset,
+                    duration = duration ?: article.duration
                 ))
             }
         }
@@ -290,7 +226,7 @@ class ContentRepositoryImpl(
 
     override suspend fun reorderQueue(fromIndex: Int, toIndex: Int) = withContext(Dispatchers.IO) {
         val currentQueue = articleDao.getQueueArticles().map { entities ->
-            entities.sortedBy { it.queueOrder }
+            entities.map { it.article }.sortedBy { it.queueOrder }
         }.first().toMutableList()
 
         if (fromIndex !in currentQueue.indices || toIndex !in currentQueue.indices) return@withContext
@@ -307,7 +243,8 @@ class ContentRepositoryImpl(
 
     override suspend fun updateQueueOrder(articleIds: List<String>) = withContext(Dispatchers.IO) {
         val currentQueue = articleDao.getQueueArticles().first()
-        val updatedQueue = currentQueue.map { article ->
+        val updatedQueue = currentQueue.map { wrap ->
+            val article = wrap.article
             val newOrder = articleIds.indexOf(article.id)
             if (newOrder != -1) {
                 article.copy(queueOrder = newOrder)
@@ -350,6 +287,7 @@ class ContentRepositoryImpl(
                                 excerpt = article.publishedAt,
                                 imageUrl = article.imageUrl,
                                 url = article.url,
+                                feedUrl = feed.url,
                                 publishedAt = article.publishedAt,
                                 publishedTimestamp = article.publishedTimestamp,
                                 isFromFeed = true,
@@ -379,6 +317,8 @@ class ContentRepositoryImpl(
                     excerpt = article.publishedAt,
                     imageUrl = article.imageUrl,
                     url = article.url,
+                    feedUrl = null,
+                    duration = DateUtils.estimateReadingTimeMs(article.content),
                     isInQueue = true,
                     queueOrder = nextOrderBase + index,
                     createdAt = System.currentTimeMillis()

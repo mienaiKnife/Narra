@@ -105,6 +105,7 @@ class RemoteFeedDataSourceImpl @Inject constructor(
                     publishedTimestamp = DateUtils.parseToTimestamp(item.pubDate),
                     imageUrl = item.image,
                     url = url,
+                    feedUrl = feed.url,
                     isFromFeed = true,
                     isInQueue = false
                 )

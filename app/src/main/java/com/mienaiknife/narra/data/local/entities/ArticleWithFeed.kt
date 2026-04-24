@@ -14,14 +14,21 @@
  * limitations under the License.
  */
 
-package com.mienaiknife.narra.ui.viewmodels
+package com.mienaiknife.narra.data.local.entities
 
-data class PlaybackSettingsUiState(
-    val fastForwardSkipTime: String = "30s",
-    val rewindSkipTime: String = "10s",
-    val pauseOnDisconnect: Boolean = true,
-    val pauseForInterruptions: Boolean = true,
-    val autoPlayNext: Boolean = true,
-    val playChimeAndTitle: Boolean = true,
-    val chimeSound: String = "music_box_chime_positive"
+import androidx.room.Embedded
+import androidx.room.Relation
+import com.mienaiknife.narra.data.models.Article
+
+data class ArticleWithFeed(
+    @Embedded val article: ArticleEntity,
+    @Relation(
+        parentColumn = "feedUrl",
+        entityColumn = "url"
+    )
+    val feed: FeedEntity?
 )
+
+fun ArticleWithFeed.toDomainModel(): Article {
+    return article.toDomainModel(feedImageUrl = feed?.imageUrl)
+}

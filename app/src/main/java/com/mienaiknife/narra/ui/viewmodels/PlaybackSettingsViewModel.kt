@@ -38,9 +38,19 @@ class PlaybackSettingsViewModel @Inject constructor(
         settingsManager.rewindSkipTime,
         settingsManager.pauseOnDisconnect,
         settingsManager.pauseForInterruptions,
-        settingsManager.autoPlayNext
-    ) { ff, rw, pod, pfi, apn ->
-        PlaybackSettingsUiState(ff, rw, pod, pfi, apn)
+        settingsManager.autoPlayNext,
+        settingsManager.playChimeAndTitle,
+        settingsManager.chimeSound
+    ) { flows: Array<Any> ->
+        PlaybackSettingsUiState(
+            fastForwardSkipTime = flows[0] as String,
+            rewindSkipTime = flows[1] as String,
+            pauseOnDisconnect = flows[2] as Boolean,
+            pauseForInterruptions = flows[3] as Boolean,
+            autoPlayNext = flows[4] as Boolean,
+            playChimeAndTitle = flows[5] as Boolean,
+            chimeSound = flows[6] as String
+        )
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
@@ -74,6 +84,18 @@ class PlaybackSettingsViewModel @Inject constructor(
     fun setAutoPlayNext(enabled: Boolean) {
         viewModelScope.launch {
             settingsManager.setAutoPlayNext(enabled)
+        }
+    }
+
+    fun setPlayChimeAndTitle(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsManager.setPlayChimeAndTitle(enabled)
+        }
+    }
+
+    fun setChimeSound(sound: String) {
+        viewModelScope.launch {
+            settingsManager.setChimeSound(sound)
         }
     }
 }

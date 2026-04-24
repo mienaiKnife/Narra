@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material3.MaterialTheme
@@ -73,11 +74,18 @@ fun SettingsScreen(
     ) {
         Spacer(modifier = Modifier.height(16.dp))
 
-        Text(
-            text = "Settings",
-            style = MaterialTheme.typography.headlineSmall,
-            modifier = Modifier.padding(horizontal = 24.dp)
-        )
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = 48.dp)
+                .padding(horizontal = 16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "Settings",
+                style = MaterialTheme.typography.headlineSmall
+            )
+        }
 
         Spacer(modifier = Modifier.height(16.dp))
 
@@ -169,7 +177,7 @@ fun SettingsListItem(item: SettingsItem) {
         ) {
             Text(
                 text = item.title,
-                style = MaterialTheme.typography.titleMedium,
+                style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurface
             )
             Text(

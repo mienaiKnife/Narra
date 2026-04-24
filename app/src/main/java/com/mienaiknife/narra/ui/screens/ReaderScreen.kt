@@ -126,12 +126,17 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.ExperimentalMaterial3Api
+import com.mienaiknife.narra.ui.theme.ThemeViewModel
+import com.mienaiknife.narra.ui.theme.getFontFamily
+
 @Composable
 fun ReaderScreen(
     onBack: () -> Unit,
-    viewModel: ReaderViewModel = hiltViewModel()
+    viewModel: ReaderViewModel = hiltViewModel(),
+    themeViewModel: ThemeViewModel
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val themeUiState by themeViewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(Unit) {
@@ -157,6 +162,7 @@ fun ReaderScreen(
             uiState.article?.let {
                 ReaderContent(
                     uiState = uiState,
+                    readerFontFamily = getFontFamily(themeUiState.readerFontFamily),
                     onBack = onBack,
                     onTogglePlayPause = viewModel::togglePlayPause,
                     onSeekToWord = viewModel::seekToWord,
@@ -184,6 +190,7 @@ fun ReaderScreen(
 @Composable
 fun ReaderContent(
     uiState: ReaderUiState,
+    readerFontFamily: androidx.compose.ui.text.font.FontFamily,
     onBack: () -> Unit,
     onTogglePlayPause: () -> Unit,
     onSeekToWord: (Int, IntRange) -> Unit,
@@ -295,6 +302,10 @@ fun ReaderContent(
         var currentWordYIndex by remember(article.id) { mutableIntStateOf(-1) }
         val density = LocalDensity.current
         val verticalPaddingPx = with(density) { 4.dp.toPx() }
+
+        // Content padding
+        val topPadding = 105.dp
+        val bottomPadding = 220.dp
         
         // Listen for manual scroll interactions
         val isDragged by scrollState.interactionSource.collectIsDraggedAsState()
@@ -314,7 +325,8 @@ fun ReaderContent(
                 if (viewportHeight > 0) {
                     val visibleItem = layoutInfo.visibleItemsInfo.find { it.index == currentParagraphIndex }
                     
-                    // Target the exact middle of the screen (0.5)
+                    // Target the exact middle of the screen
+                    // Use total viewport height to find the center of the physical screen
                     val targetViewportY = viewportHeight * 0.5f
 
                     if (visibleItem != null && currentWordYIndex == currentParagraphIndex) {
@@ -334,11 +346,7 @@ fun ReaderContent(
                         }
                     } else {
                         // Item not visible or word position not yet measured, perform an initial jump
-                        val scrollOffset = if (currentWordYInItem > 0 && currentWordYIndex == currentParagraphIndex) {
-                            (currentWordYInItem - targetViewportY).toInt()
-                        } else {
-                            (-targetViewportY).toInt()
-                        }
+                        val scrollOffset = (currentWordYInItem - targetViewportY).toInt()
                         
                         if (isInitialScroll) {
                             scrollState.scrollToItem(currentParagraphIndex, scrollOffset)
@@ -357,8 +365,8 @@ fun ReaderContent(
             state = scrollState,
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(
-                top = 105.dp,
-                bottom = 220.dp,
+                top = topPadding,
+                bottom = bottomPadding,
                 start = 24.dp,
                 end = 24.dp
             )
@@ -433,19 +441,22 @@ fun ReaderContent(
                             2 -> MaterialTheme.typography.headlineMedium.copy(fontSize = 30.sp, lineHeight = 38.sp)
                             else -> MaterialTheme.typography.headlineSmall.copy(fontSize = 26.sp, lineHeight = 34.sp)
                         }.copy(
-                            color = MaterialTheme.colorScheme.onBackground
+                            color = MaterialTheme.colorScheme.onBackground,
+                            fontFamily = readerFontFamily
                         )
                     }
                     is ContentBlock.BlockQuote -> MaterialTheme.typography.bodyLarge.copy(
                         lineHeight = 32.sp,
                         fontSize = 20.sp,
                         fontStyle = androidx.compose.ui.text.font.FontStyle.Italic,
-                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.8f)
+                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.8f),
+                        fontFamily = readerFontFamily
                     )
                     else -> MaterialTheme.typography.bodyLarge.copy(
                         lineHeight = 32.sp,
                         fontSize = 20.sp,
-                        color = MaterialTheme.colorScheme.onBackground
+                        color = MaterialTheme.colorScheme.onBackground,
+                        fontFamily = readerFontFamily
                     )
                 }
 
@@ -1058,6 +1069,7 @@ fun ReaderScreenPreview() {
                 currentParagraphIndex = 1,
                 currentWordRange = 330..334
             ),
+            readerFontFamily = androidx.compose.ui.text.font.FontFamily.Default,
             onBack = {},
             onTogglePlayPause = {},
             onSeekToWord = { _, _ -> },

@@ -46,7 +46,7 @@ Be aware these are coming so that current architectural decisions don't block th
 - Build system: Gradle with Kotlin DSL
 
 ## Code Style & Conventions
-- Follow the official Kotlin coding conventions
+- Follow the official Kotlin coding conventions and Android best practices
 - Use coroutines and Flow for async work; avoid callbacks
 - Keep ViewModels free of Android framework dependencies where possible
 - One class per file; file name matches class name

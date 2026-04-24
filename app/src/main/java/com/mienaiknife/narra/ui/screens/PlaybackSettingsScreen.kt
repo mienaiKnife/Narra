@@ -72,6 +72,8 @@ fun PlaybackSettingsScreen(
         onPauseOnDisconnectChange = { viewModel.setPauseOnDisconnect(it) },
         onPauseForInterruptionsChange = { viewModel.setPauseForInterruptions(it) },
         onAutoPlayNextChange = { viewModel.setAutoPlayNext(it) },
+        onPlayChimeAndTitleChange = { viewModel.setPlayChimeAndTitle(it) },
+        onChimeSoundChange = { viewModel.setChimeSound(it) },
         onFastForwardTimeChange = { viewModel.setFastForwardSkipTime(it) },
         onRewindTimeChange = { viewModel.setRewindSkipTime(it) }
     )
@@ -84,6 +86,8 @@ fun PlaybackSettingsContent(
     onPauseOnDisconnectChange: (Boolean) -> Unit,
     onPauseForInterruptionsChange: (Boolean) -> Unit,
     onAutoPlayNextChange: (Boolean) -> Unit,
+    onPlayChimeAndTitleChange: (Boolean) -> Unit,
+    onChimeSoundChange: (String) -> Unit,
     onFastForwardTimeChange: (String) -> Unit,
     onRewindTimeChange: (String) -> Unit
 ) {
@@ -241,11 +245,11 @@ fun PlaybackSettingsContent(
                         .padding(end = 8.dp)
                 ) {
                     Text(
-                        text = "Autoplay next article",
+                        text = "Autoplay next text",
                         style = MaterialTheme.typography.bodyLarge
                     )
                     Text(
-                        text = "Automatically play the next article in the queue",
+                        text = "Automatically play the next text in the queue",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -261,6 +265,48 @@ fun PlaybackSettingsContent(
                     )
                 )
             }
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onPlayChimeAndTitleChange(!uiState.playChimeAndTitle) }
+                    .padding(vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(end = 8.dp)
+                ) {
+                    Text(
+                        text = "Play chime and title",
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                    Text(
+                        text = "When autoplaying the next text in the queue, start by playing a chime and the title of the text",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Switch(
+                    checked = uiState.playChimeAndTitle,
+                    onCheckedChange = onPlayChimeAndTitleChange,
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = MaterialTheme.colorScheme.primary,
+                        checkedTrackColor = MaterialTheme.colorScheme.primaryContainer,
+                        uncheckedThumbColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                        uncheckedTrackColor = MaterialTheme.colorScheme.surfaceContainer
+                    )
+                )
+            }
+
+            SettingDropDownItem(
+                title = "Chime sound",
+                subtitle = "Choose the sound to play before the title",
+                selectedValue = uiState.chimeSound,
+                options = listOf("music_box_chime_positive", "vibraphone_chime_positive"),
+                onValueChange = onChimeSoundChange
+            )
         }
     }
 }
@@ -351,6 +397,8 @@ fun PlaybackSettingsScreenPreview() {
                     onPauseOnDisconnectChange = {},
                     onPauseForInterruptionsChange = {},
                     onAutoPlayNextChange = {},
+                    onPlayChimeAndTitleChange = {},
+                    onChimeSoundChange = {},
                     onFastForwardTimeChange = {},
                     onRewindTimeChange = {}
                 )

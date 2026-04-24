@@ -83,7 +83,6 @@ import com.mienaiknife.narra.ui.components.QueueItem
 import com.mienaiknife.narra.ui.components.SortBottomSheet
 import com.mienaiknife.narra.ui.theme.NarraTheme
 import com.mienaiknife.narra.ui.viewmodels.QueueViewModel
-import com.mienaiknife.narra.utils.DateUtils
 import kotlinx.coroutines.launch
 import java.util.concurrent.TimeUnit
 
@@ -114,6 +113,7 @@ fun QueueScreen(
             isPlaying = uiState.isPlaying,
             sortOption = uiState.sortOption,
             keepSorted = uiState.keepSorted,
+            totalRemainingTimeMs = uiState.totalRemainingTimeMs,
             downloadingArticleIds = uiState.downloadingArticleIds,
             onPlayPauseClick = { article -> viewModel.onPlayPauseClick(article) },
             onMarkAsPlayedClick = { article -> viewModel.togglePlayedStatus(article) },
@@ -154,6 +154,7 @@ fun QueueScreenContent(
     isPlaying: Boolean = false,
     sortOption: SortOption = SortOption.DATE_DESC,
     keepSorted: Boolean = false,
+    totalRemainingTimeMs: Long = 0L,
     downloadingArticleIds: Set<String> = emptySet(),
     onPlayPauseClick: (Article) -> Unit = {},
     onMarkAsPlayedClick: (Article) -> Unit = {},
@@ -171,14 +172,6 @@ fun QueueScreenContent(
 
     var draggedItemIndex by remember { mutableIntStateOf(-1) }
     var draggingOffset by remember { mutableFloatStateOf(0f) }
-
-    val totalRemainingTimeMs = remember(articles) {
-        articles.sumOf { article ->
-            val totalDuration = DateUtils.estimateReadingTimeMs(article.content)
-            val progress = article.progress ?: 0f
-            (totalDuration * (1f - progress)).toLong()
-        }
-    }
 
     val totalHours = TimeUnit.MILLISECONDS.toHours(totalRemainingTimeMs)
     val totalMinutes = TimeUnit.MILLISECONDS.toMinutes(totalRemainingTimeMs) % 60

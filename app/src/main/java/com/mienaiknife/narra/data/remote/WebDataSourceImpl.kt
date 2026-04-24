@@ -55,6 +55,8 @@ class WebDataSourceImpl @Inject constructor() : WebDataSource {
                 publishedTimestamp = DateUtils.parseToTimestamp(publishedAt),
                 imageUrl = imageUrl,
                 url = url,
+                feedUrl = null,
+                duration = DateUtils.estimateReadingTimeMs(parsedArticle.content),
                 isInQueue = true
             )
 

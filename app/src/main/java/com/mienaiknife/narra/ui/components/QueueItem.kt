@@ -222,7 +222,7 @@ private fun QueueItemRow(
                     overflow = TextOverflow.Ellipsis
                 )
 
-                val totalDuration = remember(article.content) { DateUtils.estimateReadingTimeMs(article.content) }
+                val totalDuration = article.duration ?: remember(article.content) { DateUtils.estimateReadingTimeMs(article.content) }
                 val progress = article.progress ?: 0f
                 val currentPosition = (progress * totalDuration).toLong()
                 val remainingTime = totalDuration - currentPosition

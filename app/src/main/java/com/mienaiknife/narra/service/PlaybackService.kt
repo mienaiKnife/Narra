@@ -16,13 +16,20 @@
 
 package com.mienaiknife.narra.service
 
+import android.app.NotificationChannel
+import android.app.NotificationManager
 import android.app.PendingIntent
+import android.content.Context
 import android.content.Intent
+import android.os.Build
 import androidx.annotation.OptIn
+import androidx.core.app.NotificationCompat
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
+import androidx.media3.session.DefaultMediaNotificationProvider
+import androidx.media3.session.MediaNotification
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
 import com.mienaiknife.narra.MainActivity
@@ -38,9 +45,16 @@ class PlaybackService : MediaSessionService() {
     lateinit var ttsPlayer: TtsPlayer
 
     private var mediaSession: MediaSession? = null
+    private lateinit var notificationProvider: MediaNotification.Provider
+
+    companion object {
+        private const val NOTIFICATION_ID = 1001
+        private const val CHANNEL_ID = "playback_channel"
+    }
 
     override fun onCreate() {
         super.onCreate()
+        createNotificationChannel()
         
         // Initialize TtsPlayer with speech-specific audio attributes
         val audioAttributes = AudioAttributes.Builder()
@@ -57,52 +71,79 @@ class PlaybackService : MediaSessionService() {
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
 
+        notificationProvider = DefaultMediaNotificationProvider.Builder(this)
+            .build()
+        setMediaNotificationProvider(notificationProvider)
+
         mediaSession = MediaSession.Builder(this, ttsPlayer)
             .setSessionActivity(pendingIntent)
             .setCallback(object : MediaSession.Callback {
-                @Deprecated("Use onConnect to configure available commands")
-                @Suppress("DEPRECATION")
-                override fun onPlayerCommandRequest(
+                override fun onConnect(
                     session: MediaSession,
-                    controller: MediaSession.ControllerInfo,
-                    playerCommand: Int
-                ): Int {
-                    when (playerCommand) {
-                        Player.COMMAND_SEEK_TO_NEXT,
-                        Player.COMMAND_SEEK_TO_NEXT_MEDIA_ITEM -> {
-                            ttsPlayer.seekToNextInternal()
-                        }
-                        Player.COMMAND_SEEK_TO_PREVIOUS,
-                        Player.COMMAND_SEEK_TO_PREVIOUS_MEDIA_ITEM -> {
-                            ttsPlayer.seekToPreviousInternal()
-                        }
-                        Player.COMMAND_SEEK_FORWARD -> {
-                            ttsPlayer.seekForward()
-                        }
-                        Player.COMMAND_SEEK_BACK -> {
-                            ttsPlayer.seekBack()
-                        }
-                    }
-                    return super.onPlayerCommandRequest(session, controller, playerCommand)
+                    controller: MediaSession.ControllerInfo
+                ): MediaSession.ConnectionResult {
+                    val sessionCommands = MediaSession.ConnectionResult.DEFAULT_SESSION_COMMANDS.buildUpon()
+                        .build()
+                    
+                    return MediaSession.ConnectionResult.AcceptedResultBuilder(session)
+                        .setAvailableSessionCommands(sessionCommands)
+                        .setAvailablePlayerCommands(session.player.availableCommands)
+                        .build()
                 }
             })
             .build()
+    }
+
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        // Immediately call startForeground to satisfy the OS and avoid ForegroundServiceDidNotStartInTimeException.
+        // We use a simple placeholder notification until Media3's onUpdateNotification takes over.
+        val notification = NotificationCompat.Builder(this, CHANNEL_ID)
+            .setSmallIcon(androidx.media3.session.R.drawable.media3_notification_small_icon)
+            .setContentTitle("Narra")
+            .setContentText("Preparing playback...")
+            .setPriority(NotificationCompat.PRIORITY_LOW)
+            .setOngoing(true)
+            .build()
+        
+        startForeground(NOTIFICATION_ID, notification)
+
+        val result = super.onStartCommand(intent, flags, startId)
+        
+        // Signal Media3 to update the notification as soon as possible
+        mediaSession?.let { onUpdateNotification(it, true) }
+        
+        return result
+    }
+
+    private fun createNotificationChannel() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channel = NotificationChannel(
+                CHANNEL_ID,
+                "Playback",
+                NotificationManager.IMPORTANCE_LOW
+            )
+            val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            manager.createNotificationChannel(channel)
+        }
     }
 
     override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession? {
         return mediaSession
     }
 
+    override fun onUpdateNotification(session: MediaSession, startInForegroundRequired: Boolean) {
+        super.onUpdateNotification(session, startInForegroundRequired)
+    }
+
     override fun onTaskRemoved(rootIntent: Intent?) {
         val player = mediaSession?.player
-        if (player == null || !player.playWhenReady || player.playbackState == Player.STATE_IDLE || player.playbackState == Player.STATE_ENDED) {
+        if (player == null || (!player.playWhenReady || player.playbackState == Player.STATE_IDLE || player.playbackState == Player.STATE_ENDED)) {
             stopSelf()
         }
     }
 
     override fun onDestroy() {
         mediaSession?.run {
-            player.release()
             release()
             mediaSession = null
         }

@@ -17,5 +17,6 @@
 package com.mienaiknife.narra.ui.viewmodels
 
 data class DownloadsSettingsUiState(
-    val downloadOverWifiOnly: Boolean = true
+    val downloadOverWifiOnly: Boolean = true,
+    val message: String? = null
 )

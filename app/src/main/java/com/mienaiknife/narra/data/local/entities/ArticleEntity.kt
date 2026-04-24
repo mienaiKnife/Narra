@@ -38,6 +38,8 @@ data class ArticleEntity(
     val queueOrder: Int = 0,
     val publishedAt: String? = null,
     val publishedTimestamp: Long? = null,
+    val feedUrl: String? = null,
+    val duration: Long? = null,
     val finishedAt: Long? = null,
     val createdAt: Long = System.currentTimeMillis()
 )
@@ -52,6 +54,7 @@ fun ArticleEntity.toDomainModel(feedImageUrl: String? = null): Article {
         imageUrl = imageUrl,
         feedImageUrl = feedImageUrl,
         url = url,
+        feedUrl = feedUrl,
         progress = progress,
         currentParagraphIndex = currentParagraphIndex,
         currentWordOffset = currentWordOffset,
@@ -59,6 +62,7 @@ fun ArticleEntity.toDomainModel(feedImageUrl: String? = null): Article {
         isFromFeed = isFromFeed,
         isInQueue = isInQueue,
         queueOrder = queueOrder,
-        publishedTimestamp = publishedTimestamp
+        publishedTimestamp = publishedTimestamp,
+        duration = duration
     )
 }

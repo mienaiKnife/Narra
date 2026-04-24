@@ -171,7 +171,8 @@ fun AppNavigation(themeViewModel: ThemeViewModel) {
                 }
             ) {
                 ReaderScreen(
-                    onBack = { navController.popBackStack() }
+                    onBack = { navController.popBackStack() },
+                    themeViewModel = themeViewModel
                 )
             }
         }

@@ -36,6 +36,7 @@ class PlaybackSettingsManager @Inject constructor(
     private val pauseOnDisconnectKey = androidx.datastore.preferences.core.booleanPreferencesKey("pause_on_disconnect")
     private val pauseForInterruptionsKey = androidx.datastore.preferences.core.booleanPreferencesKey("pause_for_interruptions")
     private val autoPlayNextKey = androidx.datastore.preferences.core.booleanPreferencesKey("auto_play_next")
+    private val playChimeAndTitleKey = androidx.datastore.preferences.core.booleanPreferencesKey("play_chime_and_title")
     private val lastArticleIdKey = stringPreferencesKey("last_article_id")
     private val ttsEngineKey = stringPreferencesKey("tts_engine")
     private val ttsModelIdKey = stringPreferencesKey("tts_model_id")
@@ -66,6 +67,10 @@ class PlaybackSettingsManager @Inject constructor(
 
     val autoPlayNext: Flow<Boolean> = context.dataStore.data.map { prefs ->
         prefs[autoPlayNextKey] ?: true
+    }
+
+    val playChimeAndTitle: Flow<Boolean> = context.dataStore.data.map { prefs ->
+        prefs[playChimeAndTitleKey] ?: true
     }
 
     val lastArticleId: Flow<String?> = context.dataStore.data.map { prefs ->
@@ -123,6 +128,18 @@ class PlaybackSettingsManager @Inject constructor(
     suspend fun setAutoPlayNext(enabled: Boolean) {
         context.dataStore.edit { prefs ->
             prefs[autoPlayNextKey] = enabled
+        }
+    }
+
+    suspend fun setChimeSound(sound: String) {
+        context.dataStore.edit { prefs ->
+            prefs[chimeSoundKey] = sound
+        }
+    }
+
+    suspend fun setPlayChimeAndTitle(enabled: Boolean) {
+        context.dataStore.edit { prefs ->
+            prefs[playChimeAndTitleKey] = enabled
         }
     }
 

@@ -250,87 +250,6 @@ fun VoicesSettingsContent(
                         activeTrackColor = MaterialTheme.colorScheme.primary,
                         inactiveTrackColor = MaterialTheme.colorScheme.primaryContainer,
                     )
-                    Text(
-                        text = "Voice data",
-                        style = MaterialTheme.typography.titleSmall,
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.padding(top = 8.dp, bottom = 8.dp)
-                    )
-
-                    Surface(
-                        color = MaterialTheme.colorScheme.surfaceContainer,
-                        shape = MaterialTheme.shapes.medium,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Column {
-                            uiState.availableModels.forEachIndexed { index, model ->
-                                TtsModelItem(
-                                    model = model,
-                                    isSelected = uiState.selectedModelId == model.id,
-                                    onSelect = { if (!isInitializing) onSelectModel(model.id) },
-                                    onDownload = { onDownloadModel(model.id) },
-                                    onDelete = { onDeleteModel(model.id) },
-                                    containerColor = Color.Transparent,
-                                    enabled = !isInitializing
-                                )
-                                if (index < uiState.availableModels.lastIndex) {
-                                    HorizontalDivider(
-                                        modifier = Modifier.padding(horizontal = 16.dp),
-                                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                                    )
-                                }
-                            }
-                        }
-                    }
-
-                    val selectedModel = uiState.availableModels.find { it.id == uiState.selectedModelId }
-                    if (selectedModel?.type == TtsModelType.KOKORO) {
-                        Spacer(modifier = Modifier.height(24.dp))
-
-                        Text(
-                            text = "Kokoro Voice",
-                            style = MaterialTheme.typography.titleSmall,
-                            color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.padding(vertical = 8.dp)
-                        )
-
-                        val currentVoice = kokoroVoices.find { it.second == uiState.selectedSpeakerId }?.first ?: "Unknown"
-
-                        ExposedDropdownMenuBox(
-                            expanded = kokoroExpanded && !isInitializing,
-                            onExpandedChange = { if (!isInitializing) kokoroExpanded = !kokoroExpanded },
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            OutlinedTextField(
-                                value = currentVoice,
-                                onValueChange = {},
-                                readOnly = true,
-                                enabled = !isInitializing,
-                                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = kokoroExpanded) },
-                                modifier = Modifier
-                                    .menuAnchor(type = ExposedDropdownMenuAnchorType.PrimaryNotEditable, enabled = !isInitializing)
-                                    .fillMaxWidth(),
-                                colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors()
-                            )
-                            ExposedDropdownMenu(
-                                expanded = kokoroExpanded,
-                                onDismissRequest = { kokoroExpanded = false }
-                            ) {
-                                kokoroVoices.forEach { (name, id) ->
-                                    DropdownMenuItem(
-                                        text = { Text(name) },
-                                        onClick = {
-                                            onSetSpeakerId(id)
-                                            kokoroExpanded = false
-                                        },
-                                        contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
-                                    )
-                                }
-                            }
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(24.dp))
 
                     Text(
                         text = "Voice settings",
@@ -383,8 +302,90 @@ fun VoicesSettingsContent(
                                 )
                             }
                         )
-                        Spacer(modifier = Modifier.height(16.dp))
                     }
+
+                    val selectedModel = uiState.availableModels.find { it.id == uiState.selectedModelId }
+                    if (selectedModel?.type == TtsModelType.KOKORO) {
+                        Spacer(modifier = Modifier.height(24.dp))
+
+                        Text(
+                            text = "Kokoro Voice",
+                            style = MaterialTheme.typography.titleSmall,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.padding(vertical = 8.dp)
+                        )
+
+                        val currentVoice = kokoroVoices.find { it.second == uiState.selectedSpeakerId }?.first ?: "Unknown"
+
+                        ExposedDropdownMenuBox(
+                            expanded = kokoroExpanded && !isInitializing,
+                            onExpandedChange = { if (!isInitializing) kokoroExpanded = !kokoroExpanded },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            OutlinedTextField(
+                                value = currentVoice,
+                                onValueChange = {},
+                                readOnly = true,
+                                enabled = !isInitializing,
+                                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = kokoroExpanded) },
+                                modifier = Modifier
+                                    .menuAnchor(type = ExposedDropdownMenuAnchorType.PrimaryNotEditable, enabled = !isInitializing)
+                                    .fillMaxWidth(),
+                                colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors()
+                            )
+                            ExposedDropdownMenu(
+                                expanded = kokoroExpanded,
+                                onDismissRequest = { kokoroExpanded = false }
+                            ) {
+                                kokoroVoices.forEach { (name, id) ->
+                                    DropdownMenuItem(
+                                        text = { Text(name) },
+                                        onClick = {
+                                            onSetSpeakerId(id)
+                                            kokoroExpanded = false
+                                        },
+                                        contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    Text(
+                        text = "Voice data",
+                        style = MaterialTheme.typography.titleSmall,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(top = 8.dp, bottom = 8.dp)
+                    )
+
+                    Surface(
+                        color = MaterialTheme.colorScheme.surfaceContainer,
+                        shape = MaterialTheme.shapes.medium,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column {
+                            uiState.availableModels.forEachIndexed { index, model ->
+                                TtsModelItem(
+                                    model = model,
+                                    isSelected = uiState.selectedModelId == model.id,
+                                    onSelect = { if (!isInitializing) onSelectModel(model.id) },
+                                    onDownload = { onDownloadModel(model.id) },
+                                    onDelete = { onDeleteModel(model.id) },
+                                    containerColor = Color.Transparent,
+                                    enabled = !isInitializing
+                                )
+                                if (index < uiState.availableModels.lastIndex) {
+                                    HorizontalDivider(
+                                        modifier = Modifier.padding(horizontal = 16.dp),
+                                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(16.dp))
                 }
             }
         }

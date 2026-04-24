@@ -18,6 +18,7 @@ package com.mienaiknife.narra.ui.screens
 
 import android.content.res.Configuration
 import android.net.Uri
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
@@ -27,17 +28,20 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.RssFeed
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
@@ -73,6 +77,7 @@ fun AddScreen(
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
     val context = LocalContext.current
+    var url by remember { mutableStateOf("") }
 
     val launcher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
@@ -92,13 +97,15 @@ fun AddScreen(
                     snackbarHostState.showSnackbar(event.message)
                 }
                 is HomeViewModel.UiEvent.ArticleAdded -> {
-                    onArticleAdded()
+                    Toast.makeText(context, "Article added successfully", Toast.LENGTH_SHORT).show()
+                    url = ""
                 }
                 is HomeViewModel.UiEvent.FeedSubscribed -> {
-                    snackbarHostState.showSnackbar("Subscribed to ${event.feedName}")
+                    Toast.makeText(context, "Subscribed to ${event.feedName}", Toast.LENGTH_SHORT).show()
+                    url = ""
                 }
                 is HomeViewModel.UiEvent.EpubImported -> {
-                    onArticleAdded()
+                    Toast.makeText(context, "EPUB imported successfully", Toast.LENGTH_SHORT).show()
                 }
             }
         }
@@ -106,8 +113,10 @@ fun AddScreen(
 
     Box(modifier = Modifier.fillMaxSize()) {
         AddScreenContent(
-            onDownloadClick = { url -> viewModel.downloadArticle(UrlUtils.cleanUrl(url)) },
-            onSubscribeClick = { url -> viewModel.subscribeToFeed(UrlUtils.cleanUrl(url)) },
+            url = url,
+            onUrlChange = { url = it },
+            onDownloadClick = { viewModel.downloadArticle(UrlUtils.cleanUrl(url)) },
+            onSubscribeClick = { viewModel.subscribeToFeed(UrlUtils.cleanUrl(url)) },
             onUploadClick = { launcher.launch("application/epub+zip") }
         )
 
@@ -120,12 +129,13 @@ fun AddScreen(
 
 @Composable
 fun AddScreenContent(
-    onDownloadClick: (String) -> Unit,
-    onSubscribeClick: (String) -> Unit,
+    url: String,
+    onUrlChange: (String) -> Unit,
+    onDownloadClick: () -> Unit,
+    onSubscribeClick: () -> Unit,
     onUploadClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    var url by remember { mutableStateOf("") }
     val focusManager = LocalFocusManager.current
 
     Column(
@@ -134,13 +144,20 @@ fun AddScreenContent(
             .statusBarsPadding(),
         horizontalAlignment = Alignment.Start
     ) {
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
-        Text(
-            text = "Add",
-            style = MaterialTheme.typography.headlineSmall,
-            modifier = Modifier.padding(horizontal = 24.dp)
-        )
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = 48.dp)
+                .padding(horizontal = 16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "Add",
+                style = MaterialTheme.typography.headlineSmall
+            )
+        }
 
         Spacer(modifier = Modifier.height(16.dp))
 
@@ -151,11 +168,21 @@ fun AddScreenContent(
         ) {
             OutlinedTextField(
                 value = url,
-                onValueChange = { url = it },
+                onValueChange = onUrlChange,
                 placeholder = { Text("Paste a URL...") },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
                 shape = RoundedCornerShape(24.dp),
+                trailingIcon = {
+                    if (url.isNotEmpty()) {
+                        IconButton(onClick = { onUrlChange("") }) {
+                            Icon(
+                                imageVector = Icons.Default.Clear,
+                                contentDescription = "Clear text"
+                            )
+                        }
+                    }
+                },
                 colors = OutlinedTextFieldDefaults.colors(
                     unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
                     focusedBorderColor = MaterialTheme.colorScheme.primary
@@ -170,7 +197,7 @@ fun AddScreenContent(
                 Button(
                     onClick = {
                         if (url.isNotBlank()) {
-                            onDownloadClick(url)
+                            onDownloadClick()
                             focusManager.clearFocus()
                         }
                     },
@@ -191,7 +218,7 @@ fun AddScreenContent(
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
                             text = "Import webpage",
-                            style = MaterialTheme.typography.labelLarge,
+                            style = MaterialTheme.typography.bodyMedium,
                             textAlign = TextAlign.Center
                         )
                     }
@@ -202,7 +229,7 @@ fun AddScreenContent(
                 Button(
                     onClick = {
                         if (url.isNotBlank()) {
-                            onSubscribeClick(url)
+                            onSubscribeClick()
                             focusManager.clearFocus()
                         }
                     },
@@ -223,7 +250,7 @@ fun AddScreenContent(
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
                             text = "Add feed",
-                            style = MaterialTheme.typography.labelLarge,
+                            style = MaterialTheme.typography.bodyMedium,
                             textAlign = TextAlign.Center
                         )
                     }
@@ -253,7 +280,7 @@ fun AddScreenContent(
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
                         text = "Upload a file",
-                        style = MaterialTheme.typography.labelLarge,
+                        style = MaterialTheme.typography.bodyMedium,
                         textAlign = TextAlign.Center
                     )
                 }
@@ -272,6 +299,8 @@ fun AddScreenPreview() {
         ) { innerPadding ->
             Box(modifier = Modifier.padding(innerPadding)) {
                 AddScreenContent(
+                    url = "",
+                    onUrlChange = {},
                     onDownloadClick = {},
                     onSubscribeClick = {},
                     onUploadClick = {}
