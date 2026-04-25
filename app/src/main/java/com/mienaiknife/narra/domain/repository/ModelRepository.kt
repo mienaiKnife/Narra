@@ -26,6 +26,12 @@ interface ModelRepository {
     fun getAvailableModels(): Flow<List<TtsModel>>
 
     /**
+     * Enqueues a model download task using WorkManager.
+     * @param modelId The ID of the model to download.
+     */
+    fun enqueueDownload(modelId: String)
+
+    /**
      * Triggers the download of a model.
      * @param modelId The ID of the model to download.
      */

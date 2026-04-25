@@ -35,7 +35,8 @@ data class TtsModelEntity(
     val sizeBytes: Long,
     val isDownloaded: Boolean,
     val progress: Float,
-    val speakerId: Int? = null
+    val speakerId: Int? = null,
+    val lastError: String? = null
 ) {
     fun toDomain() = TtsModel(
         id = id,
@@ -50,7 +51,8 @@ data class TtsModelEntity(
         sizeBytes = sizeBytes,
         isDownloaded = isDownloaded,
         progress = progress,
-        speakerId = speakerId
+        speakerId = speakerId,
+        lastError = lastError
     )
 
     private fun parseExtraUrls(json: String): Map<String, String> {
@@ -81,7 +83,8 @@ data class TtsModelEntity(
             sizeBytes = model.sizeBytes,
             isDownloaded = model.isDownloaded,
             progress = model.progress,
-            speakerId = model.speakerId
+            speakerId = model.speakerId,
+            lastError = model.lastError
         )
 
         private fun formatExtraUrls(urls: Map<String, String>): String {

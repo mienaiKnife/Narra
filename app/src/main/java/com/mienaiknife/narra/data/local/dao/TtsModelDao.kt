@@ -43,6 +43,9 @@ interface TtsModelDao {
     @Query("UPDATE tts_models SET progress = :progress WHERE id = :id")
     suspend fun updateProgress(id: String, progress: Float)
 
+    @Query("UPDATE tts_models SET lastError = :error WHERE id = :id")
+    suspend fun updateError(id: String, error: String?)
+
     @Query("DELETE FROM tts_models WHERE id = :id")
     suspend fun deleteModel(id: String)
 

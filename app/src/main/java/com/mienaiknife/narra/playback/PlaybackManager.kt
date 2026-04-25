@@ -247,7 +247,16 @@ class PlaybackManager @Inject constructor(
                     ttsPlayer.play()
                 }
             } else {
-                ttsPlayer.speak(article, ttsTexts, playWhenReady)
+                if (playWhenReady) {
+                    scope.launch {
+                        // Small delay to ensure the service is started and connected
+                        // before the player transitions to READY and triggers foreground update.
+                        delay(100)
+                        ttsPlayer.speak(article, ttsTexts, playWhenReady = true)
+                    }
+                } else {
+                    ttsPlayer.speak(article, ttsTexts, playWhenReady = false)
+                }
             }
         }
     }
@@ -412,7 +421,7 @@ class PlaybackManager @Inject constructor(
                     if (block is ContentBlock.Image) {
                         block.altText?.let { "Image: $it" } ?: ""
                     } else {
-                        block.text.toString()
+                        block.text.toSpeakableText()
                     }
                 }
                 repository.updateArticleProgress(current.id, 0f, 0, 0)

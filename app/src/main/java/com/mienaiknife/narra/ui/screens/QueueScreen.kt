@@ -68,6 +68,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
@@ -302,18 +303,20 @@ fun QueueScreenContent(
             }
         }
 
-        Text(
-            text = buildString {
-                append(articles.size)
-                append(" ")
-                append(if (articles.size == 1) "text" else "texts")
-                append(" • ")
-                append(timeLeftText)
-            },
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(horizontal = 16.dp)
-        )
+        if (articles.isNotEmpty()) {
+            Text(
+                text = buildString {
+                    append(articles.size)
+                    append(" ")
+                    append(if (articles.size == 1) "text" else "texts")
+                    append(" • ")
+                    append(timeLeftText)
+                },
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 16.dp)
+            )
+        }
 
         Spacer(modifier = Modifier.height(16.dp))
 
@@ -322,80 +325,99 @@ fun QueueScreenContent(
             onRefresh = onRefresh,
             modifier = Modifier.weight(1f)
         ) {
-            Box(modifier = Modifier.fillMaxSize()) {
-                LazyColumn(
-                    state = lazyListState,
+            if (articles.isEmpty()) {
+                Box(
                     modifier = Modifier
-                        .fillMaxSize(),
-                    verticalArrangement = Arrangement.spacedBy(24.dp),
-                    contentPadding = PaddingValues(bottom = 16.dp)
+                        .fillMaxSize()
+                        .padding(horizontal = 16.dp),
+                    contentAlignment = Alignment.Center
                 ) {
-                    itemsIndexed(
-                        items = articles,
-                        key = { _, article -> article.id }
-                    ) { index, article ->
-                        val isDragged = index == draggedItemIndex
-                        val offset = if (isDragged) IntOffset(0, draggingOffset.toInt()) else IntOffset.Zero
-                        val zIndex = if (isDragged) 1f else 0f
-
-                        QueueItem(
-                            article = article,
-                            isPlaying = isPlaying && currentArticle?.id == article.id,
-                            isDownloading = downloadingArticleIds.contains(article.id),
-                            modifier = Modifier
-                                .offset { offset }
-                                .zIndex(zIndex)
-                                .animateItem()
-                                .fillMaxWidth(),
-                            onPlayPauseClick = { onPlayPauseClick(article) },
-                            onMarkAsPlayedClick = { onMarkAsPlayedClick(article) },
-                            onRemoveClick = { onRemoveFromQueue(article) },
-                            dragModifier = Modifier.pointerInput(articles) {
-                                detectDragGestures(
-                                    onDragStart = { _ ->
-                                        draggedItemIndex = index
-                                    },
-                                    onDrag = { change, dragAmount ->
-                                        change.consume()
-                                        draggingOffset += dragAmount.y
-
-                                        val currentDraggedIndex = draggedItemIndex
-                                        if (currentDraggedIndex == -1) return@detectDragGestures
-                                        val itemHeight = lazyListState.layoutInfo.visibleItemsInfo
-                                            .firstOrNull { it.index == currentDraggedIndex }?.size ?: 0
-
-                                        if (itemHeight > 0) {
-                                            val targetIndex = when {
-                                                draggingOffset > itemHeight / 2 -> currentDraggedIndex + 1
-                                                draggingOffset < -itemHeight / 2 -> currentDraggedIndex - 1
-                                                else -> currentDraggedIndex
-                                            }
-
-                                            if (targetIndex in articles.indices && targetIndex != currentDraggedIndex) {
-                                                onReorder(currentDraggedIndex, targetIndex)
-                                                draggedItemIndex = targetIndex
-                                                draggingOffset = 0f
-                                            }
-                                        }
-                                    },
-                                    onDragEnd = {
-                                        draggedItemIndex = -1
-                                        draggingOffset = 0f
-                                    },
-                                    onDragCancel = {
-                                        draggedItemIndex = -1
-                                        draggingOffset = 0f
-                                    }
-                                )
-                            }
-                        )
-                    }
+                    Text(
+                        text = "Your queue is empty. Add some texts to get started!",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center
+                    )
                 }
+            } else {
+                Box(modifier = Modifier.fillMaxSize()) {
+                    LazyColumn(
+                        state = lazyListState,
+                        modifier = Modifier
+                            .fillMaxSize(),
+                        verticalArrangement = Arrangement.spacedBy(24.dp),
+                        contentPadding = PaddingValues(bottom = 16.dp)
+                    ) {
+                        itemsIndexed(
+                            items = articles,
+                            key = { _, article -> article.id }
+                        ) { index, article ->
+                            val isDragged = index == draggedItemIndex
+                            val offset =
+                                if (isDragged) IntOffset(0, draggingOffset.toInt()) else IntOffset.Zero
+                            val zIndex = if (isDragged) 1f else 0f
 
-                NarraScrollbar(
-                    lazyListState = lazyListState,
-                    modifier = Modifier.align(Alignment.CenterEnd)
-                )
+                            QueueItem(
+                                article = article,
+                                isPlaying = isPlaying && currentArticle?.id == article.id,
+                                isDownloading = downloadingArticleIds.contains(article.id),
+                                modifier = Modifier
+                                    .offset { offset }
+                                    .zIndex(zIndex)
+                                    .animateItem()
+                                    .fillMaxWidth(),
+                                onPlayPauseClick = { onPlayPauseClick(article) },
+                                onMarkAsPlayedClick = { onMarkAsPlayedClick(article) },
+                                onRemoveClick = { onRemoveFromQueue(article) },
+                                dragModifier = Modifier.pointerInput(articles) {
+                                    detectDragGestures(
+                                        onDragStart = { _ ->
+                                            draggedItemIndex = index
+                                        },
+                                        onDrag = { change, dragAmount ->
+                                            change.consume()
+                                            draggingOffset += dragAmount.y
+
+                                            val currentDraggedIndex = draggedItemIndex
+                                            if (currentDraggedIndex == -1) return@detectDragGestures
+                                            val itemHeight =
+                                                lazyListState.layoutInfo.visibleItemsInfo
+                                                    .firstOrNull { it.index == currentDraggedIndex }?.size
+                                                    ?: 0
+
+                                            if (itemHeight > 0) {
+                                                val targetIndex = when {
+                                                    draggingOffset > itemHeight / 2 -> currentDraggedIndex + 1
+                                                    draggingOffset < -itemHeight / 2 -> currentDraggedIndex - 1
+                                                    else -> currentDraggedIndex
+                                                }
+
+                                                if (targetIndex in articles.indices && targetIndex != currentDraggedIndex) {
+                                                    onReorder(currentDraggedIndex, targetIndex)
+                                                    draggedItemIndex = targetIndex
+                                                    draggingOffset = 0f
+                                                }
+                                            }
+                                        },
+                                        onDragEnd = {
+                                            draggedItemIndex = -1
+                                            draggingOffset = 0f
+                                        },
+                                        onDragCancel = {
+                                            draggedItemIndex = -1
+                                            draggingOffset = 0f
+                                        }
+                                    )
+                                }
+                            )
+                        }
+                    }
+
+                    NarraScrollbar(
+                        lazyListState = lazyListState,
+                        modifier = Modifier.align(Alignment.CenterEnd)
+                    )
+                }
             }
         }
     }

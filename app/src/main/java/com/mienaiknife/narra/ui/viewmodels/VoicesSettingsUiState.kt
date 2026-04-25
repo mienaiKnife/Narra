@@ -27,5 +27,6 @@ data class VoicesSettingsUiState(
     val sherpaSpeed: Float = 1.0f,
     val sherpaNoiseScale: Float = 0.667f,
     val sherpaLengthScale: Float = 1.0f,
-    val engineState: TtsState = TtsState.Idle
+    val engineState: TtsState = TtsState.Idle,
+    val errorMessage: String? = null
 )

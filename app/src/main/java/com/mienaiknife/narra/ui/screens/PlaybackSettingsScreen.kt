@@ -225,6 +225,8 @@ fun PlaybackSettingsContent(
                 onValueChange = onRewindTimeChange
             )
 
+            // TODO: Add "Fast forward hardware button" and "Rewind hardware button" settings for changing what those buttons do
+
             Text(
                 text = "Queue",
                 style = MaterialTheme.typography.titleMedium,

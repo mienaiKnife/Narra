@@ -12,13 +12,15 @@ kotlinxSerialization = "1.11.0"
 composeBom = "2026.03.01"
 navigationCompose = "2.9.7"
 dataStore = "1.2.1"
-ui = "1.10.6"
 jsoup = "1.22.1"
 readability4j = "1.0.8"
 rssparser = "6.1.5"
 room = "2.8.4"
 hilt = "2.59.2"
 hiltNavigationCompose = "1.3.0"
+hiltExt = "1.3.0"
+work = "2.11.2"
+startup = "1.2.0"
 ksp = "2.3.6"
 foundation = "1.10.6"
 desugar = "2.1.5"
@@ -52,7 +54,6 @@ androidx-compose-material3 = { group = "androidx.compose.material3", name = "mat
 androidx-compose-material-icons-extended = { group = "androidx.compose.material", name = "material-icons-extended" }
 androidx-navigation-compose = { group = "androidx.navigation", name = "navigation-compose", version.ref = "navigationCompose" }
 androidx-datastore-preferences = { group = "androidx.datastore", name = "datastore-preferences", version.ref = "dataStore" }
-androidx-ui = { group = "androidx.compose.ui", name = "ui", version.ref = "ui" }
 jsoup = { group = "org.jsoup", name = "jsoup", version.ref = "jsoup" }
 readability4j = { group = "net.dankito.readability4j", name = "readability4j", version.ref = "readability4j" }
 rssparser = { group = "com.prof18.rssparser", name = "rssparser", version.ref = "rssparser" }
@@ -73,6 +74,10 @@ epublib = { group = "com.positiondev.epublib", name = "epublib-core", version.re
 kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "kotlinxSerialization" }
 onnxruntime-android = { group = "com.microsoft.onnxruntime", name = "onnxruntime-android", version.ref = "onnxruntime" }
 commons-compress = { group = "org.apache.commons", name = "commons-compress", version.ref = "commonsCompress" }
+androidx-work-runtime-ktx = { group = "androidx.work", name = "work-runtime-ktx", version.ref = "work" }
+androidx-startup-runtime = { group = "androidx.startup", name = "startup-runtime", version.ref = "startup" }
+androidx-hilt-work = { group = "androidx.hilt", name = "hilt-work", version.ref = "hiltExt" }
+androidx-hilt-compiler = { group = "androidx.hilt", name = "hilt-compiler", version.ref = "hiltExt" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

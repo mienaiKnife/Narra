@@ -294,9 +294,12 @@ class TtsPlayer @Inject constructor(
                     }
                 }
                 is TtsState.Initializing -> {
-                    // We stay in current state if we are already READY to avoid
-                    // dropping out of foreground during model switches.
-                    if (_playbackState != STATE_READY) {
+                    // Force STATE_READY if we have content, even if the engine is still initializing.
+                    // This signals to Media3 that we are an active player and avoids staying in
+                    // BUFFERING too long, which can cause foreground service start timeouts.
+                    if (_playbackState != STATE_READY && paragraphs.isNotEmpty()) {
+                        updatePlaybackState(STATE_READY)
+                    } else if (_playbackState != STATE_READY) {
                         updatePlaybackState(STATE_BUFFERING)
                     }
                 }
@@ -406,14 +409,10 @@ class TtsPlayer @Inject constructor(
     override fun removeMediaItems(fromIndex: Int, toIndex: Int) {}
 
     override fun prepare() {
-        // If we have content, we should transition to READY or BUFFERING immediately
+        // If we have content, we should transition to READY immediately
         // to signal to the MediaSession that we are an active player.
         if (paragraphs.isNotEmpty()) {
-            if (ttsEngine.state.value is TtsState.Initializing) {
-                updatePlaybackState(STATE_BUFFERING)
-            } else {
-                updatePlaybackState(STATE_READY)
-            }
+            updatePlaybackState(STATE_READY)
         } else {
             // Wait for content
             updatePlaybackState(STATE_BUFFERING)
@@ -789,6 +788,11 @@ class TtsPlayer @Inject constructor(
             updatePlaybackState(STATE_ENDED)
             return
         }
+        
+        // Always transition to READY if we have content to speak, even if the engine
+        // is still initializing. This ensures MediaSession stays in the foreground.
+        updatePlaybackState(STATE_READY)
+
         currentParagraphIndex = article.currentParagraphIndex.coerceIn(0, paragraphs.size - 1).takeIf { paragraphs.isNotEmpty() } ?: 0
         
         // Initialize currentWordRange to the saved word offset or the first word of the resumed paragraph
@@ -818,12 +822,6 @@ class TtsPlayer @Inject constructor(
                 Player.PositionInfo(null, 0, null, 0, 0, currentParagraphIndex.toLong(), 0, 0, 0),
                 DISCONTINUITY_REASON_AUTO_TRANSITION
             )
-        }
-
-        if (ttsEngine.state.value is TtsState.Initializing) {
-            updatePlaybackState(STATE_BUFFERING)
-        } else {
-            updatePlaybackState(STATE_READY)
         }
     }
 

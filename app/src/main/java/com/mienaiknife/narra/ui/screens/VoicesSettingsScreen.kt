@@ -18,6 +18,7 @@ package com.mienaiknife.narra.ui.screens
 
 import android.content.Intent
 import android.content.res.Configuration
+import android.widget.Toast
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -85,6 +86,12 @@ fun VoicesSettingsScreen(
     viewModel: VoicesSettingsViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val context = LocalContext.current
+
+    uiState.errorMessage?.let {
+        Toast.makeText(context, it, Toast.LENGTH_LONG).show()
+        viewModel.clearErrorMessage()
+    }
 
     VoicesSettingsContent(
         uiState = uiState,
@@ -451,6 +458,14 @@ fun TtsModelItem(
                         drawStopIndicator = {}
                     )
                 }
+                if (model.lastError != null && !isDownloading) {
+                    Text(
+                        text = "Error: ${model.lastError}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.padding(top = 4.dp)
+                    )
+                }
             }
         },
         trailingContent = {
@@ -496,8 +511,8 @@ fun VoicesSettingsScreenPreview() {
         availableModels = listOf(
             TtsModel(
                 id = "vits-piper-en_US-amy-low",
-                name = "Piper Amy (English, US)",
-                language = "en-US",
+                name = "Piper Amy",
+                language = "en",
                 description = "Low quality, fast American English female voice",
                 type = TtsModelType.VITS,
                 modelUrl = "",
@@ -506,8 +521,8 @@ fun VoicesSettingsScreenPreview() {
             ),
             TtsModel(
                 id = "vits-piper-en_US-ryan-medium",
-                name = "Piper Ryan (English, US)",
-                language = "en-US",
+                name = "Piper Ryan",
+                language = "en",
                 description = "Medium quality American English male voice",
                 type = TtsModelType.VITS,
                 modelUrl = "",
@@ -516,9 +531,9 @@ fun VoicesSettingsScreenPreview() {
             ),
             TtsModel(
                 id = "matcha-en-ljspeech",
-                name = "Matcha (English)",
+                name = "Matcha Icefall",
                 language = "en",
-                description = "High quality Matcha TTS model",
+                description = "High quality American English female TTS model",
                 type = TtsModelType.MATCHA,
                 modelUrl = "",
                 tokensUrl = "",

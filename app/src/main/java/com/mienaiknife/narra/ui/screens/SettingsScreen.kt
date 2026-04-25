@@ -104,7 +104,7 @@ fun SettingsScreen(
             ),
             singleLine = true
         )
-
+        // TODO: Add an X button to the text field like the one in the Add screen
         val settingsItems = listOf(
             SettingsItem(
                 title = "User interface",

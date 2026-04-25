@@ -285,6 +285,7 @@ fun AddScreenContent(
                     )
                 }
             }
+            // TODO: Add buttons for scanning and writing articles
         }
     }
 }

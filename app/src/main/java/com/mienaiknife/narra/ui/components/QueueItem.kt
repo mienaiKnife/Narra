@@ -66,6 +66,7 @@ fun QueueItem(
             isPlaying = isPlaying,
             isDownloading = isDownloading,
             onLongClick = { showMenu = true },
+            //TODO: Show menu on regular click instead of long click
             onPlayPauseClick = {
                 if (article.isInQueue) onPlayPauseClick() else onAddToQueueClick()
             },
@@ -123,6 +124,7 @@ fun QueueItem(
                     }
                 )
             }
+            // TODO: If the article was imported from a webpage or feed, display "Visit site" button in menu which opens the article's webpage
         }
     }
 }

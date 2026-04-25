@@ -116,6 +116,8 @@ fun MiniPlayerContent(
                     }
                 }
 
+                // TODO: Make thumbnail bigger and less rounded with no padding
+
                 Spacer(modifier = Modifier.width(12.dp))
 
                 Column(modifier = Modifier.weight(1f)) {

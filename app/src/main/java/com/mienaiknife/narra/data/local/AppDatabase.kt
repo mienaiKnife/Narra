@@ -27,7 +27,7 @@ import com.mienaiknife.narra.data.local.entities.TtsModelEntity
 
 @Database(
     entities = [ArticleEntity::class, FeedEntity::class, TtsModelEntity::class],
-    version = 10,
+    version = 11,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {

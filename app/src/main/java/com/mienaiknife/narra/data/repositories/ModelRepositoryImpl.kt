@@ -17,8 +17,16 @@
 package com.mienaiknife.narra.data.repositories
 
 import android.content.Context
+import androidx.work.BackoffPolicy
+import androidx.work.Constraints
+import androidx.work.ExistingWorkPolicy
+import androidx.work.NetworkType
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkManager
+import androidx.work.workDataOf
 import com.mienaiknife.narra.data.local.dao.TtsModelDao
 import com.mienaiknife.narra.data.local.entities.TtsModelEntity
+import com.mienaiknife.narra.data.workers.DownloadWorker
 import com.mienaiknife.narra.domain.models.TtsModel
 import com.mienaiknife.narra.domain.models.TtsModelType
 import com.mienaiknife.narra.domain.repository.ModelRepository
@@ -39,12 +47,13 @@ import javax.inject.Singleton
 
 @Singleton
 class ModelRepositoryImpl @Inject constructor(
-    @param:ApplicationContext private val context: Context,
+    @ApplicationContext private val context: Context,
     private val ttsModelDao: TtsModelDao,
-    private val okHttpClient: OkHttpClient
+    private val okHttpClient: OkHttpClient,
+    private val workManager: WorkManager
 ) : ModelRepository {
 
-    private val modelsDir = File(context.filesDir, "models")
+    private val modelsDir = File(context.filesDir, "tts_models")
 
     init {
         if (!modelsDir.exists()) {
@@ -58,21 +67,18 @@ class ModelRepositoryImpl @Inject constructor(
         }
     }
 
-    /**
-     * Ensures that the default models are present in the database and updated if needed.
-     * Should be called during app startup or when entering the voices settings.
-     */
     override suspend fun ensureDefaultModelsInitialized() = withContext(Dispatchers.IO) {
-        ttsModelDao.deleteStaleKokoroModels()
-        initializeDefaultModels()
+        if (ttsModelDao.getModelCount() == 0) {
+            initializeDefaultModels()
+        }
     }
 
     private suspend fun initializeDefaultModels() {
         val defaultModels = listOf(
             TtsModel(
                 id = "vits-piper-en_US-amy-low",
-                name = "Piper Amy (English, US)",
-                language = "en-US",
+                name = "Piper Amy",
+                language = "en",
                 description = "Low quality, fast American English female voice",
                 type = TtsModelType.VITS,
                 modelUrl = "https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/vits-piper-en_US-amy-low.tar.bz2",
@@ -80,8 +86,8 @@ class ModelRepositoryImpl @Inject constructor(
             ),
             TtsModel(
                 id = "vits-piper-en_US-ryan-medium",
-                name = "Piper Ryan (English, US)",
-                language = "en-US",
+                name = "Piper Ryan",
+                language = "en",
                 description = "Medium quality American English male voice",
                 type = TtsModelType.VITS,
                 modelUrl = "https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/vits-piper-en_US-ryan-medium.tar.bz2",
@@ -99,9 +105,9 @@ class ModelRepositoryImpl @Inject constructor(
             ),
             TtsModel(
                 id = "matcha-icefall-en_US-ljspeech",
-                name = "Matcha Icefall (English)",
-                language = "en-US",
-                description = "High quality Matcha TTS model",
+                name = "Matcha Icefall",
+                language = "en",
+                description = "High quality American English female TTS model",
                 type = TtsModelType.MATCHA,
                 modelUrl = "https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/matcha-icefall-en_US-ljspeech.tar.bz2",
                 extraUrls = mapOf("vocoder.onnx" to "https://github.com/k2-fsa/sherpa-onnx/releases/download/vocoder-models/vocos-22khz-univ.onnx"),
@@ -115,13 +121,36 @@ class ModelRepositoryImpl @Inject constructor(
                 val updated = TtsModelEntity.fromDomain(model).copy(
                     isDownloaded = existing.isDownloaded,
                     progress = existing.progress,
-                    dataDir = existing.dataDir
+                    dataDir = existing.dataDir,
+                    lastError = existing.lastError
                 )
                 ttsModelDao.insertModel(updated)
             } else {
                 ttsModelDao.insertModel(TtsModelEntity.fromDomain(model))
             }
         }
+    }
+
+    override fun enqueueDownload(modelId: String) {
+        val constraints = Constraints.Builder()
+            .setRequiredNetworkType(NetworkType.CONNECTED)
+            .build()
+
+        val downloadRequest = OneTimeWorkRequestBuilder<DownloadWorker>()
+            .setConstraints(constraints)
+            .setInputData(workDataOf("modelId" to modelId))
+            .setBackoffCriteria(
+                BackoffPolicy.EXPONENTIAL,
+                1,
+                java.util.concurrent.TimeUnit.MINUTES
+            )
+            .build()
+
+        workManager.enqueueUniqueWork(
+            "download_$modelId",
+            ExistingWorkPolicy.KEEP, // Keep existing work if already running
+            downloadRequest
+        )
     }
 
     override suspend fun downloadModel(modelId: String): Result<Unit> = withContext(Dispatchers.IO) {
@@ -134,6 +163,10 @@ class ModelRepositoryImpl @Inject constructor(
         }
 
         try {
+            // Ensure progress is at least slightly above 0 so UI shows progress bar immediately
+            ttsModelDao.updateProgress(modelId, 0.01f)
+            ttsModelDao.updateError(modelId, null)
+
             val isArchive = model.modelUrl.endsWith(".tar.bz2")
             val extraFiles = model.extraUrls.toList()
             // Archives contain everything (model + tokens). Non-archives might need tokens separately.
@@ -149,8 +182,8 @@ class ModelRepositoryImpl @Inject constructor(
                 android.util.Log.d("ModelRepository", "Downloading archive: ${model.modelUrl}")
                 downloadFile(model.modelUrl, archiveFile) { progress ->
                     val overallProgress = (currentStep + progress) / totalSteps
-                    // Ensure progress is at least slightly above 0 so UI shows progress bar
                     ttsModelDao.updateProgress(modelId, overallProgress.coerceAtLeast(0.01f))
+                    android.util.Log.d("ModelRepository", "Download progress: $overallProgress")
                 }
                 android.util.Log.d("ModelRepository", "Extracting archive...")
                 extractTarBz2(archiveFile, targetDir)
@@ -164,6 +197,7 @@ class ModelRepositoryImpl @Inject constructor(
                 downloadFile(model.modelUrl, targetFile) { progress ->
                     val overallProgress = (currentStep + progress) / totalSteps
                     ttsModelDao.updateProgress(modelId, overallProgress)
+                    android.util.Log.d("ModelRepository", "Download progress: $overallProgress")
                 }
                 currentStep++
 
@@ -172,6 +206,7 @@ class ModelRepositoryImpl @Inject constructor(
                     downloadFile(model.tokensUrl, tokensFile) { progress ->
                         val overallProgress = (currentStep + progress) / totalSteps
                         ttsModelDao.updateProgress(modelId, overallProgress)
+                        android.util.Log.d("ModelRepository", "Download progress: $overallProgress")
                     }
                     currentStep++
                 }
@@ -183,6 +218,7 @@ class ModelRepositoryImpl @Inject constructor(
                 downloadFile(url, targetFile) { progress ->
                     val overallProgress = (currentStep + progress) / totalSteps
                     ttsModelDao.updateProgress(modelId, overallProgress)
+                    android.util.Log.d("ModelRepository", "Download progress: $overallProgress")
                 }
                 currentStep++
             }
@@ -192,46 +228,81 @@ class ModelRepositoryImpl @Inject constructor(
             Result.success(Unit)
         } catch (e: Exception) {
             android.util.Log.e("ModelRepository", "Failed to download model $modelId", e)
-            ttsModelDao.updateProgress(modelId, 0f)
-            targetDir.deleteRecursively()
+            ttsModelDao.updateError(modelId, e.message ?: "Unknown error")
+            // We don't delete the directory here to allow for resumable downloads.
+            // But we should reset the progress if it was a total failure (though resumable logic handles it)
             Result.failure(e)
         }
     }
 
     private suspend fun downloadFile(url: String, targetFile: File, onProgress: suspend (Float) -> Unit = {}) {
+        var downloadedBytes = if (targetFile.exists()) targetFile.length() else 0L
+        
         val request = Request.Builder()
             .url(url)
             .header("User-Agent", "Narra/1.0")
-            .build()
-        okHttpClient.newCall(request).execute().use { response ->
-            if (!response.isSuccessful) throw Exception("Failed to download file: ${response.code} ${response.message}")
-            
-            val body = response.body ?: throw Exception("Response body is null")
-            val contentLength = body.contentLength()
-            
-            android.util.Log.d("ModelRepository", "Downloading $url, size: $contentLength")
-            
-            body.byteStream().use { inputStream ->
-                FileOutputStream(targetFile).use { outputStream ->
-                    val buffer = ByteArray(8192)
-                    var bytesRead: Int
-                    var totalBytesRead = 0L
-                    
-                    while (inputStream.read(buffer).also { bytesRead = it } != -1) {
-                        outputStream.write(buffer, 0, bytesRead)
-                        totalBytesRead += bytesRead
-                        if (contentLength > 0) {
-                            onProgress(totalBytesRead.toFloat() / contentLength)
-                        } else {
-                            // If content length is unknown, we can't show accurate progress,
-                            // but we can still signal that activity is happening.
-                            // We use a small fake progress to keep the UI in "downloading" state.
-                            onProgress(0.01f) 
-                        }
-                    }
+            .apply {
+                if (downloadedBytes > 0) {
+                    addHeader("Range", "bytes=$downloadedBytes-")
                 }
             }
-            android.util.Log.d("ModelRepository", "Finished downloading $url")
+            .build()
+        
+        try {
+            okHttpClient.newCall(request).execute().use { response ->
+                if (response.code == 416) {
+                    // Requested Range Not Satisfiable - might mean it's already finished
+                    onProgress(1.0f)
+                    return
+                }
+                
+                if (!response.isSuccessful) throw Exception("Failed to download file: ${response.code} ${response.message}")
+                
+                val body = response.body ?: throw Exception("Response body is null")
+                val contentLength = body.contentLength()
+                
+                val isPartial = response.code == 206
+                if (!isPartial) {
+                    // Server doesn't support range or something went wrong, start from scratch
+                    downloadedBytes = 0L
+                }
+                
+                val totalLength = if (isPartial) downloadedBytes + contentLength else contentLength
+                
+                android.util.Log.d("ModelRepository", "Downloading $url, isPartial: $isPartial, totalLength: $totalLength")
+                
+                val bodyStream = body.byteStream()
+                
+                FileOutputStream(targetFile, isPartial).use { outputStream ->
+                    val buffer = ByteArray(8192)
+                    var bytesRead: Int
+                    var lastUpdateTime = 0L
+                    
+                    while (true) {
+                        bytesRead = bodyStream.read(buffer)
+                        if (bytesRead == -1) break
+                        
+                        outputStream.write(buffer, 0, bytesRead)
+                        downloadedBytes += bytesRead
+                        
+                        val currentTime = System.currentTimeMillis()
+                        if (currentTime - lastUpdateTime > 500) {
+                            if (totalLength > 0) {
+                                val p = downloadedBytes.toFloat() / totalLength
+                                onProgress(p)
+                            } else {
+                                onProgress(0.01f) 
+                            }
+                            lastUpdateTime = currentTime
+                        }
+                    }
+                    onProgress(1.0f)
+                }
+                android.util.Log.d("ModelRepository", "Finished downloading $url")
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("ModelRepository", "Exception during download of $url", e)
+            throw e
         }
     }
 
@@ -256,56 +327,45 @@ class ModelRepositoryImpl @Inject constructor(
     }
 
     private fun findAndMoveModelFiles(targetDir: File) {
-        // 1. Flatten all files to the root directory
-        targetDir.walkTopDown().filter { it.isFile }.forEach { file ->
-            val destFile = File(targetDir, file.name)
-            if (file.absolutePath != destFile.absolutePath) {
-                file.copyTo(destFile, overwrite = true)
-            }
+        // Models might be in a subdirectory after extraction
+        val allFiles = targetDir.walkTopDown().toList()
+        
+        // Find main model file
+        val onnxFile = allFiles.find { it.name.endsWith(".onnx") }
+        if (onnxFile != null && onnxFile.parentFile != targetDir) {
+            onnxFile.renameTo(File(targetDir, "model.onnx"))
+        } else if (onnxFile != null) {
+            onnxFile.renameTo(File(targetDir, "model.onnx"))
         }
 
-        // 2. Clean up all subdirectories
-        targetDir.listFiles()?.forEach { file ->
-            if (file.isDirectory) {
-                file.deleteRecursively()
-            }
+        // Find tokens file
+        val tokensFile = allFiles.find { it.name == "tokens.txt" }
+        if (tokensFile != null && tokensFile.parentFile != targetDir) {
+            tokensFile.renameTo(File(targetDir, "tokens.txt"))
         }
 
-        // 3. Standardize the main model name if necessary.
-        // Some models (like VITS/Matcha/Kokoro) expect a 'model.onnx', while others 
-        // (like ZipVoice/Pocket/Supertonic) use specific filenames for multiple components.
-        val rootFiles = targetDir.listFiles()?.filter { it.isFile } ?: emptyList()
-        val specialOnnxNames = listOf(
-            "vocoder.onnx", "encoder.onnx", "decoder.onnx",
-            "lm_flow.onnx", "lm_main.onnx", "text_conditioner.onnx",
-            "duration_predictor.onnx", "text_encoder.onnx", "vector_estimator.onnx", "unicode_indexer.onnx"
-        )
-
-        val genericOnnxFiles = rootFiles.filter {
-            it.name.endsWith(".onnx") && it.name !in specialOnnxNames && it.name != "model.onnx"
-        }
-
-        // If there's exactly one generic .onnx file and no 'model.onnx' exists, rename it to 'model.onnx'
-        if (genericOnnxFiles.size == 1 && rootFiles.none { it.name == "model.onnx" }) {
-            genericOnnxFiles[0].renameTo(File(targetDir, "model.onnx"))
+        // Cleanup subdirectories
+        targetDir.listFiles()?.forEach { 
+            if (it.isDirectory) it.deleteRecursively()
         }
     }
 
     override suspend fun deleteModel(modelId: String): Result<Unit> = withContext(Dispatchers.IO) {
-        val model = ttsModelDao.getModelById(modelId) ?: return@withContext Result.failure(Exception("Model not found"))
-        
-        model.dataDir?.let {
-            val dir = File(it)
-            if (dir.exists()) {
-                dir.deleteRecursively()
+        try {
+            val targetDir = File(modelsDir, modelId)
+            if (targetDir.exists()) {
+                targetDir.deleteRecursively()
             }
+            ttsModelDao.updateDownloadStatus(modelId, false, null)
+            ttsModelDao.updateProgress(modelId, 0f)
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
         }
-        
-        ttsModelDao.updateDownloadStatus(modelId, false, null)
-        Result.success(Unit)
     }
 
-    override suspend fun getModelPath(modelId: String): String? {
-        return ttsModelDao.getModelById(modelId)?.dataDir
+    override suspend fun getModelPath(modelId: String): String? = withContext(Dispatchers.IO) {
+        val targetDir = File(modelsDir, modelId)
+        if (targetDir.exists()) targetDir.absolutePath else null
     }
 }

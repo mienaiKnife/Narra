@@ -176,6 +176,8 @@ fun FeedArticlesScreenContent(
                             )
                         }
                     )
+
+                    // TODO: Add "Refresh" and "Visit site" to hamburger menu
                 }
             }
         }

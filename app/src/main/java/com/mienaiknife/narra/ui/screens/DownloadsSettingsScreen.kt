@@ -46,7 +46,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -230,6 +229,8 @@ fun DownloadsSettingsContent(
                 )
             }
 
+            // TODO: Add "Automation" section for toggling automatic refreshing and downloads
+
             Text(
                 text = "Portability",
                 style = MaterialTheme.typography.titleMedium,
@@ -272,6 +273,9 @@ fun DownloadsSettingsContent(
                     .clickable { onRestoreDatabase() }
                     .padding(vertical = 8.dp)
             )
+
+            //TODO: Replace "Backup database" and "Restore database" settings with "Choose data folder," pointing users towards a database that they can sync across devices with Syncthing
+
             Text(
                 text = "Delete database",
                 style = MaterialTheme.typography.bodyLarge,

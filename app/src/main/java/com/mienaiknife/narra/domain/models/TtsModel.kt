@@ -29,7 +29,8 @@ data class TtsModel(
     val sizeBytes: Long = 0,
     val isDownloaded: Boolean = false,
     val progress: Float = 0f,
-    val speakerId: Int? = null
+    val speakerId: Int? = null,
+    val lastError: String? = null
 )
 
 enum class TtsModelType {

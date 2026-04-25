@@ -225,6 +225,7 @@ fun UserInterfaceSettingsScreen(themeViewModel: ThemeViewModel, onBack: () -> Un
                 options = listOf("Roboto", "OpenDyslexic3"),
                 onValueChange = { themeViewModel.setReaderFontFamily(it) }
             )
+            // TODO: Add a slider for controlling font size in the reader screen
         }
     }
 }
