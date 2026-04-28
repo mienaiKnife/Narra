@@ -22,6 +22,7 @@ import com.mienaiknife.narra.domain.repository.ContentRepository
 import com.mienaiknife.narra.domain.repository.ModelRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -53,11 +54,14 @@ class HomeViewModel @Inject constructor(
         object EpubImported : UiEvent()
     }
 
+    private val _isRefreshing = MutableStateFlow(false)
+
     val uiState: StateFlow<HomeUiState> = combine(
         repository.getQueueArticles(),
         repository.getInboxArticles(),
-        repository.getFavoriteArticles()
-    ) { queue, inbox, favorites ->
+        repository.getFavoriteArticles(),
+        _isRefreshing
+    ) { queue, inbox, favorites, isRefreshing ->
         HomeUiState(
             continueListening = queue
                 .filter { (it.progress ?: 0f) > 0f && (it.progress ?: 0f) < 1f }
@@ -68,13 +72,24 @@ class HomeViewModel @Inject constructor(
                 .sortedByDescending { it.publishedTimestamp ?: 0L }
                 .take(5),
             favoriteArticles = favorites.take(10),
-            isLoading = false
+            isLoading = false,
+            isRefreshing = isRefreshing
         )
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
         initialValue = HomeUiState(isLoading = true)
     )
+
+    fun refresh() {
+        viewModelScope.launch {
+            _isRefreshing.value = true
+            repository.refreshFeeds().onFailure { error ->
+                _uiEvent.emit(UiEvent.ShowSnackbar(error.message ?: "Failed to refresh feeds"))
+            }
+            _isRefreshing.value = false
+        }
+    }
 
     fun importEpub(inputStream: java.io.InputStream, title: String) {
         viewModelScope.launch {

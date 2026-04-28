@@ -183,6 +183,13 @@ class PlaybackManager @Inject constructor(
             
             _currentArticle.value = article
             scope.launch {
+                repository.updateArticleProgress(
+                    article.id,
+                    article.progress ?: 0f,
+                    article.currentParagraphIndex,
+                    article.currentWordOffset,
+                    article.duration
+                )
                 settingsManager.setLastArticleId(article.id)
             }
             _duration.value = 0L // TTS doesn't have fixed duration
@@ -343,17 +350,6 @@ class PlaybackManager @Inject constructor(
                 ttsPlayer.play()
             }
         }
-    }
-
-    fun seekTo(position: Long) {
-        _currentPosition.value = position
-        ttsPlayer.seekTo(position)
-    }
-
-    fun seekToParagraph(index: Int) {
-        _currentParagraphIndex.value = index
-        _currentWordRange.value = null
-        ttsPlayer.seekToParagraph(index)
     }
 
     fun seekToWord(paragraphIndex: Int, wordRange: IntRange) {

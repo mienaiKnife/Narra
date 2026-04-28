@@ -63,7 +63,8 @@ object RepositoryModule {
         epubDataSource: EpubDataSource,
         opmlDataSource: OpmlDataSource,
         networkMonitor: NetworkMonitor,
-        downloadSettingsManager: DownloadSettingsManager
+        downloadSettingsManager: DownloadSettingsManager,
+        notificationHelper: com.mienaiknife.narra.utils.NotificationHelper
     ): ContentRepository {
         return ContentRepositoryImpl(
             context,
@@ -75,8 +76,17 @@ object RepositoryModule {
             epubDataSource,
             opmlDataSource,
             networkMonitor,
-            downloadSettingsManager
+            downloadSettingsManager,
+            notificationHelper
         )
+    }
+
+    @Provides
+    @Singleton
+    fun provideNotificationHelper(
+        @dagger.hilt.android.qualifiers.ApplicationContext context: android.content.Context
+    ): com.mienaiknife.narra.utils.NotificationHelper {
+        return com.mienaiknife.narra.utils.NotificationHelper(context)
     }
 
     @Provides

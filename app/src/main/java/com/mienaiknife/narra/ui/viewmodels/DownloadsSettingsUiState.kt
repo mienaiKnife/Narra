@@ -18,5 +18,11 @@ package com.mienaiknife.narra.ui.viewmodels
 
 data class DownloadsSettingsUiState(
     val downloadOverWifiOnly: Boolean = true,
-    val message: String? = null
+    val refreshInterval: String = "12 hours",
+    val message: String? = null,
+    val autoExportEnabled: Boolean = false,
+    val autoImportEnabled: Boolean = false,
+    val autoExportUri: String? = null,
+    val lastExportTimestamp: Long = 0L,
+    val pendingImport: Boolean = false
 )

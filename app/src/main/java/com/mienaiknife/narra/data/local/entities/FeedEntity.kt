@@ -25,5 +25,6 @@ data class FeedEntity(
     val title: String,
     val description: String? = null,
     val imageUrl: String? = null,
-    val createdAt: Long = System.currentTimeMillis()
+    val createdAt: Long = System.currentTimeMillis(),
+    val notificationsEnabled: Boolean = false
 )

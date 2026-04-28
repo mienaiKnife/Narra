@@ -20,6 +20,7 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Update
 import com.mienaiknife.narra.data.local.entities.FeedEntity
 import kotlinx.coroutines.flow.Flow
 
@@ -30,6 +31,9 @@ interface FeedDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertFeed(feed: FeedEntity)
+
+    @Update
+    suspend fun updateFeed(feed: FeedEntity)
 
     @Query("SELECT * FROM feeds WHERE url = :url")
     suspend fun getFeedByUrl(url: String): FeedEntity?

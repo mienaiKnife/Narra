@@ -60,10 +60,16 @@ class QueueViewModel @Inject constructor(
             Triple(refreshing, sort, keep)
         },
         _downloadingArticleIds,
-        playbackManager.currentArticle,
-        playbackManager.isPlaying
-    ) { articles, settings, downloadingIds, currentArticle, isPlaying ->
+        combine(
+            playbackManager.currentArticle,
+            playbackManager.isPlaying,
+            playbackManager.playbackSpeed
+        ) { current, playing, speed ->
+            Triple(current, playing, speed)
+        }
+    ) { articles, settings, downloadingIds, playback ->
         val (isRefreshing, sort, keep) = settings
+        val (currentArticle, isPlaying, speed) = playback
 
         val sortedArticles = if (keep) {
             when (sort) {
@@ -80,9 +86,10 @@ class QueueViewModel @Inject constructor(
         }
 
         val totalRemainingTimeMs = sortedArticles.sumOf { article ->
-            val duration = article.duration ?: 0L
+            val nominalDuration = article.duration ?: 0L
+            val adjustedDuration = (nominalDuration / speed).toLong()
             val progress = article.progress ?: 0f
-            (duration * (1f - progress)).toLong()
+            (adjustedDuration * (1f - progress)).toLong()
         }
 
         QueueUiState(
@@ -92,6 +99,7 @@ class QueueViewModel @Inject constructor(
             keepSorted = keep,
             currentArticle = currentArticle,
             isPlaying = isPlaying,
+            playbackSpeed = speed,
             downloadingArticleIds = downloadingIds,
             totalRemainingTimeMs = totalRemainingTimeMs
         )

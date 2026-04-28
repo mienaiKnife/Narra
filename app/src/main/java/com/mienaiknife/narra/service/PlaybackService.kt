@@ -22,6 +22,7 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.os.Build
+import android.content.pm.ServiceInfo
 import androidx.annotation.OptIn
 import androidx.core.app.NotificationCompat
 import androidx.media3.common.AudioAttributes
@@ -105,7 +106,11 @@ class PlaybackService : MediaSessionService() {
             .setOngoing(true)
             .build()
         
-        startForeground(NOTIFICATION_ID, notification)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            startForeground(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK)
+        } else {
+            startForeground(NOTIFICATION_ID, notification)
+        }
 
         val result = super.onStartCommand(intent, flags, startId)
         

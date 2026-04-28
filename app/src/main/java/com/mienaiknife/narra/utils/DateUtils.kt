@@ -39,6 +39,15 @@ object DateUtils {
 
     private val htmlTagRegex = Regex("<[^>]*>")
     private val whitespaceRegex = Regex("\\s+")
+    private val dateTimeFormatter = DateTimeFormatter.ofPattern("MMM d, HH:mm", Locale.US)
+
+    fun formatDateTime(timestamp: Long): String {
+        val dateTime = LocalDateTime.ofInstant(
+            java.time.Instant.ofEpochMilli(timestamp),
+            java.time.ZoneId.systemDefault()
+        )
+        return dateTime.format(dateTimeFormatter)
+    }
 
     fun formatPublishedDate(publishedAt: String?): String? {
         if (publishedAt.isNullOrBlank()) return null
@@ -101,7 +110,7 @@ object DateUtils {
         }
     }
 
-    fun estimateReadingTimeMs(text: String?): Long {
+    fun estimateReadingTimeMs(text: String?, speed: Float = 1.0f): Long {
         if (text.isNullOrBlank()) return 0L
         // Strip HTML tags roughly using pre-compiled regex
         val plainText = text.replace(htmlTagRegex, "")
@@ -109,6 +118,7 @@ object DateUtils {
         // Average reading speed is ~200-250 words per minute.
         // Let's use 200 wpm for a more generous estimate.
         // 200 wpm = 200 words / 60,000 ms = 1 word / 300 ms.
-        return (words * 300L).coerceAtLeast(1000L)
+        val baseMs = words * 300L
+        return (baseMs / speed).toLong().coerceAtLeast(1000L)
     }
 }

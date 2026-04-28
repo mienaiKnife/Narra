@@ -34,6 +34,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -65,8 +66,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -410,12 +411,12 @@ fun TtsModelItem(
     containerColor: Color = MaterialTheme.colorScheme.surfaceContainer,
     enabled: Boolean = true
 ) {
-    val isDownloading = model.progress > 0f && model.progress < 1f
+    val isDownloading = model.progress > 0f && !model.isDownloaded && model.lastError == null
 
     ListItem(
         modifier = Modifier
             .height(IntrinsicSize.Min)
-            .clickable(enabled = model.isDownloaded && !isDownloading && enabled) { onSelect() },
+            .clickable(enabled = model.isDownloaded && enabled) { onSelect() },
         colors = ListItemDefaults.colors(
             containerColor = containerColor
         ),
@@ -446,14 +447,20 @@ fun TtsModelItem(
                 )
                 if (isDownloading) {
                     Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = if (model.progress < 0.99f) "Downloading..." else "Finalizing...",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
                     LinearProgressIndicator(
                         progress = { model.progress },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(5.dp),
+                            .height(5.dp)
+                            .clip(RoundedCornerShape(2.dp)),
                         color = MaterialTheme.colorScheme.primary,
                         trackColor = MaterialTheme.colorScheme.primaryContainer,
-                        strokeCap = StrokeCap.Butt,
                         gapSize = 5.dp,
                         drawStopIndicator = {}
                     )

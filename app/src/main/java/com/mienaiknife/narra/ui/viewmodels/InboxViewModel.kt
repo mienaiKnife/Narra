@@ -61,7 +61,8 @@ class InboxViewModel @Inject constructor(
         _showPlayed,
         _downloadingArticleIds,
         playbackManager.currentArticle,
-        playbackManager.isPlaying
+        playbackManager.isPlaying,
+        playbackManager.playbackSpeed
     ) { args: Array<Any?> ->
         val articles = args[0] as List<Article>
         val isRefreshing = args[1] as Boolean
@@ -70,6 +71,7 @@ class InboxViewModel @Inject constructor(
         val downloadingIds = args[4] as Set<String>
         val currentArticle = args[5] as Article?
         val isPlaying = args[6] as Boolean
+        val playbackSpeed = args[7] as Float
 
         val filteredArticles = if (showPlayed) articles else articles.filter { (it.progress ?: 0f) < 1f }
         val sortedArticles = when (sort) {
@@ -88,6 +90,7 @@ class InboxViewModel @Inject constructor(
             showPlayed = showPlayed,
             currentArticle = currentArticle,
             isPlaying = isPlaying,
+            playbackSpeed = playbackSpeed,
             downloadingArticleIds = downloadingIds
         )
     }.stateIn(

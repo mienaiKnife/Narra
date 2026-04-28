@@ -17,7 +17,6 @@
 package com.mienaiknife.narra.ui.screens
 
 import android.content.res.Configuration
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -32,21 +31,19 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
@@ -54,9 +51,11 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.rememberNavController
 import com.mienaiknife.narra.ui.components.BottomNavBar
+import com.mienaiknife.narra.ui.components.SettingDropDownItem
 import com.mienaiknife.narra.ui.theme.NarraTheme
 import com.mienaiknife.narra.ui.theme.ThemeViewModel
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun UserInterfaceSettingsScreen(themeViewModel: ThemeViewModel, onBack: () -> Unit) {
     val uiState by themeViewModel.uiState.collectAsStateWithLifecycle()
@@ -156,7 +155,7 @@ fun UserInterfaceSettingsScreen(themeViewModel: ThemeViewModel, onBack: () -> Un
                         style = MaterialTheme.typography.bodyLarge
                     )
                     Text(
-                        text = "Make Narra always use dark mode. If unchecked, Narra will use use light mode.",
+                        text = "Make Narra always use dark mode. If unchecked, Narra will use light mode.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -225,82 +224,44 @@ fun UserInterfaceSettingsScreen(themeViewModel: ThemeViewModel, onBack: () -> Un
                 options = listOf("Roboto", "OpenDyslexic3"),
                 onValueChange = { themeViewModel.setReaderFontFamily(it) }
             )
-            // TODO: Add a slider for controlling font size in the reader screen
-        }
-    }
-}
 
-@Composable
-private fun SettingDropDownItem(
-    title: String,
-    subtitle: String,
-    selectedValue: String,
-    options: List<String>,
-    onValueChange: (String) -> Unit
-) {
-    var expanded by remember { mutableStateOf(false) }
+            Spacer(modifier = Modifier.height(16.dp))
 
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { expanded = true }
-            .padding(vertical = 8.dp)
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(
-                modifier = Modifier
-                    .weight(1f)
-                    .padding(end = 8.dp)
-            ) {
+            val sliderColors = SliderDefaults.colors(
+                activeTrackColor = MaterialTheme.colorScheme.primary,
+                inactiveTrackColor = MaterialTheme.colorScheme.primaryContainer,
+            )
+
+            Column(modifier = Modifier.padding(bottom = 16.dp)) {
                 Text(
-                    text = title,
+                    text = "Font size: ${uiState.readerFontSize.toInt()} sp",
                     style = MaterialTheme.typography.bodyLarge
                 )
                 Text(
-                    text = subtitle,
+                    text = "Adjust the text size for reading articles",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(bottom = 8.dp)
                 )
-            }
-            Text(
-                text = selectedValue,
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.primary
-            )
-        }
-
-        DropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { expanded = false }
-        ) {
-            options.forEach { option ->
-                DropdownMenuItem(
-                    text = {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            RadioButton(
-                                selected = (option == selectedValue),
-                                onClick = null
-                            )
-                            Text(
-                                text = option,
-                                style = MaterialTheme.typography.bodyLarge,
-                                modifier = Modifier.padding(start = 16.dp)
-                            )
-                        }
-                    },
-                    onClick = {
-                        onValueChange(option)
-                        expanded = false
+                Slider(
+                    value = uiState.readerFontSize,
+                    onValueChange = { themeViewModel.setReaderFontSize(it) },
+                    valueRange = 12f..36f,
+                    steps = 24, // Increments of 1
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = sliderColors,
+                    track = { sliderState ->
+                        SliderDefaults.Track(
+                            sliderState = sliderState,
+                            colors = sliderColors,
+                            drawStopIndicator = null
+                        )
                     }
                 )
             }
         }
     }
 }
-
 
 @Preview(uiMode = Configuration.UI_MODE_NIGHT_YES, showBackground = true)
 @Composable

@@ -87,4 +87,30 @@ class OpmlDataSourceTest {
         assertTrue(opmlContent.contains("xmlUrl=\"https://example.com/feed2\""))
         assertTrue(opmlContent.contains("title=\"Feed 2\""))
     }
+
+    @Test
+    fun `parseOpml fails on XXE attempt`() = runBlocking {
+        val xxeContent = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <!DOCTYPE opml [
+                <!ENTITY xxe SYSTEM "file:///etc/passwd">
+            ]>
+            <opml version="2.0">
+                <head>
+                    <title>Subscriptions &xxe;</title>
+                </head>
+                <body>
+                    <outline text="XXE" title="XXE" type="rss" xmlUrl="https://example.com/feed" />
+                </body>
+            </opml>
+        """.trimIndent()
+
+        val inputStream = ByteArrayInputStream(xxeContent.toByteArray())
+        val result = opmlDataSource.parseOpml(inputStream)
+
+        // It should either fail with an exception (because disallow-doctype-decl is true) 
+        // or successfully parse but ignore the entity. 
+        // With disallow-doctype-decl = true, it should throw an exception.
+        assertTrue("Expected failure due to DOCTYPE declaration", result.isFailure)
+    }
 }

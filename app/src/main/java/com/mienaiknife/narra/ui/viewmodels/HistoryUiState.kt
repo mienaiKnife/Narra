@@ -23,5 +23,6 @@ data class HistoryUiState(
     val isRefreshing: Boolean = false,
     val currentArticle: Article? = null,
     val isPlaying: Boolean = false,
+    val playbackSpeed: Float = 1.0f,
     val downloadingArticleIds: Set<String> = emptySet()
 )

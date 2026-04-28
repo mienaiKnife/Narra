@@ -22,5 +22,6 @@ data class HomeUiState(
     val continueListening: List<Article> = emptyList(),
     val newFromFeeds: List<Article> = emptyList(),
     val favoriteArticles: List<Article> = emptyList(),
-    val isLoading: Boolean = false
+    val isLoading: Boolean = false,
+    val isRefreshing: Boolean = false
 )

@@ -17,8 +17,11 @@
 package com.mienaiknife.narra.ui.screens
 
 import android.content.res.Configuration
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -27,22 +30,11 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Headphones
 import androidx.compose.material.icons.filled.Info
@@ -50,23 +42,36 @@ import androidx.compose.material.icons.filled.RecordVoiceOver
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.StayCurrentPortrait
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import androidx.navigation.compose.rememberNavController
 import com.mienaiknife.narra.ui.components.BottomNavBar
 import com.mienaiknife.narra.ui.theme.NarraTheme
-import com.mienaiknife.narra.ui.theme.ThemeViewModel
 
 @Composable
 fun SettingsScreen(
-    themeViewModel: ThemeViewModel,
     onNavigateToUserInterface: () -> Unit,
     onNavigateToPlayback: () -> Unit,
     onNavigateToVoices: () -> Unit,
     onNavigateToDownloads: () -> Unit,
     onNavigateToAbout: () -> Unit
 ) {
+    var searchQuery by remember { mutableStateOf("") }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -90,13 +95,23 @@ fun SettingsScreen(
         Spacer(modifier = Modifier.height(16.dp))
 
         OutlinedTextField(
-            value = "",
-            onValueChange = {},
+            value = searchQuery,
+            onValueChange = { searchQuery = it },
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp),
             placeholder = { Text("Search settings...") },
             leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+            trailingIcon = {
+                if (searchQuery.isNotEmpty()) {
+                    IconButton(onClick = { searchQuery = "" }) {
+                        Icon(
+                            imageVector = Icons.Default.Clear,
+                            contentDescription = "Clear search"
+                        )
+                    }
+                }
+            },
             shape = RoundedCornerShape(24.dp),
             colors = OutlinedTextFieldDefaults.colors(
                 unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
@@ -104,7 +119,7 @@ fun SettingsScreen(
             ),
             singleLine = true
         )
-        // TODO: Add an X button to the text field like the one in the Add screen
+
         val settingsItems = listOf(
             SettingsItem(
                 title = "User interface",
@@ -121,7 +136,7 @@ fun SettingsScreen(
             SettingsItem(
                 title = "Voices",
                 subtitle = "Text to speech settings",
-                icon = Icons.Default.RecordVoiceOver, // Placeholder for the mouth icon
+                icon = Icons.Default.RecordVoiceOver, 
                 onClick = onNavigateToVoices
             ),
             SettingsItem(
@@ -192,11 +207,6 @@ fun SettingsListItem(item: SettingsItem) {
 @Preview(uiMode = Configuration.UI_MODE_NIGHT_YES, showBackground = true)
 @Composable
 fun SettingsScreenPreview() {
-    val themeViewModel = remember {
-        object : ThemeViewModel() {
-            override fun initialize(context: android.content.Context) {}
-        }
-    }
     val navController = rememberNavController()
     NarraTheme(darkTheme = true, dynamicColor = false) {
         Scaffold(
@@ -204,7 +214,6 @@ fun SettingsScreenPreview() {
         ) { innerPadding ->
             Box(modifier = Modifier.padding(innerPadding)) {
                 SettingsScreen(
-                    themeViewModel = themeViewModel,
                     onNavigateToUserInterface = {},
                     onNavigateToPlayback = {},
                     onNavigateToVoices = {},

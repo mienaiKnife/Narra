@@ -36,6 +36,8 @@ class PlaybackSettingsViewModel @Inject constructor(
     val uiState: StateFlow<PlaybackSettingsUiState> = combine(
         settingsManager.fastForwardSkipTime,
         settingsManager.rewindSkipTime,
+        settingsManager.fastForwardHardwareButton,
+        settingsManager.rewindHardwareButton,
         settingsManager.pauseOnDisconnect,
         settingsManager.pauseForInterruptions,
         settingsManager.autoPlayNext,
@@ -45,11 +47,13 @@ class PlaybackSettingsViewModel @Inject constructor(
         PlaybackSettingsUiState(
             fastForwardSkipTime = flows[0] as String,
             rewindSkipTime = flows[1] as String,
-            pauseOnDisconnect = flows[2] as Boolean,
-            pauseForInterruptions = flows[3] as Boolean,
-            autoPlayNext = flows[4] as Boolean,
-            playChimeAndTitle = flows[5] as Boolean,
-            chimeSound = flows[6] as String
+            fastForwardHardwareButton = flows[2] as String,
+            rewindHardwareButton = flows[3] as String,
+            pauseOnDisconnect = flows[4] as Boolean,
+            pauseForInterruptions = flows[5] as Boolean,
+            autoPlayNext = flows[6] as Boolean,
+            playChimeAndTitle = flows[7] as Boolean,
+            chimeSound = flows[8] as String
         )
     }.stateIn(
         scope = viewModelScope,
@@ -66,6 +70,18 @@ class PlaybackSettingsViewModel @Inject constructor(
     fun setRewindSkipTime(time: String) {
         viewModelScope.launch {
             settingsManager.setRewindSkipTime(time)
+        }
+    }
+
+    fun setFastForwardHardwareButton(action: String) {
+        viewModelScope.launch {
+            settingsManager.setFastForwardHardwareButton(action)
+        }
+    }
+
+    fun setRewindHardwareButton(action: String) {
+        viewModelScope.launch {
+            settingsManager.setRewindHardwareButton(action)
         }
     }
 

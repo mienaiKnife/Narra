@@ -205,7 +205,7 @@ class SherpaTtsEngine @Inject constructor(
                     silenceScale = 0.2f
                 )
 
-                tts = OfflineTts(context.assets, config)
+                tts = OfflineTts(null, config)
                 currentModelId = modelId
                 currentModelType = modelType
                 lastNoiseScale = noiseScale
@@ -239,7 +239,7 @@ class SherpaTtsEngine @Inject constructor(
                     model = File(modelPath, "model.onnx").absolutePath,
                     lexicon = "",
                     tokens = File(modelPath, "tokens.txt").absolutePath,
-                    dataDir = modelPath,
+                    dataDir = File(modelPath, "espeak-ng-data").absolutePath,
                     noiseScale = noiseScale,
                     noiseScaleW = 0.8f,
                     lengthScale = lengthScale

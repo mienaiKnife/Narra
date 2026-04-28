@@ -16,26 +16,59 @@
 
 package com.mienaiknife.narra
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.runtime.getValue
+import androidx.core.content.ContextCompat
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.mienaiknife.narra.service.SyncManager
 import com.mienaiknife.narra.ui.theme.NarraTheme
 import com.mienaiknife.narra.ui.theme.ThemeViewModel
 import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+    @Inject
+    lateinit var syncManager: SyncManager
+
     private val themeViewModel: ThemeViewModel by viewModels()
+
+    private var initialArticleId: String? = null
+
+    private val requestPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted: Boolean ->
+        // Handle permission result if needed
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()
         super.onCreate(savedInstanceState)
+        
+        val articleId = intent.getStringExtra("article_id")
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(
+                    this,
+                    Manifest.permission.POST_NOTIFICATIONS
+                ) != PackageManager.PERMISSION_GRANTED
+            ) {
+                requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            }
+        }
+
         themeViewModel.initialize(this)
+        syncManager.applyStagedDatabaseIfNecessary(this)
+        syncManager.start()
         enableEdgeToEdge()
 
         setContent {
@@ -47,8 +80,16 @@ class MainActivity : ComponentActivity() {
             val darkTheme = if (useSystemTheme) androidx.compose.foundation.isSystemInDarkTheme() else isDarkMode
 
             NarraTheme(darkTheme = darkTheme, dynamicColor = isDynamicColor) {
-                AppNavigation(themeViewModel = themeViewModel)
+                AppNavigation(themeViewModel = themeViewModel, initialArticleId = initialArticleId)
             }
+        }
+    }
+
+    override fun onNewIntent(intent: android.content.Intent) {
+        super.onNewIntent(intent)
+        val articleId = intent.getStringExtra("article_id")
+        if (articleId != null) {
+            // Trigger navigation if possible
         }
     }
 }

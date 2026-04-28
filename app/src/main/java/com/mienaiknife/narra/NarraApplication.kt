@@ -28,6 +28,11 @@ class NarraApplication : Application(), Configuration.Provider {
     @Inject
     lateinit var workerFactory: HiltWorkerFactory
 
+    override fun onCreate() {
+        super.onCreate()
+        android.util.Log.i("NarraApplication", "Application onCreate")
+    }
+
     override val workManagerConfiguration: Configuration
         get() = Configuration.Builder()
             .setWorkerFactory(workerFactory)

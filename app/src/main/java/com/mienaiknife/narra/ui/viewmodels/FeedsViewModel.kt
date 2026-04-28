@@ -89,6 +89,12 @@ class FeedsViewModel @Inject constructor(
         }
     }
 
+    fun toggleNotifications(feed: FeedEntity) {
+        viewModelScope.launch {
+            repository.updateFeed(feed.copy(notificationsEnabled = !feed.notificationsEnabled))
+        }
+    }
+
     fun refresh() {
         viewModelScope.launch {
             _isRefreshing.value = true

@@ -34,5 +34,6 @@ data class Article(
     val isInQueue: Boolean = true,
     val queueOrder: Int = 0,
     val publishedTimestamp: Long? = null,
-    val duration: Long? = null
+    val duration: Long? = null,
+    val lastPlayedAt: Long? = null
 )

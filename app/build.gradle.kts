@@ -40,6 +40,10 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    testOptions {
+        unitTests.isReturnDefaultValues = true
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
@@ -115,6 +119,7 @@ dependencies {
     implementation(libs.androidx.startup.runtime)
     ksp(libs.androidx.hilt.compiler)
     testImplementation(libs.junit)
+    testImplementation("org.mockito:mockito-core:5.11.0")
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(platform(libs.androidx.compose.bom))

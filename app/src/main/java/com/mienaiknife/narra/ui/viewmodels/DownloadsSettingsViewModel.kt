@@ -19,6 +19,7 @@ package com.mienaiknife.narra.ui.viewmodels
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mienaiknife.narra.data.settings.DownloadSettingsManager
+import com.mienaiknife.narra.data.settings.SyncSettingsManager
 import com.mienaiknife.narra.domain.repository.ContentRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -34,6 +35,7 @@ import javax.inject.Inject
 @HiltViewModel
 class DownloadsSettingsViewModel @Inject constructor(
     private val downloadSettingsManager: DownloadSettingsManager,
+    private val syncSettingsManager: SyncSettingsManager,
     private val contentRepository: ContentRepository
 ) : ViewModel() {
 
@@ -41,9 +43,24 @@ class DownloadsSettingsViewModel @Inject constructor(
 
     val uiState: StateFlow<DownloadsSettingsUiState> = combine(
         downloadSettingsManager.downloadOverWifiOnly,
+        downloadSettingsManager.refreshInterval,
+        syncSettingsManager.autoExportEnabled,
+        syncSettingsManager.autoImportEnabled,
+        syncSettingsManager.autoExportUri,
+        syncSettingsManager.lastExportTimestamp,
+        syncSettingsManager.pendingImport,
         _message
-    ) { wifiOnly, message ->
-        DownloadsSettingsUiState(wifiOnly, message)
+    ) { args: Array<Any?> ->
+        DownloadsSettingsUiState(
+            downloadOverWifiOnly = args[0] as Boolean,
+            refreshInterval = args[1] as String,
+            autoExportEnabled = args[2] as Boolean,
+            autoImportEnabled = args[3] as Boolean,
+            autoExportUri = args[4] as String?,
+            lastExportTimestamp = args[5] as Long,
+            pendingImport = args[6] as Boolean,
+            message = args[7] as String?
+        )
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
@@ -53,6 +70,30 @@ class DownloadsSettingsViewModel @Inject constructor(
     fun setDownloadOverWifiOnly(enabled: Boolean) {
         viewModelScope.launch {
             downloadSettingsManager.setDownloadOverWifiOnly(enabled)
+        }
+    }
+
+    fun setRefreshInterval(interval: String) {
+        viewModelScope.launch {
+            downloadSettingsManager.setRefreshInterval(interval)
+        }
+    }
+
+    fun setAutoExportEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            syncSettingsManager.setAutoExportEnabled(enabled)
+        }
+    }
+
+    fun setAutoExportUri(uri: String?) {
+        viewModelScope.launch {
+            syncSettingsManager.setAutoExportUri(uri)
+        }
+    }
+
+    fun setAutoImportEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            syncSettingsManager.setAutoImportEnabled(enabled)
         }
     }
 

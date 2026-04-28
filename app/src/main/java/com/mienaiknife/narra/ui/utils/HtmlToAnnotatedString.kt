@@ -235,21 +235,31 @@ fun AnnotatedString.toSpeakableText(): String {
     val allAnnotations = (footnotes + links).sortedBy { it.start }
     
     for (annotation in allAnnotations) {
-        // Append text before the annotation
-        output.append(text.substring(lastIndex, annotation.start))
+        if (annotation.end <= lastIndex) continue
+        
+        val start = maxOf(lastIndex, annotation.start)
+        if (lastIndex < start) {
+            output.append(text.substring(lastIndex, start))
+        }
         
         if (annotation.tag == "footnote") {
             // Footnotes are skipped (replaced by space to maintain cadence/separation)
             output.append(" ")
         } else if (annotation.tag == "link") {
-            val linkText = text.substring(annotation.start, annotation.end).trim()
-            val url = annotation.item
-            
-            if (isUrlLike(linkText)) {
-                output.append(" link to ${simplifyUrl(url)} ")
-            } else {
-                // Keep original link text if it's not just a URL
-                output.append(linkText)
+            // Use the part of the link text that we haven't processed yet if overlapping,
+            // but usually links don't overlap in a way that makes sense to split.
+            // For simplicity, if it's a link, we process the whole item but only if it starts after lastIndex
+            // or we adjust the substring.
+            val effectiveStart = maxOf(lastIndex, annotation.start)
+            if (effectiveStart < annotation.end) {
+                val linkText = text.substring(effectiveStart, annotation.end).trim()
+                val url = annotation.item
+                
+                if (isUrlLike(linkText)) {
+                    output.append(" link to ${simplifyUrl(url)} ")
+                } else {
+                    output.append(linkText)
+                }
             }
         }
         lastIndex = annotation.end

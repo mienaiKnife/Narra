@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.automirrored.outlined.PlaylistAdd
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Delete
@@ -36,6 +37,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
@@ -52,6 +56,7 @@ fun QueueItem(
     isPlaying: Boolean,
     modifier: Modifier = Modifier,
     isDownloading: Boolean = false,
+    playbackSpeed: Float = 1.0f,
     onPlayPauseClick: () -> Unit = {},
     onRemoveClick: () -> Unit = {},
     onAddToQueueClick: () -> Unit = {},
@@ -59,14 +64,15 @@ fun QueueItem(
     dragModifier: Modifier? = null
 ) {
     var showMenu by remember { mutableStateOf(false) }
+    val uriHandler = LocalUriHandler.current
 
     Box(modifier = modifier) {
         QueueItemRow(
             article = article,
             isPlaying = isPlaying,
             isDownloading = isDownloading,
-            onLongClick = { showMenu = true },
-            //TODO: Show menu on regular click instead of long click
+            playbackSpeed = playbackSpeed,
+            onClick = { showMenu = true },
             onPlayPauseClick = {
                 if (article.isInQueue) onPlayPauseClick() else onAddToQueueClick()
             },
@@ -124,7 +130,21 @@ fun QueueItem(
                     }
                 )
             }
-            // TODO: If the article was imported from a webpage or feed, display "Visit site" button in menu which opens the article's webpage
+            if (!article.url.isNullOrBlank()) {
+                DropdownMenuItem(
+                    text = { Text("Visit site") },
+                    onClick = {
+                        uriHandler.openUri(article.url)
+                        showMenu = false
+                    },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.OpenInNew,
+                            contentDescription = null
+                        )
+                    }
+                )
+            }
         }
     }
 }
@@ -136,7 +156,8 @@ private fun QueueItemRow(
     isPlaying: Boolean,
     modifier: Modifier = Modifier,
     isDownloading: Boolean = false,
-    onLongClick: () -> Unit = {},
+    playbackSpeed: Float = 1.0f,
+    onClick: () -> Unit = {},
     onPlayPauseClick: () -> Unit = {},
     dragModifier: Modifier? = null
 ) {
@@ -167,9 +188,13 @@ private fun QueueItemRow(
         Row(
             modifier = Modifier
                 .weight(1f)
+                .semantics(mergeDescendants = true) {
+                    val progressPercent = ((article.progress ?: 0f) * 100).toInt()
+                    contentDescription = "${article.title} from ${article.source}, $progressPercent percent completed"
+                }
                 .combinedClickable(
-                    onClick = {},
-                    onLongClick = onLongClick
+                    onClick = onClick,
+                    onLongClick = onClick
                 ),
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -185,7 +210,7 @@ private fun QueueItemRow(
                 imageUrl?.let { url ->
                     AsyncImage(
                         model = url,
-                        contentDescription = null,
+                        contentDescription = "Cover for ${article.title}",
                         modifier = Modifier.fillMaxSize(),
                         contentScale = ContentScale.Crop,
                         alpha = if (article.progress == 1f) 0.6f else 1f
@@ -224,7 +249,8 @@ private fun QueueItemRow(
                     overflow = TextOverflow.Ellipsis
                 )
 
-                val totalDuration = article.duration ?: remember(article.content) { DateUtils.estimateReadingTimeMs(article.content) }
+                val nominalDuration = article.duration ?: remember(article.content) { DateUtils.estimateReadingTimeMs(article.content) }
+                val totalDuration = (nominalDuration / playbackSpeed).toLong()
                 val progress = article.progress ?: 0f
                 val currentPosition = (progress * totalDuration).toLong()
                 val remainingTime = totalDuration - currentPosition

@@ -50,7 +50,8 @@ class ContentRepositoryImpl(
     private val epubDataSource: EpubDataSource,
     private val opmlDataSource: OpmlDataSource,
     private val networkMonitor: NetworkMonitor,
-    private val downloadSettingsManager: DownloadSettingsManager
+    private val downloadSettingsManager: DownloadSettingsManager,
+    private val notificationHelper: com.mienaiknife.narra.utils.NotificationHelper
 ) : ContentRepository {
 
     override fun getAllArticles(): Flow<List<Article>> {
@@ -61,6 +62,12 @@ class ContentRepositoryImpl(
 
     override fun getArticlesBySource(source: String): Flow<List<Article>> {
         return articleDao.getArticlesBySource(source).map { entities ->
+            entities.map { it.toDomainModel() }
+        }
+    }
+
+    override fun searchArticles(query: String): Flow<List<Article>> {
+        return articleDao.searchArticles(query).map { entities ->
             entities.map { it.toDomainModel() }
         }
     }
@@ -104,6 +111,11 @@ class ContentRepositoryImpl(
     override suspend fun deleteAllFeeds() {
         feedDao.deleteAllFeeds()
         articleDao.deleteAllArticlesFromFeeds()
+    }
+
+    override suspend fun pruneOldArticleContent(maxAgeDays: Int) = withContext(Dispatchers.IO) {
+        val minTimestamp = System.currentTimeMillis() - (maxAgeDays.toLong() * 24 * 60 * 60 * 1000)
+        articleDao.pruneOldArticleContent(minTimestamp)
     }
 
     private suspend fun checkConnection(): Result<Unit> {
@@ -218,7 +230,8 @@ class ContentRepositoryImpl(
                     progress = progress,
                     currentParagraphIndex = paragraphIndex,
                     currentWordOffset = wordOffset,
-                    duration = duration ?: article.duration
+                    duration = duration ?: article.duration,
+                    lastPlayedAt = System.currentTimeMillis()
                 ))
             }
         }
@@ -261,8 +274,9 @@ class ContentRepositoryImpl(
             return@withContext Result.failure(connectionCheck.exceptionOrNull()!!)
         }
         
-        remoteFeedDataSource.fetchFeedMetadata(url).map { feedEntity ->
+        remoteFeedDataSource.fetchFeedMetadata(url).mapCatching { feedEntity ->
             feedDao.insertFeed(feedEntity)
+            refreshFeeds()
             feedEntity.title
         }
     }
@@ -276,7 +290,10 @@ class ContentRepositoryImpl(
             val feeds = feedDao.getAllFeeds().first()
             for (feed in feeds) {
                 remoteFeedDataSource.fetchArticles(feed).onSuccess { articles ->
-                    for (article in articles) {
+                    val isFirstImport = articleDao.getArticleCountByFeedUrl(feed.url) == 0
+                    val sortedArticles = articles.sortedByDescending { it.publishedTimestamp ?: 0L }
+
+                    for ((index, article) in sortedArticles.withIndex()) {
                         val existingArticle = articleDao.getArticleByUrl(article.url ?: "")
                         if (existingArticle == null) {
                             val articleEntity = ArticleEntity(
@@ -292,9 +309,14 @@ class ContentRepositoryImpl(
                                 publishedTimestamp = article.publishedTimestamp,
                                 isFromFeed = true,
                                 isInQueue = false,
+                                progress = if (isFirstImport && index >= 5) 1.0f else 0.0f,
                                 createdAt = System.currentTimeMillis()
                             )
                             articleDao.insertArticle(articleEntity)
+
+                            if (feed.notificationsEnabled && articleEntity.progress < 1.0f) {
+                                notificationHelper.showNewArticleNotification(feed, articleEntity)
+                            }
                         }
                     }
                 }
@@ -303,6 +325,10 @@ class ContentRepositoryImpl(
         } catch (e: Exception) {
             Result.failure(e)
         }
+    }
+
+    override suspend fun updateFeed(feed: com.mienaiknife.narra.data.local.entities.FeedEntity) {
+        feedDao.updateFeed(feed)
     }
 
     override suspend fun importEpub(inputStream: java.io.InputStream, title: String): Result<Unit> = withContext(Dispatchers.IO) {
@@ -329,13 +355,16 @@ class ContentRepositoryImpl(
     }
 
     override suspend fun importOpml(inputStream: java.io.InputStream): Result<Int> = withContext(Dispatchers.IO) {
-        opmlDataSource.parseOpml(inputStream).map { feeds ->
+        opmlDataSource.parseOpml(inputStream).mapCatching { feeds ->
             var count = 0
             feeds.forEach { feed ->
                 if (feedDao.getFeedByUrl(feed.url) == null) {
                     feedDao.insertFeed(feed)
                     count++
                 }
+            }
+            if (count > 0) {
+                refreshFeeds()
             }
             count
         }

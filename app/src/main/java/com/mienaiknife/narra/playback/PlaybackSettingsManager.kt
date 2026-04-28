@@ -33,6 +33,8 @@ class PlaybackSettingsManager @Inject constructor(
     private val chimeSoundKey = stringPreferencesKey("chime_sound")
     private val fastForwardSkipTimeKey = stringPreferencesKey("fast_forward_skip_time")
     private val rewindSkipTimeKey = stringPreferencesKey("rewind_skip_time")
+    private val fastForwardHardwareButtonKey = stringPreferencesKey("fast_forward_hardware_button")
+    private val rewindHardwareButtonKey = stringPreferencesKey("rewind_hardware_button")
     private val pauseOnDisconnectKey = androidx.datastore.preferences.core.booleanPreferencesKey("pause_on_disconnect")
     private val pauseForInterruptionsKey = androidx.datastore.preferences.core.booleanPreferencesKey("pause_for_interruptions")
     private val autoPlayNextKey = androidx.datastore.preferences.core.booleanPreferencesKey("auto_play_next")
@@ -55,6 +57,14 @@ class PlaybackSettingsManager @Inject constructor(
 
     val rewindSkipTime: Flow<String> = context.dataStore.data.map { prefs ->
         prefs[rewindSkipTimeKey] ?: "10s"
+    }
+
+    val fastForwardHardwareButton: Flow<String> = context.dataStore.data.map { prefs ->
+        prefs[fastForwardHardwareButtonKey] ?: "Fast forward"
+    }
+
+    val rewindHardwareButton: Flow<String> = context.dataStore.data.map { prefs ->
+        prefs[rewindHardwareButtonKey] ?: "Rewind"
     }
 
     val pauseOnDisconnect: Flow<Boolean> = context.dataStore.data.map { prefs ->
@@ -110,6 +120,18 @@ class PlaybackSettingsManager @Inject constructor(
     suspend fun setRewindSkipTime(time: String) {
         context.dataStore.edit { prefs ->
             prefs[rewindSkipTimeKey] = time
+        }
+    }
+
+    suspend fun setFastForwardHardwareButton(action: String) {
+        context.dataStore.edit { prefs ->
+            prefs[fastForwardHardwareButtonKey] = action
+        }
+    }
+
+    suspend fun setRewindHardwareButton(action: String) {
+        context.dataStore.edit { prefs ->
+            prefs[rewindHardwareButtonKey] = action
         }
     }
 

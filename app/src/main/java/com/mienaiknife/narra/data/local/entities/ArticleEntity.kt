@@ -17,10 +17,24 @@
 package com.mienaiknife.narra.data.local.entities
 
 import androidx.room.Entity
+import androidx.room.Index
 import androidx.room.PrimaryKey
 import com.mienaiknife.narra.data.models.Article
 
-@Entity(tableName = "articles")
+@Entity(
+    tableName = "articles",
+    indices = [
+        Index(value = ["isInQueue", "queueOrder", "sortTimestamp"]),
+        Index(value = ["isFromFeed", "sortTimestamp"]),
+        Index(value = ["isFavorite", "sortTimestamp"]),
+        Index(value = ["feedUrl"]),
+        Index(value = ["source", "sortTimestamp"]),
+        Index(value = ["url"], unique = true),
+        Index(value = ["title"]),
+        Index(value = ["lastPlayedAt"]),
+        Index(value = ["finishedAt"])
+    ]
+)
 data class ArticleEntity(
     @PrimaryKey val id: String,
     val title: String,
@@ -41,7 +55,9 @@ data class ArticleEntity(
     val feedUrl: String? = null,
     val duration: Long? = null,
     val finishedAt: Long? = null,
-    val createdAt: Long = System.currentTimeMillis()
+    val lastPlayedAt: Long? = null,
+    val createdAt: Long = System.currentTimeMillis(),
+    val sortTimestamp: Long = publishedTimestamp ?: createdAt
 )
 
 fun ArticleEntity.toDomainModel(feedImageUrl: String? = null): Article {
@@ -63,6 +79,7 @@ fun ArticleEntity.toDomainModel(feedImageUrl: String? = null): Article {
         isInQueue = isInQueue,
         queueOrder = queueOrder,
         publishedTimestamp = publishedTimestamp,
-        duration = duration
+        duration = duration,
+        lastPlayedAt = lastPlayedAt
     )
 }

@@ -22,12 +22,16 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.*
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
@@ -70,6 +74,7 @@ fun InboxScreen(
             isRefreshing = uiState.isRefreshing,
             sortOption = uiState.sortOption,
             showPlayed = uiState.showPlayed,
+            playbackSpeed = uiState.playbackSpeed,
             downloadingArticleIds = uiState.downloadingArticleIds,
             onAddToQueue = { viewModel.addToQueue(it) },
             onMarkAsPlayedClick = { viewModel.togglePlayedStatus(it) },
@@ -94,6 +99,7 @@ fun InboxScreenContent(
     isRefreshing: Boolean = false,
     sortOption: SortOption = SortOption.DATE_DESC,
     showPlayed: Boolean = false,
+    playbackSpeed: Float = 1.0f,
     downloadingArticleIds: Set<String> = emptySet(),
     onAddToQueue: (Article) -> Unit,
     onMarkAsPlayedClick: (Article) -> Unit = {},
@@ -105,6 +111,7 @@ fun InboxScreenContent(
 ) {
     var showMenu by remember { mutableStateOf(false) }
     val showSortSheet = remember { mutableStateOf(false) }
+    val pullToRefreshState = rememberPullToRefreshState()
 
     if (showSortSheet.value) {
         SortBottomSheet(
@@ -224,12 +231,23 @@ fun InboxScreenContent(
         PullToRefreshBox(
             isRefreshing = isRefreshing,
             onRefresh = onRefresh,
-            modifier = Modifier.weight(1f)
+            state = pullToRefreshState,
+            modifier = Modifier.weight(1f),
+            indicator = {
+                PullToRefreshDefaults.Indicator(
+                    state = pullToRefreshState,
+                    isRefreshing = isRefreshing,
+                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                    modifier = Modifier.align(Alignment.TopCenter)
+                )
+            }
         ) {
             if (articles.isEmpty()) {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
+                        .verticalScroll(rememberScrollState())
                         .padding(horizontal = 16.dp),
                     contentAlignment = Alignment.Center
                 ) {
@@ -252,6 +270,7 @@ fun InboxScreenContent(
                             QueueItem(
                                 article = article,
                                 isPlaying = false,
+                                playbackSpeed = playbackSpeed,
                                 isDownloading = downloadingArticleIds.contains(article.id),
                                 modifier = Modifier.animateItem(),
                                 onPlayPauseClick = { onAddToQueue(article) },

@@ -29,6 +29,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.Column
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.platform.LocalLayoutDirection
@@ -58,8 +59,17 @@ import com.mienaiknife.narra.ui.screens.VoicesSettingsScreen
 import com.mienaiknife.narra.ui.theme.ThemeViewModel
 
 @Composable
-fun AppNavigation(themeViewModel: ThemeViewModel) {
+fun AppNavigation(themeViewModel: ThemeViewModel, initialArticleId: String? = null) {
     val navController = rememberNavController()
+
+    LaunchedEffect(initialArticleId) {
+        if (initialArticleId != null) {
+            navController.navigate(NavDestination.Reader(initialArticleId)) {
+                launchSingleTop = true
+            }
+        }
+    }
+
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     
     val isReaderScreen = navBackStackEntry?.destination?.hasRoute<NavDestination.Reader>() == true
@@ -121,7 +131,6 @@ fun AppNavigation(themeViewModel: ThemeViewModel) {
             }
             composable<NavDestination.Settings> {
                 SettingsScreen(
-                    themeViewModel = themeViewModel,
                     onNavigateToUserInterface = { navController.navigate(NavDestination.SettingsUi) },
                     onNavigateToPlayback = { navController.navigate(NavDestination.SettingsPlayback) },
                     onNavigateToVoices = { navController.navigate(NavDestination.SettingsVoices) },

@@ -55,13 +55,22 @@ class HistoryViewModel @Inject constructor(
         _isRefreshing,
         _downloadingArticleIds,
         playbackManager.currentArticle,
-        playbackManager.isPlaying
-    ) { articles, isRefreshing, downloadingIds, currentArticle, isPlaying ->
+        playbackManager.isPlaying,
+        playbackManager.playbackSpeed
+    ) { args: Array<Any?> ->
+        val articles = args[0] as List<Article>
+        val isRefreshing = args[1] as Boolean
+        val downloadingIds = args[2] as Set<String>
+        val currentArticle = args[3] as Article?
+        val isPlaying = args[4] as Boolean
+        val playbackSpeed = args[5] as Float
+
         HistoryUiState(
             articles = articles,
             isRefreshing = isRefreshing,
             currentArticle = currentArticle,
             isPlaying = isPlaying,
+            playbackSpeed = playbackSpeed,
             downloadingArticleIds = downloadingIds
         )
     }.stateIn(

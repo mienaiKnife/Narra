@@ -33,11 +33,15 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -82,6 +86,7 @@ fun HistoryScreen(
             articles = uiState.articles,
             isRefreshing = uiState.isRefreshing,
             isPlaying = uiState.isPlaying,
+            playbackSpeed = uiState.playbackSpeed,
             currentArticleId = uiState.currentArticle?.id,
             downloadingArticleIds = uiState.downloadingArticleIds,
             onBackClick = onBack,
@@ -102,6 +107,7 @@ fun HistoryScreenContent(
     articles: List<Article>,
     isRefreshing: Boolean = false,
     isPlaying: Boolean = false,
+    playbackSpeed: Float = 1.0f,
     currentArticleId: String? = null,
     downloadingArticleIds: Set<String> = emptySet(),
     onBackClick: () -> Unit,
@@ -111,6 +117,7 @@ fun HistoryScreenContent(
     onRefresh: () -> Unit = {}
 ) {
     var showMenu by remember { mutableStateOf(false) }
+    val pullToRefreshState = rememberPullToRefreshState()
 
     Column(
         modifier = Modifier
@@ -205,32 +212,59 @@ fun HistoryScreenContent(
         PullToRefreshBox(
             isRefreshing = isRefreshing,
             onRefresh = onRefresh,
-            modifier = Modifier.weight(1f)
-        ) {
-            val scrollState = rememberLazyListState()
-            Box(modifier = Modifier.fillMaxSize()) {
-                LazyColumn(
-                    state = scrollState,
-                    modifier = Modifier.fillMaxSize(),
-                    verticalArrangement = Arrangement.spacedBy(24.dp),
-                    contentPadding = PaddingValues(bottom = 16.dp)
-                ) {
-                    items(articles, key = { it.id }) { article ->
-                        QueueItem(
-                            article = article,
-                            isPlaying = isPlaying && currentArticleId == article.id,
-                            isDownloading = downloadingArticleIds.contains(article.id),
-                            modifier = Modifier.animateItem(),
-                            onPlayPauseClick = { onPlayPauseClick(article) },
-                            onMarkAsPlayedClick = { onMarkAsPlayedClick(article) }
-                        )
-                    }
-                }
-
-                NarraScrollbar(
-                    lazyListState = scrollState,
-                    modifier = Modifier.align(Alignment.CenterEnd)
+            state = pullToRefreshState,
+            modifier = Modifier.weight(1f),
+            indicator = {
+                PullToRefreshDefaults.Indicator(
+                    state = pullToRefreshState,
+                    isRefreshing = isRefreshing,
+                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                    modifier = Modifier.align(Alignment.TopCenter)
                 )
+            }
+        ) {
+            if (articles.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .verticalScroll(rememberScrollState())
+                        .padding(horizontal = 16.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "Your history is empty.",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            } else {
+                val scrollState = rememberLazyListState()
+                Box(modifier = Modifier.fillMaxSize()) {
+                    LazyColumn(
+                        state = scrollState,
+                        modifier = Modifier.fillMaxSize(),
+                        verticalArrangement = Arrangement.spacedBy(24.dp),
+                        contentPadding = PaddingValues(bottom = 16.dp)
+                    ) {
+                        items(articles, key = { it.id }) { article ->
+                            QueueItem(
+                                article = article,
+                                isPlaying = isPlaying && currentArticleId == article.id,
+                                isDownloading = downloadingArticleIds.contains(article.id),
+                                playbackSpeed = playbackSpeed,
+                                modifier = Modifier.animateItem(),
+                                onPlayPauseClick = { onPlayPauseClick(article) },
+                                onMarkAsPlayedClick = { onMarkAsPlayedClick(article) }
+                            )
+                        }
+                    }
+
+                    NarraScrollbar(
+                        lazyListState = scrollState,
+                        modifier = Modifier.align(Alignment.CenterEnd)
+                    )
+                }
             }
         }
     }

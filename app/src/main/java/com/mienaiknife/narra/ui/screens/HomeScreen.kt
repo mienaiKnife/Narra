@@ -42,11 +42,16 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextAlign
@@ -71,17 +76,21 @@ fun HomeScreen(
 
     HomeScreenContent(
         uiState = uiState,
-        onArticleClick = onArticleClick
+        onArticleClick = onArticleClick,
+        onRefresh = { viewModel.refresh() }
     )
 }
 
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreenContent(
     uiState: com.mienaiknife.narra.ui.viewmodels.HomeUiState,
     onArticleClick: (String) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onRefresh: () -> Unit = {}
 ) {
     val scrollState = rememberScrollState()
+    val pullToRefreshState = rememberPullToRefreshState()
 
     Column(
         modifier = modifier
@@ -106,60 +115,80 @@ fun HomeScreenContent(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        if (uiState.isLoading) {
-            Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
-                androidx.compose.material3.CircularProgressIndicator()
-            }
-        } else if (uiState.continueListening.isNotEmpty() || uiState.newFromFeeds.isNotEmpty() || uiState.favoriteArticles.isNotEmpty()) {
-            Column(
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth()
-                    .verticalScroll(scrollState)
-            ) {
-                if (uiState.continueListening.isNotEmpty()) {
-                    ArticleCarousel(
-                        title = "Continue listening",
-                        articles = uiState.continueListening,
-                        onArticleClick = onArticleClick
-                    )
-                    Spacer(modifier = Modifier.height(24.dp))
-                }
-
-                if (uiState.newFromFeeds.isNotEmpty()) {
-                    ArticleCarousel(
-                        title = "New from your feeds",
-                        articles = uiState.newFromFeeds,
-                        onArticleClick = onArticleClick
-                    )
-                    Spacer(modifier = Modifier.height(24.dp))
-                }
-
-                if (uiState.favoriteArticles.isNotEmpty()) {
-                    ArticleCarousel(
-                        title = "Your favorites",
-                        articles = uiState.favoriteArticles,
-                        onArticleClick = onArticleClick
-                    )
-                    Spacer(modifier = Modifier.height(24.dp))
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-            }
-        } else {
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth(),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = "No texts yet. Add some from the Add screen!",
-                    modifier = Modifier.padding(16.dp),
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center
+        PullToRefreshBox(
+            isRefreshing = uiState.isRefreshing,
+            onRefresh = onRefresh,
+            state = pullToRefreshState,
+            modifier = Modifier.weight(1f),
+            indicator = {
+                PullToRefreshDefaults.Indicator(
+                    state = pullToRefreshState,
+                    isRefreshing = uiState.isRefreshing,
+                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                    modifier = Modifier.align(Alignment.TopCenter)
                 )
+            }
+        ) {
+            if (uiState.isLoading) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .verticalScroll(scrollState),
+                    contentAlignment = Alignment.Center
+                ) {
+                    androidx.compose.material3.CircularProgressIndicator()
+                }
+            } else if (uiState.continueListening.isNotEmpty() || uiState.newFromFeeds.isNotEmpty() || uiState.favoriteArticles.isNotEmpty()) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .verticalScroll(scrollState)
+                ) {
+                    if (uiState.continueListening.isNotEmpty()) {
+                        ArticleCarousel(
+                            title = "Continue listening",
+                            articles = uiState.continueListening,
+                            onArticleClick = onArticleClick
+                        )
+                        Spacer(modifier = Modifier.height(24.dp))
+                    }
+
+                    if (uiState.newFromFeeds.isNotEmpty()) {
+                        ArticleCarousel(
+                            title = "New from your feeds",
+                            articles = uiState.newFromFeeds,
+                            onArticleClick = onArticleClick
+                        )
+                        Spacer(modifier = Modifier.height(24.dp))
+                    }
+
+                    if (uiState.favoriteArticles.isNotEmpty()) {
+                        ArticleCarousel(
+                            title = "Your favorites",
+                            articles = uiState.favoriteArticles,
+                            onArticleClick = onArticleClick
+                        )
+                        Spacer(modifier = Modifier.height(24.dp))
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+                }
+            } else {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .verticalScroll(scrollState),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "No texts yet. Add some from the Add screen!",
+                        modifier = Modifier.padding(16.dp),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center
+                    )
+                }
             }
         }
     }
@@ -201,7 +230,11 @@ fun ArticleCard(
 ) {
     Card(
         modifier = modifier
-            .width(140.dp),
+            .width(140.dp)
+            .semantics(mergeDescendants = true) {
+                val progressPercent = ((article.progress ?: 0f) * 100).toInt()
+                contentDescription = "${article.title} from ${article.source}, $progressPercent percent completed"
+            },
         onClick = onClick,
         shape = RoundedCornerShape(5.dp),
         colors = CardDefaults.cardColors(
@@ -221,7 +254,7 @@ fun ArticleCard(
                 imageUrl?.let { url ->
                     AsyncImage(
                         model = url,
-                        contentDescription = null,
+                        contentDescription = "Cover image for ${article.title}",
                         modifier = Modifier.fillMaxSize(),
                         contentScale = ContentScale.Crop,
                         alpha = if (article.progress == 1f) 0.6f else 1f

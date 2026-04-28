@@ -33,6 +33,12 @@ class OpmlDataSourceImpl @Inject constructor() : OpmlDataSource {
         return try {
             val feeds = mutableListOf<FeedEntity>()
             val factory = DocumentBuilderFactory.newInstance()
+            
+            // Disable XXE
+            factory.setFeature("http://xml.org/sax/features/external-general-entities", false)
+            factory.setFeature("http://xml.org/sax/features/external-parameter-entities", false)
+            factory.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true)
+
             val builder = factory.newDocumentBuilder()
             val doc = builder.parse(inputStream)
             

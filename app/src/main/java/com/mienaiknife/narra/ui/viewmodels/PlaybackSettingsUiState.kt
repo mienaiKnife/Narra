@@ -19,6 +19,8 @@ package com.mienaiknife.narra.ui.viewmodels
 data class PlaybackSettingsUiState(
     val fastForwardSkipTime: String = "30s",
     val rewindSkipTime: String = "10s",
+    val fastForwardHardwareButton: String = "Fast forward",
+    val rewindHardwareButton: String = "Rewind",
     val pauseOnDisconnect: Boolean = true,
     val pauseForInterruptions: Boolean = true,
     val autoPlayNext: Boolean = true,

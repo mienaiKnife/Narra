@@ -44,6 +44,8 @@ import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.layout.ContentScale
@@ -88,6 +90,13 @@ fun MiniPlayerContent(
     Surface(
         modifier = Modifier
             .fillMaxWidth()
+            .semantics(mergeDescendants = true) {
+                contentDescription = if (isPlaying) {
+                    "Playing ${article.title}. Tap to open player."
+                } else {
+                    "Paused ${article.title}. Tap to open player."
+                }
+            }
             .clickable { onExpand(article.id) },
         color = MaterialTheme.colorScheme.surfaceContainer,
     ) {
@@ -95,28 +104,25 @@ fun MiniPlayerContent(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 12.dp, vertical = 12.dp),
+                    .padding(end = 12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Thumbnail Placeholder
+                // Thumbnail
                 Box(
                     modifier = Modifier
-                        .size(48.dp)
-                        .clip(RoundedCornerShape(8.dp))
+                        .size(64.dp)
                         .background(MaterialTheme.colorScheme.surfaceContainer),
                     contentAlignment = Alignment.Center
                 ) {
                     article.imageUrl?.let { imageUrl ->
                         AsyncImage(
                             model = imageUrl,
-                            contentDescription = null,
+                            contentDescription = "Cover for ${article.title}",
                             modifier = Modifier.fillMaxSize(),
                             contentScale = ContentScale.Crop
                         )
                     }
                 }
-
-                // TODO: Make thumbnail bigger and less rounded with no padding
 
                 Spacer(modifier = Modifier.width(12.dp))
 
@@ -145,16 +151,16 @@ fun MiniPlayerContent(
                 }
             }
 
-            // Progress Bar (matching ReaderScreen style)
+            // Progress Bar
             val progress = if (duration > 0) currentPosition.toFloat() / duration else 0f
             LinearProgressIndicator(
                 progress = { progress },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(5.dp),
+                    .height(5.dp)
+                    .clip(RoundedCornerShape(2.dp)),
                 color = MaterialTheme.colorScheme.primary,
                 trackColor = MaterialTheme.colorScheme.primaryContainer,
-                strokeCap = StrokeCap.Butt,
                 gapSize = 5.dp,
                 drawStopIndicator = {}
             )

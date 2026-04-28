@@ -35,6 +35,8 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.Delete
@@ -55,6 +57,8 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -112,6 +116,7 @@ fun QueueScreen(
             isRefreshing = uiState.isRefreshing,
             currentArticle = uiState.currentArticle,
             isPlaying = uiState.isPlaying,
+            playbackSpeed = uiState.playbackSpeed,
             sortOption = uiState.sortOption,
             keepSorted = uiState.keepSorted,
             totalRemainingTimeMs = uiState.totalRemainingTimeMs,
@@ -153,6 +158,7 @@ fun QueueScreenContent(
     isRefreshing: Boolean = false,
     currentArticle: Article? = null,
     isPlaying: Boolean = false,
+    playbackSpeed: Float = 1.0f,
     sortOption: SortOption = SortOption.DATE_DESC,
     keepSorted: Boolean = false,
     totalRemainingTimeMs: Long = 0L,
@@ -170,6 +176,7 @@ fun QueueScreenContent(
     var showMenu by remember { mutableStateOf(false) }
     val showSortSheet = remember { mutableStateOf(false) }
     val lazyListState = rememberLazyListState()
+    val pullToRefreshState = rememberPullToRefreshState()
 
     var draggedItemIndex by remember { mutableIntStateOf(-1) }
     var draggingOffset by remember { mutableFloatStateOf(0f) }
@@ -323,12 +330,23 @@ fun QueueScreenContent(
         PullToRefreshBox(
             isRefreshing = isRefreshing,
             onRefresh = onRefresh,
-            modifier = Modifier.weight(1f)
+            state = pullToRefreshState,
+            modifier = Modifier.weight(1f),
+            indicator = {
+                PullToRefreshDefaults.Indicator(
+                    state = pullToRefreshState,
+                    isRefreshing = isRefreshing,
+                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                    modifier = Modifier.align(Alignment.TopCenter)
+                )
+            }
         ) {
             if (articles.isEmpty()) {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
+                        .verticalScroll(rememberScrollState())
                         .padding(horizontal = 16.dp),
                     contentAlignment = Alignment.Center
                 ) {
@@ -361,6 +379,7 @@ fun QueueScreenContent(
                                 article = article,
                                 isPlaying = isPlaying && currentArticle?.id == article.id,
                                 isDownloading = downloadingArticleIds.contains(article.id),
+                                playbackSpeed = playbackSpeed,
                                 modifier = Modifier
                                     .offset { offset }
                                     .zIndex(zIndex)

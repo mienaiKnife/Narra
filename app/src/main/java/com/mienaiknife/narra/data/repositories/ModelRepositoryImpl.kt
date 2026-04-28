@@ -132,6 +132,7 @@ class ModelRepositoryImpl @Inject constructor(
     }
 
     override fun enqueueDownload(modelId: String) {
+        android.util.Log.i("ModelRepository", "Enqueuing download for $modelId")
         val constraints = Constraints.Builder()
             .setRequiredNetworkType(NetworkType.CONNECTED)
             .build()
@@ -148,12 +149,16 @@ class ModelRepositoryImpl @Inject constructor(
 
         workManager.enqueueUniqueWork(
             "download_$modelId",
-            ExistingWorkPolicy.KEEP, // Keep existing work if already running
+            ExistingWorkPolicy.REPLACE, // Ensure fresh start for debugging
             downloadRequest
         )
     }
 
     override suspend fun downloadModel(modelId: String): Result<Unit> = withContext(Dispatchers.IO) {
+        android.util.Log.i("ModelRepository", "START downloadModel: $modelId")
+        val filesDirContent = context.filesDir.walkTopDown().joinToString { it.name }
+        android.util.Log.i("ModelRepository", "Current filesDir content: $filesDirContent")
+
         val entity = ttsModelDao.getModelById(modelId) ?: return@withContext Result.failure(Exception("Model not found"))
         val model = entity.toDomain()
 
@@ -170,8 +175,9 @@ class ModelRepositoryImpl @Inject constructor(
             val isArchive = model.modelUrl.endsWith(".tar.bz2")
             val extraFiles = model.extraUrls.toList()
             // Archives contain everything (model + tokens). Non-archives might need tokens separately.
+            // For archives, we add an extra step for extraction/cleanup.
             val totalSteps = if (isArchive) {
-                1 + extraFiles.size
+                2 + extraFiles.size
             } else {
                 1 + (if (model.tokensUrl.isNotEmpty()) 1 else 0) + extraFiles.size
             }
@@ -179,34 +185,41 @@ class ModelRepositoryImpl @Inject constructor(
 
             if (isArchive) {
                 val archiveFile = File(targetDir, "archive.tar.bz2")
-                android.util.Log.d("ModelRepository", "Downloading archive: ${model.modelUrl}")
+                android.util.Log.i("ModelRepository", "Downloading archive: ${model.modelUrl}")
                 downloadFile(model.modelUrl, archiveFile) { progress ->
                     val overallProgress = (currentStep + progress) / totalSteps
                     ttsModelDao.updateProgress(modelId, overallProgress.coerceAtLeast(0.01f))
-                    android.util.Log.d("ModelRepository", "Download progress: $overallProgress")
+                    android.util.Log.i("ModelRepository", "Download progress: $overallProgress")
                 }
-                android.util.Log.d("ModelRepository", "Extracting archive...")
+                currentStep++
+                ttsModelDao.updateProgress(modelId, currentStep.toFloat() / totalSteps)
+
+                android.util.Log.i("ModelRepository", "Extracting archive...")
                 extractTarBz2(archiveFile, targetDir)
                 archiveFile.delete()
                 
-                android.util.Log.d("ModelRepository", "Moving model files...")
+                android.util.Log.i("ModelRepository", "Moving model files...")
                 findAndMoveModelFiles(targetDir)
+                
                 currentStep++
+                ttsModelDao.updateProgress(modelId, currentStep.toFloat() / totalSteps)
             } else {
                 val targetFile = File(targetDir, "model.onnx")
+                android.util.Log.i("ModelRepository", "Downloading model file: ${model.modelUrl}")
                 downloadFile(model.modelUrl, targetFile) { progress ->
                     val overallProgress = (currentStep + progress) / totalSteps
                     ttsModelDao.updateProgress(modelId, overallProgress)
-                    android.util.Log.d("ModelRepository", "Download progress: $overallProgress")
+                    android.util.Log.i("ModelRepository", "Download progress: $overallProgress")
                 }
                 currentStep++
 
                 if (model.tokensUrl.isNotEmpty()) {
                     val tokensFile = File(targetDir, "tokens.txt")
+                    android.util.Log.i("ModelRepository", "Downloading tokens file: ${model.tokensUrl}")
                     downloadFile(model.tokensUrl, tokensFile) { progress ->
                         val overallProgress = (currentStep + progress) / totalSteps
                         ttsModelDao.updateProgress(modelId, overallProgress)
-                        android.util.Log.d("ModelRepository", "Download progress: $overallProgress")
+                        android.util.Log.i("ModelRepository", "Download progress: $overallProgress")
                     }
                     currentStep++
                 }
@@ -215,16 +228,18 @@ class ModelRepositoryImpl @Inject constructor(
             // Download extra files (like voices.bin or vocoder.onnx)
             extraFiles.forEach { (fileName, url) ->
                 val targetFile = File(targetDir, fileName)
+                android.util.Log.i("ModelRepository", "Downloading extra file: $url")
                 downloadFile(url, targetFile) { progress ->
                     val overallProgress = (currentStep + progress) / totalSteps
                     ttsModelDao.updateProgress(modelId, overallProgress)
-                    android.util.Log.d("ModelRepository", "Download progress: $overallProgress")
+                    android.util.Log.i("ModelRepository", "Download progress: $overallProgress")
                 }
                 currentStep++
             }
 
             ttsModelDao.updateProgress(modelId, 1.0f)
             ttsModelDao.updateDownloadStatus(modelId, true, targetDir.absolutePath)
+            android.util.Log.i("ModelRepository", "FINISHED downloadModel: $modelId Success")
             Result.success(Unit)
         } catch (e: Exception) {
             android.util.Log.e("ModelRepository", "Failed to download model $modelId", e)
@@ -306,15 +321,25 @@ class ModelRepositoryImpl @Inject constructor(
         }
     }
 
-    private fun extractTarBz2(archiveFile: File, targetDir: File) {
+    internal fun extractTarBz2(archiveFile: File, targetDir: File) {
+        android.util.Log.i("ModelRepository", "Extracting ${archiveFile.name} to ${targetDir.absolutePath}")
+        val targetCanonicalPath = targetDir.canonicalPath
         FileInputStream(archiveFile).use { fis ->
             BZip2CompressorInputStream(fis).use { bzis ->
                 TarArchiveInputStream(bzis).use { tais ->
                     var entry = tais.nextEntry
                     while (entry != null) {
+                        android.util.Log.i("ModelRepository", "Archive entry: ${entry.name}, isDirectory: ${entry.isDirectory}")
+                        val curFile = File(targetDir, entry.name)
+                        
+                        // Path traversal validation (Tar Slip protection)
+                        if (!curFile.canonicalPath.startsWith(targetCanonicalPath + File.separator)) {
+                            throw SecurityException("Malicious zip entry: ${entry.name}")
+                        }
+
                         if (!entry.isDirectory) {
-                            val curFile = File(targetDir, entry.name)
                             curFile.parentFile?.mkdirs()
+                            android.util.Log.i("ModelRepository", "Writing to ${curFile.absolutePath}")
                             FileOutputStream(curFile).use { fos ->
                                 tais.copyTo(fos)
                             }
@@ -327,27 +352,25 @@ class ModelRepositoryImpl @Inject constructor(
     }
 
     private fun findAndMoveModelFiles(targetDir: File) {
-        // Models might be in a subdirectory after extraction
-        val allFiles = targetDir.walkTopDown().toList()
+        val rootSubDirs = targetDir.listFiles { file -> file.isDirectory } ?: return
         
-        // Find main model file
-        val onnxFile = allFiles.find { it.name.endsWith(".onnx") }
-        if (onnxFile != null && onnxFile.parentFile != targetDir) {
-            onnxFile.renameTo(File(targetDir, "model.onnx"))
-        } else if (onnxFile != null) {
-            onnxFile.renameTo(File(targetDir, "model.onnx"))
+        // Find the top-level directory in the archive (e.g. vits-piper-en_US-amy-low/)
+        // Move EVERYTHING inside it up to targetDir
+        for (subDir in rootSubDirs) {
+            if (subDir.name.contains("vits-") || subDir.name.contains("kokoro-") || subDir.name.contains("matcha-")) {
+                subDir.listFiles()?.forEach { file ->
+                    val dest = File(targetDir, file.name)
+                    if (dest.exists()) dest.deleteRecursively()
+                    file.renameTo(dest)
+                }
+                subDir.deleteRecursively()
+            }
         }
-
-        // Find tokens file
-        val tokensFile = allFiles.find { it.name == "tokens.txt" }
-        if (tokensFile != null && tokensFile.parentFile != targetDir) {
-            tokensFile.renameTo(File(targetDir, "tokens.txt"))
-        }
-
-        // Cleanup subdirectories
-        targetDir.listFiles()?.forEach { 
-            if (it.isDirectory) it.deleteRecursively()
-        }
+        
+        // Ensure main model file is named model.onnx
+        val allFiles = targetDir.listFiles() ?: return
+        val onnxFile = allFiles.find { it.name.endsWith(".onnx") && it.name != "model.onnx" }
+        onnxFile?.renameTo(File(targetDir, "model.onnx"))
     }
 
     override suspend fun deleteModel(modelId: String): Result<Unit> = withContext(Dispatchers.IO) {

@@ -24,6 +24,7 @@ import com.mienaiknife.narra.NavDestination
 import com.mienaiknife.narra.data.models.Article
 import com.mienaiknife.narra.data.models.SortOption
 import com.mienaiknife.narra.domain.repository.ContentRepository
+import com.mienaiknife.narra.playback.PlaybackManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -39,6 +40,7 @@ import javax.inject.Inject
 @HiltViewModel
 class FeedArticlesViewModel @Inject constructor(
     private val repository: ContentRepository,
+    private val playbackManager: PlaybackManager,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -52,16 +54,26 @@ class FeedArticlesViewModel @Inject constructor(
     val feedTitle: String = savedStateHandle.toRoute<NavDestination.Feed>().feedTitle
 
     private val _sortOption = MutableStateFlow(SortOption.DATE_DESC)
+    private val _isRefreshing = MutableStateFlow(false)
     private val _showPlayed = MutableStateFlow(false)
 
     private val _downloadingArticleIds = MutableStateFlow<Set<String>>(emptySet())
 
     val uiState: StateFlow<FeedArticlesUiState> = combine(
         repository.getArticlesBySource(feedTitle),
+        _isRefreshing,
         _sortOption,
         _showPlayed,
-        _downloadingArticleIds
-    ) { articles, sort, showPlayed, downloadingIds ->
+        _downloadingArticleIds,
+        playbackManager.playbackSpeed
+    ) { args: Array<Any?> ->
+        val articles = args[0] as List<Article>
+        val isRefreshing = args[1] as Boolean
+        val sort = args[2] as SortOption
+        val showPlayed = args[3] as Boolean
+        val downloadingIds = args[4] as Set<String>
+        val playbackSpeed = args[5] as Float
+
         val filteredArticles = if (showPlayed) articles else articles.filter { (it.progress ?: 0f) < 1f }
         val sortedArticles = when (sort) {
             SortOption.MANUAL -> filteredArticles
@@ -74,8 +86,10 @@ class FeedArticlesViewModel @Inject constructor(
         }
         FeedArticlesUiState(
             articles = sortedArticles,
+            isRefreshing = isRefreshing,
             sortOption = sort,
             showPlayed = showPlayed,
+            playbackSpeed = playbackSpeed,
             feedTitle = feedTitle,
             downloadingArticleIds = downloadingIds
         )
@@ -104,6 +118,16 @@ class FeedArticlesViewModel @Inject constructor(
             _sortOption.value = next
         } else {
             _sortOption.value = option
+        }
+    }
+
+    fun refresh() {
+        viewModelScope.launch {
+            _isRefreshing.value = true
+            repository.refreshFeeds().onFailure { error ->
+                _uiEvent.emit(UiEvent.ShowSnackbar(error.message ?: "Failed to refresh feeds"))
+            }
+            _isRefreshing.value = false
         }
     }
 

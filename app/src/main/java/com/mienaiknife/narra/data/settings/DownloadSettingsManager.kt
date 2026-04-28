@@ -19,6 +19,7 @@ package com.mienaiknife.narra.data.settings
 import android.content.Context
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.stringPreferencesKey
 import com.mienaiknife.narra.ui.theme.dataStore
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
@@ -31,14 +32,25 @@ class DownloadSettingsManager @Inject constructor(
     @param:ApplicationContext private val context: Context
 ) {
     private val downloadOverWifiOnlyKey = booleanPreferencesKey("download_over_wifi_only")
+    private val refreshIntervalKey = stringPreferencesKey("refresh_interval")
 
     val downloadOverWifiOnly: Flow<Boolean> = context.dataStore.data.map { prefs ->
         prefs[downloadOverWifiOnlyKey] ?: true
     }
 
+    val refreshInterval: Flow<String> = context.dataStore.data.map { prefs ->
+        prefs[refreshIntervalKey] ?: "12 hours"
+    }
+
     suspend fun setDownloadOverWifiOnly(enabled: Boolean) {
         context.dataStore.edit { prefs ->
             prefs[downloadOverWifiOnlyKey] = enabled
+        }
+    }
+
+    suspend fun setRefreshInterval(interval: String) {
+        context.dataStore.edit { prefs ->
+            prefs[refreshIntervalKey] = interval
         }
     }
 }

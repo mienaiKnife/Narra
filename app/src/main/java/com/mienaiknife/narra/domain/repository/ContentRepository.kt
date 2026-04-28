@@ -26,6 +26,7 @@ interface ContentRepository {
     fun getFavoriteArticles(): Flow<List<Article>>
     fun getAllArticles(): Flow<List<Article>>
     fun getArticlesBySource(source: String): Flow<List<Article>>
+    fun searchArticles(query: String): Flow<List<Article>>
     suspend fun getArticleById(id: String): Article?
     suspend fun downloadWebPage(url: String): Result<Article>
     suspend fun removeFromQueue(id: String)
@@ -38,6 +39,7 @@ interface ContentRepository {
     suspend fun updateQueueOrder(articleIds: List<String>)
     suspend fun subscribeToFeed(url: String): Result<String>
     suspend fun refreshFeeds(): Result<Unit>
+    suspend fun updateFeed(feed: com.mienaiknife.narra.data.local.entities.FeedEntity)
     suspend fun deleteFeed(url: String)
     suspend fun importEpub(inputStream: java.io.InputStream, title: String): Result<Unit>
     suspend fun importOpml(inputStream: java.io.InputStream): Result<Int>
@@ -49,6 +51,7 @@ interface ContentRepository {
     suspend fun toggleFavorite(id: String)
     suspend fun deleteAllMetadata()
     suspend fun deleteAllFeeds()
+    suspend fun pruneOldArticleContent(maxAgeDays: Int)
     suspend fun backupDatabase(outputStream: java.io.OutputStream): Result<Unit>
     suspend fun restoreDatabase(inputStream: java.io.InputStream): Result<Unit>
 }

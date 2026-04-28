@@ -32,21 +32,15 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
@@ -55,6 +49,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.rememberNavController
 import com.mienaiknife.narra.ui.components.BottomNavBar
+import com.mienaiknife.narra.ui.components.SettingDropDownItem
 import com.mienaiknife.narra.ui.theme.NarraTheme
 import com.mienaiknife.narra.ui.viewmodels.PlaybackSettingsUiState
 import com.mienaiknife.narra.ui.viewmodels.PlaybackSettingsViewModel
@@ -75,7 +70,9 @@ fun PlaybackSettingsScreen(
         onPlayChimeAndTitleChange = { viewModel.setPlayChimeAndTitle(it) },
         onChimeSoundChange = { viewModel.setChimeSound(it) },
         onFastForwardTimeChange = { viewModel.setFastForwardSkipTime(it) },
-        onRewindTimeChange = { viewModel.setRewindSkipTime(it) }
+        onRewindTimeChange = { viewModel.setRewindSkipTime(it) },
+        onFastForwardHardwareButtonChange = { viewModel.setFastForwardHardwareButton(it) },
+        onRewindHardwareButtonChange = { viewModel.setRewindHardwareButton(it) }
     )
 }
 
@@ -89,7 +86,9 @@ fun PlaybackSettingsContent(
     onPlayChimeAndTitleChange: (Boolean) -> Unit,
     onChimeSoundChange: (String) -> Unit,
     onFastForwardTimeChange: (String) -> Unit,
-    onRewindTimeChange: (String) -> Unit
+    onRewindTimeChange: (String) -> Unit,
+    onFastForwardHardwareButtonChange: (String) -> Unit,
+    onRewindHardwareButtonChange: (String) -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -225,8 +224,22 @@ fun PlaybackSettingsContent(
                 onValueChange = onRewindTimeChange
             )
 
-            // TODO: Add "Fast forward hardware button" and "Rewind hardware button" settings for changing what those buttons do
+            SettingDropDownItem(
+                title = "Fast forward hardware button",
+                subtitle = "Customize what the fast forward hardware button does",
+                selectedValue = uiState.fastForwardHardwareButton,
+                options = listOf("Fast forward", "Skip article", "Rewind", "Restart article"),
+                onValueChange = onFastForwardHardwareButtonChange
+            )
 
+            SettingDropDownItem(
+                title = "Rewind hardware button",
+                subtitle = "Customize what the rewind hardware button does",
+                selectedValue = uiState.rewindHardwareButton,
+                options = listOf("Fast forward", "Skip article", "Rewind", "Restart article"),
+                onValueChange = onRewindHardwareButtonChange
+            )
+            
             Text(
                 text = "Queue",
                 style = MaterialTheme.typography.titleMedium,
@@ -313,77 +326,6 @@ fun PlaybackSettingsContent(
     }
 }
 
-@Composable
-private fun SettingDropDownItem(
-    title: String,
-    subtitle: String,
-    selectedValue: String,
-    options: List<String>,
-    onValueChange: (String) -> Unit
-) {
-    var expanded by remember { mutableStateOf(false) }
-
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { expanded = true }
-            .padding(vertical = 8.dp)
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(
-                modifier = Modifier
-                    .weight(1f)
-                    .padding(end = 8.dp)
-            ) {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.bodyLarge
-                )
-                Text(
-                    text = subtitle,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            Text(
-                text = selectedValue,
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.primary
-            )
-        }
-
-        DropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { expanded = false }
-        ) {
-            options.forEach { option ->
-                DropdownMenuItem(
-                    text = {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            RadioButton(
-                                selected = (option == selectedValue),
-                                onClick = null
-                            )
-                            Text(
-                                text = option,
-                                style = MaterialTheme.typography.bodyLarge,
-                                modifier = Modifier.padding(start = 16.dp)
-                            )
-                        }
-                    },
-                    onClick = {
-                        onValueChange(option)
-                        expanded = false
-                    }
-                )
-            }
-        }
-    }
-}
-
 @Preview(uiMode = Configuration.UI_MODE_NIGHT_YES, showBackground = true)
 @Composable
 fun PlaybackSettingsScreenPreview() {
@@ -402,7 +344,9 @@ fun PlaybackSettingsScreenPreview() {
                     onPlayChimeAndTitleChange = {},
                     onChimeSoundChange = {},
                     onFastForwardTimeChange = {},
-                    onRewindTimeChange = {}
+                    onRewindTimeChange = {},
+                    onFastForwardHardwareButtonChange = {},
+                    onRewindHardwareButtonChange = {}
                 )
             }
         }

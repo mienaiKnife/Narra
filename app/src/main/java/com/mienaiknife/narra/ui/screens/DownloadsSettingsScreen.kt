@@ -16,6 +16,7 @@
 
 package com.mienaiknife.narra.ui.screens
 
+import android.content.Intent
 import android.content.res.Configuration
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -31,6 +32,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.AlertDialog
@@ -55,9 +58,11 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.rememberNavController
 import com.mienaiknife.narra.ui.components.BottomNavBar
+import com.mienaiknife.narra.ui.components.SettingDropDownItem
 import com.mienaiknife.narra.ui.theme.NarraTheme
 import com.mienaiknife.narra.ui.viewmodels.DownloadsSettingsUiState
 import com.mienaiknife.narra.ui.viewmodels.DownloadsSettingsViewModel
+import com.mienaiknife.narra.utils.DateUtils
 
 @Composable
 fun DownloadsSettingsScreen(
@@ -108,6 +113,23 @@ fun DownloadsSettingsScreen(
         }
     }
 
+    val autoExportLocationLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("application/octet-stream")
+    ) { uri ->
+        uri?.let {
+            try {
+                context.contentResolver.takePersistableUriPermission(
+                    it,
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+                )
+            } catch (e: Exception) {
+                android.util.Log.e("DownloadsSettingsScreen", "Failed to take persistable permission", e)
+            }
+            viewModel.setAutoExportUri(it.toString())
+            viewModel.setAutoExportEnabled(true)
+        }
+    }
+
     val showDeleteConfirm = remember { mutableStateOf(false) }
 
     if (showDeleteConfirm.value) {
@@ -136,10 +158,20 @@ fun DownloadsSettingsScreen(
     DownloadsSettingsContent(
         uiState = uiState,
         onDownloadOverWifiOnlyChange = { viewModel.setDownloadOverWifiOnly(it) },
+        onRefreshIntervalChange = { viewModel.setRefreshInterval(it) },
         onImportOpml = { importLauncher.launch(arrayOf("application/xml", "text/xml", "application/octet-stream", "*/*")) },
         onExportOpml = { exportLauncher.launch("narra-subscriptions.opml") },
         onBackupDatabase = { backupLauncher.launch("narra-backup.db") },
         onRestoreDatabase = { restoreLauncher.launch(arrayOf("application/octet-stream", "*/*")) },
+        onAutoExportEnabledChange = { enabled ->
+            if (enabled && uiState.autoExportUri == null) {
+                autoExportLocationLauncher.launch("narra_db.sqlite")
+            } else {
+                viewModel.setAutoExportEnabled(enabled)
+            }
+        },
+        onAutoImportEnabledChange = { viewModel.setAutoImportEnabled(it) },
+        onSetAutoExportLocation = { autoExportLocationLauncher.launch("narra_db.sqlite") },
         onDeleteDatabase = { showDeleteConfirm.value = true },
         onBack = onBack
     )
@@ -149,10 +181,14 @@ fun DownloadsSettingsScreen(
 fun DownloadsSettingsContent(
     uiState: DownloadsSettingsUiState,
     onDownloadOverWifiOnlyChange: (Boolean) -> Unit,
+    onRefreshIntervalChange: (String) -> Unit,
     onImportOpml: () -> Unit,
     onExportOpml: () -> Unit,
     onBackupDatabase: () -> Unit,
     onRestoreDatabase: () -> Unit,
+    onAutoExportEnabledChange: (Boolean) -> Unit,
+    onAutoImportEnabledChange: (Boolean) -> Unit,
+    onSetAutoExportLocation: () -> Unit,
     onDeleteDatabase: () -> Unit,
     onBack: () -> Unit
 ) {
@@ -189,6 +225,7 @@ fun DownloadsSettingsContent(
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .verticalScroll(rememberScrollState())
                 .padding(horizontal = 16.dp)
         ) {
             Text(
@@ -229,62 +266,229 @@ fun DownloadsSettingsContent(
                 )
             }
 
-            // TODO: Add "Automation" section for toggling automatic refreshing and downloads
-
             Text(
-                text = "Portability",
+                text = "Automation",
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.padding(top = 24.dp, bottom = 8.dp)
             )
 
-            Text(
-                text = "Import subscriptions (OPML)",
-                style = MaterialTheme.typography.bodyLarge,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { onImportOpml() }
-                    .padding(vertical = 8.dp)
+            SettingDropDownItem(
+                title = "Refresh inbox",
+                subtitle = "Specify an interval at which the inbox is automatically refreshed",
+                selectedValue = uiState.refreshInterval,
+                options = listOf("Never", "1 hour", "3 hours", "6 hours", "12 hours", "24 hours"),
+                onValueChange = onRefreshIntervalChange
             )
 
             Text(
-                text = "Export subscriptions (OPML)",
-                style = MaterialTheme.typography.bodyLarge,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { onExportOpml() }
-                    .padding(vertical = 8.dp)
+                text = "Database",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(top = 24.dp, bottom = 8.dp)
             )
 
-            Text(
-                text = "Backup database",
-                style = MaterialTheme.typography.bodyLarge,
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clickable { onBackupDatabase() }
-                    .padding(vertical = 8.dp)
-            )
+                    .padding(vertical = 12.dp)
+            ) {
+                Text(
+                    text = "Export database",
+                    style = MaterialTheme.typography.bodyLarge
+                )
+                Text(
+                    text = "Back up your texts, feeds, and playback progress",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
 
-            Text(
-                text = "Restore database",
-                style = MaterialTheme.typography.bodyLarge,
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clickable { onRestoreDatabase() }
                     .padding(vertical = 8.dp)
-            )
+            ) {
+                Text(
+                    text = "Import database",
+                    style = MaterialTheme.typography.bodyLarge
+                )
+                Text(
+                    text = "Restore your data from a backup",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
 
-            //TODO: Replace "Backup database" and "Restore database" settings with "Choose data folder," pointing users towards a database that they can sync across devices with Syncthing
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(end = 8.dp)
+                ) {
+                    Text(
+                        text = "Auto-export database",
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                    Text(
+                        text = "Automatically export database for external syncing (e.g. via Syncthing)",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Switch(
+                    checked = uiState.autoExportEnabled,
+                    onCheckedChange = onAutoExportEnabledChange,
+                    enabled = true,
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = MaterialTheme.colorScheme.primary,
+                        checkedTrackColor = MaterialTheme.colorScheme.primaryContainer,
+                        uncheckedThumbColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                        uncheckedTrackColor = MaterialTheme.colorScheme.surfaceContainer
+                    )
+                )
+            }
 
-            Text(
-                text = "Delete database",
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.error,
+            if (uiState.autoExportEnabled) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .weight(1f)
+                            .padding(end = 8.dp)
+                    ) {
+                        Text(
+                            text = "Auto-import database",
+                            style = MaterialTheme.typography.bodyLarge
+                        )
+                        Text(
+                            text = "Automatically check for a newer database and stage it for import",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Switch(
+                        checked = uiState.autoImportEnabled,
+                        onCheckedChange = onAutoImportEnabledChange,
+                        enabled = uiState.autoExportUri != null,
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = MaterialTheme.colorScheme.primary,
+                            checkedTrackColor = MaterialTheme.colorScheme.primaryContainer,
+                            uncheckedThumbColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            uncheckedTrackColor = MaterialTheme.colorScheme.surfaceContainer
+                        )
+                    )
+                }
+
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onSetAutoExportLocation() }
+                        .padding(vertical = 8.dp)
+                ) {
+                    Text(
+                        text = "Auto-export location",
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                    Text(
+                        text = if (uiState.autoExportUri != null) {
+                            "File set. Tap to change."
+                        } else {
+                            "Not set. Tap to pick a folder"
+                        },
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                if (uiState.lastExportTimestamp > 0) {
+                    Text(
+                        text = "Last auto-export: ${DateUtils.formatDateTime(uiState.lastExportTimestamp)}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(bottom = 8.dp)
+                    )
+                }
+
+                if (uiState.pendingImport) {
+                    Text(
+                        text = "New database staged. Restart app to apply.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(bottom = 8.dp)
+                    )
+                }
+            }
+
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clickable { onDeleteDatabase() }
                     .padding(vertical = 8.dp)
+            ) {
+                Text(
+                    text = "Delete database",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.error
+                )
+                Text(
+                    text = "Delete all articles, feeds, and playback progress from this device",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            Text(
+                text = "OPML",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(top = 24.dp, bottom = 8.dp)
             )
+
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onImportOpml() }
+                    .padding(vertical = 8.dp)
+            ) {
+                Text(
+                    text = "Import feeds",
+                    style = MaterialTheme.typography.bodyLarge
+                )
+                Text(
+                    text = "Import your subscriptions from another RSS reader",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onExportOpml() }
+                    .padding(vertical = 8.dp)
+            ) {
+                Text(
+                    text = "Export feeds",
+                    style = MaterialTheme.typography.bodyLarge
+                )
+                Text(
+                    text = "Transfer your subscriptions to another RSS reader",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
     }
 }
@@ -299,12 +503,21 @@ fun DownloadsSettingsScreenPreview() {
         ) { innerPadding ->
             Box(modifier = Modifier.padding(innerPadding)) {
                 DownloadsSettingsContent(
-                    uiState = DownloadsSettingsUiState(),
+                    uiState = DownloadsSettingsUiState(
+                        autoExportEnabled = true,
+                        autoImportEnabled = true,
+                        autoExportUri = "content://com.android.externalstorage.documents/document/primary%3ANarra%2Fnarra_db.sqlite",
+                        lastExportTimestamp = System.currentTimeMillis()
+                    ),
                     onDownloadOverWifiOnlyChange = {},
+                    onRefreshIntervalChange = {},
                     onImportOpml = {},
                     onExportOpml = {},
                     onBackupDatabase = {},
                     onRestoreDatabase = {},
+                    onAutoExportEnabledChange = {},
+                    onAutoImportEnabledChange = {},
+                    onSetAutoExportLocation = {},
                     onDeleteDatabase = {},
                     onBack = {}
                 )

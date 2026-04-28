@@ -26,6 +26,7 @@ data class QueueUiState(
     val keepSorted: Boolean = false,
     val currentArticle: Article? = null,
     val isPlaying: Boolean = false,
+    val playbackSpeed: Float = 1.0f,
     val downloadingArticleIds: Set<String> = emptySet(),
     val totalRemainingTimeMs: Long = 0L
 )

@@ -47,6 +47,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CenterFocusStrong
 import androidx.compose.material.icons.filled.FastForward
@@ -107,6 +108,13 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.ProgressBarRangeInfo
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.progressBarRangeInfo
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.draw.clip
 import coil3.compose.AsyncImage
 import com.mienaiknife.narra.data.models.SampleArticles
@@ -163,6 +171,7 @@ fun ReaderScreen(
                 ReaderContent(
                     uiState = uiState,
                     readerFontFamily = getFontFamily(themeUiState.readerFontFamily),
+                    readerFontSize = themeUiState.readerFontSize,
                     onBack = onBack,
                     onTogglePlayPause = viewModel::togglePlayPause,
                     onSeekToWord = viewModel::seekToWord,
@@ -191,6 +200,7 @@ fun ReaderScreen(
 fun ReaderContent(
     uiState: ReaderUiState,
     readerFontFamily: androidx.compose.ui.text.font.FontFamily,
+    readerFontSize: Float,
     onBack: () -> Unit,
     onTogglePlayPause: () -> Unit,
     onSeekToWord: (Int, IntRange) -> Unit,
@@ -235,6 +245,7 @@ fun ReaderContent(
     val context = LocalContext.current
     val view = LocalView.current
     val uriHandler = LocalUriHandler.current
+    val haptic = LocalHapticFeedback.current
     
     // Keep screen on while in the reader
     DisposableEffect(Unit) {
@@ -436,25 +447,26 @@ fun ReaderContent(
 
                 val baseStyle = when (block) {
                     is ContentBlock.Heading -> {
+                        val scaleFactor = readerFontSize / 18f
                         when (block.level) {
-                            1 -> MaterialTheme.typography.headlineLarge.copy(fontSize = 34.sp, lineHeight = 42.sp)
-                            2 -> MaterialTheme.typography.headlineMedium.copy(fontSize = 30.sp, lineHeight = 38.sp)
-                            else -> MaterialTheme.typography.headlineSmall.copy(fontSize = 26.sp, lineHeight = 34.sp)
+                            1 -> MaterialTheme.typography.headlineLarge.copy(fontSize = (34 * scaleFactor).sp, lineHeight = (42 * scaleFactor).sp)
+                            2 -> MaterialTheme.typography.headlineMedium.copy(fontSize = (30 * scaleFactor).sp, lineHeight = (38 * scaleFactor).sp)
+                            else -> MaterialTheme.typography.headlineSmall.copy(fontSize = (26 * scaleFactor).sp, lineHeight = (34 * scaleFactor).sp)
                         }.copy(
                             color = MaterialTheme.colorScheme.onBackground,
                             fontFamily = readerFontFamily
                         )
                     }
                     is ContentBlock.BlockQuote -> MaterialTheme.typography.bodyLarge.copy(
-                        lineHeight = 32.sp,
-                        fontSize = 20.sp,
+                        lineHeight = (32 * (readerFontSize / 20f)).sp,
+                        fontSize = readerFontSize.sp,
                         fontStyle = androidx.compose.ui.text.font.FontStyle.Italic,
                         color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.8f),
                         fontFamily = readerFontFamily
                     )
                     else -> MaterialTheme.typography.bodyLarge.copy(
-                        lineHeight = 32.sp,
-                        fontSize = 20.sp,
+                        lineHeight = (32 * (readerFontSize / 20f)).sp,
+                        fontSize = readerFontSize.sp,
                         color = MaterialTheme.colorScheme.onBackground,
                         fontFamily = readerFontFamily
                     )
@@ -684,7 +696,7 @@ fun ReaderContent(
                             Icon(
                                 imageVector = Icons.Default.Menu,
                                 contentDescription = "Menu",
-                                modifier = Modifier.size(28.dp),
+                                modifier = Modifier.size(32.dp),
                                 tint = MaterialTheme.colorScheme.onBackground
                             )
                         }
@@ -784,7 +796,15 @@ fun ReaderContent(
                         progress = { progress },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(5.dp),
+                            .height(5.dp)
+                            .clip(RoundedCornerShape(2.dp))
+                            .semantics {
+                                progressBarRangeInfo = ProgressBarRangeInfo(
+                                    current = currentPosition.toFloat(),
+                                    range = 0f..duration.toFloat(),
+                                    steps = 100
+                                )
+                            },
                         color = MaterialTheme.colorScheme.primary,
                         trackColor = MaterialTheme.colorScheme.primaryContainer,
                         strokeCap = StrokeCap.Butt,
@@ -822,8 +842,15 @@ fun ReaderContent(
                         // Speed Button
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             IconButton(
-                                onClick = onCycleSpeed,
-                                modifier = Modifier.height(64.dp)
+                                onClick = {
+                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    onCycleSpeed()
+                                },
+                                modifier = Modifier
+                                    .height(64.dp)
+                                    .semantics {
+                                        liveRegion = LiveRegionMode.Polite
+                                    }
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Speed,
@@ -843,7 +870,10 @@ fun ReaderContent(
                         // Rewind
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             IconButton(
-                                onClick = onSkipBackward,
+                                onClick = {
+                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    onSkipBackward()
+                                },
                                 modifier = Modifier.height(64.dp)
                             ) {
                                 Icon(
@@ -864,7 +894,10 @@ fun ReaderContent(
                         // Play/Pause
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             IconButton(
-                                onClick = onTogglePlayPause,
+                                onClick = {
+                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    onTogglePlayPause()
+                                },
                                 modifier = Modifier.size(64.dp)
                             ) {
                                 Icon(
@@ -880,7 +913,10 @@ fun ReaderContent(
                         // Forward
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             IconButton(
-                                onClick = onSkipForward,
+                                onClick = {
+                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    onSkipForward()
+                                },
                                 modifier = Modifier.height(64.dp)
                             ) {
                                 Icon(
@@ -1070,6 +1106,7 @@ fun ReaderScreenPreview() {
                 currentWordRange = 330..334
             ),
             readerFontFamily = androidx.compose.ui.text.font.FontFamily.Default,
+            readerFontSize = 20f,
             onBack = {},
             onTogglePlayPause = {},
             onSeekToWord = { _, _ -> },

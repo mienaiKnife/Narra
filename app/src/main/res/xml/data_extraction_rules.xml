@@ -21,15 +21,13 @@
 -->
 <data-extraction-rules xmlns:android="http://schemas.android.com/apk/res/android">
     <cloud-backup>
-        <!-- TODO: Use <include> and <exclude> to control what is backed up.
-        <include .../>
-        <exclude .../>
-        -->
+        <include domain="database" path="."/>
+        <include domain="file" path="datastore/"/>
+        <exclude domain="file" path="tts_models/"/>
     </cloud-backup>
-    <!--
     <device-transfer>
-        <include .../>
-        <exclude .../>
+        <include domain="database" path="."/>
+        <include domain="file" path="datastore/"/>
+        <exclude domain="file" path="tts_models/"/>
     </device-transfer>
-    -->
 </data-extraction-rules>

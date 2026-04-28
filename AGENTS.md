@@ -31,7 +31,6 @@ Be aware these are coming so that current architectural decisions don't block th
 - Automatic readability/reader-mode heuristic improvements over time
 - Importing texts by scanning photos
 - User-customizable color themes
-- Customizable font in the reader screen
 
 ## Tech Stack
 - Language: Kotlin

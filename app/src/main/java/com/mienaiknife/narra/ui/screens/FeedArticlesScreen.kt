@@ -21,12 +21,17 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -69,6 +74,7 @@ fun FeedArticlesScreen(
             onBackClick = onBack,
             onAddToQueue = { viewModel.addToQueue(it) },
             onDeleteArticle = { viewModel.deleteArticle(it) },
+            onRefresh = { viewModel.refresh() },
             onSortOptionSelected = { viewModel.setSortOption(it) },
             onShowPlayedChange = { viewModel.setShowPlayed(it) }
         )
@@ -87,11 +93,13 @@ fun FeedArticlesScreenContent(
     onBackClick: () -> Unit,
     onAddToQueue: (Article) -> Unit,
     onDeleteArticle: (Article) -> Unit,
+    onRefresh: () -> Unit = {},
     onSortOptionSelected: (SortOption) -> Unit = {},
     onShowPlayedChange: (Boolean) -> Unit = {}
 ) {
     var showMenu by remember { mutableStateOf(false) }
     val showSortSheet = remember { mutableStateOf(false) }
+    val pullToRefreshState = rememberPullToRefreshState()
 
     if (showSortSheet.value) {
         SortBottomSheet(
@@ -177,41 +185,71 @@ fun FeedArticlesScreenContent(
                         }
                     )
 
-                    // TODO: Add "Refresh" and "Visit site" to hamburger menu
+                    DropdownMenuItem(
+                        text = { Text("Refresh") },
+                        onClick = {
+                            showMenu = false
+                            onRefresh()
+                        },
+                        leadingIcon = {
+                            Icon(
+                                Icons.Default.Refresh, contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onBackground
+                            )
+                        }
+                    )
                 }
             }
         }
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        if (uiState.articles.isEmpty()) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 16.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = "No articles found in this feed.",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+        PullToRefreshBox(
+            isRefreshing = uiState.isRefreshing,
+            onRefresh = onRefresh,
+            state = pullToRefreshState,
+            modifier = Modifier.weight(1f),
+            indicator = {
+                PullToRefreshDefaults.Indicator(
+                    state = pullToRefreshState,
+                    isRefreshing = uiState.isRefreshing,
+                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                    modifier = Modifier.align(Alignment.TopCenter)
                 )
             }
-        } else {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize(),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
-                contentPadding = PaddingValues(bottom = 24.dp)
-            ) {
-                items(uiState.articles) { article ->
-                    QueueItem(
-                        article = article,
-                        isPlaying = false,
-                        isDownloading = article.id in uiState.downloadingArticleIds,
-                        onAddToQueueClick = { onAddToQueue(article) },
-                        onRemoveClick = { onDeleteArticle(article) }
+        ) {
+            if (uiState.articles.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .verticalScroll(rememberScrollState())
+                        .padding(horizontal = 16.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "No articles found in this feed.",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize(),
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                    contentPadding = PaddingValues(bottom = 24.dp)
+                ) {
+                    items(uiState.articles) { article ->
+                        QueueItem(
+                            article = article,
+                            isPlaying = false,
+                            playbackSpeed = uiState.playbackSpeed,
+                            isDownloading = article.id in uiState.downloadingArticleIds,
+                            onAddToQueueClick = { onAddToQueue(article) },
+                            onRemoveClick = { onDeleteArticle(article) }
+                        )
+                    }
                 }
             }
         }
