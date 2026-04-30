@@ -60,11 +60,14 @@ data class ArticleEntity(
     val sortTimestamp: Long = publishedTimestamp ?: createdAt
 )
 
-fun ArticleEntity.toDomainModel(feedImageUrl: String? = null): Article {
+fun ArticleEntity.toDomainModel(
+    feedImageUrl: String? = null,
+    sourceOverride: String? = null
+): Article {
     return Article(
         id = id,
         title = title,
-        source = source,
+        source = sourceOverride ?: source,
         publishedAt = publishedAt,
         content = content ?: "",
         imageUrl = imageUrl,

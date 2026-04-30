@@ -30,7 +30,8 @@ data class ThemeUiState(
     val isDynamicColor: Boolean = false,
     val useSystemTheme: Boolean = true,
     val readerFontFamily: String = "Roboto",
-    val readerFontSize: Float = 18.0f
+    val readerFontSize: Float = 18.0f,
+    val showRemainingTime: Boolean = true
 )
 
 open class ThemeViewModel : ViewModel() {
@@ -66,6 +67,11 @@ open class ThemeViewModel : ViewModel() {
                     _uiState.update { it.copy(readerFontSize = fontSize) }
                 }
             }
+            viewModelScope.launch {
+                themeManager?.showRemainingTime?.collect { showRemaining ->
+                    _uiState.update { it.copy(showRemainingTime = showRemaining) }
+                }
+            }
         }
     }
 
@@ -87,5 +93,9 @@ open class ThemeViewModel : ViewModel() {
 
     fun setReaderFontSize(fontSize: Float) {
         themeManager?.setReaderFontSize(fontSize)
+    }
+
+    fun setShowRemainingTime(enabled: Boolean) {
+        themeManager?.setShowRemainingTime(enabled)
     }
 }

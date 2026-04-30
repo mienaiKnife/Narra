@@ -17,6 +17,7 @@
 package com.mienaiknife.narra.data.remote
 
 import com.mienaiknife.narra.data.models.Article
+import com.mienaiknife.narra.ui.utils.UrlUtils
 import com.mienaiknife.narra.utils.DateUtils
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
@@ -29,6 +30,10 @@ import javax.inject.Inject
 class WebDataSourceImpl @Inject constructor() : WebDataSource {
 
     override suspend fun downloadArticle(url: String): Result<Article> {
+        if (!UrlUtils.isPublicUrl(url)) {
+            return Result.failure(com.mienaiknife.narra.domain.NarraError.Network.NoConnection())
+        }
+
         return try {
             val doc = Jsoup.connect(url)
                 .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36")

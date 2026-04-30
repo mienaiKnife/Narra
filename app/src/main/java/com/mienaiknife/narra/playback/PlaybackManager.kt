@@ -219,34 +219,40 @@ class PlaybackManager @Inject constructor(
                     val playChimeAndTitle = settingsManager.playChimeAndTitle.first()
 
                     if (playChimeAndTitle) {
-                        // Request audio focus before playing chime and announcement
-                        ttsPlayer.requestAudioFocus()
+                        // Keep CPU awake for chime + announcement + content start
+                        ttsPlayer.acquireManualWakeLock()
+                        try {
+                            // Request audio focus before playing chime and announcement
+                            ttsPlayer.requestAudioFocus()
 
-                        playChime()
-                        // Small delay to let the chime breathe
-                        delay(300)
+                            playChime()
+                            // Small delay to let the chime breathe
+                            delay(300)
 
-                        // Announcements usually sound better at normal speed even if the article is fast
-                        val currentSpeed = _playbackSpeed.value
-                        if (currentSpeed != 1.0f) ttsPlayer.setPlaybackSpeed(1.0f)
+                            // Announcements usually sound better at normal speed even if the article is fast
+                            val currentSpeed = _playbackSpeed.value
+                            if (currentSpeed != 1.0f) ttsPlayer.setPlaybackSpeed(1.0f)
 
-                        ttsPlayer.speakAnnouncement("Now playing: ${article.title}")
+                            ttsPlayer.speakAnnouncement("Now playing: ${article.title}")
 
-                        // Wait for the announcement to start and then finish
-                        withTimeoutOrNull(5000) {
-                            // Wait for Speaking state with "announcement" ID
-                            ttsPlayer.engineState.first {
-                                it is TtsState.Speaking && it.utteranceId == "announcement"
+                            // Wait for the announcement to start and then finish
+                            withTimeoutOrNull(5000) {
+                                // Wait for Speaking state with "announcement" ID
+                                ttsPlayer.engineState.first {
+                                    it is TtsState.Speaking && it.utteranceId == "announcement"
+                                }
+                                // Then wait for it to be Ready (meaning it finished)
+                                ttsPlayer.engineState.first { it is TtsState.Ready }
                             }
-                            // Then wait for it to be Ready (meaning it finished)
-                            ttsPlayer.engineState.first { it is TtsState.Ready }
-                        }
 
-                        delay(500) // Brief pause after announcement
+                            delay(500) // Brief pause after announcement
 
-                        // Restore speed for the actual content
-                        if (currentSpeed != 1.0f) {
-                            ttsPlayer.setPlaybackSpeed(currentSpeed)
+                            // Restore speed for the actual content
+                            if (currentSpeed != 1.0f) {
+                                ttsPlayer.setPlaybackSpeed(currentSpeed)
+                            }
+                        } finally {
+                            ttsPlayer.releaseManualWakeLock()
                         }
                     }
                     
@@ -290,6 +296,8 @@ class PlaybackManager @Inject constructor(
                 repository.markAsFinished(finishedArticle.id)
                 _currentArticle.value = null
                 _isPlaying.value = false
+                // Queue finished, stop player and release locks
+                ttsPlayer.stop()
             }
         }
     }
@@ -327,7 +335,7 @@ class PlaybackManager @Inject constructor(
 
     fun stop() {
         transitionJob?.cancel()
-        ttsPlayer.pause()
+        ttsPlayer.stop() // Use stop() instead of pause() to release locks
         _currentArticle.value = null
         _isPlaying.value = false
     }

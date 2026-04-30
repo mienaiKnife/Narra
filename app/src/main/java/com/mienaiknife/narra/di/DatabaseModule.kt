@@ -22,11 +22,14 @@ import com.mienaiknife.narra.data.local.AppDatabase
 import com.mienaiknife.narra.data.local.dao.ArticleDao
 import com.mienaiknife.narra.data.local.dao.FeedDao
 import com.mienaiknife.narra.data.local.dao.TtsModelDao
+import com.mienaiknife.narra.utils.SecurityManager
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import net.zetetic.database.sqlcipher.SupportOpenHelperFactory
+import java.io.File
 import javax.inject.Singleton
 
 @Module
@@ -35,14 +38,92 @@ object DatabaseModule {
 
     @Provides
     @Singleton
-    fun provideAppDatabase(@ApplicationContext context: Context): AppDatabase {
+    fun provideAppDatabase(
+        @ApplicationContext context: Context,
+        securityManager: SecurityManager
+    ): AppDatabase {
+        System.loadLibrary("sqlcipher")
+        val dbFile = context.getDatabasePath(AppDatabase.DATABASE_NAME)
+        val passphrase = securityManager.getDatabaseEncryptionKey()
+        
+        // 1. If DB exists, check if it's already encrypted
+        if (dbFile.exists()) {
+            val isEncrypted = try {
+                net.zetetic.database.sqlcipher.SQLiteDatabase.openDatabase(
+                    dbFile.absolutePath,
+                    passphrase,
+                    null,
+                    net.zetetic.database.sqlcipher.SQLiteDatabase.OPEN_READONLY,
+                    null
+                ).use { it.isOpen }
+            } catch (e: Exception) {
+                false
+            }
+
+            if (!isEncrypted) {
+                // 2. Try to open as unencrypted to confirm it's a migration case
+                val isUnencrypted = try {
+                    net.zetetic.database.sqlcipher.SQLiteDatabase.openDatabase(
+                        dbFile.absolutePath,
+                        "".toByteArray(),
+                        null,
+                        net.zetetic.database.sqlcipher.SQLiteDatabase.OPEN_READONLY,
+                        null
+                    ).use { it.isOpen }
+                } catch (e: Exception) {
+                    false
+                }
+
+                if (isUnencrypted) {
+                    android.util.Log.i("DatabaseModule", "Unencrypted database found. Encrypting...")
+                    try {
+                        encryptDatabase(context, dbFile, passphrase)
+                        android.util.Log.i("DatabaseModule", "Database encrypted successfully.")
+                    } catch (e: Exception) {
+                        android.util.Log.e("DatabaseModule", "Failed to encrypt database", e)
+                    }
+                } else {
+                    android.util.Log.e("DatabaseModule", "Database is corrupted or encrypted with a different key.")
+                    dbFile.delete()
+                    File(dbFile.path + "-wal").delete()
+                    File(dbFile.path + "-shm").delete()
+                }
+            }
+        }
+
+        val factory = SupportOpenHelperFactory(passphrase)
+
         return Room.databaseBuilder(
             context,
             AppDatabase::class.java,
             AppDatabase.DATABASE_NAME
         )
+            .openHelperFactory(factory)
             .fallbackToDestructiveMigration(dropAllTables = true)
             .build()
+    }
+
+    private fun encryptDatabase(context: Context, dbFile: File, passphrase: ByteArray) {
+        val tempDbFile = File(context.cacheDir, "temp_encrypt.db")
+        if (tempDbFile.exists()) tempDbFile.delete()
+
+        net.zetetic.database.sqlcipher.SQLiteDatabase.openDatabase(
+            dbFile.absolutePath,
+            "".toByteArray(),
+            null,
+            net.zetetic.database.sqlcipher.SQLiteDatabase.OPEN_READWRITE,
+            null
+        ).use { db ->
+            val passphraseHex = passphrase.joinToString("") { "%02x".format(it) }
+            db.rawExecSQL("ATTACH DATABASE '${tempDbFile.absolutePath}' AS encrypted KEY x'$passphraseHex';")
+            db.rawExecSQL("SELECT sqlcipher_export('encrypted');")
+            db.rawExecSQL("DETACH DATABASE encrypted;")
+        }
+
+        dbFile.delete()
+        File(dbFile.path + "-wal").delete()
+        File(dbFile.path + "-shm").delete()
+        tempDbFile.renameTo(dbFile)
     }
 
     @Provides

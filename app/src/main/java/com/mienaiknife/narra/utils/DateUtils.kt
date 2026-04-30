@@ -99,11 +99,15 @@ object DateUtils {
         return null
     }
 
-    fun formatElapsedTime(millis: Long): String {
+    fun formatElapsedTime(millis: Long, referenceDuration: Long = 0L): String {
+        val totalToUse = maxOf(millis, referenceDuration)
         val hours = TimeUnit.MILLISECONDS.toHours(millis)
         val minutes = TimeUnit.MILLISECONDS.toMinutes(millis) % 60
         val seconds = TimeUnit.MILLISECONDS.toSeconds(millis) % 60
-        return if (hours > 0) {
+
+        val totalHours = TimeUnit.MILLISECONDS.toHours(totalToUse)
+
+        return if (totalHours > 0) {
             String.format(Locale.US, "%d:%02d:%02d", hours, minutes, seconds)
         } else {
             String.format(Locale.US, "%d:%02d", minutes, seconds)

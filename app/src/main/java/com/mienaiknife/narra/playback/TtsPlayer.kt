@@ -252,7 +252,8 @@ class TtsPlayer @Inject constructor(
                         if (currentParagraphIndex == paragraphs.size - 1 && wasSpeaking) {
                             // Finished article
                             _playWhenReady = false
-                            abandonAudioFocusInternal()
+                            // Note: We don't abandonAudioFocusInternal() here anymore to keep WakeLock held
+                            // during transition to next article. stop() or release() will call it.
                             updatePlaybackState(STATE_ENDED)
                         } else if (!wasSpeaking) {
                             // Engine just became ready (e.g. after model switch or init), so resume synthesis
@@ -772,13 +773,14 @@ class TtsPlayer @Inject constructor(
         ttsEngine.stop()
         isEngineSpeaking = false
 
+        val artworkUrl = article.imageUrl ?: article.feedImageUrl
         _currentMediaItem = MediaItem.Builder()
             .setMediaId(article.id)
             .setMediaMetadata(
                 MediaMetadata.Builder()
                     .setTitle(article.title)
                     .setArtist(article.source)
-                    .setArtworkUri(article.imageUrl?.toUri())
+                    .setArtworkUri(artworkUrl?.toUri())
                     .build()
             )
             .build()
@@ -826,8 +828,30 @@ class TtsPlayer @Inject constructor(
     }
 
     fun speakAnnouncement(text: String) {
+        acquireLocks()
         if (requestAudioFocus() == AudioManager.AUDIOFOCUS_REQUEST_GRANTED) {
             ttsEngine.speak(text, "announcement")
+        }
+    }
+
+    /**
+     * Acquires a manual wake lock that will stay held until releaseManualWakeLock is called.
+     * This is useful for keeping the CPU awake during complex transitions where the player
+     * might be temporarily idle.
+     */
+    fun acquireManualWakeLock() {
+        android.util.Log.d("TtsPlayer", "Acquiring manual wake lock")
+        acquireLocks()
+    }
+
+    /**
+     * Releases the manual wake lock. Note that the player will still hold a wake lock
+     * if it is currently speaking.
+     */
+    fun releaseManualWakeLock() {
+        android.util.Log.d("TtsPlayer", "Releasing manual wake lock")
+        if (!_playWhenReady && !isEngineSpeaking) {
+            releaseLocks()
         }
     }
 

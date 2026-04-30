@@ -1,37 +1,43 @@
 # Content Parsing & Normalization
 
-Narra ingests content from multiple sources (RSS, EPUB, Web Articles) and normalizes them into a unified format for the TTS engine. This process is managed by the `ContentRepository`.
+Narra ingests content from multiple sources (RSS, EPUB, Web Articles) and normalizes them into a unified format for both the UI and the TTS engine.
 
-## The Data Flow
+## Content Representation: `ContentBlock`
 
-1. **Source Ingestion**: Content is fetched from a URL (RSS/Web) or imported from a file (EPUB).
-2. **Parsing**: Source-specific parsers (e.g., `EpubParser`, `RssParser`, `WebReader`) extract the raw text and metadata.
-3. **Normalization**: The extracted content is mapped to the `Article` and `Chapter` domain models.
-4. **Persistence**: The normalized models are saved to the local database via Room.
+Instead of handling raw HTML strings throughout the app, Narra parses content into a list of `ContentBlock` objects. This allows the UI to render different types of content (text, images, headings) appropriately and enables the TTS engine to handle them distinctly.
 
-## Supported Sources
+- **`ContentBlock.Text`**: Contains an `AnnotatedString` for rich text display in the Reader UI.
+- **`ContentBlock.Image`**: Contains image metadata (URL, alt text).
+- **`ContentBlock.Heading`**: Represents structural headers.
+
+## The Parsing Engine: `HtmlParser`
+
+The `HtmlParser` (located in `ui.utils`) is responsible for converting raw HTML from any source into `ContentBlock`s.
+
+1. **JSoup Processing**: It uses JSoup to parse the HTML fragment.
+2. **Recursive Traversal**: It traverses the DOM tree, mapping tags like `<b>`, `<i>`, and `<a>` to styles in an `AnnotatedString`.
+3. **Block Segmentation**: It identifies block-level elements (like `<p>`, `<div>`, `<h1>`) to create distinct blocks for the TTS queue.
+
+## Source Normalization
+
+All sources are eventually mapped to the `Article` domain model, which tracks the source type, progress, and metadata.
 
 ### RSS Feeds
-- **Library**: Narra uses a lightweight RSS parser.
-- **Logic**: It fetches the feed XML, parses the items, and extracts the full content if available in the feed (e.g., `<content:encoded>`). If only a snippet is provided, it may optionally trigger a Web Reader fetch for the full article.
+- **Logic**: Fetches feed XML and extracts full content from `<content:encoded>` or `<description>`.
+- **Normalization**: Maps feed entries to `Article` entities, preserving the source feed's metadata.
 
 ### EPUB Files
-- **Library**: Narra uses a JVM-compatible EPUB library.
-- **Logic**: It parses the manifest and spine to extract chapters in the correct order. HTML/XHTML content within the EPUB is cleaned to remove CSS, scripts, and unnecessary tags before being passed to the TTS.
+- **Logic**: Uses a JVM EPUB library to extract the spine and manifest.
+- **Normalization**: Each chapter in an EPUB is treated as a separate `Chapter` (or sometimes a series of `Article`s depending on size), linked to the parent book.
 
 ### Web Articles
-- **Library**: A port of Mozilla's **Readability** library.
-- **Logic**: When a user saves a web URL, Narra downloads the HTML and runs it through the Readability heuristic to identify the main article body, stripping away ads, sidebars, and navigation menus.
+- **Logic**: Uses a **Readability** port to extract the "clean" article text from a URL.
+- **Normalization**: Persists the source URL so the content can be refreshed.
 
-## Extending the Parser
+## UI Integration: `HtmlToAnnotatedString`
 
-To add support for a new content type (e.g., PDF or Markdown files):
-
-1. **Add a Parser**: Create a new parser class in the `data` layer.
-2. **Update ContentRepository**: Add a method to handle the new source and map it to the domain models.
-3. **Handle Persistence**: Ensure the `ContentSourceType` enum includes the new type so the UI can display appropriate icons/labels.
+For the Reader UI, Narra uses `HtmlToAnnotatedString` to convert HTML into Compose-compatible `AnnotatedString`s. This ensures that links are clickable and styles (bold, italic) are preserved while the TTS is speaking.
 
 ## Best Practices
-- **Sanitization**: Always strip HTML tags and normalize whitespace before sending text to the `TtsEngine`.
-- **Async Operations**: Parsing large EPUBs or heavy web pages must happen on `Dispatchers.IO`.
-- **Metadata Preservation**: Always preserve the source URL and author information for attribution and potential refreshing.
+- **Speakable Text**: Use the `.toSpeakableText()` extension to strip remaining UI-specific artifacts before sending content to the TTS engine.
+- **Background Parsing**: Heavy parsing (especially for large EPUBs) should always be performed on `Dispatchers.IO` via the `ContentRepository`.

@@ -17,7 +17,6 @@
 package com.mienaiknife.narra.ui.screens
 
 import android.content.Context
-import android.content.pm.PackageManager
 import android.content.res.Configuration
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -48,6 +47,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -59,7 +59,8 @@ import com.mienaiknife.narra.ui.theme.NarraTheme
 fun AboutScreen(onBack: () -> Unit, onNavigateToLicenses: () -> Unit) {
     val context = LocalContext.current
     val uriHandler = LocalUriHandler.current
-    val versionName = getVersionName(context)
+    val isPreview = LocalInspectionMode.current
+    val versionName = if (isPreview) "0.1-preview" else getVersionName(context)
 
     Column(
         modifier = Modifier
@@ -190,7 +191,7 @@ private fun getVersionName(context: Context): String {
     return try {
         val packageInfo = context.packageManager.getPackageInfo(context.packageName, 0)
         packageInfo.versionName ?: "Unknown"
-    } catch (_: PackageManager.NameNotFoundException) {
+    } catch (_: Exception) {
         "Unknown"
     }
 }

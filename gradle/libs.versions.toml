@@ -33,6 +33,8 @@ epublib = "3.1"
 material = "1.13.0"
 onnxruntime = "1.24.3"
 commonsCompress = "1.26.1"
+sqlcipher = "4.15.0"
+securityCrypto = "1.1.0"
 
 [libraries]
 material = { group = "com.google.android.material", name = "material", version.ref = "material" }
@@ -80,6 +82,8 @@ commons-compress = { group = "org.apache.commons", name = "commons-compress", ve
 androidx-work-runtime-ktx = { group = "androidx.work", name = "work-runtime-ktx", version.ref = "work" }
 androidx-hilt-work = { group = "androidx.hilt", name = "hilt-work", version.ref = "hiltWork" }
 androidx-startup-runtime = { group = "androidx.startup", name = "startup-runtime", version.ref = "startup" }
+sqlcipher = { group = "net.zetetic", name = "sqlcipher-android", version.ref = "sqlcipher" }
+androidx-security-crypto = { group = "androidx.security", name = "security-crypto", version.ref = "securityCrypto" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

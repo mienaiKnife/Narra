@@ -18,6 +18,7 @@ package com.mienaiknife.narra.data.remote
 
 import com.mienaiknife.narra.data.local.entities.FeedEntity
 import com.mienaiknife.narra.data.models.Article
+import com.mienaiknife.narra.ui.utils.UrlUtils
 import com.mienaiknife.narra.utils.DateUtils
 import com.prof18.rssparser.RssParser
 import org.jsoup.Jsoup
@@ -29,6 +30,10 @@ class RemoteFeedDataSourceImpl @Inject constructor(
 ) : RemoteFeedDataSource {
 
     override suspend fun fetchFeedMetadata(url: String): Result<FeedEntity> {
+        if (!UrlUtils.isPublicUrl(url)) {
+            return Result.failure(com.mienaiknife.narra.domain.NarraError.Network.NoConnection())
+        }
+
         return try {
             var targetUrl = url
             var channel = try {
@@ -46,7 +51,7 @@ class RemoteFeedDataSourceImpl @Inject constructor(
                 val feedLink = doc.select("link[rel=alternate][type=application/rss+xml]").attr("abs:href")
                     .ifEmpty { doc.select("link[rel=alternate][type=application/atom+xml]").attr("abs:href") }
                 
-                if (feedLink.isNotEmpty()) {
+                if (feedLink.isNotEmpty() && UrlUtils.isPublicUrl(feedLink)) {
                     targetUrl = feedLink
                     channel = rssParser.getRssChannel(targetUrl)
                 }
@@ -60,17 +65,25 @@ class RemoteFeedDataSourceImpl @Inject constructor(
             val link = channel.link
             val title = channel.title ?: "Untitled Feed"
 
-            if (imageUrl == null && link != null) {
+            if (imageUrl == null && link != null && UrlUtils.isPublicUrl(link)) {
                 try {
                     val doc = Jsoup.connect(link)
                         .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36")
                         .get()
                     
                     imageUrl = doc.select("link[rel~=(?i)^(shortcut|apple-touch-)?icon]").attr("abs:href")
-                    if (imageUrl.isEmpty()) {
-                        imageUrl = doc.select("meta[property=og:image]").attr("abs:href")
+                    if (imageUrl.isNotEmpty() && !UrlUtils.isPublicUrl(imageUrl)) {
+                        imageUrl = null
                     }
-                    if (imageUrl.isEmpty()) {
+                    
+                    if (imageUrl.isNullOrEmpty()) {
+                        imageUrl = doc.select("meta[property=og:image]").attr("abs:href")
+                        if (imageUrl.isNotEmpty() && !UrlUtils.isPublicUrl(imageUrl)) {
+                            imageUrl = null
+                        }
+                    }
+                    
+                    if (imageUrl.isNullOrEmpty()) {
                         imageUrl = null
                     }
                 } catch (_: Exception) {

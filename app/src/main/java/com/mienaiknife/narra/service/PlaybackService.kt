@@ -34,7 +34,10 @@ import androidx.media3.session.MediaNotification
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
 import com.mienaiknife.narra.MainActivity
+import com.mienaiknife.narra.playback.PlaybackManager
 import com.mienaiknife.narra.playback.TtsPlayer
+import com.google.common.util.concurrent.Futures
+import com.google.common.util.concurrent.ListenableFuture
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 
@@ -44,6 +47,9 @@ class PlaybackService : MediaSessionService() {
 
     @Inject
     lateinit var ttsPlayer: TtsPlayer
+
+    @Inject
+    lateinit var playbackManager: PlaybackManager
 
     private var mediaSession: MediaSession? = null
     private lateinit var notificationProvider: MediaNotification.Provider
@@ -83,13 +89,41 @@ class PlaybackService : MediaSessionService() {
                     session: MediaSession,
                     controller: MediaSession.ControllerInfo
                 ): MediaSession.ConnectionResult {
-                    val sessionCommands = MediaSession.ConnectionResult.DEFAULT_SESSION_COMMANDS.buildUpon()
-                        .build()
-                    
+                    // Accept all controllers and allow all commands by default
                     return MediaSession.ConnectionResult.AcceptedResultBuilder(session)
-                        .setAvailableSessionCommands(sessionCommands)
+                        .setAvailableSessionCommands(MediaSession.ConnectionResult.DEFAULT_SESSION_COMMANDS)
                         .setAvailablePlayerCommands(session.player.availableCommands)
                         .build()
+                }
+
+                override fun onMediaButtonEvent(
+                    session: MediaSession,
+                    controllerInfo: MediaSession.ControllerInfo,
+                    intent: Intent
+                ): Boolean {
+                    android.util.Log.d("PlaybackService", "Media button event from ${controllerInfo.packageName}: $intent")
+                    return super.onMediaButtonEvent(session, controllerInfo, intent)
+                }
+
+                override fun onPlaybackResumption(
+                    mediaSession: MediaSession,
+                    controller: MediaSession.ControllerInfo,
+                    isForPlayback: Boolean
+                ): ListenableFuture<MediaSession.MediaItemsWithStartPosition> {
+                    android.util.Log.d("PlaybackService", "onPlaybackResumption called (isForPlayback=$isForPlayback)")
+                    
+                    val currentItem = ttsPlayer.currentMediaItem
+                    if (currentItem != null) {
+                        return Futures.immediateFuture(
+                            MediaSession.MediaItemsWithStartPosition(
+                                listOf(currentItem),
+                                0,
+                                ttsPlayer.currentPosition
+                            )
+                        )
+                    }
+                    
+                    return super.onPlaybackResumption(mediaSession, controller, isForPlayback)
                 }
             })
             .build()

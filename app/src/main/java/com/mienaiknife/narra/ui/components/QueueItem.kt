@@ -32,6 +32,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DragIndicator
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.RssFeed
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -57,6 +58,7 @@ fun QueueItem(
     modifier: Modifier = Modifier,
     isDownloading: Boolean = false,
     playbackSpeed: Float = 1.0f,
+    showRemainingTime: Boolean = true,
     onPlayPauseClick: () -> Unit = {},
     onRemoveClick: () -> Unit = {},
     onAddToQueueClick: () -> Unit = {},
@@ -72,6 +74,7 @@ fun QueueItem(
             isPlaying = isPlaying,
             isDownloading = isDownloading,
             playbackSpeed = playbackSpeed,
+            showRemainingTime = showRemainingTime,
             onClick = { showMenu = true },
             onPlayPauseClick = {
                 if (article.isInQueue) onPlayPauseClick() else onAddToQueueClick()
@@ -157,6 +160,7 @@ private fun QueueItemRow(
     modifier: Modifier = Modifier,
     isDownloading: Boolean = false,
     playbackSpeed: Float = 1.0f,
+    showRemainingTime: Boolean = true,
     onClick: () -> Unit = {},
     onPlayPauseClick: () -> Unit = {},
     dragModifier: Modifier? = null
@@ -206,16 +210,20 @@ private fun QueueItemRow(
                     .background(MaterialTheme.colorScheme.surfaceContainer),
                 contentAlignment = Alignment.Center
             ) {
+                Icon(
+                    imageVector = Icons.Default.RssFeed,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(32.dp)
+                )
                 val imageUrl = article.imageUrl ?: article.feedImageUrl ?: article.url?.let { "https://www.google.com/s2/favicons?domain=$it&sz=128" }
-                imageUrl?.let { url ->
-                    AsyncImage(
-                        model = url,
-                        contentDescription = "Cover for ${article.title}",
-                        modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Crop,
-                        alpha = if (article.progress == 1f) 0.6f else 1f
-                    )
-                }
+                AsyncImage(
+                    model = imageUrl,
+                    contentDescription = "Cover for ${article.title}",
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop,
+                    alpha = if (article.progress == 1f) 0.6f else 1f
+                )
             }
 
             Spacer(modifier = Modifier.width(12.dp))
@@ -261,17 +269,15 @@ private fun QueueItemRow(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text(
-                            text = if (progress > 0f && progress < 1f) {
-                                DateUtils.formatElapsedTime(currentPosition)
-                            } else {
-                                DateUtils.formatElapsedTime(totalDuration)
-                            },
-                            style = MaterialTheme.typography.labelSmall,
-                            color = if (article.progress == 1f) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f) else MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
+                        val inProgress = progress > 0f && progress < 1f
+                        
+                        if (inProgress) {
+                            Text(
+                                text = DateUtils.formatElapsedTime(currentPosition, totalDuration),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
 
-                        if (progress > 0f && progress < 1f) {
                             Spacer(modifier = Modifier.width(8.dp))
 
                             LinearProgressIndicator(
@@ -289,12 +295,21 @@ private fun QueueItemRow(
                             Spacer(modifier = Modifier.width(8.dp))
 
                             Text(
-                                text = "-${DateUtils.formatElapsedTime(remainingTime)}",
+                                text = if (showRemainingTime) {
+                                    "-${DateUtils.formatElapsedTime(remainingTime, totalDuration)}"
+                                } else {
+                                    DateUtils.formatElapsedTime(totalDuration, totalDuration)
+                                },
                                 style = MaterialTheme.typography.labelSmall,
-                                color = if (article.progress == 1f) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f) else MaterialTheme.colorScheme.onSurfaceVariant,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         } else {
                             Spacer(modifier = Modifier.weight(1f))
+                            Text(
+                                text = DateUtils.formatElapsedTime(totalDuration, totalDuration),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = if (article.progress == 1f) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f) else MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
                         }
                     }
                 }

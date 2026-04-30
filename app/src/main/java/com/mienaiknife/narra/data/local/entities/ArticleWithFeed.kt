@@ -30,5 +30,8 @@ data class ArticleWithFeed(
 )
 
 fun ArticleWithFeed.toDomainModel(): Article {
-    return article.toDomainModel(feedImageUrl = feed?.imageUrl)
+    return article.toDomainModel(
+        feedImageUrl = feed?.imageUrl,
+        sourceOverride = if (article.isFromFeed) feed?.title else null
+    )
 }

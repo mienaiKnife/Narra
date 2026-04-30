@@ -39,18 +39,21 @@ class ThemeManager(private val context: Context, private val scope: CoroutineSco
     private val useSystemThemeKey = booleanPreferencesKey("use_system_theme")
     private val readerFontFamilyKey = stringPreferencesKey("reader_font_family")
     private val readerFontSizeKey = floatPreferencesKey("reader_font_size")
+    private val showRemainingTimeKey = booleanPreferencesKey("show_remaining_time")
 
     private val _isDarkMode = MutableStateFlow(true)
     private val _isDynamicColor = MutableStateFlow(false)
     private val _useSystemTheme = MutableStateFlow(true)
     private val _readerFontFamily = MutableStateFlow("Roboto")
     private val _readerFontSize = MutableStateFlow(18.0f)
+    private val _showRemainingTime = MutableStateFlow(true)
 
     val isDarkMode: StateFlow<Boolean> = _isDarkMode.asStateFlow()
     val isDynamicColor: StateFlow<Boolean> = _isDynamicColor.asStateFlow()
     val useSystemTheme: StateFlow<Boolean> = _useSystemTheme.asStateFlow()
     val readerFontFamily: StateFlow<String> = _readerFontFamily.asStateFlow()
     val readerFontSize: StateFlow<Float> = _readerFontSize.asStateFlow()
+    val showRemainingTime: StateFlow<Boolean> = _showRemainingTime.asStateFlow()
 
     init {
         scope.launch {
@@ -60,6 +63,7 @@ class ThemeManager(private val context: Context, private val scope: CoroutineSco
             _useSystemTheme.value = prefs[useSystemThemeKey] ?: true
             _readerFontFamily.value = prefs[readerFontFamilyKey] ?: "Roboto"
             _readerFontSize.value = prefs[readerFontSizeKey] ?: 18.0f
+            _showRemainingTime.value = prefs[showRemainingTimeKey] ?: true
         }
     }
 
@@ -105,6 +109,15 @@ class ThemeManager(private val context: Context, private val scope: CoroutineSco
                 prefs[readerFontSizeKey] = fontSize
             }
             _readerFontSize.value = fontSize
+        }
+    }
+
+    fun setShowRemainingTime(enabled: Boolean) {
+        scope.launch {
+            context.dataStore.edit { prefs ->
+                prefs[showRemainingTimeKey] = enabled
+            }
+            _showRemainingTime.value = enabled
         }
     }
 }

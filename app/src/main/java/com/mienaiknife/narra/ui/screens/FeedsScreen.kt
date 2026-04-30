@@ -312,21 +312,19 @@ fun FeedItem(
                     .background(MaterialTheme.colorScheme.surfaceContainer),
                 contentAlignment = Alignment.Center
             ) {
-                if (feed.imageUrl != null) {
-                    AsyncImage(
-                        model = feed.imageUrl,
-                        contentDescription = "Feed icon",
-                        modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Crop
-                    )
-                } else {
-                    Icon(
-                        imageVector = Icons.Default.RssFeed,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(32.dp)
-                    )
-                }
+                Icon(
+                    imageVector = Icons.Default.RssFeed,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(32.dp)
+                )
+                val imageUrl = feed.imageUrl ?: "https://www.google.com/s2/favicons?domain=${feed.url}&sz=128"
+                AsyncImage(
+                    model = imageUrl,
+                    contentDescription = "Feed icon",
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop
+                )
             }
 
             Spacer(modifier = Modifier.width(16.dp))

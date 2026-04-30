@@ -117,6 +117,8 @@ dependencies {
     implementation(libs.androidx.work.runtime.ktx)
     implementation(libs.androidx.hilt.work)
     implementation(libs.androidx.startup.runtime)
+    implementation(libs.sqlcipher)
+    implementation(libs.androidx.security.crypto)
     ksp(libs.androidx.hilt.compiler)
     testImplementation(libs.junit)
     testImplementation("org.mockito:mockito-core:5.11.0")
