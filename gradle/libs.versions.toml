@@ -7,20 +7,20 @@ espressoCore = "3.7.0"
 lifecycleRuntimeKtx = "2.10.0"
 lifecycleViewmodelCompose = "2.10.0"
 activityCompose = "1.13.0"
-kotlin = "2.3.20"
+kotlin = "2.3.21"
 kotlinxSerialization = "1.11.0"
-composeBom = "2026.03.01"
-navigationCompose = "2.9.7"
+composeBom = "2026.04.01"
+navigationCompose = "2.9.8"
 dataStore = "1.2.1"
-ui = "1.10.6"
-jsoup = "1.22.1"
+ui = "1.11.0"
+jsoup = "1.22.2"
 readability4j = "1.0.8"
 rssparser = "6.1.5"
 room = "2.8.4"
 hilt = "2.59.2"
 hiltNavigationCompose = "1.3.0"
 ksp = "2.3.6"
-foundation = "1.10.6"
+foundation = "1.11.0"
 desugar = "2.1.5"
 splashscreen = "1.2.0"
 media3 = "1.10.0"
@@ -31,10 +31,11 @@ coil = "3.4.0"
 okhttp = "5.3.2"
 epublib = "3.1"
 material = "1.13.0"
-onnxruntime = "1.24.3"
-commonsCompress = "1.26.1"
+onnxruntime = "1.25.1"
+commonsCompress = "1.28.0"
 sqlcipher = "4.15.0"
 securityCrypto = "1.1.0"
+mockito = "5.23.0"
 
 [libraries]
 material = { group = "com.google.android.material", name = "material", version.ref = "material" }
@@ -84,6 +85,7 @@ androidx-hilt-work = { group = "androidx.hilt", name = "hilt-work", version.ref 
 androidx-startup-runtime = { group = "androidx.startup", name = "startup-runtime", version.ref = "startup" }
 sqlcipher = { group = "net.zetetic", name = "sqlcipher-android", version.ref = "sqlcipher" }
 androidx-security-crypto = { group = "androidx.security", name = "security-crypto", version.ref = "securityCrypto" }
+mockito-core = { group = "org.mockito", name = "mockito-core", version.ref = "mockito" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

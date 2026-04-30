@@ -29,5 +29,10 @@ interface RemoteFeedDataSource {
     /**
      * Fetches articles from a given feed URL.
      */
-    suspend fun fetchArticles(feed: FeedEntity): Result<List<Article>>
+    suspend fun fetchArticles(feed: FeedEntity): Result<FetchArticlesResult>
+
+    data class FetchArticlesResult(
+        val articles: List<Article>,
+        val feedTitle: String?
+    )
 }

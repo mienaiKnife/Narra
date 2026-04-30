@@ -85,7 +85,7 @@ import com.mienaiknife.narra.ui.viewmodels.FeedsViewModel
 
 @Composable
 fun FeedsScreen(
-    onNavigateToFeed: (String) -> Unit,
+    onNavigateToFeed: (String, String) -> Unit,
     onBack: () -> Unit,
     viewModel: FeedsViewModel = hiltViewModel()
 ) {
@@ -107,7 +107,7 @@ fun FeedsScreen(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FeedsScreenContent(
-    onFeedClick: (String) -> Unit,
+    onFeedClick: (String, String) -> Unit,
     feeds: List<FeedEntity>,
     isRefreshing: Boolean = false,
     sortOption: SortOption = SortOption.TITLE_ASC,
@@ -265,7 +265,7 @@ fun FeedsScreenContent(
                             FeedItem(
                                 feed = feed,
                                 onClick = {
-                                    onFeedClick(feed.title)
+                                    onFeedClick(feed.url, feed.title)
                                 },
                                 onDeleteClick = { onDeleteFeed(feed) },
                                 onToggleNotifications = { onToggleNotifications(feed) }
@@ -312,18 +312,24 @@ fun FeedItem(
                     .background(MaterialTheme.colorScheme.surfaceContainer),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    imageVector = Icons.Default.RssFeed,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(32.dp)
-                )
                 val imageUrl = feed.imageUrl ?: "https://www.google.com/s2/favicons?domain=${feed.url}&sz=128"
+                var isImageLoaded by remember(imageUrl) { mutableStateOf(false) }
+
+                if (!isImageLoaded) {
+                    Icon(
+                        imageVector = Icons.Default.RssFeed,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(32.dp)
+                    )
+                }
+
                 AsyncImage(
                     model = imageUrl,
                     contentDescription = "Feed icon",
                     modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop
+                    contentScale = ContentScale.Crop,
+                    onSuccess = { isImageLoaded = true }
                 )
             }
 
@@ -391,7 +397,7 @@ fun FeedsScreenPreview() {
         ) { innerPadding ->
             Box(modifier = Modifier.padding(innerPadding)) {
                 FeedsScreenContent(
-                    onFeedClick = {},
+                    onFeedClick = { _, _ -> },
                     feeds = sampleFeeds,
                     onBackClick = {}
                 )

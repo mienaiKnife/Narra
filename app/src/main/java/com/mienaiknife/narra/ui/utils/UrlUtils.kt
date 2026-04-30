@@ -71,6 +71,20 @@ object UrlUtils {
         }
     }
 
+    fun getDomainName(url: String): String {
+        return try {
+            val uri = URL(url)
+            val host = uri.host
+            if (host.startsWith("www.")) {
+                host.substring(4)
+            } else {
+                host
+            }
+        } catch (_: Exception) {
+            url
+        }
+    }
+
     /**
      * Checks if the given URL is a public URL and not a local/private network address.
      * This is a basic SSRF protection measure.

@@ -17,7 +17,7 @@
 package com.mienaiknife.narra.data.workers
 
 import android.content.Context
-import android.net.Uri
+import androidx.core.net.toUri
 import android.provider.DocumentsContract
 import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
@@ -41,7 +41,7 @@ class DatabaseImportWorker @AssistedInject constructor(
         if (!syncSettingsManager.autoImportEnabled.first()) return@withContext Result.success()
 
         val uriString = syncSettingsManager.autoExportUri.first() ?: return@withContext Result.success()
-        val uri = Uri.parse(uriString)
+        val uri = uriString.toUri()
 
         try {
             val lastModified = getRemoteModifiedTime(uri) ?: return@withContext Result.failure()
@@ -70,7 +70,7 @@ class DatabaseImportWorker @AssistedInject constructor(
         }
     }
 
-    private fun getRemoteModifiedTime(uri: Uri): Long? {
+    private fun getRemoteModifiedTime(uri: android.net.Uri): Long? {
         return try {
             context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
                 if (cursor.moveToFirst()) {

@@ -66,6 +66,12 @@ class ContentRepositoryImpl(
         }
     }
 
+    override fun getArticlesByFeedUrl(feedUrl: String): Flow<List<Article>> {
+        return articleDao.getArticlesByFeedUrl(feedUrl).map { entities ->
+            entities.map { it.toDomainModel() }
+        }
+    }
+
     override fun searchArticles(query: String): Flow<List<Article>> {
         return articleDao.searchArticles(query).map { entities ->
             entities.map { it.toDomainModel() }
@@ -289,7 +295,14 @@ class ContentRepositoryImpl(
         try {
             val feeds = feedDao.getAllFeeds().first()
             for (feed in feeds) {
-                remoteFeedDataSource.fetchArticles(feed).onSuccess { articles ->
+                remoteFeedDataSource.fetchArticles(feed).onSuccess { result ->
+                    val articles = result.articles
+                    val updatedTitle = result.feedTitle
+                    
+                    if (updatedTitle != null && updatedTitle != feed.title) {
+                        feedDao.insertFeed(feed.copy(title = updatedTitle))
+                    }
+
                     val isFirstImport = articleDao.getArticleCountByFeedUrl(feed.url) == 0
                     val sortedArticles = articles.sortedByDescending { it.publishedTimestamp ?: 0L }
 
@@ -299,7 +312,7 @@ class ContentRepositoryImpl(
                             val articleEntity = ArticleEntity(
                                 id = article.id,
                                 title = article.title,
-                                source = article.source,
+                                source = updatedTitle ?: article.source,
                                 content = null,
                                 excerpt = article.publishedAt,
                                 imageUrl = article.imageUrl,

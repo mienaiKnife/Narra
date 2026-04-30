@@ -39,7 +39,7 @@ sealed interface NavDestination {
     data object Feeds : NavDestination
 
     @Serializable
-    data class Feed(val feedTitle: String) : NavDestination
+    data class Feed(val feedUrl: String, val feedTitle: String) : NavDestination
 
     @Serializable
     data object Settings : NavDestination

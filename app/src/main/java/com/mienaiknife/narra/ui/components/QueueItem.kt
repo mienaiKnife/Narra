@@ -210,19 +210,25 @@ private fun QueueItemRow(
                     .background(MaterialTheme.colorScheme.surfaceContainer),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    imageVector = Icons.Default.RssFeed,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(32.dp)
-                )
                 val imageUrl = article.imageUrl ?: article.feedImageUrl ?: article.url?.let { "https://www.google.com/s2/favicons?domain=$it&sz=128" }
+                var isImageLoaded by remember(imageUrl) { mutableStateOf(false) }
+
+                if (!isImageLoaded) {
+                    Icon(
+                        imageVector = Icons.Default.RssFeed,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(32.dp)
+                    )
+                }
+
                 AsyncImage(
                     model = imageUrl,
                     contentDescription = "Cover for ${article.title}",
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Crop,
-                    alpha = if (article.progress == 1f) 0.6f else 1f
+                    alpha = if (article.progress == 1f) 0.6f else 1f,
+                    onSuccess = { isImageLoaded = true }
                 )
             }
 
@@ -304,7 +310,9 @@ private fun QueueItemRow(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         } else {
-                            Spacer(modifier = Modifier.weight(1f))
+                            if (progress >= 1f) {
+                                Spacer(modifier = Modifier.weight(1f))
+                            }
                             Text(
                                 text = DateUtils.formatElapsedTime(totalDuration, totalDuration),
                                 style = MaterialTheme.typography.labelSmall,

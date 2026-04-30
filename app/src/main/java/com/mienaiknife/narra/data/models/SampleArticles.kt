@@ -20,7 +20,7 @@ object SampleArticles {
     val sampleArticle1 = Article(
         id = "1",
         title = "Technically Radical: On The Unrecognized Potential of Tech Workers and Hackers",
-        source = "wedontagree.net",
+        source = "We Don't Agree",
         publishedAt = "Aug 1, 2025",
         content = """
             <blockquote>They're so thoroughly hypnotized by the short-term victory of global capitalism that they can't surf the new paradigm, look to the longer term.<br/><br/>— Charles Stross, Accelerando</blockquote>

@@ -20,6 +20,9 @@ import androidx.room.Entity
 import androidx.room.PrimaryKey
 import com.mienaiknife.narra.domain.models.TtsModel
 import com.mienaiknife.narra.domain.models.TtsModelType
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.decodeFromString
 
 @Entity(tableName = "tts_models")
 data class TtsModelEntity(
@@ -58,12 +61,7 @@ data class TtsModelEntity(
     private fun parseExtraUrls(json: String): Map<String, String> {
         if (json.isBlank()) return emptyMap()
         return try {
-            json.trim('{', '}')
-                .split(",")
-                .associate { 
-                    val parts = it.split(":")
-                    parts[0].trim('"') to parts[1].trim('"')
-                }
+            Json.decodeFromString(json)
         } catch (_: Exception) {
             emptyMap()
         }
@@ -89,9 +87,7 @@ data class TtsModelEntity(
 
         private fun formatExtraUrls(urls: Map<String, String>): String {
             if (urls.isEmpty()) return ""
-            return urls.entries.joinToString(prefix = "{", postfix = "}") { 
-                "\"${it.key}\":\"${it.value}\"" 
-            }
+            return Json.encodeToString(urls)
         }
     }
 }

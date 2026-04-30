@@ -53,6 +53,10 @@ interface ArticleDao {
     fun getArticlesBySource(source: String): Flow<List<ArticleWithFeed>>
 
     @Transaction
+    @Query("SELECT * FROM articles WHERE feedUrl = :feedUrl ORDER BY sortTimestamp DESC")
+    fun getArticlesByFeedUrl(feedUrl: String): Flow<List<ArticleWithFeed>>
+
+    @Transaction
     @Query("SELECT * FROM articles WHERE title LIKE '%' || :query || '%' OR source LIKE '%' || :query || '%' ORDER BY sortTimestamp DESC")
     fun searchArticles(query: String): Flow<List<ArticleWithFeed>>
 

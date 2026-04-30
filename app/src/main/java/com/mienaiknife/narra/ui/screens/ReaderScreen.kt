@@ -836,7 +836,9 @@ fun ReaderContent(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         } else {
-                            Spacer(modifier = Modifier.weight(1f))
+                            if (currentPosition >= duration && duration > 0) {
+                                Spacer(modifier = Modifier.weight(1f))
+                            }
                             Text(
                                 text = DateUtils.formatElapsedTime(duration, duration),
                                 style = MaterialTheme.typography.labelMedium,

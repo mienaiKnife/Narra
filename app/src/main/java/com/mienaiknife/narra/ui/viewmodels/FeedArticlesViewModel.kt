@@ -51,7 +51,9 @@ class FeedArticlesViewModel @Inject constructor(
         data class ShowSnackbar(val message: String) : UiEvent()
     }
 
-    val feedTitle: String = savedStateHandle.toRoute<NavDestination.Feed>().feedTitle
+    private val routeData = savedStateHandle.toRoute<NavDestination.Feed>()
+    val feedUrl: String = routeData.feedUrl
+    val initialFeedTitle: String = routeData.feedTitle
 
     private val _sortOption = MutableStateFlow(SortOption.DATE_DESC)
     private val _isRefreshing = MutableStateFlow(false)
@@ -60,7 +62,7 @@ class FeedArticlesViewModel @Inject constructor(
     private val _downloadingArticleIds = MutableStateFlow<Set<String>>(emptySet())
 
     val uiState: StateFlow<FeedArticlesUiState> = combine(
-        repository.getArticlesBySource(feedTitle),
+        repository.getArticlesByFeedUrl(feedUrl),
         _isRefreshing,
         _sortOption,
         _showPlayed,
@@ -73,6 +75,9 @@ class FeedArticlesViewModel @Inject constructor(
         val showPlayed = args[3] as Boolean
         val downloadingIds = args[4] as Set<String>
         val playbackSpeed = args[5] as Float
+
+        // Use the source of the first article if available, as it might have been updated
+        val currentFeedTitle = articles.firstOrNull()?.source ?: initialFeedTitle
 
         val filteredArticles = if (showPlayed) articles else articles.filter { (it.progress ?: 0f) < 1f }
         val sortedArticles = when (sort) {
@@ -90,13 +95,13 @@ class FeedArticlesViewModel @Inject constructor(
             sortOption = sort,
             showPlayed = showPlayed,
             playbackSpeed = playbackSpeed,
-            feedTitle = feedTitle,
+            feedTitle = currentFeedTitle,
             downloadingArticleIds = downloadingIds
         )
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
-        initialValue = FeedArticlesUiState(feedTitle = feedTitle)
+        initialValue = FeedArticlesUiState(feedTitle = initialFeedTitle)
     )
 
     fun setShowPlayed(show: Boolean) {

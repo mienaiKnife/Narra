@@ -122,7 +122,7 @@ fun AppNavigation(themeViewModel: ThemeViewModel, initialArticleId: String? = nu
             }
             composable<NavDestination.Feeds> { 
                 FeedsScreen(
-                    onNavigateToFeed = { feedTitle -> navController.navigate(NavDestination.Feed(feedTitle)) },
+                    onNavigateToFeed = { feedUrl, feedTitle -> navController.navigate(NavDestination.Feed(feedUrl, feedTitle)) },
                     onBack = { navController.popBackStack() }
                 ) 
             }

@@ -80,12 +80,21 @@ class SherpaTtsEngine @Inject constructor(
     private var currentSessionId: Int = 0
 
     data class UtteranceRequest(val text: String, val utteranceId: String, val sessionId: Int)
+    
+    data class WordBoundary(
+        val startChar: Int,
+        val endChar: Int,
+        val startSample: Int,
+        val endSample: Int
+    )
+
     data class SynthesizedAudio(
         val samples: FloatArray,
         val sampleRate: Int,
         val utteranceId: String,
         val text: String,
-        val sessionId: Int
+        val sessionId: Int,
+        val wordBoundaries: List<WordBoundary> = emptyList()
     ) {
         override fun equals(other: Any?): Boolean {
             if (this === other) return true
@@ -334,13 +343,17 @@ class SherpaTtsEngine @Inject constructor(
                 try {
                     val audio = engine.generate(request.text, currentSpeakerId ?: 0)
                     if (request.sessionId != currentSessionId) continue
+                    
+                    val boundaries = estimateWordBoundaries(request.text, audio.samples.size)
+                    
                     synthesizedQueue.send(
                         SynthesizedAudio(
                             audio.samples,
                             audio.sampleRate,
                             request.utteranceId,
                             request.text,
-                            request.sessionId
+                            request.sessionId,
+                            boundaries
                         )
                     )
                 } catch (e: Exception) {
@@ -359,10 +372,12 @@ class SherpaTtsEngine @Inject constructor(
 
     private suspend fun playAudio(audio: SynthesizedAudio) {
         try {
-            _state.value = TtsState.Speaking(audio.utteranceId, 0, audio.text.length, 0)
+            // Initial state update
+            _state.value = TtsState.Speaking(audio.utteranceId, 0, 0, 0)
             
             val samples = audio.samples
             val sampleRate = audio.sampleRate
+            val wordBoundaries = audio.wordBoundaries
 
             val bufferSize = AudioTrack.getMinBufferSize(
                 sampleRate,
@@ -418,12 +433,17 @@ class SherpaTtsEngine @Inject constructor(
                     val currentHead = playbackHeadPosition
                     val playedFrames = (currentHead - startHeadPosition).coerceAtLeast(0)
                     
+                    // Find the current word based on played frames
+                    val currentWord = wordBoundaries.find { 
+                        playedFrames in it.startSample until it.endSample 
+                    } ?: wordBoundaries.lastOrNull { playedFrames >= it.endSample }
+
                     // Throttle state updates to avoid overwhelming the UI
                     if (offset % 4000 == 0 || offset >= totalSamples) {
                         _state.value = TtsState.Speaking(
                             audio.utteranceId,
-                            0,
-                            audio.text.length,
+                            currentWord?.startChar ?: 0,
+                            currentWord?.endChar ?: 0,
                             playedFrames
                         )
                     }
@@ -440,11 +460,17 @@ class SherpaTtsEngine @Inject constructor(
                     playState == AudioTrack.PLAYSTATE_PLAYING &&
                     scope.isActive &&
                     audio.sessionId == currentSessionId) {
+                    
+                    val playedFrames = (playbackHeadPosition - startHeadPosition).coerceAtLeast(0)
+                    val currentWord = wordBoundaries.find { 
+                        playedFrames in it.startSample until it.endSample 
+                    } ?: wordBoundaries.lastOrNull { playedFrames >= it.endSample }
+
                     _state.value = TtsState.Speaking(
                         audio.utteranceId,
-                        0,
-                        audio.text.length,
-                        playbackHeadPosition - startHeadPosition
+                        currentWord?.startChar ?: 0,
+                        currentWord?.endChar ?: 0,
+                        playedFrames
                     )
                     kotlinx.coroutines.delay(30)
                 }
@@ -522,6 +548,32 @@ class SherpaTtsEngine @Inject constructor(
                 Log.e("SherpaTtsEngine", "Failed to set volume", e)
             }
         }
+    }
+
+    private fun estimateWordBoundaries(text: String, totalSamples: Int): List<WordBoundary> {
+        val boundaries = mutableListOf<WordBoundary>()
+        val totalChars = text.length
+        if (totalChars == 0) return boundaries
+
+        // Find all non-whitespace tokens
+        val regex = Regex("\\S+")
+        val matches = regex.findAll(text).toList()
+        
+        if (matches.isEmpty()) return boundaries
+
+        matches.forEach { match ->
+            val startChar = match.range.first
+            val endChar = match.range.last + 1
+            
+            // Linear heuristic: map character position to sample position
+            // This assumes a constant speech rate throughout the paragraph
+            val startSample = (startChar.toFloat() / totalChars * totalSamples).toInt()
+            val endSample = (endChar.toFloat() / totalChars * totalSamples).toInt()
+            
+            boundaries.add(WordBoundary(startChar, endChar, startSample, endSample))
+        }
+        
+        return boundaries
     }
 
     override fun release() {

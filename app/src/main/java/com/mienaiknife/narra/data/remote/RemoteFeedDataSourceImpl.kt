@@ -63,7 +63,27 @@ class RemoteFeedDataSourceImpl @Inject constructor(
 
             var imageUrl = channel.image?.url
             val link = channel.link
-            val title = channel.title ?: "Untitled Feed"
+            var title = channel.title?.trim() ?: "Untitled Feed"
+
+            // If title looks like a URL or is very short/generic, try to get a better one
+            if (title.contains("://") || title.contains("www.") || title == "RSS" || title == "Atom" || title == "Untitled Feed") {
+                if (link != null && UrlUtils.isPublicUrl(link)) {
+                    try {
+                        val doc = Jsoup.connect(link)
+                            .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36")
+                            .get()
+                        val siteTitle = doc.title().trim()
+                        if (siteTitle.isNotEmpty() && !siteTitle.contains("://")) {
+                            title = siteTitle
+                        }
+                    } catch (_: Exception) {}
+                }
+            }
+
+            // Still a URL? Fallback to domain name
+            if (title.contains("://") || title.contains("www.")) {
+                title = UrlUtils.getDomainName(title)
+            }
 
             if (imageUrl == null && link != null && UrlUtils.isPublicUrl(link)) {
                 try {
@@ -104,15 +124,23 @@ class RemoteFeedDataSourceImpl @Inject constructor(
         }
     }
 
-    override suspend fun fetchArticles(feed: FeedEntity): Result<List<Article>> {
+    override suspend fun fetchArticles(feed: FeedEntity): Result<RemoteFeedDataSource.FetchArticlesResult> {
         return try {
             val channel = rssParser.getRssChannel(feed.url)
+            val updatedTitle = channel.title?.trim()?.let {
+                if (it.contains("://") || it.contains("www.") || it == "RSS" || it == "Atom") {
+                    null // Don't use it if it looks like a URL
+                } else {
+                    it
+                }
+            }
+
             val articles = channel.items.mapNotNull { item ->
                 val url = item.link ?: return@mapNotNull null
                 Article(
                     id = UUID.randomUUID().toString(),
                     title = item.title ?: "Untitled",
-                    source = feed.title,
+                    source = updatedTitle ?: feed.title,
                     content = "", // Content is fetched on demand or from item.content if available
                     publishedAt = item.pubDate,
                     publishedTimestamp = DateUtils.parseToTimestamp(item.pubDate),
@@ -123,7 +151,7 @@ class RemoteFeedDataSourceImpl @Inject constructor(
                     isInQueue = false
                 )
             }
-            Result.success(articles)
+            Result.success(RemoteFeedDataSource.FetchArticlesResult(articles, updatedTitle))
         } catch (e: Exception) {
             Result.failure(e)
         }

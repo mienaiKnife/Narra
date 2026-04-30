@@ -16,6 +16,7 @@
 
 package com.mienaiknife.narra.ui.utils
 
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -41,5 +42,13 @@ class UrlUtilsTest {
     fun `isPublicUrl returns false for invalid URLs`() {
         assertFalse("Should return false for invalid scheme", UrlUtils.isPublicUrl("not-a-url"))
         assertFalse("Should return false for empty string", UrlUtils.isPublicUrl(""))
+    }
+
+    @Test
+    fun `getDomainName extracts domain correctly`() {
+        assertEquals("example.com", UrlUtils.getDomainName("https://example.com/path"))
+        assertEquals("google.com", UrlUtils.getDomainName("https://www.google.com/search"))
+        assertEquals("blog.jetbrains.com", UrlUtils.getDomainName("https://blog.jetbrains.com/kotlin/"))
+        assertEquals("sub.example.com", UrlUtils.getDomainName("http://sub.example.com"))
     }
 }

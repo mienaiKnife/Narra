@@ -701,6 +701,9 @@ class TtsPlayer @Inject constructor(
                 seekTo(nextPos)
                 return
             }
+            else -> {
+                // Handle other commands if necessary, or just fall through
+            }
         }
 
         val index = (positionMs / 1000).toInt()

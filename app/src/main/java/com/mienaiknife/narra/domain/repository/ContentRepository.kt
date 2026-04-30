@@ -26,6 +26,7 @@ interface ContentRepository {
     fun getFavoriteArticles(): Flow<List<Article>>
     fun getAllArticles(): Flow<List<Article>>
     fun getArticlesBySource(source: String): Flow<List<Article>>
+    fun getArticlesByFeedUrl(feedUrl: String): Flow<List<Article>>
     fun searchArticles(query: String): Flow<List<Article>>
     suspend fun getArticleById(id: String): Article?
     suspend fun downloadWebPage(url: String): Result<Article>

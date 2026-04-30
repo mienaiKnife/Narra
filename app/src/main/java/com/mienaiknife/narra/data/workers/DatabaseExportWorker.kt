@@ -17,7 +17,7 @@
 package com.mienaiknife.narra.data.workers
 
 import android.content.Context
-import android.net.Uri
+import androidx.core.net.toUri
 import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
@@ -39,7 +39,7 @@ class DatabaseExportWorker @AssistedInject constructor(
 
     override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
         val uriString = inputData.getString("uri") ?: return@withContext Result.failure()
-        val uri = Uri.parse(uriString)
+        val uri = uriString.toUri()
 
         try {
             // 1. Checkpoint to make the main file consistent

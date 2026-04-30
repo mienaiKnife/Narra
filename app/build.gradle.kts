@@ -24,16 +24,12 @@ plugins {
 
 android {
     namespace = "com.mienaiknife.narra"
-    compileSdk {
-        version = release(36) {
-            minorApiLevel = 1
-        }
-    }
+    compileSdk = 37
 
     defaultConfig {
         applicationId = "com.mienaiknife.narra"
         minSdk = 24
-        targetSdk = 36
+        targetSdk = 37
         versionCode = 1
         versionName = "0.1"
 
@@ -121,7 +117,7 @@ dependencies {
     implementation(libs.androidx.security.crypto)
     ksp(libs.androidx.hilt.compiler)
     testImplementation(libs.junit)
-    testImplementation("org.mockito:mockito-core:5.11.0")
+    testImplementation(libs.mockito.core)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(platform(libs.androidx.compose.bom))
