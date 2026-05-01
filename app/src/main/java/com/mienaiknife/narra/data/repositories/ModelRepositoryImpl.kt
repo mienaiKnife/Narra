@@ -31,10 +31,12 @@ import com.mienaiknife.narra.domain.models.TtsModel
 import com.mienaiknife.narra.domain.models.TtsModelType
 import com.mienaiknife.narra.domain.repository.ModelRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.yield
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream
@@ -100,7 +102,6 @@ class ModelRepositoryImpl @Inject constructor(
                 description = "High quality multi-voice Kokoro TTS",
                 type = TtsModelType.KOKORO,
                 modelUrl = "https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/kokoro-en-v0_19.tar.bz2",
-                extraUrls = mapOf("voices.bin" to "https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/voices.bin"),
                 sizeBytes = 80000000
             ),
             TtsModel(
@@ -110,7 +111,6 @@ class ModelRepositoryImpl @Inject constructor(
                 description = "High quality American English female TTS model",
                 type = TtsModelType.MATCHA,
                 modelUrl = "https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/matcha-icefall-en_US-ljspeech.tar.bz2",
-                extraUrls = mapOf("vocoder.onnx" to "https://github.com/k2-fsa/sherpa-onnx/releases/download/vocoder-models/vocos-22khz-univ.onnx"),
                 sizeBytes = 150000000
             )
         )
@@ -154,6 +154,11 @@ class ModelRepositoryImpl @Inject constructor(
         )
     }
 
+    override fun cancelDownload(modelId: String) {
+        android.util.Log.i("ModelRepository", "Cancelling download for $modelId")
+        workManager.cancelUniqueWork("download_$modelId")
+    }
+
     override suspend fun downloadModel(modelId: String): Result<Unit> = withContext(Dispatchers.IO) {
         android.util.Log.i("ModelRepository", "START downloadModel: $modelId")
         val filesDirContent = context.filesDir.walkTopDown().joinToString { it.name }
@@ -187,6 +192,7 @@ class ModelRepositoryImpl @Inject constructor(
                 val archiveFile = File(targetDir, "archive.tar.bz2")
                 android.util.Log.i("ModelRepository", "Downloading archive: ${model.modelUrl}")
                 downloadFile(model.modelUrl, archiveFile) { progress ->
+                    yield()
                     val overallProgress = (currentStep + progress) / totalSteps
                     ttsModelDao.updateProgress(modelId, overallProgress.coerceAtLeast(0.01f))
                     android.util.Log.i("ModelRepository", "Download progress: $overallProgress")
@@ -207,6 +213,7 @@ class ModelRepositoryImpl @Inject constructor(
                 val targetFile = File(targetDir, "model.onnx")
                 android.util.Log.i("ModelRepository", "Downloading model file: ${model.modelUrl}")
                 downloadFile(model.modelUrl, targetFile) { progress ->
+                    yield()
                     val overallProgress = (currentStep + progress) / totalSteps
                     ttsModelDao.updateProgress(modelId, overallProgress)
                     android.util.Log.i("ModelRepository", "Download progress: $overallProgress")
@@ -217,6 +224,7 @@ class ModelRepositoryImpl @Inject constructor(
                     val tokensFile = File(targetDir, "tokens.txt")
                     android.util.Log.i("ModelRepository", "Downloading tokens file: ${model.tokensUrl}")
                     downloadFile(model.tokensUrl, tokensFile) { progress ->
+                        yield()
                         val overallProgress = (currentStep + progress) / totalSteps
                         ttsModelDao.updateProgress(modelId, overallProgress)
                         android.util.Log.i("ModelRepository", "Download progress: $overallProgress")
@@ -230,6 +238,7 @@ class ModelRepositoryImpl @Inject constructor(
                 val targetFile = File(targetDir, fileName)
                 android.util.Log.i("ModelRepository", "Downloading extra file: $url")
                 downloadFile(url, targetFile) { progress ->
+                    yield()
                     val overallProgress = (currentStep + progress) / totalSteps
                     ttsModelDao.updateProgress(modelId, overallProgress)
                     android.util.Log.i("ModelRepository", "Download progress: $overallProgress")
@@ -241,11 +250,14 @@ class ModelRepositoryImpl @Inject constructor(
             ttsModelDao.updateDownloadStatus(modelId, true, targetDir.absolutePath)
             android.util.Log.i("ModelRepository", "FINISHED downloadModel: $modelId Success")
             Result.success(Unit)
+        } catch (e: CancellationException) {
+            android.util.Log.i("ModelRepository", "Download cancelled for $modelId")
+            ttsModelDao.updateProgress(modelId, 0f)
+            ttsModelDao.updateError(modelId, null)
+            throw e
         } catch (e: Exception) {
             android.util.Log.e("ModelRepository", "Failed to download model $modelId", e)
             ttsModelDao.updateError(modelId, e.message ?: "Unknown error")
-            // We don't delete the directory here to allow for resumable downloads.
-            // But we should reset the progress if it was a total failure (though resumable logic handles it)
             Result.failure(e)
         }
     }
@@ -294,6 +306,7 @@ class ModelRepositoryImpl @Inject constructor(
                     var lastUpdateTime = 0L
                     
                     while (true) {
+                        yield()
                         bytesRead = bodyStream.read(buffer)
                         if (bytesRead == -1) break
                         
@@ -321,30 +334,39 @@ class ModelRepositoryImpl @Inject constructor(
         }
     }
 
-    internal fun extractTarBz2(archiveFile: File, targetDir: File) {
+    internal suspend fun extractTarBz2(archiveFile: File, targetDir: File) {
         android.util.Log.i("ModelRepository", "Extracting ${archiveFile.name} to ${targetDir.absolutePath}")
         val targetCanonicalPath = targetDir.canonicalPath
-        FileInputStream(archiveFile).use { fis ->
-            BZip2CompressorInputStream(fis).use { bzis ->
-                TarArchiveInputStream(bzis).use { tais ->
-                    var entry = tais.nextEntry
-                    while (entry != null) {
-                        android.util.Log.i("ModelRepository", "Archive entry: ${entry.name}, isDirectory: ${entry.isDirectory}")
-                        val curFile = File(targetDir, entry.name)
-                        
-                        // Path traversal validation (Tar Slip protection)
-                        if (!curFile.canonicalPath.startsWith(targetCanonicalPath + File.separator)) {
-                            throw SecurityException("Malicious zip entry: ${entry.name}")
-                        }
-
-                        if (!entry.isDirectory) {
-                            curFile.parentFile?.mkdirs()
-                            android.util.Log.i("ModelRepository", "Writing to ${curFile.absolutePath}")
-                            FileOutputStream(curFile).use { fos ->
-                                tais.copyTo(fos)
+        withContext(Dispatchers.IO) {
+            FileInputStream(archiveFile).use { fis ->
+                BZip2CompressorInputStream(fis).use { bzis ->
+                    TarArchiveInputStream(bzis).use { tais ->
+                        var entry = tais.nextEntry
+                        while (entry != null) {
+                            yield()
+                            android.util.Log.i("ModelRepository", "Archive entry: ${entry.name}, isDirectory: ${entry.isDirectory}")
+                            val curFile = File(targetDir, entry.name)
+                            
+                            // Path traversal validation (Tar Slip protection)
+                            if (!curFile.canonicalPath.startsWith(targetCanonicalPath + File.separator)) {
+                                throw SecurityException("Malicious zip entry: ${entry.name}")
                             }
+
+                            if (!entry.isDirectory) {
+                                curFile.parentFile?.mkdirs()
+                                android.util.Log.i("ModelRepository", "Writing to ${curFile.absolutePath}")
+                                FileOutputStream(curFile).use { fos ->
+                                    // Custom copyTo with yield for cancellation
+                                    val buffer = ByteArray(8192)
+                                    var bytesRead: Int
+                                    while (tais.read(buffer).also { bytesRead = it } != -1) {
+                                        yield()
+                                        fos.write(buffer, 0, bytesRead)
+                                    }
+                                }
+                            }
+                            entry = tais.nextEntry
                         }
-                        entry = tais.nextEntry
                     }
                 }
             }

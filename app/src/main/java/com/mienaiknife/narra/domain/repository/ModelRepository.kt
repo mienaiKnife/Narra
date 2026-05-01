@@ -32,6 +32,12 @@ interface ModelRepository {
     fun enqueueDownload(modelId: String)
 
     /**
+     * Cancels an ongoing model download.
+     * @param modelId The ID of the model to cancel.
+     */
+    fun cancelDownload(modelId: String)
+
+    /**
      * Triggers the download of a model.
      * @param modelId The ID of the model to download.
      */

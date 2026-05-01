@@ -98,6 +98,10 @@ class VoicesSettingsViewModel @Inject constructor(
         modelRepository.enqueueDownload(modelId)
     }
 
+    fun cancelDownload(modelId: String) {
+        modelRepository.cancelDownload(modelId)
+    }
+
     fun clearErrorMessage() {
         _errorMessage.value = null
     }

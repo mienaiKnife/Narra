@@ -230,6 +230,8 @@ fun UserInterfaceSettingsScreen(themeViewModel: ThemeViewModel, onBack: () -> Un
             val sliderColors = SliderDefaults.colors(
                 activeTrackColor = MaterialTheme.colorScheme.primary,
                 inactiveTrackColor = MaterialTheme.colorScheme.primaryContainer,
+                activeTickColor = MaterialTheme.colorScheme.onPrimary,
+                inactiveTickColor = MaterialTheme.colorScheme.primary
             )
 
             Column(modifier = Modifier.padding(bottom = 16.dp)) {
@@ -253,8 +255,7 @@ fun UserInterfaceSettingsScreen(themeViewModel: ThemeViewModel, onBack: () -> Un
                     track = { sliderState ->
                         SliderDefaults.Track(
                             sliderState = sliderState,
-                            colors = sliderColors,
-                            drawStopIndicator = null
+                            colors = sliderColors
                         )
                     }
                 )

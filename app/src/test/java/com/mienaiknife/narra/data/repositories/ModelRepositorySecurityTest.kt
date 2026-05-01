@@ -30,6 +30,7 @@ import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.`when`
+import kotlinx.coroutines.runBlocking
 import java.io.File
 import java.io.FileOutputStream
 
@@ -75,12 +76,14 @@ class ModelRepositorySecurityTest {
         }
 
         assertThrows(SecurityException::class.java) {
-            repository.extractTarBz2(archiveFile, targetDir)
+            runBlocking {
+                repository.extractTarBz2(archiveFile, targetDir)
+            }
         }
     }
     
     @Test
-    fun `extractTarBz2 succeeds on valid entries`() {
+    fun `extractTarBz2 succeeds on valid entries`() = runBlocking {
         val archiveFile = tempFolder.newFile("valid.tar.bz2")
         
         FileOutputStream(archiveFile).use { fos ->

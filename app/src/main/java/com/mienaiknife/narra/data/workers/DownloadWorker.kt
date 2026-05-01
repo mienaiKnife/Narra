@@ -29,6 +29,7 @@ import androidx.work.WorkerParameters
 import com.mienaiknife.narra.domain.repository.ModelRepository
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
+import kotlinx.coroutines.CancellationException
 import javax.inject.Inject
 
 @HiltWorker
@@ -62,6 +63,9 @@ class DownloadWorker @AssistedInject constructor(
                 android.util.Log.e("DownloadWorker", "Download failed for $modelId, retrying...")
                 Result.retry()
             }
+        } catch (e: CancellationException) {
+            android.util.Log.i("DownloadWorker", "Download cancelled for $modelId")
+            throw e
         } catch (e: Exception) {
             android.util.Log.e("DownloadWorker", "Exception in DownloadWorker for $modelId", e)
             Result.retry()

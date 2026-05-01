@@ -38,6 +38,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material3.DropdownMenuItem
@@ -100,6 +101,7 @@ fun VoicesSettingsScreen(
         onSelectModel = viewModel::selectModel,
         onSetSpeakerId = viewModel::setSpeakerId,
         onDownloadModel = viewModel::downloadModel,
+        onCancelDownload = viewModel::cancelDownload,
         onDeleteModel = viewModel::deleteModel,
         onSetSherpaNoiseScale = viewModel::setSherpaNoiseScale,
         onSetSherpaLengthScale = viewModel::setSherpaLengthScale,
@@ -116,6 +118,7 @@ fun VoicesSettingsContent(
     onSelectModel: (String?) -> Unit,
     onSetSpeakerId: (Int) -> Unit,
     onDownloadModel: (String) -> Unit,
+    onCancelDownload: (String) -> Unit,
     onDeleteModel: (String) -> Unit,
     onSetSherpaNoiseScale: (Float) -> Unit,
     onSetSherpaLengthScale: (Float) -> Unit,
@@ -380,6 +383,7 @@ fun VoicesSettingsContent(
                                     isSelected = uiState.selectedModelId == model.id,
                                     onSelect = { if (!isInitializing) onSelectModel(model.id) },
                                     onDownload = { onDownloadModel(model.id) },
+                                    onCancelDownload = { onCancelDownload(model.id) },
                                     onDelete = { onDeleteModel(model.id) },
                                     containerColor = Color.Transparent,
                                     enabled = !isInitializing
@@ -407,6 +411,7 @@ fun TtsModelItem(
     isSelected: Boolean,
     onSelect: () -> Unit,
     onDownload: () -> Unit,
+    onCancelDownload: () -> Unit,
     onDelete: () -> Unit,
     containerColor: Color = MaterialTheme.colorScheme.surfaceContainer,
     enabled: Boolean = true
@@ -492,7 +497,13 @@ fun TtsModelItem(
                     }
 
                     isDownloading -> {
-                        // Redundant circular indicator removed for cleaner UI during download
+                        IconButton(onClick = onCancelDownload) {
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = "Cancel download",
+                                tint = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
                     }
 
                     else -> {
@@ -563,6 +574,7 @@ fun VoicesSettingsScreenPreview() {
                     onSelectModel = {},
                     onSetSpeakerId = {},
                     onDownloadModel = {},
+                    onCancelDownload = {},
                     onDeleteModel = {},
                     onSetSherpaNoiseScale = {},
                     onSetSherpaLengthScale = {},
