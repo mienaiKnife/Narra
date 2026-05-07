@@ -91,6 +91,7 @@ fun HistoryScreen(
             downloadingArticleIds = uiState.downloadingArticleIds,
             onBackClick = onBack,
             onPlayPauseClick = { viewModel.onPlayPauseClick(it) },
+            onAddToQueueClick = { viewModel.addToQueue(it) },
             onMarkAsPlayedClick = { viewModel.togglePlayedStatus(it) },
             onClearHistory = { viewModel.clearHistory() },
             onRefresh = { viewModel.refresh() }
@@ -112,6 +113,7 @@ fun HistoryScreenContent(
     downloadingArticleIds: Set<String> = emptySet(),
     onBackClick: () -> Unit,
     onPlayPauseClick: (Article) -> Unit,
+    onAddToQueueClick: (Article) -> Unit = {},
     onMarkAsPlayedClick: (Article) -> Unit = {},
     onClearHistory: () -> Unit = {},
     onRefresh: () -> Unit = {}
@@ -255,6 +257,7 @@ fun HistoryScreenContent(
                                 playbackSpeed = playbackSpeed,
                                 modifier = Modifier.animateItem(),
                                 onPlayPauseClick = { onPlayPauseClick(article) },
+                                onAddToQueueClick = { onAddToQueueClick(article) },
                                 onMarkAsPlayedClick = { onMarkAsPlayedClick(article) }
                             )
                         }

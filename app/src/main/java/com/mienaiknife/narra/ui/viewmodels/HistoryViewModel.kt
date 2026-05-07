@@ -81,7 +81,22 @@ class HistoryViewModel @Inject constructor(
 
     fun onPlayPauseClick(article: Article) {
         if (!article.isInQueue) {
-            addToQueue(article)
+            viewModelScope.launch {
+                if (article.content.isEmpty()) {
+                    _downloadingArticleIds.value += article.id
+                }
+                repository.addToQueue(article.id).onSuccess {
+                    val updatedArticle = repository.getArticleById(article.id)
+                    if (updatedArticle != null && updatedArticle.content.isNotEmpty()) {
+                        val blocks = HtmlParser.parse(updatedArticle.content)
+                        playbackManager.setCurrentArticle(updatedArticle, blocks)
+                    }
+                }.onFailure { error ->
+                    _uiEvent.emit(UiEvent.ShowSnackbar(error.message ?: "Failed to add to queue"))
+                }.also {
+                    _downloadingArticleIds.value -= article.id
+                }
+            }
         } else {
             if (uiState.value.currentArticle?.id == article.id) {
                 playbackManager.togglePlayPause()

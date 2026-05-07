@@ -14,17 +14,11 @@
  * limitations under the License.
  */
 
-package com.mienaiknife.narra.ui.viewmodels
+package com.mienaiknife.narra.ui.widget
 
-import com.mienaiknife.narra.data.models.Article
-import com.mienaiknife.narra.data.models.SortOption
+import androidx.glance.appwidget.GlanceAppWidget
+import androidx.glance.appwidget.GlanceAppWidgetReceiver
 
-data class FeedArticlesUiState(
-    val articles: List<Article> = emptyList(),
-    val isRefreshing: Boolean = false,
-    val sortOption: SortOption = SortOption.DATE_DESC,
-    val showPlayed: Boolean = true,
-    val playbackSpeed: Float = 1.0f,
-    val feedTitle: String = "",
-    val downloadingArticleIds: Set<String> = emptySet()
-)
+class NarraWidgetReceiver : GlanceAppWidgetReceiver() {
+    override val glanceAppWidget: GlanceAppWidget = NarraWidget()
+}

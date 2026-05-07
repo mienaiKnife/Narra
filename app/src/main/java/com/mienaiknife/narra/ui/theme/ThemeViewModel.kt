@@ -19,11 +19,13 @@ package com.mienaiknife.narra.ui.theme
 import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
 data class ThemeUiState(
     val isDarkMode: Boolean = true,
@@ -34,68 +36,72 @@ data class ThemeUiState(
     val showRemainingTime: Boolean = true
 )
 
-open class ThemeViewModel : ViewModel() {
-    private var themeManager: ThemeManager? = null
+@HiltViewModel
+open class ThemeViewModel @Inject constructor(
+    private val themeManager: ThemeManager
+) : ViewModel() {
     private val _uiState = MutableStateFlow(ThemeUiState())
     val uiState: StateFlow<ThemeUiState> = _uiState.asStateFlow()
 
-    open fun initialize(context: Context) {
-        if (themeManager == null) {
-            themeManager = ThemeManager(context, viewModelScope)
-            viewModelScope.launch {
-                themeManager?.isDarkMode?.collect { isDark ->
-                    _uiState.update { it.copy(isDarkMode = isDark) }
-                }
+    init {
+        viewModelScope.launch {
+            themeManager.isDarkMode.collect { isDark ->
+                _uiState.update { it.copy(isDarkMode = isDark) }
             }
-            viewModelScope.launch {
-                themeManager?.isDynamicColor?.collect { isDynamic ->
-                    _uiState.update { it.copy(isDynamicColor = isDynamic) }
-                }
+        }
+        viewModelScope.launch {
+            themeManager.isDynamicColor.collect { isDynamic ->
+                _uiState.update { it.copy(isDynamicColor = isDynamic) }
             }
-            viewModelScope.launch {
-                themeManager?.useSystemTheme?.collect { useSystem ->
-                    _uiState.update { it.copy(useSystemTheme = useSystem) }
-                }
+        }
+        viewModelScope.launch {
+            themeManager.useSystemTheme.collect { useSystem ->
+                _uiState.update { it.copy(useSystemTheme = useSystem) }
             }
-            viewModelScope.launch {
-                themeManager?.readerFontFamily?.collect { fontFamily ->
-                    _uiState.update { it.copy(readerFontFamily = fontFamily) }
-                }
+        }
+        viewModelScope.launch {
+            themeManager.readerFontFamily.collect { fontFamily ->
+                _uiState.update { it.copy(readerFontFamily = fontFamily) }
             }
-            viewModelScope.launch {
-                themeManager?.readerFontSize?.collect { fontSize ->
-                    _uiState.update { it.copy(readerFontSize = fontSize) }
-                }
+        }
+        viewModelScope.launch {
+            themeManager.readerFontSize.collect { fontSize ->
+                _uiState.update { it.copy(readerFontSize = fontSize) }
             }
-            viewModelScope.launch {
-                themeManager?.showRemainingTime?.collect { showRemaining ->
-                    _uiState.update { it.copy(showRemainingTime = showRemaining) }
-                }
+        }
+        viewModelScope.launch {
+            themeManager.showRemainingTime.collect { showRemainingTime ->
+                _uiState.update { it.copy(showRemainingTime = showRemainingTime) }
             }
         }
     }
 
+    // Kept for backward compatibility if needed by Compose previews or other manual initializations
+    open fun initialize(context: Context) {
+        // No-op as it's now handled by Hilt injection
+    }
+
     fun setDarkMode(enabled: Boolean) {
-        themeManager?.setDarkMode(enabled)
+        themeManager.setDarkMode(enabled)
     }
 
     fun setDynamicColor(enabled: Boolean) {
-        themeManager?.setDynamicColor(enabled)
+        themeManager.setDynamicColor(enabled)
     }
 
     fun setUseSystemTheme(enabled: Boolean) {
-        themeManager?.setUseSystemTheme(enabled)
+        themeManager.setUseSystemTheme(enabled)
     }
 
     fun setReaderFontFamily(fontFamily: String) {
-        themeManager?.setReaderFontFamily(fontFamily)
+        themeManager.setReaderFontFamily(fontFamily)
     }
 
     fun setReaderFontSize(fontSize: Float) {
-        themeManager?.setReaderFontSize(fontSize)
+        themeManager.setReaderFontSize(fontSize)
     }
 
-    fun setShowRemainingTime(enabled: Boolean) {
-        themeManager?.setShowRemainingTime(enabled)
+    fun setShowRemainingTime(showRemainingTime: Boolean) {
+        themeManager.setShowRemainingTime(showRemainingTime)
     }
 }

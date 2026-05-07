@@ -25,15 +25,19 @@ import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
 
-class ThemeManager(private val context: Context, private val scope: CoroutineScope) {
+class ThemeManager(
+    private val context: Context,
+) {
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private val darkModeKey = booleanPreferencesKey("dark_mode")
     private val dynamicColorKey = booleanPreferencesKey("dynamic_color")
     private val useSystemThemeKey = booleanPreferencesKey("use_system_theme")
@@ -41,12 +45,12 @@ class ThemeManager(private val context: Context, private val scope: CoroutineSco
     private val readerFontSizeKey = floatPreferencesKey("reader_font_size")
     private val showRemainingTimeKey = booleanPreferencesKey("show_remaining_time")
 
-    private val _isDarkMode = MutableStateFlow(true)
-    private val _isDynamicColor = MutableStateFlow(false)
-    private val _useSystemTheme = MutableStateFlow(true)
+    private val _isDarkMode = MutableStateFlow(value = true)
+    private val _isDynamicColor = MutableStateFlow(value = false)
+    private val _useSystemTheme = MutableStateFlow(value = true)
     private val _readerFontFamily = MutableStateFlow("Roboto")
     private val _readerFontSize = MutableStateFlow(18.0f)
-    private val _showRemainingTime = MutableStateFlow(true)
+    private val _showRemainingTime = MutableStateFlow(value = true)
 
     val isDarkMode: StateFlow<Boolean> = _isDarkMode.asStateFlow()
     val isDynamicColor: StateFlow<Boolean> = _isDynamicColor.asStateFlow()
@@ -57,67 +61,50 @@ class ThemeManager(private val context: Context, private val scope: CoroutineSco
 
     init {
         scope.launch {
-            val prefs = context.dataStore.data.first()
-            _isDarkMode.value = prefs[darkModeKey] ?: true
-            _isDynamicColor.value = prefs[dynamicColorKey] ?: false
-            _useSystemTheme.value = prefs[useSystemThemeKey] ?: true
-            _readerFontFamily.value = prefs[readerFontFamilyKey] ?: "Roboto"
-            _readerFontSize.value = prefs[readerFontSizeKey] ?: 18.0f
-            _showRemainingTime.value = prefs[showRemainingTimeKey] ?: true
+            context.dataStore.data.collect { preferences ->
+                _isDarkMode.value = preferences[darkModeKey] ?: true
+                _isDynamicColor.value = preferences[dynamicColorKey] ?: false
+                _useSystemTheme.value = preferences[useSystemThemeKey] ?: true
+                _readerFontFamily.value = preferences[readerFontFamilyKey] ?: "Roboto"
+                _readerFontSize.value = preferences[readerFontSizeKey] ?: 18.0f
+                _showRemainingTime.value = preferences[showRemainingTimeKey] ?: true
+            }
         }
     }
 
     fun setDarkMode(enabled: Boolean) {
         scope.launch {
-            context.dataStore.edit { prefs ->
-                prefs[darkModeKey] = enabled
-            }
-            _isDarkMode.value = enabled
+            context.dataStore.edit { it[darkModeKey] = enabled }
         }
     }
 
     fun setDynamicColor(enabled: Boolean) {
         scope.launch {
-            context.dataStore.edit { prefs ->
-                prefs[dynamicColorKey] = enabled
-            }
-            _isDynamicColor.value = enabled
+            context.dataStore.edit { it[dynamicColorKey] = enabled }
         }
     }
 
     fun setUseSystemTheme(enabled: Boolean) {
         scope.launch {
-            context.dataStore.edit { prefs ->
-                prefs[useSystemThemeKey] = enabled
-            }
-            _useSystemTheme.value = enabled
+            context.dataStore.edit { it[useSystemThemeKey] = enabled }
         }
     }
 
     fun setReaderFontFamily(fontFamily: String) {
         scope.launch {
-            context.dataStore.edit { prefs ->
-                prefs[readerFontFamilyKey] = fontFamily
-            }
-            _readerFontFamily.value = fontFamily
+            context.dataStore.edit { it[readerFontFamilyKey] = fontFamily }
         }
     }
 
     fun setReaderFontSize(fontSize: Float) {
         scope.launch {
-            context.dataStore.edit { prefs ->
-                prefs[readerFontSizeKey] = fontSize
-            }
-            _readerFontSize.value = fontSize
+            context.dataStore.edit { it[readerFontSizeKey] = fontSize }
         }
     }
 
-    fun setShowRemainingTime(enabled: Boolean) {
+    fun setShowRemainingTime(showRemainingTime: Boolean) {
         scope.launch {
-            context.dataStore.edit { prefs ->
-                prefs[showRemainingTimeKey] = enabled
-            }
-            _showRemainingTime.value = enabled
+            context.dataStore.edit { it[showRemainingTimeKey] = showRemainingTime }
         }
     }
 }

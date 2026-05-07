@@ -309,11 +309,9 @@ fun UserInterfaceSettingsScreen(themeViewModel: ThemeViewModel, onBack: () -> Un
 @Preview(uiMode = Configuration.UI_MODE_NIGHT_YES, showBackground = true)
 @Composable
 fun UserInterfaceSettingsScreenPreview() {
-    val themeViewModel = remember {
-        object : ThemeViewModel() {
-            override fun initialize(context: android.content.Context) {}
-        }
-    }
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val themeManager = remember { com.mienaiknife.narra.ui.theme.ThemeManager(context) }
+    val themeViewModel = remember { com.mienaiknife.narra.ui.theme.ThemeViewModel(themeManager) }
     val navController = rememberNavController()
     NarraTheme(darkTheme = true, dynamicColor = false) {
         Scaffold(

@@ -57,7 +57,7 @@ class FeedArticlesViewModel @Inject constructor(
 
     private val _sortOption = MutableStateFlow(SortOption.DATE_DESC)
     private val _isRefreshing = MutableStateFlow(false)
-    private val _showPlayed = MutableStateFlow(false)
+    private val _showPlayed = MutableStateFlow(true)
 
     private val _downloadingArticleIds = MutableStateFlow<Set<String>>(emptySet())
 

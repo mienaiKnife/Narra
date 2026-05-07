@@ -58,7 +58,7 @@ class ReaderViewModel @Inject constructor(
     }
 
     private val _blocks = MutableStateFlow<List<ContentBlock>>(emptyList())
-    private val _isLoading = MutableStateFlow(false)
+    private val _isLoading = MutableStateFlow(true)
     private val _searchQuery = MutableStateFlow("")
 
     @Suppress("UNCHECKED_CAST")
@@ -139,27 +139,33 @@ class ReaderViewModel @Inject constructor(
     }
 
     fun loadArticle(id: String) {
-        if (playbackManager.currentArticle.value?.id == id) return
+        if (playbackManager.currentArticle.value?.id == id) {
+            _isLoading.value = false
+            return
+        }
 
         viewModelScope.launch {
             _isLoading.value = true
-            var articleData = repository.getArticleById(id)
-            if (articleData != null) {
-                if (!articleData.isInQueue) {
-                    repository.addToQueue(id).onFailure { error ->
-                        _uiEvent.emit(UiEvent.ShowSnackbar(error.message ?: "Failed to download article"))
-                    }
-                    // Refresh data after adding to queue (which might have downloaded content)
-                    articleData = repository.getArticleById(id)
-                }
-
+            try {
+                var articleData = repository.getArticleById(id)
                 if (articleData != null) {
-                    // This triggers the Flow in PlaybackManager, which our init block observes
-                    val blocks = HtmlParser.parse(articleData.content)
-                    playbackManager.setCurrentArticle(articleData, blocks, playWhenReady = false)
+                    if (!articleData.isInQueue) {
+                        repository.addToQueue(id).onFailure { error ->
+                            _uiEvent.emit(UiEvent.ShowSnackbar(error.message ?: "Failed to download article"))
+                        }
+                        // Refresh data after adding to queue (which might have downloaded content)
+                        articleData = repository.getArticleById(id)
+                    }
+
+                    if (articleData != null) {
+                        // This triggers the Flow in PlaybackManager, which our init block observes
+                        val blocks = HtmlParser.parse(articleData.content)
+                        playbackManager.setCurrentArticle(articleData, blocks, playWhenReady = false)
+                    }
                 }
+            } finally {
+                _isLoading.value = false
             }
-            _isLoading.value = false
         }
     }
 

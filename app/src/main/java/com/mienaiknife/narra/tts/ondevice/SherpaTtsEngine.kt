@@ -56,7 +56,7 @@ class SherpaTtsEngine @Inject constructor(
     private val settingsManager: PlaybackSettingsManager
 ) : TtsEngine {
 
-    private val _state = MutableStateFlow<TtsState>(TtsState.Idle)
+    private val _state = MutableStateFlow<TtsState>(TtsState.Initializing)
     override val state: StateFlow<TtsState> = _state.asStateFlow()
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
@@ -192,7 +192,8 @@ class SherpaTtsEngine @Inject constructor(
                 tts = null
 
                 if (modelId == null) {
-                    _state.value = TtsState.Error("No model selected")
+                    Log.d("SherpaTtsEngine", "Engine skipped initialization: no model selected")
+                    _state.value = TtsState.Idle
                     return@withContext
                 }
 

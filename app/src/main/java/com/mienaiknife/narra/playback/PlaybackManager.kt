@@ -56,7 +56,7 @@ class PlaybackManager @Inject constructor(
     private val repository: ContentRepository,
     val settingsManager: PlaybackSettingsManager
 ) {
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+    internal val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private val _currentArticle = MutableStateFlow<Article?>(null)
     val currentArticle: StateFlow<Article?> = _currentArticle.asStateFlow()
 
@@ -83,6 +83,7 @@ class PlaybackManager @Inject constructor(
 
     private var sleepTimerJob: kotlinx.coroutines.Job? = null
     private var transitionJob: kotlinx.coroutines.Job? = null
+    private var progressJob: kotlinx.coroutines.Job? = null
 
     init {
         ttsPlayer.onSkipNext = { skipNext() }
@@ -102,6 +103,17 @@ class PlaybackManager @Inject constructor(
             override fun onIsPlayingChanged(isPlaying: Boolean) {
                 _isPlaying.value = isPlaying
                 updateProgress()
+                
+                progressJob?.cancel()
+                if (isPlaying) {
+                    progressJob = scope.launch {
+                        while (true) {
+                            delay(1000)
+                            _currentPosition.value = ttsPlayer.currentPosition
+                            updateProgress()
+                        }
+                    }
+                }
             }
 
             override fun onPositionDiscontinuity(
@@ -122,6 +134,8 @@ class PlaybackManager @Inject constructor(
                 if (playbackState == Player.STATE_ENDED) {
                     scope.launch {
                         if (settingsManager.autoPlayNext.first()) {
+                            // Keep CPU awake while we fetch next article
+                            ttsPlayer.acquireManualWakeLock()
                             playNextArticle(isAutomatic = true)
                         } else {
                             _isPlaying.value = false
@@ -166,8 +180,7 @@ class PlaybackManager @Inject constructor(
                 article.id,
                 progress,
                 if (playbackState == Player.STATE_ENDED) 0 else currentPara,
-                currentWordOffset,
-                duration
+                currentWordOffset
             )
         }
     }
@@ -204,16 +217,20 @@ class PlaybackManager @Inject constructor(
                 }
             }
 
-            // Ensure PlaybackService is running so MediaSession is active
-            try {
-                ContextCompat.startForegroundService(context, Intent(context, PlaybackService::class.java))
-            } catch (e: Exception) {
-                android.util.Log.e("PlaybackManager", "Failed to start PlaybackService", e)
-            }
-            
             if (isAutomatic && playWhenReady) {
                 // Prepare TtsPlayer with the new article but don't start playing yet
                 ttsPlayer.speak(article, ttsTexts, playWhenReady = false)
+
+                // Ensure PlaybackService is running
+                try {
+                    val intent = Intent(context, PlaybackService::class.java).apply {
+                        putExtra("EXTRA_TITLE", article.title)
+                        putExtra("EXTRA_ARTIST", article.source)
+                    }
+                    ContextCompat.startForegroundService(context, intent)
+                } catch (e: Exception) {
+                    android.util.Log.e("PlaybackManager", "Failed to start PlaybackService", e)
+                }
 
                 transitionJob = scope.launch {
                     val playChimeAndTitle = settingsManager.playChimeAndTitle.first()
@@ -236,7 +253,8 @@ class PlaybackManager @Inject constructor(
                             ttsPlayer.speakAnnouncement("Now playing: ${article.title}")
 
                             // Wait for the announcement to start and then finish
-                            withTimeoutOrNull(5000) {
+                            // Increased timeout to 10s for slow TTS engines
+                            withTimeoutOrNull(10000) {
                                 // Wait for Speaking state with "announcement" ID
                                 ttsPlayer.engineState.first {
                                     it is TtsState.Speaking && it.utteranceId == "announcement"
@@ -254,6 +272,9 @@ class PlaybackManager @Inject constructor(
                         } finally {
                             ttsPlayer.releaseManualWakeLock()
                         }
+                    } else {
+                        // Even if no chime/title, ensure locks are eventually released
+                        ttsPlayer.releaseManualWakeLock()
                     }
                     
                     // Now start the actual article content
@@ -261,14 +282,20 @@ class PlaybackManager @Inject constructor(
                 }
             } else {
                 if (playWhenReady) {
-                    scope.launch {
-                        // Small delay to ensure the service is started and connected
-                        // before the player transitions to READY and triggers foreground update.
-                        delay(100)
-                        ttsPlayer.speak(article, ttsTexts, playWhenReady = true)
-                    }
+                    ttsPlayer.speak(article, ttsTexts, playWhenReady = true)
                 } else {
                     ttsPlayer.speak(article, ttsTexts, playWhenReady = false)
+                }
+
+                // Ensure PlaybackService is running so MediaSession is active
+                try {
+                    val intent = Intent(context, PlaybackService::class.java).apply {
+                        putExtra("EXTRA_TITLE", article.title)
+                        putExtra("EXTRA_ARTIST", article.source)
+                    }
+                    ContextCompat.startForegroundService(context, intent)
+                } catch (e: Exception) {
+                    android.util.Log.e("PlaybackManager", "Failed to start PlaybackService", e)
                 }
             }
         }
@@ -347,16 +374,17 @@ class PlaybackManager @Inject constructor(
         } else {
             // Ensure PlaybackService is running when starting playback
             try {
-                ContextCompat.startForegroundService(context, Intent(context, PlaybackService::class.java))
+                val intent = Intent(context, PlaybackService::class.java)
+                _currentArticle.value?.let {
+                    intent.putExtra("EXTRA_TITLE", it.title)
+                    intent.putExtra("EXTRA_ARTIST", it.source)
+                }
+                ContextCompat.startForegroundService(context, intent)
             } catch (e: Exception) {
                 android.util.Log.e("PlaybackManager", "Failed to start PlaybackService", e)
             }
             
-            scope.launch {
-                // Small delay to ensure the service is started and connected
-                delay(100)
-                ttsPlayer.play()
-            }
+            ttsPlayer.play()
         }
     }
 
@@ -448,6 +476,31 @@ class PlaybackManager @Inject constructor(
         }
         _playbackSpeed.value = nextSpeed
         ttsPlayer.setPlaybackSpeed(nextSpeed)
+    }
+
+    /**
+     * Handles hardware media button presses for Next/Previous based on settings.
+     */
+    fun handleHardwareButton(isNext: Boolean) {
+        scope.launch {
+            if (isNext) {
+                val action = settingsManager.fastForwardHardwareButton.first()
+                android.util.Log.d("PlaybackManager", "Handling hardware Next: $action")
+                when (action) {
+                    "skip_article" -> skipNext()
+                    "fast_forward" -> skipForward()
+                    else -> skipNext()
+                }
+            } else {
+                val action = settingsManager.rewindHardwareButton.first()
+                android.util.Log.d("PlaybackManager", "Handling hardware Previous: $action")
+                when (action) {
+                    "previous_article" -> skipPrevious()
+                    "rewind" -> skipBackward()
+                    else -> skipPrevious()
+                }
+            }
+        }
     }
 
     fun setSleepTimer(minutes: Int?) {

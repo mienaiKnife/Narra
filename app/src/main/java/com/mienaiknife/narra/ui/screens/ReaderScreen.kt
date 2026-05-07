@@ -158,6 +158,13 @@ fun ReaderScreen(
         }
     }
 
+    // Automatically close the screen if the queue finishes (article becomes null)
+    LaunchedEffect(uiState.article, uiState.isLoading) {
+        if (!uiState.isLoading && uiState.article == null) {
+            onBack()
+        }
+    }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -823,24 +830,29 @@ fun ReaderContent(
                             .padding(start = 16.dp, top = 8.dp, end = 16.dp),
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        val inProgress = currentPosition > 0 && currentPosition < duration
+                        val nominalDuration = article.duration ?: remember(article.content) { DateUtils.estimateReadingTimeMs(article.content) }
+                        val scaledTotalDuration = (nominalDuration / playbackSpeed).toLong()
+                        val scaledCurrentPosition = (progress * scaledTotalDuration).toLong()
+                        val scaledRemainingTime = scaledTotalDuration - scaledCurrentPosition
+
+                        val inProgress = progress > 0f && progress < 1f
                         if (inProgress) {
                             Text(
-                                text = DateUtils.formatElapsedTime(currentPosition, duration),
+                                text = DateUtils.formatElapsedTime(scaledCurrentPosition, scaledTotalDuration),
                                 style = MaterialTheme.typography.labelMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Text(
-                                text = "-${DateUtils.formatElapsedTime(duration - currentPosition, duration)}",
+                                text = "-${DateUtils.formatElapsedTime(scaledRemainingTime, scaledTotalDuration)}",
                                 style = MaterialTheme.typography.labelMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         } else {
-                            if (currentPosition >= duration && duration > 0) {
+                            if (progress >= 1f && scaledTotalDuration > 0) {
                                 Spacer(modifier = Modifier.weight(1f))
                             }
                             Text(
-                                text = DateUtils.formatElapsedTime(duration, duration),
+                                text = DateUtils.formatElapsedTime(scaledTotalDuration, scaledTotalDuration),
                                 style = MaterialTheme.typography.labelMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )

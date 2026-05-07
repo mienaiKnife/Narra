@@ -75,6 +75,13 @@ fun BottomNavBar(navController: NavController) {
                     ).any { currentDestination?.hasRoute(it) == true }
                 }
 
+                BottomNavItem.Queue -> {
+                    listOf(
+                        NavDestination.Queue::class,
+                        NavDestination.History::class
+                    ).any { currentDestination?.hasRoute(it) == true }
+                }
+
                 BottomNavItem.Inbox -> {
                     listOf(
                         NavDestination.Inbox::class,

@@ -309,6 +309,7 @@ class ContentRepositoryImpl(
                     for ((index, article) in sortedArticles.withIndex()) {
                         val existingArticle = articleDao.getArticleByUrl(article.url ?: "")
                         if (existingArticle == null) {
+                            val isOldOnFirstImport = isFirstImport && index >= 5
                             val articleEntity = ArticleEntity(
                                 id = article.id,
                                 title = article.title,
@@ -322,7 +323,9 @@ class ContentRepositoryImpl(
                                 publishedTimestamp = article.publishedTimestamp,
                                 isFromFeed = true,
                                 isInQueue = false,
-                                progress = if (isFirstImport && index >= 5) 1.0f else 0.0f,
+                                progress = if (isOldOnFirstImport) 1.0f else 0.0f,
+                                finishedAt = if (isOldOnFirstImport) System.currentTimeMillis() else null,
+                                lastPlayedAt = if (isOldOnFirstImport) System.currentTimeMillis() else null,
                                 createdAt = System.currentTimeMillis()
                             )
                             articleDao.insertArticle(articleEntity)

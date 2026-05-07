@@ -14,17 +14,24 @@
  * limitations under the License.
  */
 
-package com.mienaiknife.narra.ui.viewmodels
+package com.mienaiknife.narra.di
 
-import com.mienaiknife.narra.data.models.Article
-import com.mienaiknife.narra.data.models.SortOption
+import android.content.Context
+import com.mienaiknife.narra.ui.theme.ThemeManager
+import dagger.Module
+import dagger.Provides
+import dagger.hilt.InstallIn
+import dagger.hilt.android.qualifiers.ApplicationContext
+import dagger.hilt.components.SingletonComponent
+import javax.inject.Singleton
 
-data class FeedArticlesUiState(
-    val articles: List<Article> = emptyList(),
-    val isRefreshing: Boolean = false,
-    val sortOption: SortOption = SortOption.DATE_DESC,
-    val showPlayed: Boolean = true,
-    val playbackSpeed: Float = 1.0f,
-    val feedTitle: String = "",
-    val downloadingArticleIds: Set<String> = emptySet()
-)
+@Module
+@InstallIn(SingletonComponent::class)
+object SettingsModule {
+
+    @Provides
+    @Singleton
+    fun provideThemeManager(@ApplicationContext context: Context): ThemeManager {
+        return ThemeManager(context)
+    }
+}
