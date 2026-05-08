@@ -451,7 +451,7 @@ class SherpaTtsEngine @Inject constructor(
                     
                     if (written == 0) {
                         // Buffer full, wait a bit longer to be power efficient
-                        kotlinx.coroutines.delay(50)
+                        kotlinx.coroutines.delay(100)
                     }
                 }
                 

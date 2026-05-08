@@ -10,7 +10,8 @@ Narra bridges the gap between traditional media players and Text-to-Speech engin
 
 - **`TtsPlayer`**: A custom implementation of Media3's `BasePlayer`. It wraps a `TtsEngine` and translates standard Media3 commands (play, pause, seek) into TTS actions. It also manages audio focus, noisy intents (headphone unplugging), and wake locks.
 - **`PlaybackService`**: A `MediaSessionService` that hosts the `TtsPlayer`. It provides the `MediaSession` that enables system-wide media controls, lock screen integration, and foreground service persistence.
-- **`PlaybackManager`**: A singleton coordinator that manages the high-level playback state. It handles the transition between articles, manages the sleep timer, and coordinates "chimes" and announcements.
+- **`PlaybackManager`**: A singleton coordinator that manages the high-level playback state. It handles the transition between articles and manages the sleep timer.
+- **`PlaybackSettingsManager`**: Manages user preferences for playback, such as skip times, auto-play settings, and the selected TTS engine/model.
 - **`TtsEngine`**: The underlying interface for actual speech synthesis (e.g., `AndroidTtsEngine`, `SherpaTtsEngine`).
 
 ## The Playback Flow

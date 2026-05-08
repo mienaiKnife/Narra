@@ -44,6 +44,9 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import javax.inject.Inject
@@ -76,8 +79,18 @@ class TtsPlayer @Inject constructor(
     private var _playerError: PlaybackException? = null
 
     private var paragraphs: List<String> = emptyList()
-    private var currentParagraphIndex = -1
-    private var currentWordRange: IntRange? = null
+    private val _currentParagraphIndexFlow = MutableStateFlow(-1)
+    val currentParagraphIndexFlow: StateFlow<Int> = _currentParagraphIndexFlow.asStateFlow()
+    private var currentParagraphIndex: Int
+        get() = _currentParagraphIndexFlow.value
+        set(value) { _currentParagraphIndexFlow.value = value }
+
+    private val _currentWordRangeFlow = MutableStateFlow<IntRange?>(null)
+    val currentWordRangeFlow: StateFlow<IntRange?> = _currentWordRangeFlow.asStateFlow()
+    private var currentWordRange: IntRange?
+        get() = _currentWordRangeFlow.value
+        set(value) { _currentWordRangeFlow.value = value }
+
     private var resumeWordOffset = 0
     private var isEngineSpeaking = false
 
@@ -88,12 +101,19 @@ class TtsPlayer @Inject constructor(
         when (focusChange) {
             AudioManager.AUDIOFOCUS_LOSS -> {
                 _playbackSuppressionReason = PLAYBACK_SUPPRESSION_REASON_NONE
-                playWhenReady = false
+                _playWhenReady = false
+                pauseInternal()
                 invalidateState()
             }
-            AudioManager.AUDIOFOCUS_LOSS_TRANSIENT,
-            AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK
-            -> {
+            AudioManager.AUDIOFOCUS_LOSS_TRANSIENT -> {
+                _playbackSuppressionReason = PLAYBACK_SUPPRESSION_REASON_TRANSIENT_AUDIO_FOCUS_LOSS
+                pauseInternal()
+                invalidateState()
+            }
+            AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK -> {
+                // For TTS/Speech, it's often better to pause than duck (talk over)
+                // but we follow the request if possible. 
+                // Here we'll treat it as transient loss to be safe for speech.
                 _playbackSuppressionReason = PLAYBACK_SUPPRESSION_REASON_TRANSIENT_AUDIO_FOCUS_LOSS
                 pauseInternal()
                 invalidateState()
@@ -147,6 +167,14 @@ class TtsPlayer @Inject constructor(
                             resumeInternal()
                         }
                     }
+                    
+                    // Maintain WakeLock if we are still ready to play but not currently speaking
+                    if (_playWhenReady || _playbackState == STATE_BUFFERING) {
+                        acquireLocks()
+                    } else {
+                        releaseLocks()
+                    }
+                    
                     invalidateState()
                 }
                 is TtsState.Speaking -> {
@@ -164,29 +192,33 @@ class TtsPlayer @Inject constructor(
                             currentWordRange = (state.start + resumeWordOffset) until (state.end + resumeWordOffset)
                         }
                     }
+                    
+                    // Ensure WakeLock is held while speaking
+                    acquireLocks()
+                    
                     invalidateState()
                 }
                 is TtsState.Initializing -> {
-                    _playbackState = if (_currentMediaItem != null) {
-                        if (paragraphs.isNotEmpty()) {
-                            STATE_READY
-                        } else {
-                            STATE_BUFFERING
-                        }
-                    } else {
-                        STATE_IDLE
-                    }
+                    _playbackState = STATE_BUFFERING
+                    
+                    // Hold WakeLock while initializing/buffering
+                    acquireLocks()
+                    
                     invalidateState()
                 }
                 is TtsState.Error -> {
                     android.util.Log.e("TtsPlayer", "Engine error: ${state.message}")
-                    _playerError = PlaybackException(state.message, null, PlaybackException.ERROR_CODE_UNSPECIFIED)
+                    _playerError = PlaybackException(state.message, null, PlaybackException.ERROR_CODE_IO_UNSPECIFIED)
                     _playbackState = STATE_IDLE
+                    _playWhenReady = false
+                    
+                    releaseLocks()
                     invalidateState()
                 }
                 is TtsState.Idle -> {
                     if (paragraphs.isEmpty() && currentParagraphIndex == -1) {
                         _playbackState = STATE_IDLE
+                        releaseLocks()
                         invalidateState()
                     }
                 }
@@ -195,14 +227,22 @@ class TtsPlayer @Inject constructor(
     }
 
     override fun getState(): State {
-        val playlist = if (_currentMediaItem != null) {
-            val durationUs = if (paragraphs.isNotEmpty()) paragraphs.size * 1000000L else C.TIME_UNSET
-            listOf(MediaItemData.Builder(_currentMediaItem!!)
-                .setUid("period")
-                .setDurationUs(durationUs)
-                .setIsSeekable(true)
-                .setMediaMetadata(_currentMediaItem!!.mediaMetadata)
-                .build())
+        val playlist = if (_currentMediaItem != null || mediaItems.size > 0) {
+            (0 until mediaItems.size).map { i ->
+                val item = mediaItems[i]
+                val durationUs = if (i == currentItemIndex && paragraphs.isNotEmpty()) {
+                    paragraphs.size * 1000000L
+                } else {
+                    C.TIME_UNSET
+                }
+                
+                MediaItemData.Builder(item)
+                    .setUid(item.mediaId)
+                    .setDurationUs(durationUs)
+                    .setIsSeekable(true)
+                    .setMediaMetadata(item.mediaMetadata)
+                    .build()
+            }
         } else {
             emptyList()
         }
@@ -252,7 +292,7 @@ class TtsPlayer @Inject constructor(
             .setPlayerError(_playerError)
             .setPlaylist(playlist)
             .setPlaylistMetadata(_currentMediaItem?.mediaMetadata ?: MediaMetadata.EMPTY)
-            .setCurrentMediaItemIndex(0)
+            .setCurrentMediaItemIndex(currentItemIndex)
             .setContentPositionMs(currentPositionMs)
             .build()
     }
@@ -313,15 +353,33 @@ class TtsPlayer @Inject constructor(
         return Futures.immediateVoidFuture()
     }
 
-    override fun handleSetMediaItems(mediaItems: MutableList<MediaItem>, startIndex: Int, startPositionMs: Long): ListenableFuture<*> {
-        if (startIndex in mediaItems.indices) {
-            _currentMediaItem = mediaItems[startIndex]
-            invalidateState()
+    private val mediaItems = mutableListOf<MediaItem>()
+    private var currentItemIndex = 0
+
+    override fun handleSetMediaItems(items: MutableList<MediaItem>, startIndex: Int, startPositionMs: Long): ListenableFuture<*> {
+        mediaItems.clear()
+        mediaItems.addAll(items)
+        currentItemIndex = if (startIndex != C.INDEX_UNSET) startIndex.coerceIn(items.indices) else 0
+        
+        if (mediaItems.isNotEmpty()) {
+            _currentMediaItem = mediaItems[currentItemIndex]
+        } else {
+            _currentMediaItem = null
         }
+        
+        invalidateState()
         return Futures.immediateVoidFuture()
     }
 
     override fun handleSeek(mediaItemIndex: Int, positionMs: Long, seekCommand: Int): ListenableFuture<*> {
+        if (mediaItemIndex != currentItemIndex && mediaItemIndex in mediaItems.indices) {
+            currentItemIndex = mediaItemIndex
+            _currentMediaItem = mediaItems[currentItemIndex]
+            // When switching items, we'd normally need to reload content from repository
+            // but PlaybackManager will handle the sync
+            invalidateState()
+            return Futures.immediateVoidFuture()
+        }
         when (seekCommand) {
             COMMAND_SEEK_TO_NEXT, COMMAND_SEEK_TO_NEXT_MEDIA_ITEM -> {
                 onSkipNext?.invoke()
@@ -370,6 +428,7 @@ class TtsPlayer @Inject constructor(
                 focusRequest = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN)
                     .setAudioAttributes(attr)
                     .setAcceptsDelayedFocusGain(true)
+                    .setWillPauseWhenDucked(true)
                     .setOnAudioFocusChangeListener(audioFocusChangeListener)
                     .build()
             }
@@ -383,9 +442,18 @@ class TtsPlayer @Inject constructor(
             )
         }
 
-        if (result == AudioManager.AUDIOFOCUS_REQUEST_GRANTED) {
-            registerNoisyReceiver()
-            acquireLocks()
+        when (result) {
+            AudioManager.AUDIOFOCUS_REQUEST_GRANTED -> {
+                _playbackSuppressionReason = PLAYBACK_SUPPRESSION_REASON_NONE
+                registerNoisyReceiver()
+                acquireLocks()
+            }
+            AudioManager.AUDIOFOCUS_REQUEST_DELAYED -> {
+                _playbackSuppressionReason = PLAYBACK_SUPPRESSION_REASON_TRANSIENT_AUDIO_FOCUS_LOSS
+            }
+            else -> {
+                _playbackSuppressionReason = PLAYBACK_SUPPRESSION_REASON_TRANSIENT_AUDIO_FOCUS_LOSS
+            }
         }
         return result
     }
@@ -429,13 +497,18 @@ class TtsPlayer @Inject constructor(
     }
 
     private fun acquireLocks() {
+        if (!_playWhenReady && !isEngineSpeaking && _playbackState != STATE_BUFFERING) return
+
         if (wakeLock == null) {
             val powerManager = context.getSystemService(Context.POWER_SERVICE) as PowerManager
             wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "Narra:PlaybackWakeLock").apply {
                 setReferenceCounted(false)
             }
         }
-        wakeLock?.acquire(10 * 60 * 1000L)
+        // Acquire for a long duration if needed, but it's better to manage it explicitly
+        if (!wakeLock!!.isHeld) {
+            wakeLock?.acquire(24 * 60 * 60 * 1000L) // 24 hours max, will be released manually
+        }
 
         if (wifiLock == null) {
             val wifiManager = context.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
@@ -449,7 +522,9 @@ class TtsPlayer @Inject constructor(
                 setReferenceCounted(false)
             }
         }
-        wifiLock?.acquire()
+        if (!wifiLock!!.isHeld) {
+            wifiLock?.acquire()
+        }
     }
 
     private fun releaseLocks() {
@@ -485,6 +560,16 @@ class TtsPlayer @Inject constructor(
             .build()
         
         _currentMediaItem = mediaItem
+        
+        // Ensure this item is in the mediaItems list if not already
+        if (!mediaItems.any { it.mediaId == article.id }) {
+            mediaItems.clear()
+            mediaItems.add(mediaItem)
+            currentItemIndex = 0
+        } else {
+            currentItemIndex = mediaItems.indexOfFirst { it.mediaId == article.id }
+        }
+
         _playbackState = STATE_READY
         
         currentParagraphIndex = article.currentParagraphIndex.coerceIn(0, paragraphs.size - 1).takeIf { paragraphs.isNotEmpty() } ?: 0
@@ -546,8 +631,8 @@ class TtsPlayer @Inject constructor(
         }
     }
 
-    fun getCurrentParagraphIndex(): Int = currentParagraphIndex
-    fun getCurrentWordRange(): IntRange? = currentWordRange
+    fun getParagraphIndex(): Int = currentParagraphIndex
+    fun getWordRange(): IntRange? = currentWordRange
     
     // Stub implementations for required methods
     override fun handleSetRepeatMode(repeatMode: Int): ListenableFuture<*> = Futures.immediateVoidFuture()

@@ -18,6 +18,8 @@ package com.mienaiknife.narra.di
 
 import com.mienaiknife.narra.data.local.EpubDataSource
 import com.mienaiknife.narra.data.local.EpubDataSourceImpl
+import com.mienaiknife.narra.data.local.ImageDataSource
+import com.mienaiknife.narra.data.local.ImageDataSourceImpl
 import com.mienaiknife.narra.data.local.OpmlDataSource
 import com.mienaiknife.narra.data.local.OpmlDataSourceImpl
 import com.mienaiknife.narra.data.local.dao.ArticleDao
@@ -64,6 +66,7 @@ object RepositoryModule {
         opmlDataSource: OpmlDataSource,
         networkMonitor: NetworkMonitor,
         downloadSettingsManager: DownloadSettingsManager,
+        imageDataSource: ImageDataSource,
         notificationHelper: com.mienaiknife.narra.utils.NotificationHelper
     ): ContentRepository {
         return ContentRepositoryImpl(
@@ -74,6 +77,7 @@ object RepositoryModule {
             webDataSource,
             remoteFeedDataSource,
             epubDataSource,
+            imageDataSource,
             opmlDataSource,
             networkMonitor,
             downloadSettingsManager,
@@ -88,6 +92,10 @@ object RepositoryModule {
     ): com.mienaiknife.narra.utils.NotificationHelper {
         return com.mienaiknife.narra.utils.NotificationHelper(context)
     }
+
+    @Provides
+    @Singleton
+    fun provideImageDataSource(imageDataSourceImpl: ImageDataSourceImpl): ImageDataSource = imageDataSourceImpl
 
     @Provides
     @Singleton

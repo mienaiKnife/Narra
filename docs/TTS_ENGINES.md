@@ -16,6 +16,7 @@ Every TTS implementation must reside in its own package under `com.<package>.tts
 
 - **Android TTS** (`/tts/android`): Wraps `android.speech.tts.TextToSpeech`. Best for low latency and zero-download availability.
 - **On-Device AI** (`/tts/ondevice`): Uses Sherpa-ONNX for high-quality offline synthesis. Requires model management via `ModelRepository`.
+- **Delegating Engine** (`/tts/common`): A wrapper that delegates to the currently selected engine, allowing for seamless switching at runtime.
 - **Cloud Providers** (`/tts/cloud`): (Planned) Will handle network-based synthesis (Google Cloud, OpenAI, etc.).
 
 ## Adding a New Engine
@@ -29,12 +30,26 @@ Create a new class implementing `TtsEngine`.
 class MyNewTtsEngine @Inject constructor(
     private val context: Context
 ) : TtsEngine {
-    override suspend fun synthesize(text: String, voice: TtsVoice): Flow<TtsAudioChunk> {
-        // Implementation here
+    override val state: StateFlow<TtsState> = _state.asStateFlow()
+
+    override fun speak(text: String, utteranceId: String) {
+        // Stop current and speak new text
     }
 
-    override suspend fun getAvailableVoices(): List<TtsVoice> {
-        // Return voices supported by this engine
+    override fun enqueue(text: String, utteranceId: String) {
+        // Add to queue
+    }
+
+    override fun stop() {
+        // Stop playback and clear queue
+    }
+
+    override fun setPlaybackSpeed(speed: Float) {
+        // Adjust speed
+    }
+
+    override fun release() {
+        // Cleanup
     }
 }
 ```

@@ -26,6 +26,8 @@ import androidx.media3.common.Player
 import androidx.media3.common.Timeline
 import androidx.annotation.OptIn
 import androidx.media3.common.util.UnstableApi
+import androidx.core.net.toUri
+import androidx.media3.common.MediaMetadata
 import com.mienaiknife.narra.data.models.Article
 import com.mienaiknife.narra.domain.TtsState
 import com.mienaiknife.narra.domain.repository.ContentRepository
@@ -42,7 +44,11 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -90,14 +96,41 @@ class PlaybackManager @Inject constructor(
         ttsPlayer.onSkipPrevious = { skipPrevious() }
 
         scope.launch {
+            ttsPlayer.currentParagraphIndexFlow.collect { index ->
+                _currentParagraphIndex.value = index
+            }
+        }
+
+        scope.launch {
+            ttsPlayer.currentWordRangeFlow.collect { range ->
+                _currentWordRange.value = range
+            }
+        }
+
+        scope.launch {
             settingsManager.lastArticleId.first()?.let { id ->
                 val article = repository.getArticleById(id)
                 if (article != null) {
-                    val blocks = HtmlParser.parse(article.content)
-                    setCurrentArticle(article, blocks, playWhenReady = false)
+                    setCurrentArticle(article, playWhenReady = false)
                 }
             }
         }
+    }
+
+    private var queueArticles: List<Article> = emptyList()
+
+    private fun startQueueSync() {
+        // Observe queue changes and sync with TtsPlayer
+        repository.getQueueArticles()
+            .onEach { articles ->
+                queueArticles = articles
+                syncQueueToPlayer()
+            }
+            .launchIn(scope)
+    }
+
+    init {
+        startQueueSync()
 
         ttsPlayer.addListener(object : Player.Listener {
             override fun onIsPlayingChanged(isPlaying: Boolean) {
@@ -121,8 +154,8 @@ class PlaybackManager @Inject constructor(
                 newPosition: Player.PositionInfo,
                 reason: Int
             ) {
-                _currentParagraphIndex.value = ttsPlayer.getCurrentParagraphIndex()
-                _currentWordRange.value = ttsPlayer.getCurrentWordRange()
+                _currentParagraphIndex.value = ttsPlayer.getParagraphIndex()
+                _currentWordRange.value = ttsPlayer.getWordRange()
                 _currentPosition.value = ttsPlayer.currentPosition
                 updateProgress()
             }
@@ -157,6 +190,9 @@ class PlaybackManager @Inject constructor(
         })
     }
 
+    private var lastPersistenceTime = 0L
+    private val PERSISTENCE_THRESHOLD_MS = 5000L
+
     private fun updateProgress() {
         val article = _currentArticle.value ?: return
         val duration = ttsPlayer.duration
@@ -171,23 +207,77 @@ class PlaybackManager @Inject constructor(
             (currentPosition.toFloat() / duration.toFloat()).coerceIn(0f, 0.999f)
         }
 
-        val currentPara = ttsPlayer.getCurrentParagraphIndex()
-        val currentRange = ttsPlayer.getCurrentWordRange()
+        val currentPara = ttsPlayer.getParagraphIndex()
+        val currentRange = ttsPlayer.getWordRange()
         val currentWordOffset = if (playbackState == Player.STATE_ENDED) 0 else currentRange?.first ?: 0
 
-        scope.launch {
-            repository.updateArticleProgress(
-                article.id,
-                progress,
-                if (playbackState == Player.STATE_ENDED) 0 else currentPara,
-                currentWordOffset
-            )
+        val currentTime = System.currentTimeMillis()
+        if (playbackState == Player.STATE_ENDED || currentTime - lastPersistenceTime >= PERSISTENCE_THRESHOLD_MS) {
+            lastPersistenceTime = currentTime
+            scope.launch {
+                repository.updateArticleProgress(
+                    article.id,
+                    progress,
+                    if (playbackState == Player.STATE_ENDED) 0 else currentPara,
+                    currentWordOffset
+                )
+            }
         }
+    }
+
+    private fun syncQueueToPlayer() {
+        if (queueArticles.isEmpty()) return
+        
+        val currentItems = (0 until ttsPlayer.mediaItemCount).map { ttsPlayer.getMediaItemAt(it) }
+        val newItems = queueArticles.map { article ->
+            val artworkUrl = article.imageUrl ?: article.feedImageUrl
+            val artworkUri = artworkUrl?.takeIf { it.startsWith("http") }?.toUri()
+            MediaItem.Builder()
+                .setMediaId(article.id)
+                .setUri("tts://${article.id}")
+                .setMediaMetadata(MediaMetadata.Builder()
+                    .setTitle(article.title)
+                    .setArtist(article.source)
+                    .setArtworkUri(artworkUri)
+                    .setIsPlayable(true)
+                    .build())
+                .build()
+        }
+        
+        // Simple sync logic: if the IDs don't match, replace the playlist
+        // In a more advanced version, we'd use move/add/remove for smoother transitions
+        val currentIds = currentItems.map { it.mediaId }
+        val newIds = newItems.map { it.mediaId }
+        
+        if (currentIds != newIds) {
+            val currentIndex = ttsPlayer.currentMediaItemIndex
+            val currentId = if (currentIndex >= 0 && currentIndex < currentIds.size) currentIds[currentIndex] else null
+            
+            ttsPlayer.setMediaItems(newItems)
+            
+            // Try to restore current item index if it's still in the queue
+            val newIndex = newIds.indexOf(currentId)
+            if (newIndex != -1) {
+                ttsPlayer.seekTo(newIndex, ttsPlayer.currentPosition)
+            }
+        }
+    }
+
+    /**
+     * Reloads the last played article into the TtsPlayer.
+     * This is useful for session resumption after the app has been killed.
+     */
+    suspend fun reloadLastArticle(): Boolean {
+        val lastId = settingsManager.lastArticleId.firstOrNull() ?: return false
+        val article = repository.getArticleById(lastId) ?: return false
+        
+        setCurrentArticle(article, playWhenReady = false, isAutomatic = false)
+        return true
     }
 
     fun setCurrentArticle(
         article: Article,
-        blocks: List<ContentBlock>,
+        blocks: List<ContentBlock>? = null,
         playWhenReady: Boolean = true,
         isAutomatic: Boolean = false
     ) {
@@ -210,29 +300,34 @@ class PlaybackManager @Inject constructor(
             _currentParagraphIndex.value = 0
             _currentWordRange.value = null
 
-            val ttsTexts = blocks.map { block ->
-                when (block) {
-                    is ContentBlock.Image -> block.altText?.let { "Image: $it" } ?: ""
-                    else -> block.text.toSpeakableText()
+            transitionJob = scope.launch {
+                val actualBlocks = withContext(Dispatchers.Default) {
+                    blocks ?: HtmlParser.parse(article.content)
                 }
-            }
-
-            if (isAutomatic && playWhenReady) {
-                // Prepare TtsPlayer with the new article but don't start playing yet
-                ttsPlayer.speak(article, ttsTexts, playWhenReady = false)
-
-                // Ensure PlaybackService is running
-                try {
-                    val intent = Intent(context, PlaybackService::class.java).apply {
-                        putExtra("EXTRA_TITLE", article.title)
-                        putExtra("EXTRA_ARTIST", article.source)
+                val ttsTexts = withContext(Dispatchers.Default) {
+                    actualBlocks.map { block ->
+                        when (block) {
+                            is ContentBlock.Image -> block.altText?.let { "Image: $it" } ?: ""
+                            else -> block.text.toSpeakableText()
+                        }
                     }
-                    ContextCompat.startForegroundService(context, intent)
-                } catch (e: Exception) {
-                    android.util.Log.e("PlaybackManager", "Failed to start PlaybackService", e)
                 }
 
-                transitionJob = scope.launch {
+                if (isAutomatic && playWhenReady) {
+                    // Prepare TtsPlayer with the new article but don't start playing yet
+                    ttsPlayer.speak(article, ttsTexts, playWhenReady = false)
+
+                    // Ensure PlaybackService is running
+                    try {
+                        val intent = Intent(context, PlaybackService::class.java).apply {
+                            putExtra("EXTRA_TITLE", article.title)
+                            putExtra("EXTRA_ARTIST", article.source)
+                        }
+                        ContextCompat.startForegroundService(context, intent)
+                    } catch (e: Exception) {
+                        android.util.Log.e("PlaybackManager", "Failed to start PlaybackService", e)
+                    }
+
                     val playChimeAndTitle = settingsManager.playChimeAndTitle.first()
 
                     if (playChimeAndTitle) {
@@ -279,23 +374,23 @@ class PlaybackManager @Inject constructor(
                     
                     // Now start the actual article content
                     ttsPlayer.play()
-                }
-            } else {
-                if (playWhenReady) {
-                    ttsPlayer.speak(article, ttsTexts, playWhenReady = true)
                 } else {
-                    ttsPlayer.speak(article, ttsTexts, playWhenReady = false)
-                }
-
-                // Ensure PlaybackService is running so MediaSession is active
-                try {
-                    val intent = Intent(context, PlaybackService::class.java).apply {
-                        putExtra("EXTRA_TITLE", article.title)
-                        putExtra("EXTRA_ARTIST", article.source)
+                    if (playWhenReady) {
+                        ttsPlayer.speak(article, ttsTexts, playWhenReady = true)
+                    } else {
+                        ttsPlayer.speak(article, ttsTexts, playWhenReady = false)
                     }
-                    ContextCompat.startForegroundService(context, intent)
-                } catch (e: Exception) {
-                    android.util.Log.e("PlaybackManager", "Failed to start PlaybackService", e)
+
+                    // Ensure PlaybackService is running so MediaSession is active
+                    try {
+                        val intent = Intent(context, PlaybackService::class.java).apply {
+                            putExtra("EXTRA_TITLE", article.title)
+                            putExtra("EXTRA_ARTIST", article.source)
+                        }
+                        ContextCompat.startForegroundService(context, intent)
+                    } catch (e: Exception) {
+                        android.util.Log.e("PlaybackManager", "Failed to start PlaybackService", e)
+                    }
                 }
             }
         }
@@ -317,8 +412,7 @@ class PlaybackManager @Inject constructor(
 
             if (nextArticle != null) {
                 repository.markAsFinished(finishedArticle.id)
-                val blocks = HtmlParser.parse(nextArticle.content)
-                setCurrentArticle(nextArticle, blocks, isAutomatic = isAutomatic)
+                setCurrentArticle(nextArticle, isAutomatic = isAutomatic)
             } else {
                 repository.markAsFinished(finishedArticle.id)
                 _currentArticle.value = null
@@ -410,15 +504,19 @@ class PlaybackManager @Inject constructor(
         val article = _currentArticle.value ?: return
         // If we are more than 3 seconds in, just restart current article
         if (ttsPlayer.currentPosition > 3000) {
-            val blocks = HtmlParser.parse(article.content)
-            val ttsTexts = blocks.map { block ->
-                if (block is ContentBlock.Image) {
-                    block.altText?.let { "Image: $it" } ?: ""
-                } else {
-                    block.text.toSpeakableText()
-                }
-            }
             scope.launch {
+                val blocks = withContext(Dispatchers.Default) {
+                    HtmlParser.parse(article.content)
+                }
+                val ttsTexts = withContext(Dispatchers.Default) {
+                    blocks.map { block ->
+                        if (block is ContentBlock.Image) {
+                            block.altText?.let { "Image: $it" } ?: ""
+                        } else {
+                            block.text.toSpeakableText()
+                        }
+                    }
+                }
                 repository.updateArticleProgress(article.id, 0f, 0, 0)
                 ttsPlayer.speak(
                     article.copy(currentParagraphIndex = 0, currentWordOffset = 0, progress = 0f),
@@ -444,16 +542,19 @@ class PlaybackManager @Inject constructor(
             }
 
             if (prevArticle != null) {
-                val blocks = HtmlParser.parse(prevArticle.content)
-                setCurrentArticle(prevArticle, blocks)
+                setCurrentArticle(prevArticle)
             } else {
                 // Restart current if no previous
-                val blocks = HtmlParser.parse(current.content)
-                val ttsTexts = blocks.map { block ->
-                    if (block is ContentBlock.Image) {
-                        block.altText?.let { "Image: $it" } ?: ""
-                    } else {
-                        block.text.toSpeakableText()
+                val blocks = withContext(Dispatchers.Default) {
+                    HtmlParser.parse(current.content)
+                }
+                val ttsTexts = withContext(Dispatchers.Default) {
+                    blocks.map { block ->
+                        if (block is ContentBlock.Image) {
+                            block.altText?.let { "Image: $it" } ?: ""
+                        } else {
+                            block.text.toSpeakableText()
+                        }
                     }
                 }
                 repository.updateArticleProgress(current.id, 0f, 0, 0)

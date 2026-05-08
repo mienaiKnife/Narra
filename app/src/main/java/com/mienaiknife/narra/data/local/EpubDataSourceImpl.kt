@@ -24,7 +24,9 @@ import java.io.InputStream
 import java.util.UUID
 import javax.inject.Inject
 
-class EpubDataSourceImpl @Inject constructor() : EpubDataSource {
+class EpubDataSourceImpl @Inject constructor(
+    private val imageDataSource: ImageDataSource
+) : EpubDataSource {
 
     override suspend fun parseEpub(context: android.content.Context, inputStream: InputStream, fallbackTitle: String): Result<List<Article>> {
         return try {
@@ -50,14 +52,8 @@ class EpubDataSourceImpl @Inject constructor() : EpubDataSource {
 
             val coverImageResource = book.coverImage
             val coverImageUrl = coverImageResource?.let { resource ->
-                val fileName = "cover_${bookTitle.hashCode()}.png"
-                val file = java.io.File(context.cacheDir, fileName)
-                if (!file.exists()) {
-                    java.io.FileOutputStream(file).use { out ->
-                        out.write(resource.data)
-                    }
-                }
-                file.absolutePath
+                val fileName = "epub_cover_${bookTitle.hashCode()}.png"
+                imageDataSource.saveImage(resource.data, fileName)
             }
 
             val articles = spineReferences.mapIndexedNotNull { index, spineReference ->

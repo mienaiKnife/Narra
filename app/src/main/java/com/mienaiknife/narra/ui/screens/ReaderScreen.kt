@@ -87,7 +87,6 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
@@ -818,7 +817,6 @@ fun ReaderContent(
                             },
                         color = MaterialTheme.colorScheme.primary,
                         trackColor = MaterialTheme.colorScheme.primaryContainer,
-                        strokeCap = StrokeCap.Butt,
                         gapSize = 5.dp,
                         drawStopIndicator = {}
                     )

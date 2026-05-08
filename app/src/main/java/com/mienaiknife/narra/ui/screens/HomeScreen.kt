@@ -38,6 +38,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AutoStories
+import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.RssFeed
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -131,8 +133,8 @@ fun HomeScreenContent(
                 PullToRefreshDefaults.Indicator(
                     state = pullToRefreshState,
                     isRefreshing = uiState.isRefreshing,
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    color = MaterialTheme.colorScheme.onPrimary,
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.align(Alignment.TopCenter)
                 )
             }
@@ -261,8 +263,13 @@ fun ArticleCard(
                 var isImageLoaded by remember(imageUrl) { mutableStateOf(false) }
 
                 if (!isImageLoaded) {
+                    val placeholderIcon = when {
+                        article.url?.startsWith("epub://") == true -> Icons.Default.AutoStories
+                        article.isFromFeed -> Icons.Default.RssFeed
+                        else -> Icons.Default.Language
+                    }
                     Icon(
-                        imageVector = Icons.Default.RssFeed,
+                        imageVector = placeholderIcon,
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(48.dp)

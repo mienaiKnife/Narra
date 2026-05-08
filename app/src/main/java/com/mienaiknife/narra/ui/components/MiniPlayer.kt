@@ -31,6 +31,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AutoStories
+import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.RssFeed
@@ -121,8 +123,13 @@ fun MiniPlayerContent(
                     var isImageLoaded by remember(imageUrl) { mutableStateOf(false) }
 
                     if (!isImageLoaded) {
+                        val placeholderIcon = when {
+                            article.url?.startsWith("epub://") == true -> Icons.Default.AutoStories
+                            article.isFromFeed -> Icons.Default.RssFeed
+                            else -> Icons.Default.Language
+                        }
                         Icon(
-                            imageVector = Icons.Default.RssFeed,
+                            imageVector = placeholderIcon,
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(32.dp)

@@ -237,8 +237,8 @@ fun InboxScreenContent(
                 PullToRefreshDefaults.Indicator(
                     state = pullToRefreshState,
                     isRefreshing = isRefreshing,
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    color = MaterialTheme.colorScheme.onPrimary,
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.align(Alignment.TopCenter)
                 )
             }

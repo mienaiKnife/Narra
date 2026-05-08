@@ -159,9 +159,9 @@ class NarraWidget : GlanceAppWidget() {
                     // Row 3: Controls
                     Row(
                         modifier = GlanceModifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalAlignment = Alignment.CenterHorizontally
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
+                        Spacer(modifier = GlanceModifier.defaultWeight())
                         Image(
                             provider = ImageProvider(R.drawable.ic_rewind),
                             contentDescription = "Rewind",
@@ -172,7 +172,7 @@ class NarraWidget : GlanceAppWidget() {
                                 )
                             )
                         )
-                        Spacer(modifier = GlanceModifier.width(12.dp))
+                        Spacer(modifier = GlanceModifier.defaultWeight())
                         Image(
                             provider = ImageProvider(if (isPlaying) R.drawable.ic_pause else R.drawable.ic_play),
                             contentDescription = if (isPlaying) "Pause" else "Play",
@@ -183,7 +183,7 @@ class NarraWidget : GlanceAppWidget() {
                                 )
                             )
                         )
-                        Spacer(modifier = GlanceModifier.width(12.dp))
+                        Spacer(modifier = GlanceModifier.defaultWeight())
                         Image(
                             provider = ImageProvider(R.drawable.ic_fast_forward),
                             contentDescription = "Fast Forward",
@@ -194,7 +194,7 @@ class NarraWidget : GlanceAppWidget() {
                                 )
                             )
                         )
-                        Spacer(modifier = GlanceModifier.width(12.dp))
+                        Spacer(modifier = GlanceModifier.defaultWeight())
                         Image(
                             provider = ImageProvider(R.drawable.ic_skip_next),
                             contentDescription = "Skip Next",
@@ -205,6 +205,7 @@ class NarraWidget : GlanceAppWidget() {
                                 )
                             )
                         )
+                        Spacer(modifier = GlanceModifier.defaultWeight())
                     }
                 }
             }

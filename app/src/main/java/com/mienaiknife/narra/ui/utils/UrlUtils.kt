@@ -17,7 +17,6 @@
 package com.mienaiknife.narra.ui.utils
 
 import androidx.core.net.toUri
-import java.net.InetAddress
 import java.net.URL
 
 object UrlUtils {
@@ -95,18 +94,21 @@ object UrlUtils {
             val host = url.host.lowercase()
 
             // 1. Basic check for localhost and local names
-            if (host == "localhost" || host == "127.0.0.1" || host == "::1" || host.endsWith(".local")) {
+            if (host == "localhost" || host == "127.0.0.1" || host == "::1" || host.endsWith(".local") || host.contains(":") || host == "0.0.0.0") {
                 return false
             }
 
-            // 2. Deep check for IP ranges (requires network lookup or careful pattern matching)
-            // For SSRF, we want to avoid 10.x.x.x, 192.168.x.x, 172.16.x.x, etc.
-            // Note: In a real app, you'd might want to do this asynchronously to avoid blocking
-            // but for simple UI checks or before passing to Jsoup, it's often done synchronously.
-            val address = InetAddress.getByName(host)
-            !(address.isLoopbackAddress || address.isAnyLocalAddress || address.isLinkLocalAddress || address.isSiteLocalAddress)
+            // 2. Check for private IPv4 ranges (simple string-based check to avoid blocking network I/O)
+            if (host.startsWith("10.") || host.startsWith("192.168.") || host.startsWith("169.254.")) {
+                return false
+            }
+            if (host.startsWith("172.")) {
+                val secondOctet = host.substringAfter("172.").substringBefore(".").toIntOrNull()
+                if (secondOctet in 16..31) return false
+            }
+
+            true
         } catch (_: Exception) {
-            // If we can't parse it or resolve it, we don't treat it as a safe public URL
             false
         }
     }

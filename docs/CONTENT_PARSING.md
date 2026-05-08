@@ -6,13 +6,14 @@ Narra ingests content from multiple sources (RSS, EPUB, Web Articles) and normal
 
 Instead of handling raw HTML strings throughout the app, Narra parses content into a list of `ContentBlock` objects. This allows the UI to render different types of content (text, images, headings) appropriately and enables the TTS engine to handle them distinctly.
 
-- **`ContentBlock.Text`**: Contains an `AnnotatedString` for rich text display in the Reader UI.
+- **`ContentBlock.Paragraph`**: Contains an `AnnotatedString` for a standard paragraph of text.
+- **`ContentBlock.BlockQuote`**: Represents quoted text blocks.
+- **`ContentBlock.Heading`**: Represents structural headers with a specific level (e.g., H1, H2).
 - **`ContentBlock.Image`**: Contains image metadata (URL, alt text).
-- **`ContentBlock.Heading`**: Represents structural headers.
 
 ## The Parsing Engine: `HtmlParser`
 
-The `HtmlParser` (located in `ui.utils`) is responsible for converting raw HTML from any source into `ContentBlock`s.
+The `HtmlParser` (an object located in `ui.utils.HtmlToAnnotatedString.kt`) is responsible for converting raw HTML from any source into `ContentBlock`s.
 
 1. **JSoup Processing**: It uses JSoup to parse the HTML fragment.
 2. **Recursive Traversal**: It traverses the DOM tree, mapping tags like `<b>`, `<i>`, and `<a>` to styles in an `AnnotatedString`.

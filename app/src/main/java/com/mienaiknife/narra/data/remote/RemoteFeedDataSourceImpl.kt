@@ -137,6 +137,15 @@ class RemoteFeedDataSourceImpl @Inject constructor(
 
             val articles = channel.items.mapNotNull { item ->
                 val url = item.link ?: return@mapNotNull null
+                
+                android.util.Log.d("RemoteFeedDataSource", "Processing item: ${item.title}")
+                android.util.Log.d("RemoteFeedDataSource", "Item standard image: ${item.image}")
+
+                // Aggressive image extraction
+                val imageUrl = item.image 
+                    ?: extractImageFromHtml(item.description).also { if (it != null) android.util.Log.d("RemoteFeedDataSource", "Extracted from description: $it") }
+                    ?: extractImageFromHtml(item.content).also { if (it != null) android.util.Log.d("RemoteFeedDataSource", "Extracted from content: $it") }
+
                 Article(
                     id = UUID.randomUUID().toString(),
                     title = item.title ?: "Untitled",
@@ -144,7 +153,7 @@ class RemoteFeedDataSourceImpl @Inject constructor(
                     content = "", // Content is fetched on demand or from item.content if available
                     publishedAt = item.pubDate,
                     publishedTimestamp = DateUtils.parseToTimestamp(item.pubDate),
-                    imageUrl = item.image,
+                    imageUrl = imageUrl,
                     url = url,
                     feedUrl = feed.url,
                     isFromFeed = true,
@@ -154,6 +163,41 @@ class RemoteFeedDataSourceImpl @Inject constructor(
             Result.success(RemoteFeedDataSource.FetchArticlesResult(articles, updatedTitle))
         } catch (e: Exception) {
             Result.failure(e)
+        }
+    }
+
+    private fun extractImageFromHtml(html: String?): String? {
+        if (html.isNullOrBlank()) return null
+        return try {
+            val doc = Jsoup.parse(html)
+            val img = doc.select("img").firstOrNull()
+            if (img == null) {
+                android.util.Log.d("RemoteFeedDataSource", "No img tag found in HTML")
+                return null
+            }
+
+            val absSrc = img.attr("abs:src")
+            val src = img.attr("src")
+            val dataSrc = img.attr("data-src")
+            
+            android.util.Log.d("RemoteFeedDataSource", "Found img tag. abs:src='$absSrc', src='$src', data-src='$dataSrc'")
+
+            val imageUrl = absSrc.takeIf { it.isNotBlank() }
+                ?: src.takeIf { it.isNotBlank() }
+                ?: dataSrc.takeIf { it.isNotBlank() }
+            
+            if (imageUrl == null) {
+                android.util.Log.d("RemoteFeedDataSource", "No usable image URL found in attributes")
+                return null
+            }
+
+            val isPublic = UrlUtils.isPublicUrl(imageUrl)
+            android.util.Log.d("RemoteFeedDataSource", "Extracted URL: '$imageUrl', isPublic=$isPublic")
+
+            imageUrl.takeIf { isPublic }
+        } catch (e: Exception) {
+            android.util.Log.e("RemoteFeedDataSource", "Failed to extract image from HTML", e)
+            null
         }
     }
 }

@@ -19,6 +19,7 @@ package com.mienaiknife.narra.data.repositories
 import android.content.Context
 import com.mienaiknife.narra.data.local.AppDatabase
 import com.mienaiknife.narra.data.local.EpubDataSource
+import com.mienaiknife.narra.data.local.ImageDataSource
 import com.mienaiknife.narra.data.local.OpmlDataSource
 import com.mienaiknife.narra.data.local.dao.ArticleDao
 import com.mienaiknife.narra.data.local.dao.FeedDao
@@ -48,6 +49,7 @@ class ContentRepositoryImpl(
     private val webDataSource: WebDataSource,
     private val remoteFeedDataSource: RemoteFeedDataSource,
     private val epubDataSource: EpubDataSource,
+    private val imageDataSource: ImageDataSource,
     private val opmlDataSource: OpmlDataSource,
     private val networkMonitor: NetworkMonitor,
     private val downloadSettingsManager: DownloadSettingsManager,
@@ -150,6 +152,12 @@ class ContentRepositoryImpl(
 
         webDataSource.downloadArticle(url).mapCatching { remoteArticle ->
             val nextOrder = articleDao.getNextQueueOrder()
+            
+            val localImageUrl = remoteArticle.imageUrl?.let { imageUrl ->
+                val fileName = "web_${remoteArticle.id.hashCode()}_${System.currentTimeMillis()}.png"
+                imageDataSource.downloadAndSaveImage(imageUrl, fileName)
+            }
+
             val articleEntity = ArticleEntity(
                 id = existingArticle?.id ?: remoteArticle.id,
                 title = remoteArticle.title,
@@ -157,6 +165,7 @@ class ContentRepositoryImpl(
                 content = remoteArticle.content,
                 excerpt = remoteArticle.publishedAt, // Using publishedAt as excerpt if available from WebDataSource
                 imageUrl = remoteArticle.imageUrl,
+                localImageUrl = localImageUrl,
                 url = url,
                 feedUrl = remoteArticle.feedUrl,
                 progress = 0f,
@@ -195,10 +204,22 @@ class ContentRepositoryImpl(
 
     override suspend fun addToQueue(id: String): Result<Unit> {
         val article = articleDao.getArticleById(id) ?: return Result.failure(com.mienaiknife.narra.domain.NarraError.Content.NotFound())
+        
+        // If content is empty, trigger full download (which also handles image persistence)
         if (article.content.isNullOrEmpty()) {
             val url = article.url ?: return Result.failure(com.mienaiknife.narra.domain.NarraError.Content.EmptyContent())
             return downloadWebPage(url).map { }
         }
+
+        // Ensure persistent image is downloaded if it's missing but we have a URL
+        if (article.localImageUrl == null && !article.imageUrl.isNullOrBlank()) {
+            val fileName = "article_${article.id.hashCode()}_${System.currentTimeMillis()}.png"
+            val localPath = imageDataSource.downloadAndSaveImage(article.imageUrl, fileName)
+            if (localPath != null) {
+                articleDao.insertArticle(article.copy(localImageUrl = localPath))
+            }
+        }
+
         articleDao.addToQueue(id)
         return Result.success(Unit)
     }
@@ -308,8 +329,26 @@ class ContentRepositoryImpl(
 
                     for ((index, article) in sortedArticles.withIndex()) {
                         val existingArticle = articleDao.getArticleByUrl(article.url ?: "")
+                        
+                        // If article exists but is missing local image, try to download it now
+                        if (existingArticle != null && existingArticle.localImageUrl == null && article.imageUrl != null) {
+                            val localImageUrl = article.imageUrl.let { imageUrl ->
+                                val fileName = "feed_${article.id.hashCode()}_${System.currentTimeMillis()}.png"
+                                imageDataSource.downloadAndSaveImage(imageUrl, fileName)
+                            }
+                            if (localImageUrl != null) {
+                                articleDao.insertArticle(existingArticle.copy(localImageUrl = localImageUrl))
+                            }
+                        }
+
                         if (existingArticle == null) {
                             val isOldOnFirstImport = isFirstImport && index >= 5
+
+                            val localImageUrl = article.imageUrl?.let { imageUrl ->
+                                val fileName = "feed_${article.id.hashCode()}_${System.currentTimeMillis()}.png"
+                                imageDataSource.downloadAndSaveImage(imageUrl, fileName)
+                            }
+
                             val articleEntity = ArticleEntity(
                                 id = article.id,
                                 title = article.title,
@@ -317,6 +356,7 @@ class ContentRepositoryImpl(
                                 content = null,
                                 excerpt = article.publishedAt,
                                 imageUrl = article.imageUrl,
+                                localImageUrl = localImageUrl,
                                 url = article.url,
                                 feedUrl = feed.url,
                                 publishedAt = article.publishedAt,

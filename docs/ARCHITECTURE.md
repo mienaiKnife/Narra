@@ -5,8 +5,8 @@ Narra follows a Clean Architecture approach with a clear separation of concerns:
 ## Layers
 
 - **UI Layer**: Built with **Jetpack Compose**. ViewModels observe state from the domain layer and are kept free of Android framework dependencies to ensure testability.
-- **Domain Layer**: The "brain" of the app. Contains use cases, domain models (`Article`, `Feed`, `TtsModel`), and core interfaces (`TtsEngine`, `ContentRepository`).
-- **Data Layer**: Implementation of repositories. Handles data orchestration between local storage and remote APIs.
+- **Domain Layer**: The "brain" of the app. Contains use cases, domain models (`TtsModel`), and core interfaces (`TtsEngine`, `ContentRepository`).
+- **Data Layer**: Implementation of repositories. Handles data orchestration between local storage and remote APIs. Contains the `Article` model and Room entities.
 
 ## Key Components
 
@@ -14,7 +14,10 @@ Narra follows a Clean Architecture approach with a clear separation of concerns:
 Abstracts the underlying speech synthesis. Implementations like `AndroidTtsEngine` (system TTS) and `SherpaTtsEngine` (on-device AI) are interchangeable.
 
 ### `ContentRepository`
-The central hub for data. It handles fetching from RSS, parsing EPUBs, and extracting Web content, normalizing everything into the `Article` model.
+The central hub for data. It handles fetching from RSS, parsing EPUBs, and extracting Web content, normalizing everything into the `Article` model. It also manages database operations, feed subscriptions, and backup/restore functionality.
+
+### `HtmlParser`
+Located in `ui.utils` (within `HtmlToAnnotatedString.kt`), it is responsible for converting raw HTML content from various sources into a list of `ContentBlock`s, which are then used for both UI rendering and TTS synthesis.
 
 ### `ModelRepository`
 Manages the lifecycle of on-device AI models. It handles downloading from remote sources, local storage management, and versioning.
@@ -40,11 +43,12 @@ Narra utilizes **WorkManager** for reliable background operations:
 app/
   src/main/
     java/com/mienaiknife/narra/
-      data/          # Repositories, Room DAOs, Entities, Workers
-      domain/        # Use cases, Interfaces, Domain Models
+      data/          # Repositories, Room DAOs, Entities, Workers, Models
+      domain/        # Use cases, Interfaces, Domain Models (TtsModel)
       tts/           # TTS engine implementations
-      ui/            # Composables, ViewModels, Theme
-      service/       # PlaybackService (Media3)
+      ui/            # Composables, ViewModels, Theme, Models
+      utils/         # Core utilities (Security, Notifications)
+      service/       # PlaybackService (Media3), SyncManager
       playback/      # TtsPlayer and PlaybackManager
 ```
 

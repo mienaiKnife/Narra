@@ -27,9 +27,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.automirrored.outlined.PlaylistAdd
+import androidx.compose.material.icons.filled.AutoStories
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DragIndicator
+import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.RssFeed
@@ -210,12 +212,17 @@ private fun QueueItemRow(
                     .background(MaterialTheme.colorScheme.surfaceContainer),
                 contentAlignment = Alignment.Center
             ) {
-                val imageUrl = article.imageUrl ?: article.feedImageUrl ?: article.url?.let { "https://www.google.com/s2/favicons?domain=$it&sz=128" }
+                val imageUrl = article.localImageUrl ?: article.imageUrl ?: article.feedImageUrl ?: article.url?.let { "https://www.google.com/s2/favicons?domain=$it&sz=128" }
                 var isImageLoaded by remember(imageUrl) { mutableStateOf(false) }
 
                 if (!isImageLoaded) {
+                    val placeholderIcon = when {
+                        article.url?.startsWith("epub://") == true -> Icons.Default.AutoStories
+                        article.isFromFeed -> Icons.Default.RssFeed
+                        else -> Icons.Default.Language
+                    }
                     Icon(
-                        imageVector = Icons.Default.RssFeed,
+                        imageVector = placeholderIcon,
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(32.dp)
@@ -259,7 +266,7 @@ private fun QueueItemRow(
                     text = article.title,
                     style = MaterialTheme.typography.bodyMedium,
                     color = if (article.progress == 1f) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f) else MaterialTheme.colorScheme.onSurface,
-                    maxLines = 2,
+                    maxLines = if (article.isInQueue) 2 else 3,
                     overflow = TextOverflow.Ellipsis
                 )
 
@@ -269,7 +276,7 @@ private fun QueueItemRow(
                 val currentPosition = (progress * totalDuration).toLong()
                 val remainingTime = totalDuration - currentPosition
 
-                if (totalDuration > 0) {
+                if (totalDuration > 0 && article.isInQueue) {
                     Spacer(modifier = Modifier.height(4.dp))
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
