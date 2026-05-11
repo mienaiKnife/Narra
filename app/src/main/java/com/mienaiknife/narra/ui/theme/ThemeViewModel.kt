@@ -33,7 +33,9 @@ data class ThemeUiState(
     val useSystemTheme: Boolean = true,
     val readerFontFamily: String = "Roboto",
     val readerFontSize: Float = 18.0f,
-    val showRemainingTime: Boolean = true
+    val showRemainingTime: Boolean = true,
+    val tapToShowControls: Boolean = true,
+    val autoFullscreen: Boolean = true,
 )
 
 @HiltViewModel
@@ -74,6 +76,16 @@ open class ThemeViewModel @Inject constructor(
                 _uiState.update { it.copy(showRemainingTime = showRemainingTime) }
             }
         }
+        viewModelScope.launch {
+            themeManager.tapToShowControls.collect { tapToShowControls ->
+                _uiState.update { it.copy(tapToShowControls = tapToShowControls) }
+            }
+        }
+        viewModelScope.launch {
+            themeManager.autoFullscreen.collect { autoFullscreen ->
+                _uiState.update { it.copy(autoFullscreen = autoFullscreen) }
+            }
+        }
     }
 
     // Kept for backward compatibility if needed by Compose previews or other manual initializations
@@ -103,5 +115,13 @@ open class ThemeViewModel @Inject constructor(
 
     fun setShowRemainingTime(showRemainingTime: Boolean) {
         themeManager.setShowRemainingTime(showRemainingTime)
+    }
+
+    fun setTapToShowControls(enabled: Boolean) {
+        themeManager.setTapToShowControls(enabled)
+    }
+
+    fun setAutoFullscreen(enabled: Boolean) {
+        themeManager.setAutoFullscreen(enabled)
     }
 }

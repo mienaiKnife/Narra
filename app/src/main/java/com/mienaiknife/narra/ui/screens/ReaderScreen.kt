@@ -116,6 +116,7 @@ import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.progressBarRangeInfo
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.unit.DpOffset
 import coil3.compose.AsyncImage
 import com.mienaiknife.narra.data.models.SampleArticles
 import com.mienaiknife.narra.ui.models.ContentBlock
@@ -179,6 +180,8 @@ fun ReaderScreen(
                     uiState = uiState,
                     readerFontFamily = getFontFamily(themeUiState.readerFontFamily),
                     readerFontSize = themeUiState.readerFontSize,
+                    tapToShowControls = themeUiState.tapToShowControls,
+                    autoFullscreen = themeUiState.autoFullscreen,
                     onBack = onBack,
                     onTogglePlayPause = viewModel::togglePlayPause,
                     onSeekToWord = viewModel::seekToWord,
@@ -208,6 +211,8 @@ fun ReaderContent(
     uiState: ReaderUiState,
     readerFontFamily: androidx.compose.ui.text.font.FontFamily,
     readerFontSize: Float,
+    tapToShowControls: Boolean,
+    autoFullscreen: Boolean,
     onBack: () -> Unit,
     onTogglePlayPause: () -> Unit,
     onSeekToWord: (Int, IntRange) -> Unit,
@@ -279,14 +284,16 @@ fun ReaderContent(
         }
     }
 
-    LaunchedEffect(isPlaying, isControlsVisible, lastInteractionTrigger, isAtTop) {
+    LaunchedEffect(isPlaying, isControlsVisible, lastInteractionTrigger, isAtTop, autoFullscreen) {
         if (isAtTop) {
             isControlsVisible = true
-        } else if (isPlaying) {
+        } else if (isPlaying && autoFullscreen) {
             if (isControlsVisible) {
                 delay(5000)
                 isControlsVisible = false
             }
+        } else if (!autoFullscreen) {
+            isControlsVisible = true
         } else {
             isControlsVisible = true
         }
@@ -296,12 +303,14 @@ fun ReaderContent(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
-            .pointerInput(Unit) {
+            .pointerInput(tapToShowControls) {
                 awaitPointerEventScope {
                     while (true) {
                         awaitPointerEvent(PointerEventPass.Initial)
-                        isControlsVisible = true
-                        lastInteractionTrigger++
+                        if (tapToShowControls) {
+                            isControlsVisible = true
+                            lastInteractionTrigger++
+                        }
                     }
                 }
             }
@@ -352,7 +361,8 @@ fun ReaderContent(
 
                     if (visibleItem != null && currentWordYIndex == currentParagraphIndex) {
                         // Smoothly center the active word at the target line
-                        val currentWordViewportY = visibleItem.offset + currentWordYInItem
+                        // Account for viewportStartOffset which is negative when contentPadding.top is present
+                        val currentWordViewportY = visibleItem.offset - layoutInfo.viewportStartOffset + currentWordYInItem
                         val delta = currentWordViewportY - targetViewportY
                         
                         if (kotlin.math.abs(delta) > 2f) {
@@ -524,44 +534,90 @@ fun ReaderContent(
                         Spacer(modifier = Modifier.width(16.dp))
                         
                         var layoutResult by remember { mutableStateOf<TextLayoutResult?>(null) }
-                        Text(
-                            text = annotatedString,
-                            style = baseStyle,
-                            onTextLayout = { lr ->
-                                layoutResult = lr
-                                if (isCurrentParagraph && currentWordRange != null) {
-                                    if (currentWordRange.first in 0 until lr.layoutInput.text.length) {
-                                        val boundingBox = lr.getBoundingBox(currentWordRange.first)
-                                        currentWordYInItem = boundingBox.center.y + verticalPaddingPx
-                                        currentWordYIndex = index
+                        var contextMenuLink by remember { mutableStateOf<String?>(null) }
+                        var contextMenuOffset by remember { mutableStateOf(DpOffset.Zero) }
+
+                        val headingSpacerPx = with(density) { 32.dp.toPx() }
+                        Box(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = annotatedString,
+                                style = baseStyle,
+                                onTextLayout = { lr ->
+                                    layoutResult = lr
+                                    if (isCurrentParagraph && currentWordRange != null) {
+                                        if (currentWordRange.first in 0 until lr.layoutInput.text.length) {
+                                            val boundingBox = lr.getBoundingBox(currentWordRange.first)
+                                            val isHeadingWithSpacer = block is ContentBlock.Heading && index > 0
+                                            val internalOffset = (if (isHeadingWithSpacer) headingSpacerPx else 0f) + verticalPaddingPx
+                                            currentWordYInItem = boundingBox.center.y + internalOffset
+                                            currentWordYIndex = index
+                                        }
                                     }
-                                }
-                            },
-                            modifier = Modifier
-                                .weight(1f)
-                                .pointerInput(annotatedString) {
-                                detectTapGestures { pos ->
-                                    layoutResult?.getOffsetForPosition(pos)?.let { offset ->
-                                        annotatedString.getStringAnnotations(
-                                            tag = "word",
-                                            start = offset,
-                                            end = offset
-                                        )
-                                            .firstOrNull()?.let { annotation ->
-                                                val parts = annotation.item.split("|")
-                                                val pIdx = parts[0].toInt()
-                                                val start = parts[1].toInt()
-                                                val end = parts[2].toInt()
-                                                onSeekToWord(pIdx, start until end)
-                                                isFollowing = true
+                                },
+                                modifier = Modifier.pointerInput(annotatedString, isControlsVisible) {
+                                    detectTapGestures(
+                                        onTap = { pos ->
+                                            if (isControlsVisible) {
+                                                layoutResult?.getOffsetForPosition(pos)?.let { offset ->
+                                                    annotatedString.getStringAnnotations(
+                                                        tag = "word",
+                                                        start = offset,
+                                                        end = offset
+                                                    ).firstOrNull()?.let { annotation ->
+                                                        val parts = annotation.item.split("|")
+                                                        val pIdx = parts[0].toInt()
+                                                        val start = parts[1].toInt()
+                                                        val end = parts[2].toInt()
+                                                        onSeekToWord(pIdx, start until end)
+                                                        isFollowing = true
+                                                    }
+                                                }
                                             }
-                                    }
+                                        },
+                                        onLongPress = { pos ->
+                                            layoutResult?.getOffsetForPosition(pos)?.let { offset ->
+                                                annotatedString.getStringAnnotations(
+                                                    tag = "link",
+                                                    start = offset,
+                                                    end = offset
+                                                ).firstOrNull()?.let { annotation ->
+                                                    contextMenuLink = annotation.item
+                                                    contextMenuOffset = DpOffset(pos.x.toDp(), pos.y.toDp())
+                                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                                }
+                                            }
+                                        }
+                                    )
                                 }
+                            )
+
+                            DropdownMenu(
+                                expanded = contextMenuLink != null,
+                                onDismissRequest = { contextMenuLink = null },
+                                offset = contextMenuOffset
+                            ) {
+                                DropdownMenuItem(
+                                    text = { Text("Open link") },
+                                    onClick = {
+                                        contextMenuLink?.let { uriHandler.openUri(it) }
+                                        contextMenuLink = null
+                                    },
+                                    leadingIcon = {
+                                        Icon(
+                                            Icons.AutoMirrored.Filled.OpenInNew,
+                                            contentDescription = null
+                                        )
+                                    }
+                                )
                             }
-                        )
+                        }
                     }
                 } else {
                     var layoutResult by remember { mutableStateOf<TextLayoutResult?>(null) }
+                    var contextMenuLink by remember { mutableStateOf<String?>(null) }
+                    var contextMenuOffset by remember { mutableStateOf(DpOffset.Zero) }
+
+                    val headingSpacerPx = with(density) { 32.dp.toPx() }
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -581,31 +637,69 @@ fun ReaderContent(
                                 if (isCurrentParagraph && currentWordRange != null) {
                                     if (currentWordRange.first in 0 until lr.layoutInput.text.length) {
                                         val boundingBox = lr.getBoundingBox(currentWordRange.first)
-                                        currentWordYInItem = boundingBox.center.y + verticalPaddingPx
+                                        val isHeadingWithSpacer = block is ContentBlock.Heading && index > 0
+                                        val internalOffset = (if (isHeadingWithSpacer) headingSpacerPx else 0f) + verticalPaddingPx
+                                        currentWordYInItem = boundingBox.center.y + internalOffset
                                         currentWordYIndex = index
                                     }
                                 }
                             },
-                            modifier = Modifier.pointerInput(annotatedString) {
-                                detectTapGestures { pos ->
-                                    layoutResult?.getOffsetForPosition(pos)?.let { offset ->
-                                        annotatedString.getStringAnnotations(
-                                            tag = "word",
-                                            start = offset,
-                                            end = offset
-                                        )
-                                            .firstOrNull()?.let { annotation ->
-                                                val parts = annotation.item.split("|")
-                                                val pIdx = parts[0].toInt()
-                                                val start = parts[1].toInt()
-                                                val end = parts[2].toInt()
-                                                onSeekToWord(pIdx, start until end)
-                                                isFollowing = true
+                            modifier = Modifier.pointerInput(annotatedString, isControlsVisible) {
+                                detectTapGestures(
+                                    onTap = { pos ->
+                                        if (isControlsVisible) {
+                                            layoutResult?.getOffsetForPosition(pos)?.let { offset ->
+                                                annotatedString.getStringAnnotations(
+                                                    tag = "word",
+                                                    start = offset,
+                                                    end = offset
+                                                ).firstOrNull()?.let { annotation ->
+                                                    val parts = annotation.item.split("|")
+                                                    val pIdx = parts[0].toInt()
+                                                    val start = parts[1].toInt()
+                                                    val end = parts[2].toInt()
+                                                    onSeekToWord(pIdx, start until end)
+                                                    isFollowing = true
+                                                }
                                             }
+                                        }
+                                    },
+                                    onLongPress = { pos ->
+                                        layoutResult?.getOffsetForPosition(pos)?.let { offset ->
+                                            annotatedString.getStringAnnotations(
+                                                tag = "link",
+                                                start = offset,
+                                                end = offset
+                                            ).firstOrNull()?.let { annotation ->
+                                                contextMenuLink = annotation.item
+                                                contextMenuOffset = DpOffset(pos.x.toDp(), pos.y.toDp())
+                                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                            }
+                                        }
                                     }
-                                }
+                                )
                             }
                         )
+
+                        DropdownMenu(
+                            expanded = contextMenuLink != null,
+                            onDismissRequest = { contextMenuLink = null },
+                            offset = contextMenuOffset
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text("Open link") },
+                                onClick = {
+                                    contextMenuLink?.let { uriHandler.openUri(it) }
+                                    contextMenuLink = null
+                                },
+                                leadingIcon = {
+                                    Icon(
+                                        Icons.AutoMirrored.Filled.OpenInNew,
+                                        contentDescription = null
+                                    )
+                                }
+                            )
+                        }
                     }
                 }
                 Spacer(modifier = Modifier.height(16.dp))
@@ -1133,6 +1227,8 @@ fun ReaderScreenPreview() {
             ),
             readerFontFamily = androidx.compose.ui.text.font.FontFamily.Default,
             readerFontSize = 20f,
+            tapToShowControls = true,
+            autoFullscreen = true,
             onBack = {},
             onTogglePlayPause = {},
             onSeekToWord = { _, _ -> },

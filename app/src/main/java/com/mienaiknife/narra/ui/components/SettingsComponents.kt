@@ -41,12 +41,13 @@ fun SettingDropDownItem(
     subtitle: String,
     selectedValue: String,
     options: List<String>,
-    onValueChange: (String) -> Unit
+    onValueChange: (String) -> Unit,
+    modifier: Modifier = Modifier
 ) {
     var expanded by remember { mutableStateOf(false) }
 
     Column(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .clickable { expanded = true }
             .padding(vertical = 8.dp)

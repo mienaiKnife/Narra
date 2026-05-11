@@ -45,6 +45,9 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
+import com.mienaiknife.narra.ui.components.flashHighlight
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -68,6 +71,7 @@ import com.mienaiknife.narra.utils.DateUtils
 @Composable
 fun DownloadsSettingsScreen(
     onBack: () -> Unit,
+    highlightSetting: String? = null,
     viewModel: DownloadsSettingsViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -160,6 +164,7 @@ fun DownloadsSettingsScreen(
 
     DownloadsSettingsContent(
         uiState = uiState,
+        highlightSetting = highlightSetting,
         onDownloadOverWifiOnlyChange = { viewModel.setDownloadOverWifiOnly(it) },
         onRefreshIntervalChange = { viewModel.setRefreshInterval(it) },
         onImportOpml = { importLauncher.launch(arrayOf("application/xml", "text/xml", "application/octet-stream", "*/*")) },
@@ -183,6 +188,7 @@ fun DownloadsSettingsScreen(
 @Composable
 fun DownloadsSettingsContent(
     uiState: DownloadsSettingsUiState,
+    highlightSetting: String? = null,
     onDownloadOverWifiOnlyChange: (Boolean) -> Unit,
     onRefreshIntervalChange: (String) -> Unit,
     onImportOpml: () -> Unit,
@@ -195,6 +201,32 @@ fun DownloadsSettingsContent(
     onDeleteDatabase: () -> Unit,
     onBack: () -> Unit
 ) {
+    val downloadOverWifiOnlyRequester = remember { BringIntoViewRequester() }
+    val refreshIntervalRequester = remember { BringIntoViewRequester() }
+    val backupDatabaseRequester = remember { BringIntoViewRequester() }
+    val restoreDatabaseRequester = remember { BringIntoViewRequester() }
+    val autoExportEnabledRequester = remember { BringIntoViewRequester() }
+    val autoImportEnabledRequester = remember { BringIntoViewRequester() }
+    val autoExportLocationRequester = remember { BringIntoViewRequester() }
+    val deleteDatabaseRequester = remember { BringIntoViewRequester() }
+    val importFeedsRequester = remember { BringIntoViewRequester() }
+    val exportFeedsRequester = remember { BringIntoViewRequester() }
+
+    LaunchedEffect(highlightSetting) {
+        when (highlightSetting) {
+            "downloadOverWifiOnly" -> downloadOverWifiOnlyRequester.bringIntoView()
+            "refreshInterval" -> refreshIntervalRequester.bringIntoView()
+            "exportDatabase" -> backupDatabaseRequester.bringIntoView()
+            "importDatabase" -> restoreDatabaseRequester.bringIntoView()
+            "autoExportDatabase" -> autoExportEnabledRequester.bringIntoView()
+            "autoImportDatabase" -> autoImportEnabledRequester.bringIntoView()
+            "autoExportLocation" -> autoExportLocationRequester.bringIntoView()
+            "deleteDatabase" -> deleteDatabaseRequester.bringIntoView()
+            "importFeeds" -> importFeedsRequester.bringIntoView()
+            "exportFeeds" -> exportFeedsRequester.bringIntoView()
+        }
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -239,7 +271,10 @@ fun DownloadsSettingsContent(
             )
 
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .bringIntoViewRequester(downloadOverWifiOnlyRequester)
+                    .flashHighlight(highlightSetting == "downloadOverWifiOnly"),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column(
@@ -281,7 +316,10 @@ fun DownloadsSettingsContent(
                 subtitle = "Specify an interval at which the inbox is automatically refreshed",
                 selectedValue = uiState.refreshInterval,
                 options = listOf("Never", "1 hour", "3 hours", "6 hours", "12 hours", "24 hours"),
-                onValueChange = onRefreshIntervalChange
+                onValueChange = onRefreshIntervalChange,
+                modifier = Modifier
+                    .bringIntoViewRequester(refreshIntervalRequester)
+                    .flashHighlight(highlightSetting == "refreshInterval")
             )
 
             Text(
@@ -294,6 +332,8 @@ fun DownloadsSettingsContent(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .bringIntoViewRequester(backupDatabaseRequester)
+                    .flashHighlight(highlightSetting == "exportDatabase")
                     .clickable { onBackupDatabase() }
                     .padding(vertical = 12.dp)
             ) {
@@ -311,6 +351,8 @@ fun DownloadsSettingsContent(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .bringIntoViewRequester(restoreDatabaseRequester)
+                    .flashHighlight(highlightSetting == "importDatabase")
                     .clickable { onRestoreDatabase() }
                     .padding(vertical = 8.dp)
             ) {
@@ -328,6 +370,8 @@ fun DownloadsSettingsContent(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .bringIntoViewRequester(autoExportEnabledRequester)
+                    .flashHighlight(highlightSetting == "autoExportDatabase")
                     .padding(vertical = 12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -363,6 +407,8 @@ fun DownloadsSettingsContent(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
+                        .bringIntoViewRequester(autoImportEnabledRequester)
+                        .flashHighlight(highlightSetting == "autoImportDatabase")
                         .padding(vertical = 12.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -397,6 +443,8 @@ fun DownloadsSettingsContent(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
+                        .bringIntoViewRequester(autoExportLocationRequester)
+                        .flashHighlight(highlightSetting == "autoExportLocation")
                         .clickable { onSetAutoExportLocation() }
                         .padding(vertical = 8.dp)
                 ) {
@@ -437,6 +485,8 @@ fun DownloadsSettingsContent(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .bringIntoViewRequester(deleteDatabaseRequester)
+                    .flashHighlight(highlightSetting == "deleteDatabase")
                     .clickable { onDeleteDatabase() }
                     .padding(vertical = 8.dp)
             ) {
@@ -462,6 +512,8 @@ fun DownloadsSettingsContent(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .bringIntoViewRequester(importFeedsRequester)
+                    .flashHighlight(highlightSetting == "importFeeds")
                     .clickable { onImportOpml() }
                     .padding(vertical = 8.dp)
             ) {
@@ -479,6 +531,8 @@ fun DownloadsSettingsContent(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .bringIntoViewRequester(exportFeedsRequester)
+                    .flashHighlight(highlightSetting == "exportFeeds")
                     .clickable { onExportOpml() }
                     .padding(vertical = 8.dp)
             ) {
@@ -512,6 +566,7 @@ fun DownloadsSettingsScreenPreview() {
                         autoExportUri = "content://com.android.externalstorage.documents/document/primary%3ANarra%2Fnarra_db.sqlite",
                         lastExportTimestamp = System.currentTimeMillis()
                     ),
+                    highlightSetting = null,
                     onDownloadOverWifiOnlyChange = {},
                     onRefreshIntervalChange = {},
                     onImportOpml = {},

@@ -44,6 +44,8 @@ class ThemeManager(
     private val readerFontFamilyKey = stringPreferencesKey("reader_font_family")
     private val readerFontSizeKey = floatPreferencesKey("reader_font_size")
     private val showRemainingTimeKey = booleanPreferencesKey("show_remaining_time")
+    private val tapToShowControlsKey = booleanPreferencesKey("tap_to_show_controls")
+    private val autoFullscreenKey = booleanPreferencesKey("auto_fullscreen")
 
     private val _isDarkMode = MutableStateFlow(value = true)
     private val _isDynamicColor = MutableStateFlow(value = false)
@@ -51,6 +53,8 @@ class ThemeManager(
     private val _readerFontFamily = MutableStateFlow("Roboto")
     private val _readerFontSize = MutableStateFlow(18.0f)
     private val _showRemainingTime = MutableStateFlow(value = true)
+    private val _tapToShowControls = MutableStateFlow(value = true)
+    private val _autoFullscreen = MutableStateFlow(value = true)
 
     val isDarkMode: StateFlow<Boolean> = _isDarkMode.asStateFlow()
     val isDynamicColor: StateFlow<Boolean> = _isDynamicColor.asStateFlow()
@@ -58,6 +62,8 @@ class ThemeManager(
     val readerFontFamily: StateFlow<String> = _readerFontFamily.asStateFlow()
     val readerFontSize: StateFlow<Float> = _readerFontSize.asStateFlow()
     val showRemainingTime: StateFlow<Boolean> = _showRemainingTime.asStateFlow()
+    val tapToShowControls: StateFlow<Boolean> = _tapToShowControls.asStateFlow()
+    val autoFullscreen: StateFlow<Boolean> = _autoFullscreen.asStateFlow()
 
     init {
         scope.launch {
@@ -68,6 +74,8 @@ class ThemeManager(
                 _readerFontFamily.value = preferences[readerFontFamilyKey] ?: "Roboto"
                 _readerFontSize.value = preferences[readerFontSizeKey] ?: 18.0f
                 _showRemainingTime.value = preferences[showRemainingTimeKey] ?: true
+                _tapToShowControls.value = preferences[tapToShowControlsKey] ?: true
+                _autoFullscreen.value = preferences[autoFullscreenKey] ?: true
             }
         }
     }
@@ -105,6 +113,18 @@ class ThemeManager(
     fun setShowRemainingTime(showRemainingTime: Boolean) {
         scope.launch {
             context.dataStore.edit { it[showRemainingTimeKey] = showRemainingTime }
+        }
+    }
+
+    fun setTapToShowControls(enabled: Boolean) {
+        scope.launch {
+            context.dataStore.edit { it[tapToShowControlsKey] = enabled }
+        }
+    }
+
+    fun setAutoFullscreen(enabled: Boolean) {
+        scope.launch {
+            context.dataStore.edit { it[autoFullscreenKey] = enabled }
         }
     }
 }

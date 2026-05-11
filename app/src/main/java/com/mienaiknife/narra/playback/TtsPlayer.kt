@@ -27,6 +27,7 @@ import android.os.Build
 import android.os.Looper
 import android.os.PowerManager
 import androidx.core.net.toUri
+import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
@@ -93,6 +94,7 @@ class TtsPlayer @Inject constructor(
 
     private var resumeWordOffset = 0
     private var isEngineSpeaking = false
+    private var isPreparing = false
 
     private var _seekForwardIncrement = 30000L
     private var _seekBackIncrement = 10000L
@@ -131,7 +133,7 @@ class TtsPlayer @Inject constructor(
     private val noisyReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             if (intent?.action == AudioManager.ACTION_AUDIO_BECOMING_NOISY) {
-                setPlayWhenReady(false)
+                playWhenReady = false
             }
         }
     }
@@ -160,13 +162,15 @@ class TtsPlayer @Inject constructor(
                     _playbackState = STATE_READY
                     
                     if (_playWhenReady && (currentParagraphIndex >= 0) && (currentParagraphIndex < paragraphs.size)) {
-                        if (currentParagraphIndex == paragraphs.size - 1 && wasSpeaking) {
+                        if ((currentParagraphIndex == paragraphs.size - 1) && wasSpeaking) {
                             _playWhenReady = false
                             _playbackState = STATE_ENDED
                         } else if (!wasSpeaking) {
                             resumeInternal()
                         }
                     }
+                    
+                    invalidateState()
                     
                     // Maintain WakeLock if we are still ready to play but not currently speaking
                     if (_playWhenReady || _playbackState == STATE_BUFFERING) {
@@ -226,22 +230,44 @@ class TtsPlayer @Inject constructor(
         }.launchIn(scope)
     }
 
+    private var _audioAttributes = AudioAttributes.Builder()
+        .setUsage(C.USAGE_MEDIA)
+        .setContentType(C.AUDIO_CONTENT_TYPE_SPEECH)
+        .build()
+
     override fun getState(): State {
-        val playlist = if (_currentMediaItem != null || mediaItems.size > 0) {
-            (0 until mediaItems.size).map { i ->
-                val item = mediaItems[i]
-                val durationUs = if (i == currentItemIndex && paragraphs.isNotEmpty()) {
-                    paragraphs.size * 1000000L
-                } else {
-                    C.TIME_UNSET
-                }
-                
-                MediaItemData.Builder(item)
-                    .setUid(item.mediaId)
-                    .setDurationUs(durationUs)
-                    .setIsSeekable(true)
-                    .setMediaMetadata(item.mediaMetadata)
+        val playlist = if (_currentMediaItem != null || mediaItems.isNotEmpty() || isPreparing) {
+            val itemsToUse = if (mediaItems.isNotEmpty()) mediaItems else listOfNotNull(_currentMediaItem)
+            
+            if (itemsToUse.isEmpty() && isPreparing) {
+                // Return a dummy item while preparing to ensure notification can be shown
+                val dummyItem = MediaItem.Builder()
+                    .setMediaId("preparing")
+                    .setMediaMetadata(MediaMetadata.Builder()
+                        .setTitle("Loading...")
+                        .build())
                     .build()
+                listOf(
+                    MediaItemData.Builder(dummyItem)
+                        .setUid(dummyItem.mediaId)
+                        .build()
+                )
+            } else {
+                (0 until itemsToUse.size).map { i ->
+                    val item = itemsToUse[i]
+                    val durationUs = if (i == currentItemIndex && paragraphs.isNotEmpty()) {
+                        paragraphs.size * 1000000L
+                    } else {
+                        C.TIME_UNSET
+                    }
+                    
+                    MediaItemData.Builder(item)
+                        .setUid(item.mediaId)
+                        .setDurationUs(durationUs)
+                        .setIsSeekable(true)
+                        .setMediaMetadata(item.mediaMetadata)
+                        .build()
+                }
             }
         } else {
             emptyList()
@@ -254,7 +280,7 @@ class TtsPlayer @Inject constructor(
         } else 0L
 
         val currentPlaybackState = if (playlist.isEmpty() && _playbackState != STATE_ENDED) {
-            STATE_IDLE
+            if (isPreparing || _playWhenReady) STATE_BUFFERING else STATE_IDLE
         } else {
             _playbackState
         }
@@ -262,36 +288,47 @@ class TtsPlayer @Inject constructor(
         android.util.Log.d("TtsPlayer", "getState(): state=$_playbackState -> $currentPlaybackState, playWhenReady=$_playWhenReady, hasPlaylist=${playlist.isNotEmpty()}, isSpeaking=$isEngineSpeaking")
 
         return State.Builder()
-            .setAvailableCommands(Player.Commands.Builder()
-                .addAll(
-                    COMMAND_PLAY_PAUSE,
-                    COMMAND_PREPARE,
-                    COMMAND_STOP,
-                    COMMAND_SET_SPEED_AND_PITCH,
-                    COMMAND_GET_CURRENT_MEDIA_ITEM,
-                    COMMAND_GET_METADATA,
-                    COMMAND_GET_TIMELINE,
-                    COMMAND_GET_AUDIO_ATTRIBUTES,
-                    COMMAND_GET_TRACKS,
-                    COMMAND_GET_DEVICE_VOLUME,
-                    COMMAND_GET_VOLUME,
-                    COMMAND_SEEK_TO_NEXT,
-                    COMMAND_SEEK_TO_PREVIOUS,
-                    COMMAND_SEEK_TO_NEXT_MEDIA_ITEM,
-                    COMMAND_SEEK_TO_PREVIOUS_MEDIA_ITEM,
-                    COMMAND_SEEK_FORWARD,
-                    COMMAND_SEEK_BACK,
-                    COMMAND_SEEK_IN_CURRENT_MEDIA_ITEM,
-                    COMMAND_SET_MEDIA_ITEM,
-                    COMMAND_CHANGE_MEDIA_ITEMS
-                ).build())
+            .setAvailableCommands(
+                Player.Commands.Builder()
+                    .addAll(
+                        COMMAND_PLAY_PAUSE,
+                        COMMAND_PREPARE,
+                        COMMAND_STOP,
+                        COMMAND_SEEK_TO_DEFAULT_POSITION,
+                        COMMAND_SEEK_IN_CURRENT_MEDIA_ITEM,
+                        COMMAND_SEEK_TO_PREVIOUS_MEDIA_ITEM,
+                        COMMAND_SEEK_TO_PREVIOUS,
+                        COMMAND_SEEK_TO_NEXT_MEDIA_ITEM,
+                        COMMAND_SEEK_TO_NEXT,
+                        COMMAND_SEEK_TO_MEDIA_ITEM,
+                        COMMAND_SEEK_BACK,
+                        COMMAND_SEEK_FORWARD,
+                        COMMAND_SET_SPEED_AND_PITCH,
+                        COMMAND_SET_SHUFFLE_MODE,
+                        COMMAND_SET_REPEAT_MODE,
+                        COMMAND_GET_CURRENT_MEDIA_ITEM,
+                        COMMAND_GET_TIMELINE,
+                        COMMAND_GET_METADATA,
+                        COMMAND_SET_PLAYLIST_METADATA,
+                        COMMAND_SET_MEDIA_ITEM,
+                        COMMAND_CHANGE_MEDIA_ITEMS,
+                        COMMAND_GET_AUDIO_ATTRIBUTES,
+                        COMMAND_GET_VOLUME,
+                        COMMAND_GET_DEVICE_VOLUME,
+                        COMMAND_SET_VOLUME,
+                        COMMAND_SET_DEVICE_VOLUME_WITH_FLAGS,
+                        COMMAND_GET_TRACKS,
+                        COMMAND_RELEASE,
+                    ).build(),
+            )
             .setPlayWhenReady(_playWhenReady, PLAY_WHEN_READY_CHANGE_REASON_USER_REQUEST)
             .setPlaybackState(currentPlaybackState)
             .setPlaybackParameters(_playbackParameters)
             .setPlaybackSuppressionReason(_playbackSuppressionReason)
             .setPlayerError(_playerError)
+            .setAudioAttributes(_audioAttributes)
             .setPlaylist(playlist)
-            .setPlaylistMetadata(_currentMediaItem?.mediaMetadata ?: MediaMetadata.EMPTY)
+            .setPlaylistMetadata(playlist.getOrNull(currentItemIndex)?.mediaMetadata ?: MediaMetadata.EMPTY)
             .setCurrentMediaItemIndex(currentItemIndex)
             .setContentPositionMs(currentPositionMs)
             .build()
@@ -314,6 +351,8 @@ class TtsPlayer @Inject constructor(
                 _playbackSuppressionReason = PLAYBACK_SUPPRESSION_REASON_NONE
                 pauseInternal()
             }
+            
+            // Explicitly notify the service to update notification state
             invalidateState()
         }
         return Futures.immediateVoidFuture()
@@ -361,10 +400,10 @@ class TtsPlayer @Inject constructor(
         mediaItems.addAll(items)
         currentItemIndex = if (startIndex != C.INDEX_UNSET) startIndex.coerceIn(items.indices) else 0
         
-        if (mediaItems.isNotEmpty()) {
-            _currentMediaItem = mediaItems[currentItemIndex]
+        _currentMediaItem = if (mediaItems.isNotEmpty()) {
+            mediaItems[currentItemIndex]
         } else {
-            _currentMediaItem = null
+            null
         }
         
         invalidateState()
@@ -535,6 +574,8 @@ class TtsPlayer @Inject constructor(
     // TtsPlayer specific
     fun speak(article: com.mienaiknife.narra.data.models.Article, parsedParagraphs: List<String>, playWhenReady: Boolean = false) {
         android.util.Log.d("TtsPlayer", "speak() called: title=${article.title}, paragraphs=${parsedParagraphs.size}, playWhenReady=$playWhenReady")
+        isPreparing = true
+        invalidateState()
         
         ttsEngine.stop()
         isEngineSpeaking = false
@@ -553,7 +594,9 @@ class TtsPlayer @Inject constructor(
             .setUri("tts://${article.id}")
             .setMediaMetadata(MediaMetadata.Builder()
                 .setTitle(article.title)
+                .setSubtitle(article.source)
                 .setArtist(article.source)
+                .setDisplayTitle(article.title) // Essential for Samsung "Now Bar"
                 .setArtworkUri(artworkUri)
                 .setIsPlayable(true)
                 .build())
@@ -561,13 +604,12 @@ class TtsPlayer @Inject constructor(
         
         _currentMediaItem = mediaItem
         
-        // Ensure this item is in the mediaItems list if not already
-        if (!mediaItems.any { it.mediaId == article.id }) {
+        currentItemIndex = if (!mediaItems.any { it.mediaId == article.id }) {
             mediaItems.clear()
             mediaItems.add(mediaItem)
-            currentItemIndex = 0
+            0
         } else {
-            currentItemIndex = mediaItems.indexOfFirst { it.mediaId == article.id }
+            mediaItems.indexOfFirst { it.mediaId == article.id }
         }
 
         _playbackState = STATE_READY
@@ -576,6 +618,7 @@ class TtsPlayer @Inject constructor(
         resumeWordOffset = article.currentWordOffset.coerceAtLeast(0)
         
         _playWhenReady = playWhenReady
+        isPreparing = false
         if (playWhenReady) {
             requestAudioFocus()
             resumeInternal()
@@ -634,6 +677,10 @@ class TtsPlayer @Inject constructor(
     fun getParagraphIndex(): Int = currentParagraphIndex
     fun getWordRange(): IntRange? = currentWordRange
     
+    fun triggerStateInvalidation() {
+        invalidateState()
+    }
+    
     // Stub implementations for required methods
     override fun handleSetRepeatMode(repeatMode: Int): ListenableFuture<*> = Futures.immediateVoidFuture()
     override fun handleSetShuffleModeEnabled(shuffleModeEnabled: Boolean): ListenableFuture<*> = Futures.immediateVoidFuture()
@@ -646,4 +693,11 @@ class TtsPlayer @Inject constructor(
     override fun handleIncreaseDeviceVolume(flags: Int): ListenableFuture<*> = Futures.immediateVoidFuture()
     override fun handleDecreaseDeviceVolume(flags: Int): ListenableFuture<*> = Futures.immediateVoidFuture()
     override fun handleSetDeviceMuted(muted: Boolean, flags: Int): ListenableFuture<*> = Futures.immediateVoidFuture()
+
+    override fun handleSetAudioAttributes(audioAttributes: AudioAttributes, handleAudioFocus: Boolean): ListenableFuture<*> {
+        _audioAttributes = audioAttributes
+        ttsEngine.setAudioAttributes(audioAttributes.usage, audioAttributes.contentType)
+        invalidateState()
+        return Futures.immediateVoidFuture()
+    }
 }

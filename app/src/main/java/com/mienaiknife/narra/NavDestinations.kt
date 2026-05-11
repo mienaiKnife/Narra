@@ -45,16 +45,16 @@ sealed interface NavDestination {
     data object Settings : NavDestination
 
     @Serializable
-    data object SettingsUi : NavDestination
+    data class SettingsUi(val highlightSetting: String? = null) : NavDestination
 
     @Serializable
-    data object SettingsPlayback : NavDestination
+    data class SettingsPlayback(val highlightSetting: String? = null) : NavDestination
 
     @Serializable
-    data object SettingsVoices : NavDestination
+    data class SettingsVoices(val highlightSetting: String? = null) : NavDestination
 
     @Serializable
-    data object SettingsDownloads : NavDestination
+    data class SettingsDownloads(val highlightSetting: String? = null) : NavDestination
 
     @Serializable
     data object SettingsAbout : NavDestination

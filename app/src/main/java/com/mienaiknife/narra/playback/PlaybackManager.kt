@@ -16,11 +16,12 @@
 
 package com.mienaiknife.narra.playback
 
-import androidx.core.content.ContextCompat
 import com.mienaiknife.narra.R
 import android.content.Context
 import android.content.Intent
 import android.media.MediaPlayer
+import android.os.Build
+import android.widget.Toast
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.common.Timeline
@@ -131,6 +132,16 @@ class PlaybackManager @Inject constructor(
 
     init {
         startQueueSync()
+
+        scope.launch {
+            ttsPlayer.engineState.collect { state ->
+                if (state is TtsState.Error && state.message == "No Sherpa-ONNX model selected") {
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(context, state.message, Toast.LENGTH_LONG).show()
+                    }
+                }
+            }
+        }
 
         ttsPlayer.addListener(object : Player.Listener {
             override fun onIsPlayingChanged(isPlaying: Boolean) {
@@ -275,6 +286,15 @@ class PlaybackManager @Inject constructor(
         return true
     }
 
+    private fun startPlaybackService() {
+        val intent = Intent(context, PlaybackService::class.java)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            context.startForegroundService(intent)
+        } else {
+            context.startService(intent)
+        }
+    }
+
     fun setCurrentArticle(
         article: Article,
         blocks: List<ContentBlock>? = null,
@@ -314,19 +334,9 @@ class PlaybackManager @Inject constructor(
                 }
 
                 if (isAutomatic && playWhenReady) {
-                    // Prepare TtsPlayer with the new article but don't start playing yet
+                    // Set up player state BEFORE starting the service to ensure Media3 has metadata immediately
                     ttsPlayer.speak(article, ttsTexts, playWhenReady = false)
-
-                    // Ensure PlaybackService is running
-                    try {
-                        val intent = Intent(context, PlaybackService::class.java).apply {
-                            putExtra("EXTRA_TITLE", article.title)
-                            putExtra("EXTRA_ARTIST", article.source)
-                        }
-                        ContextCompat.startForegroundService(context, intent)
-                    } catch (e: Exception) {
-                        android.util.Log.e("PlaybackManager", "Failed to start PlaybackService", e)
-                    }
+                    startPlaybackService()
 
                     val playChimeAndTitle = settingsManager.playChimeAndTitle.first()
 
@@ -377,19 +387,9 @@ class PlaybackManager @Inject constructor(
                 } else {
                     if (playWhenReady) {
                         ttsPlayer.speak(article, ttsTexts, playWhenReady = true)
+                        startPlaybackService()
                     } else {
                         ttsPlayer.speak(article, ttsTexts, playWhenReady = false)
-                    }
-
-                    // Ensure PlaybackService is running so MediaSession is active
-                    try {
-                        val intent = Intent(context, PlaybackService::class.java).apply {
-                            putExtra("EXTRA_TITLE", article.title)
-                            putExtra("EXTRA_ARTIST", article.source)
-                        }
-                        ContextCompat.startForegroundService(context, intent)
-                    } catch (e: Exception) {
-                        android.util.Log.e("PlaybackManager", "Failed to start PlaybackService", e)
                     }
                 }
             }
@@ -462,22 +462,13 @@ class PlaybackManager @Inject constructor(
     }
 
     fun togglePlayPause() {
+        if (!ttsPlayer.isPlaying) {
+            startPlaybackService()
+        }
         if (ttsPlayer.isPlaying || transitionJob?.isActive == true) {
             transitionJob?.cancel()
             ttsPlayer.pause()
         } else {
-            // Ensure PlaybackService is running when starting playback
-            try {
-                val intent = Intent(context, PlaybackService::class.java)
-                _currentArticle.value?.let {
-                    intent.putExtra("EXTRA_TITLE", it.title)
-                    intent.putExtra("EXTRA_ARTIST", it.source)
-                }
-                ContextCompat.startForegroundService(context, intent)
-            } catch (e: Exception) {
-                android.util.Log.e("PlaybackManager", "Failed to start PlaybackService", e)
-            }
-            
             ttsPlayer.play()
         }
     }

@@ -108,3 +108,5 @@ app/
 - This app will never require a first-party user account; do not design any feature
   that depends on users registering with or authenticating against a server operated
   by this project
+
+And remember, your contribution is very much appreciated. Thank you for your help!

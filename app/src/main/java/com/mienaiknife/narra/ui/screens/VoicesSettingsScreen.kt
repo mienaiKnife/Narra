@@ -60,6 +60,10 @@ import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
+import androidx.compose.runtime.LaunchedEffect
+import com.mienaiknife.narra.ui.components.flashHighlight
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -85,6 +89,7 @@ import com.mienaiknife.narra.ui.viewmodels.VoicesSettingsViewModel
 @Composable
 fun VoicesSettingsScreen(
     onBack: () -> Unit,
+    highlightSetting: String? = null,
     viewModel: VoicesSettingsViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -97,6 +102,7 @@ fun VoicesSettingsScreen(
 
     VoicesSettingsContent(
         uiState = uiState,
+        highlightSetting = highlightSetting,
         onSetEngine = viewModel::setEngine,
         onSelectModel = viewModel::selectModel,
         onSetSpeakerId = viewModel::setSpeakerId,
@@ -114,6 +120,7 @@ fun VoicesSettingsScreen(
 fun VoicesSettingsContent(
     uiState: VoicesSettingsUiState,
     modifier: Modifier = Modifier,
+    highlightSetting: String? = null,
     onSetEngine: (String) -> Unit,
     onSelectModel: (String?) -> Unit,
     onSetSpeakerId: (Int) -> Unit,
@@ -125,6 +132,25 @@ fun VoicesSettingsContent(
     onBack: () -> Unit
 ) {
     val context = LocalContext.current
+
+    val engineSelectionRequester = remember { BringIntoViewRequester() }
+    val androidTtsSettingsRequester = remember { BringIntoViewRequester() }
+    val noiseScaleRequester = remember { BringIntoViewRequester() }
+    val lengthScaleRequester = remember { BringIntoViewRequester() }
+    val kokoroVoiceRequester = remember { BringIntoViewRequester() }
+    val voiceDataRequester = remember { BringIntoViewRequester() }
+
+    LaunchedEffect(highlightSetting) {
+        when (highlightSetting) {
+            "engineSelection" -> engineSelectionRequester.bringIntoView()
+            "androidTtsSettings" -> androidTtsSettingsRequester.bringIntoView()
+            "noiseScale" -> noiseScaleRequester.bringIntoView()
+            "lengthScale" -> lengthScaleRequester.bringIntoView()
+            "kokoroVoice" -> kokoroVoiceRequester.bringIntoView()
+            "voiceData" -> voiceDataRequester.bringIntoView()
+        }
+    }
+
     val engines = listOf("Android's native TTS", "On-device AI (Sherpa-ONNX)")
     val engineValues = listOf("android", "ondevice")
     var expanded by remember { mutableStateOf(false) }
@@ -206,7 +232,10 @@ fun VoicesSettingsContent(
             ExposedDropdownMenuBox(
                 expanded = expanded && !isInitializing,
                 onExpandedChange = { if (!isInitializing) expanded = !expanded },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .bringIntoViewRequester(engineSelectionRequester)
+                    .flashHighlight(highlightSetting == "engineSelection")
             ) {
                 OutlinedTextField(
                     value = selectedEngineName,
@@ -245,6 +274,8 @@ fun VoicesSettingsContent(
                         style = MaterialTheme.typography.bodyLarge,
                         modifier = Modifier
                             .fillMaxWidth()
+                            .bringIntoViewRequester(androidTtsSettingsRequester)
+                            .flashHighlight(highlightSetting == "androidTtsSettings")
                             .padding(vertical = 16.dp)
                             .clickable {
                                 try {
@@ -269,7 +300,10 @@ fun VoicesSettingsContent(
                         modifier = Modifier.padding(vertical = 8.dp)
                     )
 
-                    Column(modifier = Modifier.padding(horizontal = 8.dp)) {
+                    Column(modifier = Modifier
+                        .bringIntoViewRequester(noiseScaleRequester)
+                        .flashHighlight(highlightSetting == "noiseScale")
+                        .padding(horizontal = 8.dp)) {
                         Text(
                             text = "Noise Scale (Expressiveness): ${"%.3f".format(uiState.sherpaNoiseScale)}",
                             style = MaterialTheme.typography.bodyMedium,
@@ -296,7 +330,10 @@ fun VoicesSettingsContent(
                         Text(
                             text = "Length Scale: ${"%.2f".format(uiState.sherpaLengthScale)}",
                             style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onBackground
+                            color = MaterialTheme.colorScheme.onBackground,
+                            modifier = Modifier
+                                .bringIntoViewRequester(lengthScaleRequester)
+                                .flashHighlight(highlightSetting == "lengthScale")
                         )
                         Slider(
                             value = uiState.sherpaLengthScale,
@@ -331,7 +368,10 @@ fun VoicesSettingsContent(
                         ExposedDropdownMenuBox(
                             expanded = kokoroExpanded && !isInitializing,
                             onExpandedChange = { if (!isInitializing) kokoroExpanded = !kokoroExpanded },
-                            modifier = Modifier.fillMaxWidth()
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .bringIntoViewRequester(kokoroVoiceRequester)
+                                .flashHighlight(highlightSetting == "kokoroVoice")
                         ) {
                             OutlinedTextField(
                                 value = currentVoice,
@@ -374,7 +414,10 @@ fun VoicesSettingsContent(
                     Surface(
                         color = MaterialTheme.colorScheme.surfaceContainer,
                         shape = MaterialTheme.shapes.medium,
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .bringIntoViewRequester(voiceDataRequester)
+                            .flashHighlight(highlightSetting == "voiceData")
                     ) {
                         Column {
                             uiState.availableModels.forEachIndexed { index, model ->
@@ -570,6 +613,7 @@ fun VoicesSettingsScreenPreview() {
             Box(modifier = Modifier.padding(innerPadding)) {
                 VoicesSettingsContent(
                     uiState = mockUiState,
+                    highlightSetting = null,
                     onSetEngine = {},
                     onSelectModel = {},
                     onSetSpeakerId = {},

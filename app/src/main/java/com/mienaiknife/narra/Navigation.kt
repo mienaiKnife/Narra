@@ -39,6 +39,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.toRoute
 import com.mienaiknife.narra.ui.components.BottomNavBar
 import com.mienaiknife.narra.ui.components.MiniPlayer
 import com.mienaiknife.narra.ui.screens.AboutScreen
@@ -131,24 +132,44 @@ fun AppNavigation(themeViewModel: ThemeViewModel, initialArticleId: String? = nu
             }
             composable<NavDestination.Settings> {
                 SettingsScreen(
-                    onNavigateToUserInterface = { navController.navigate(NavDestination.SettingsUi) },
-                    onNavigateToPlayback = { navController.navigate(NavDestination.SettingsPlayback) },
-                    onNavigateToVoices = { navController.navigate(NavDestination.SettingsVoices) },
-                    onNavigateToDownloads = { navController.navigate(NavDestination.SettingsDownloads) },
-                    onNavigateToAbout = { navController.navigate(NavDestination.SettingsAbout) }
+                    onNavigateToUserInterface = { navController.navigate(NavDestination.SettingsUi()) },
+                    onNavigateToPlayback = { navController.navigate(NavDestination.SettingsPlayback()) },
+                    onNavigateToVoices = { navController.navigate(NavDestination.SettingsVoices()) },
+                    onNavigateToDownloads = { navController.navigate(NavDestination.SettingsDownloads()) },
+                    onNavigateToAbout = { navController.navigate(NavDestination.SettingsAbout) },
+                    navigateToDestination = { destination ->
+                        navController.navigate(destination)
+                    }
                 )
             }
-            composable<NavDestination.SettingsUi> {
-                UserInterfaceSettingsScreen(themeViewModel = themeViewModel, onBack = { navController.popBackStack() })
+            composable<NavDestination.SettingsUi> { backStackEntry ->
+                val route = backStackEntry.toRoute<NavDestination.SettingsUi>()
+                UserInterfaceSettingsScreen(
+                    themeViewModel = themeViewModel,
+                    highlightSetting = route.highlightSetting,
+                    onBack = { navController.popBackStack() }
+                )
             }
-            composable<NavDestination.SettingsPlayback> {
-                PlaybackSettingsScreen(onBack = { navController.popBackStack() })
+            composable<NavDestination.SettingsPlayback> { backStackEntry ->
+                val route = backStackEntry.toRoute<NavDestination.SettingsPlayback>()
+                PlaybackSettingsScreen(
+                    highlightSetting = route.highlightSetting,
+                    onBack = { navController.popBackStack() }
+                )
             }
-            composable<NavDestination.SettingsVoices> {
-                VoicesSettingsScreen(onBack = { navController.popBackStack() })
+            composable<NavDestination.SettingsVoices> { backStackEntry ->
+                val route = backStackEntry.toRoute<NavDestination.SettingsVoices>()
+                VoicesSettingsScreen(
+                    highlightSetting = route.highlightSetting,
+                    onBack = { navController.popBackStack() }
+                )
             }
-            composable<NavDestination.SettingsDownloads> {
-                DownloadsSettingsScreen(onBack = { navController.popBackStack() })
+            composable<NavDestination.SettingsDownloads> { backStackEntry ->
+                val route = backStackEntry.toRoute<NavDestination.SettingsDownloads>()
+                DownloadsSettingsScreen(
+                    highlightSetting = route.highlightSetting,
+                    onBack = { navController.popBackStack() }
+                )
             }
             composable<NavDestination.SettingsAbout> {
                 AboutScreen(

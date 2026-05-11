@@ -40,7 +40,12 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.getValue
+import com.mienaiknife.narra.ui.components.flashHighlight
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
@@ -57,6 +62,7 @@ import com.mienaiknife.narra.ui.viewmodels.PlaybackSettingsViewModel
 @Composable
 fun PlaybackSettingsScreen(
     onBack: () -> Unit,
+    highlightSetting: String? = null,
     viewModel: PlaybackSettingsViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -64,6 +70,7 @@ fun PlaybackSettingsScreen(
     PlaybackSettingsContent(
         onBack = onBack,
         uiState = uiState,
+        highlightSetting = highlightSetting,
         onPauseOnDisconnectChange = { viewModel.setPauseOnDisconnect(it) },
         onPauseForInterruptionsChange = { viewModel.setPauseForInterruptions(it) },
         onAutoPlayNextChange = { viewModel.setAutoPlayNext(it) },
@@ -80,6 +87,7 @@ fun PlaybackSettingsScreen(
 fun PlaybackSettingsContent(
     onBack: () -> Unit,
     uiState: PlaybackSettingsUiState,
+    highlightSetting: String? = null,
     onPauseOnDisconnectChange: (Boolean) -> Unit,
     onPauseForInterruptionsChange: (Boolean) -> Unit,
     onAutoPlayNextChange: (Boolean) -> Unit,
@@ -90,6 +98,30 @@ fun PlaybackSettingsContent(
     onFastForwardHardwareButtonChange: (String) -> Unit,
     onRewindHardwareButtonChange: (String) -> Unit
 ) {
+    val pauseOnDisconnectRequester = remember { BringIntoViewRequester() }
+    val pauseForInterruptionsRequester = remember { BringIntoViewRequester() }
+    val fastForwardSkipTimeRequester = remember { BringIntoViewRequester() }
+    val rewindSkipTimeRequester = remember { BringIntoViewRequester() }
+    val fastForwardHardwareButtonRequester = remember { BringIntoViewRequester() }
+    val rewindHardwareButtonRequester = remember { BringIntoViewRequester() }
+    val autoPlayNextRequester = remember { BringIntoViewRequester() }
+    val playChimeAndTitleRequester = remember { BringIntoViewRequester() }
+    val chimeSoundRequester = remember { BringIntoViewRequester() }
+
+    LaunchedEffect(highlightSetting) {
+        when (highlightSetting) {
+            "pauseOnDisconnect" -> pauseOnDisconnectRequester.bringIntoView()
+            "pauseForInterruptions" -> pauseForInterruptionsRequester.bringIntoView()
+            "fastForwardSkipTime" -> fastForwardSkipTimeRequester.bringIntoView()
+            "rewindSkipTime" -> rewindSkipTimeRequester.bringIntoView()
+            "fastForwardHardwareButton" -> fastForwardHardwareButtonRequester.bringIntoView()
+            "rewindHardwareButton" -> rewindHardwareButtonRequester.bringIntoView()
+            "autoPlayNext" -> autoPlayNextRequester.bringIntoView()
+            "playChimeAndTitle" -> playChimeAndTitleRequester.bringIntoView()
+            "chimeSound" -> chimeSoundRequester.bringIntoView()
+        }
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -136,6 +168,8 @@ fun PlaybackSettingsContent(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .bringIntoViewRequester(pauseOnDisconnectRequester)
+                    .flashHighlight(highlightSetting == "pauseOnDisconnect")
                     .clickable { onPauseOnDisconnectChange(!uiState.pauseOnDisconnect) }
                     .padding(vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically
@@ -170,6 +204,8 @@ fun PlaybackSettingsContent(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .bringIntoViewRequester(pauseForInterruptionsRequester)
+                    .flashHighlight(highlightSetting == "pauseForInterruptions")
                     .clickable { onPauseForInterruptionsChange(!uiState.pauseForInterruptions) }
                     .padding(vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically
@@ -213,7 +249,10 @@ fun PlaybackSettingsContent(
                 subtitle = "Customize how much the fast forward button skips forward",
                 selectedValue = uiState.fastForwardSkipTime,
                 options = listOf("10s", "15s", "30s", "60s"),
-                onValueChange = onFastForwardTimeChange
+                onValueChange = onFastForwardTimeChange,
+                modifier = Modifier
+                    .bringIntoViewRequester(fastForwardSkipTimeRequester)
+                    .flashHighlight(highlightSetting == "fastForwardSkipTime")
             )
 
             SettingDropDownItem(
@@ -221,7 +260,10 @@ fun PlaybackSettingsContent(
                 subtitle = "Customize how much the rewind button skips backwards",
                 selectedValue = uiState.rewindSkipTime,
                 options = listOf("10s", "15s", "30s", "60s"),
-                onValueChange = onRewindTimeChange
+                onValueChange = onRewindTimeChange,
+                modifier = Modifier
+                    .bringIntoViewRequester(rewindSkipTimeRequester)
+                    .flashHighlight(highlightSetting == "rewindSkipTime")
             )
 
             SettingDropDownItem(
@@ -229,7 +271,10 @@ fun PlaybackSettingsContent(
                 subtitle = "Customize what the fast forward hardware button does",
                 selectedValue = uiState.fastForwardHardwareButton,
                 options = listOf("Fast forward", "Skip article", "Rewind", "Restart article"),
-                onValueChange = onFastForwardHardwareButtonChange
+                onValueChange = onFastForwardHardwareButtonChange,
+                modifier = Modifier
+                    .bringIntoViewRequester(fastForwardHardwareButtonRequester)
+                    .flashHighlight(highlightSetting == "fastForwardHardwareButton")
             )
 
             SettingDropDownItem(
@@ -237,7 +282,10 @@ fun PlaybackSettingsContent(
                 subtitle = "Customize what the rewind hardware button does",
                 selectedValue = uiState.rewindHardwareButton,
                 options = listOf("Fast forward", "Skip article", "Rewind", "Restart article"),
-                onValueChange = onRewindHardwareButtonChange
+                onValueChange = onRewindHardwareButtonChange,
+                modifier = Modifier
+                    .bringIntoViewRequester(rewindHardwareButtonRequester)
+                    .flashHighlight(highlightSetting == "rewindHardwareButton")
             )
             
             Text(
@@ -250,6 +298,8 @@ fun PlaybackSettingsContent(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .bringIntoViewRequester(autoPlayNextRequester)
+                    .flashHighlight(highlightSetting == "autoPlayNext")
                     .clickable { onAutoPlayNextChange(!uiState.autoPlayNext) }
                     .padding(vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically
@@ -284,6 +334,8 @@ fun PlaybackSettingsContent(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .bringIntoViewRequester(playChimeAndTitleRequester)
+                    .flashHighlight(highlightSetting == "playChimeAndTitle")
                     .clickable { onPlayChimeAndTitleChange(!uiState.playChimeAndTitle) }
                     .padding(vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically
@@ -320,7 +372,10 @@ fun PlaybackSettingsContent(
                 subtitle = "Choose the sound to play before the title",
                 selectedValue = uiState.chimeSound,
                 options = listOf("music_box_chime_positive", "vibraphone_chime_positive"),
-                onValueChange = onChimeSoundChange
+                onValueChange = onChimeSoundChange,
+                modifier = Modifier
+                    .bringIntoViewRequester(chimeSoundRequester)
+                    .flashHighlight(highlightSetting == "chimeSound")
             )
         }
     }
@@ -338,6 +393,7 @@ fun PlaybackSettingsScreenPreview() {
                 PlaybackSettingsContent(
                     onBack = {},
                     uiState = PlaybackSettingsUiState(),
+                    highlightSetting = null,
                     onPauseOnDisconnectChange = {},
                     onPauseForInterruptionsChange = {},
                     onAutoPlayNextChange = {},

@@ -41,6 +41,9 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.RecordVoiceOver
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.StayCurrentPortrait
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuAnchorType
+import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -68,7 +71,8 @@ fun SettingsScreen(
     onNavigateToPlayback: () -> Unit,
     onNavigateToVoices: () -> Unit,
     onNavigateToDownloads: () -> Unit,
-    onNavigateToAbout: () -> Unit
+    onNavigateToAbout: () -> Unit,
+    navigateToDestination: (com.mienaiknife.narra.NavDestination) -> Unit = {}
 ) {
     var searchQuery by remember { mutableStateOf("") }
 
@@ -94,31 +98,88 @@ fun SettingsScreen(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        OutlinedTextField(
-            value = searchQuery,
-            onValueChange = { searchQuery = it },
+        var expanded by remember { mutableStateOf(false) }
+
+        @OptIn(ExperimentalMaterial3Api::class)
+        ExposedDropdownMenuBox(
+            expanded = expanded,
+            onExpandedChange = { expanded = it },
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp),
-            placeholder = { Text("Search settings...") },
-            leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
-            trailingIcon = {
-                if (searchQuery.isNotEmpty()) {
-                    IconButton(onClick = { searchQuery = "" }) {
-                        Icon(
-                            imageVector = Icons.Default.Clear,
-                            contentDescription = "Clear search"
+                .padding(horizontal = 16.dp)
+        ) {
+            OutlinedTextField(
+                value = searchQuery,
+                onValueChange = {
+                    searchQuery = it
+                    expanded = it.isNotBlank()
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .menuAnchor(type = ExposedDropdownMenuAnchorType.PrimaryNotEditable),
+                placeholder = { Text("Search settings...") },
+                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                trailingIcon = {
+                    if (searchQuery.isNotEmpty()) {
+                        IconButton(onClick = {
+                            searchQuery = ""
+                            expanded = false
+                        }) {
+                            Icon(
+                                imageVector = Icons.Default.Clear,
+                                contentDescription = "Clear search"
+                            )
+                        }
+                    }
+                },
+                shape = RoundedCornerShape(24.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
+                    focusedBorderColor = MaterialTheme.colorScheme.primary
+                ),
+                singleLine = true
+            )
+
+            val filteredSettings = remember(searchQuery) {
+                if (searchQuery.isBlank()) {
+                    emptyList()
+                } else {
+                    allSearchableSettings.filter { item ->
+                        item.title.contains(searchQuery, ignoreCase = true) ||
+                                item.subtitle.contains(searchQuery, ignoreCase = true) ||
+                                item.keywords.any { it.contains(searchQuery, ignoreCase = true) }
+                    }.take(5)
+                }
+            }
+
+            if (expanded && filteredSettings.isNotEmpty()) {
+                ExposedDropdownMenu(
+                    expanded = expanded,
+                    onDismissRequest = { expanded = false },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    filteredSettings.forEach { result ->
+                        androidx.compose.material3.DropdownMenuItem(
+                            text = {
+                                Column {
+                                    Text(result.title, style = MaterialTheme.typography.bodyLarge)
+                                    Text(
+                                        result.subtitle,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            },
+                            onClick = {
+                                navigateToDestination(result.destination)
+                                searchQuery = ""
+                                expanded = false
+                            }
                         )
                     }
                 }
-            },
-            shape = RoundedCornerShape(24.dp),
-            colors = OutlinedTextFieldDefaults.colors(
-                unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
-                focusedBorderColor = MaterialTheme.colorScheme.primary
-            ),
-            singleLine = true
-        )
+            }
+        }
 
         val settingsItems = listOf(
             SettingsItem(
@@ -218,7 +279,8 @@ fun SettingsScreenPreview() {
                     onNavigateToPlayback = {},
                     onNavigateToVoices = {},
                     onNavigateToDownloads = {},
-                    onNavigateToAbout = {}
+                    onNavigateToAbout = {},
+                    navigateToDestination = {}
                 )
             }
         }
