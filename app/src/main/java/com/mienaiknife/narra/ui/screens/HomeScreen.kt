@@ -38,20 +38,25 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AutoStories
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.RssFeed
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -71,6 +76,7 @@ import androidx.navigation.compose.rememberNavController
 import coil3.compose.AsyncImage
 import com.mienaiknife.narra.data.models.Article
 import com.mienaiknife.narra.data.models.SampleArticles
+import com.mienaiknife.narra.ui.components.AdaptiveText
 import com.mienaiknife.narra.ui.components.BottomNavBar
 import com.mienaiknife.narra.ui.theme.NarraTheme
 import com.mienaiknife.narra.ui.viewmodels.HomeViewModel
@@ -78,13 +84,28 @@ import com.mienaiknife.narra.ui.viewmodels.HomeViewModel
 @Composable
 fun HomeScreen(
     onArticleClick: (String) -> Unit,
+    onAddClick: () -> Unit,
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    LaunchedEffect(Unit) {
+        viewModel.uiEvent.collect { event ->
+            when (event) {
+                is HomeViewModel.UiEvent.ShowSnackbar -> {
+                    snackbarHostState.showSnackbar(event.message)
+                }
+                else -> {}
+            }
+        }
+    }
 
     HomeScreenContent(
         uiState = uiState,
+        snackbarHostState = snackbarHostState,
         onArticleClick = onArticleClick,
+        onAddClick = onAddClick,
         onRefresh = { viewModel.refresh() }
     )
 }
@@ -93,109 +114,146 @@ fun HomeScreen(
 @Composable
 fun HomeScreenContent(
     uiState: com.mienaiknife.narra.ui.viewmodels.HomeUiState,
+    snackbarHostState: SnackbarHostState,
     onArticleClick: (String) -> Unit,
+    onAddClick: () -> Unit,
     modifier: Modifier = Modifier,
     onRefresh: () -> Unit = {}
 ) {
     val scrollState = rememberScrollState()
     val pullToRefreshState = rememberPullToRefreshState()
 
-    Column(
+    Scaffold(
+        snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
+        containerColor = MaterialTheme.colorScheme.background,
         modifier = modifier
             .fillMaxSize()
-            .statusBarsPadding()
-    ) {
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Row(
+            .statusBarsPadding(),
+        contentWindowInsets = androidx.compose.foundation.layout.WindowInsets(0, 0, 0, 0)
+    ) { innerPadding ->
+        Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .heightIn(min = 48.dp)
-                .padding(horizontal = 16.dp),
-            verticalAlignment = Alignment.CenterVertically
+                .padding(innerPadding)
+                .fillMaxSize()
         ) {
-            Text(
-                text = "Home",
-                style = MaterialTheme.typography.headlineSmall,
-                color = MaterialTheme.colorScheme.onBackground
-            )
-        }
+            Spacer(modifier = Modifier.height(16.dp))
 
-        Spacer(modifier = Modifier.height(16.dp))
-
-        PullToRefreshBox(
-            isRefreshing = uiState.isRefreshing,
-            onRefresh = onRefresh,
-            state = pullToRefreshState,
-            modifier = Modifier.weight(1f),
-            indicator = {
-                PullToRefreshDefaults.Indicator(
-                    state = pullToRefreshState,
-                    isRefreshing = uiState.isRefreshing,
-                    containerColor = MaterialTheme.colorScheme.surface,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.align(Alignment.TopCenter)
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = 48.dp)
+                    .padding(horizontal = 16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Home",
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = MaterialTheme.colorScheme.onBackground
                 )
             }
-        ) {
-            if (uiState.isLoading) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .verticalScroll(scrollState),
-                    contentAlignment = Alignment.Center
-                ) {
-                    androidx.compose.material3.CircularProgressIndicator()
-                }
-            } else if (uiState.continueListening.isNotEmpty() || uiState.newFromFeeds.isNotEmpty() || uiState.favoriteArticles.isNotEmpty()) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .verticalScroll(scrollState)
-                ) {
-                    if (uiState.continueListening.isNotEmpty()) {
-                        ArticleCarousel(
-                            title = "Continue listening",
-                            articles = uiState.continueListening,
-                            onArticleClick = onArticleClick
-                        )
-                        Spacer(modifier = Modifier.height(24.dp))
-                    }
 
-                    if (uiState.newFromFeeds.isNotEmpty()) {
-                        ArticleCarousel(
-                            title = "New from your feeds",
-                            articles = uiState.newFromFeeds,
-                            onArticleClick = onArticleClick
-                        )
-                        Spacer(modifier = Modifier.height(24.dp))
-                    }
+            Spacer(modifier = Modifier.height(16.dp))
 
-                    if (uiState.favoriteArticles.isNotEmpty()) {
-                        ArticleCarousel(
-                            title = "Your favorites",
-                            articles = uiState.favoriteArticles,
-                            onArticleClick = onArticleClick
-                        )
-                        Spacer(modifier = Modifier.height(24.dp))
-                    }
-
-                    Spacer(modifier = Modifier.height(16.dp))
-                }
-            } else {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .verticalScroll(scrollState),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "No texts yet. Add some from the Add screen!",
-                        modifier = Modifier.padding(16.dp),
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        textAlign = TextAlign.Center
+            PullToRefreshBox(
+                isRefreshing = uiState.isRefreshing,
+                onRefresh = onRefresh,
+                state = pullToRefreshState,
+                modifier = Modifier.weight(1f),
+                indicator = {
+                    PullToRefreshDefaults.Indicator(
+                        state = pullToRefreshState,
+                        isRefreshing = uiState.isRefreshing,
+                        containerColor = MaterialTheme.colorScheme.surface,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.align(Alignment.TopCenter)
                     )
+                }
+            ) {
+                if (uiState.isLoading) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .verticalScroll(scrollState),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        androidx.compose.material3.CircularProgressIndicator()
+                    }
+                } else if (uiState.continueListening.isNotEmpty() || uiState.newFromFeeds.isNotEmpty() || uiState.favoriteArticles.isNotEmpty()) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .verticalScroll(scrollState)
+                    ) {
+                        if (uiState.continueListening.isNotEmpty()) {
+                            ArticleCarousel(
+                                title = "Continue listening",
+                                articles = uiState.continueListening,
+                                onArticleClick = onArticleClick
+                            )
+                            Spacer(modifier = Modifier.height(24.dp))
+                        }
+
+                        if (uiState.newFromFeeds.isNotEmpty()) {
+                            ArticleCarousel(
+                                title = "New from your feeds",
+                                articles = uiState.newFromFeeds,
+                                onArticleClick = onArticleClick
+                            )
+                            Spacer(modifier = Modifier.height(24.dp))
+                        }
+
+                        if (uiState.favoriteArticles.isNotEmpty()) {
+                            ArticleCarousel(
+                                title = "Your favorites",
+                                articles = uiState.favoriteArticles,
+                                onArticleClick = onArticleClick
+                            )
+                            Spacer(modifier = Modifier.height(24.dp))
+                        }
+
+                        Spacer(modifier = Modifier.height(32.dp))
+                    }
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .verticalScroll(scrollState),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            modifier = Modifier.padding(32.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.AutoStories,
+                                contentDescription = null,
+                                modifier = Modifier.size(64.dp),
+                                tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Text(
+                                text = "Your library is empty",
+                                style = MaterialTheme.typography.headlineSmall,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = "Add articles from RSS feeds, EPUB files, or web links to start listening.",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                textAlign = TextAlign.Center
+                            )
+                            Spacer(modifier = Modifier.height(24.dp))
+                            Button(
+                                onClick = onAddClick,
+                                shape = RoundedCornerShape(8.dp)
+                            ) {
+                                Icon(Icons.Default.Add, contentDescription = null)
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Add Content")
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -306,19 +364,21 @@ fun ArticleCard(
                     .padding(12.dp)
                     .fillMaxWidth()
             ) {
-                Text(
+                val baseColor = if (article.progress == 1f) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f) else MaterialTheme.colorScheme.onSurface
+                val variantColor = if (article.progress == 1f) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f) else MaterialTheme.colorScheme.onSurfaceVariant
+                
+                AdaptiveText(
                     text = article.title,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = if (article.progress == 1f) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f) else MaterialTheme.colorScheme.onSurface,
+                    style = MaterialTheme.typography.bodyMedium.copy(color = baseColor),
+                    modifier = Modifier.fillMaxWidth(),
                     maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                    minLines = 2
+                    overflow = TextOverflow.Ellipsis
                 )
                 Spacer(modifier = Modifier.height(4.dp))
-                Text(
+                AdaptiveText(
                     text = article.source,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = if (article.progress == 1f) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f) else MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.bodySmall.copy(color = variantColor),
+                    modifier = Modifier.fillMaxWidth(),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -332,6 +392,7 @@ fun ArticleCard(
 fun HomeScreenPreview() {
     val navController = rememberNavController()
     val mockArticles = SampleArticles.all
+    val snackbarHostState = remember { SnackbarHostState() }
     NarraTheme(darkTheme = true, dynamicColor = false) {
         Scaffold(
             bottomBar = { BottomNavBar(navController) }
@@ -343,7 +404,9 @@ fun HomeScreenPreview() {
                         newFromFeeds = mockArticles.filter { it.isFromFeed }.take(5),
                         favoriteArticles = mockArticles.filter { it.isFavorite }.take(5)
                     ),
-                    onArticleClick = {}
+                    snackbarHostState = snackbarHostState,
+                    onArticleClick = {},
+                    onAddClick = {}
                 )
             }
         }

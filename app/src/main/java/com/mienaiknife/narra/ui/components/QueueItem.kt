@@ -40,6 +40,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -69,6 +71,7 @@ fun QueueItem(
 ) {
     var showMenu by remember { mutableStateOf(false) }
     val uriHandler = LocalUriHandler.current
+    val haptic = LocalHapticFeedback.current
 
     Box(modifier = modifier) {
         QueueItemRow(
@@ -79,6 +82,7 @@ fun QueueItem(
             showRemainingTime = showRemainingTime,
             onClick = { showMenu = true },
             onPlayPauseClick = {
+                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                 if (article.isInQueue) onPlayPauseClick() else onAddToQueueClick()
             },
             dragModifier = dragModifier
@@ -96,6 +100,7 @@ fun QueueItem(
                     )
                 },
                 onClick = {
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                     onMarkAsPlayedClick()
                     showMenu = false
                 },
@@ -110,6 +115,7 @@ fun QueueItem(
                 DropdownMenuItem(
                     text = { Text("Remove from queue") },
                     onClick = {
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                         onRemoveClick()
                         showMenu = false
                     },
@@ -124,6 +130,7 @@ fun QueueItem(
                 DropdownMenuItem(
                     text = { Text("Add to queue") },
                     onClick = {
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                         onAddToQueueClick()
                         showMenu = false
                     },
@@ -196,7 +203,11 @@ private fun QueueItemRow(
                 .weight(1f)
                 .semantics(mergeDescendants = true) {
                     val progressPercent = ((article.progress ?: 0f) * 100).toInt()
-                    contentDescription = "${article.title} from ${article.source}, $progressPercent percent completed"
+                    contentDescription = if (article.isInQueue) {
+                        "${article.title} by ${article.source}, $progressPercent percent completed"
+                    } else {
+                        "${article.title} by ${article.source}"
+                    }
                 }
                 .combinedClickable(
                     onClick = onClick,
@@ -255,17 +266,19 @@ private fun QueueItemRow(
                     }
                     append(article.source)
                 }
-                Text(
+                
+                val baseColor = if (article.progress == 1f) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f) else MaterialTheme.colorScheme.onSurface
+                val variantColor = if (article.progress == 1f) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f) else MaterialTheme.colorScheme.onSurfaceVariant
+
+                AdaptiveText(
                     text = sourceText,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = if (article.progress == 1f) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f) else MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.bodySmall.copy(color = variantColor),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
-                Text(
+                AdaptiveText(
                     text = article.title,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = if (article.progress == 1f) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f) else MaterialTheme.colorScheme.onSurface,
+                    style = MaterialTheme.typography.bodyMedium.copy(color = baseColor),
                     maxLines = if (article.isInQueue) 2 else 3,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -335,7 +348,15 @@ private fun QueueItemRow(
 
         IconButton(
             onClick = onPlayPauseClick,
-            modifier = Modifier.padding(end = 16.dp),
+            modifier = Modifier
+                .padding(end = 16.dp)
+                .semantics {
+                    contentDescription = when {
+                        !article.isInQueue -> "Add ${article.title} to queue"
+                        isPlaying -> "Pause ${article.title}"
+                        else -> "Play ${article.title}"
+                    }
+                },
             enabled = !isDownloading
         ) {
             val (icon, contentDescription) = when {

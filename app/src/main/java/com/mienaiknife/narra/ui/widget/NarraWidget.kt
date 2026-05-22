@@ -17,14 +17,17 @@
 package com.mienaiknife.narra.ui.widget
 
 import android.content.Context
+import android.graphics.BitmapFactory
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
 import androidx.glance.GlanceTheme
 import androidx.glance.Image
 import androidx.glance.ImageProvider
 import androidx.glance.appwidget.action.actionRunCallback
+import androidx.glance.action.actionStartActivity
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.provideContent
 import androidx.glance.layout.Alignment
@@ -35,6 +38,7 @@ import androidx.glance.layout.Spacer
 import androidx.glance.layout.fillMaxHeight
 import androidx.glance.layout.fillMaxSize
 import androidx.glance.layout.fillMaxWidth
+import androidx.glance.layout.height
 import androidx.glance.layout.padding
 import androidx.glance.layout.size
 import androidx.glance.layout.width
@@ -43,6 +47,7 @@ import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import androidx.glance.currentState
 import androidx.glance.ColorFilter
+import androidx.glance.action.actionParametersOf
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.cornerRadius
 import androidx.glance.state.PreferencesGlanceStateDefinition
@@ -50,14 +55,17 @@ import androidx.glance.preview.ExperimentalGlancePreviewApi
 import androidx.glance.preview.Preview
 import androidx.glance.background
 import androidx.glance.material3.ColorProviders
+import com.mienaiknife.narra.MainActivity
 import com.mienaiknife.narra.R
 import com.mienaiknife.narra.ui.theme.DarkColorScheme
 import com.mienaiknife.narra.utils.DateUtils
+import java.io.File
 
 class NarraWidget : GlanceAppWidget() {
 
     companion object {
         val DarkThemeColors = ColorProviders(DarkColorScheme)
+        private val ARTICLE_ID_KEY = androidx.glance.action.ActionParameters.Key<String>("article_id")
     }
 
     override val stateDefinition = PreferencesGlanceStateDefinition
@@ -65,14 +73,24 @@ class NarraWidget : GlanceAppWidget() {
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         provideContent {
             val prefs = currentState<androidx.datastore.preferences.core.Preferences>()
+            val imagePath = prefs[WidgetManager.KEY_IMAGE_PATH]
+            val bitmap = if (!imagePath.isNullOrEmpty()) {
+                val file = File(imagePath)
+                if (file.exists()) {
+                    BitmapFactory.decodeFile(file.absolutePath)
+                } else null
+            } else null
+
             GlanceTheme(colors = DarkThemeColors) {
                 WidgetContent(
+                    articleId = prefs[WidgetManager.KEY_ARTICLE_ID],
                     title = prefs[WidgetManager.KEY_ARTICLE_TITLE] ?: "No article playing",
                     isPlaying = prefs[WidgetManager.KEY_IS_PLAYING] ?: false,
                     progress = prefs[WidgetManager.KEY_PROGRESS] ?: 0f,
                     duration = prefs[WidgetManager.KEY_DURATION] ?: 0L,
                     showRemainingTime = prefs[WidgetManager.KEY_SHOW_REMAINING_TIME] ?: true,
-                    playbackSpeed = prefs[WidgetManager.KEY_PLAYBACK_SPEED] ?: 1.0f
+                    playbackSpeed = prefs[WidgetManager.KEY_PLAYBACK_SPEED] ?: 1.0f,
+                    artwork = bitmap
                 )
             }
         }
@@ -80,12 +98,14 @@ class NarraWidget : GlanceAppWidget() {
 
     @Composable
     fun WidgetContent(
-        title: String,
+        articleId: String?,
+        title: String?,
         isPlaying: Boolean,
         progress: Float,
         duration: Long,
         showRemainingTime: Boolean,
-        playbackSpeed: Float
+        playbackSpeed: Float,
+        artwork: android.graphics.Bitmap?
     ) {
         val totalDurationAtSpeed = (duration / playbackSpeed).toLong()
         val currentPosition = (progress * totalDurationAtSpeed).toLong()
@@ -101,6 +121,8 @@ class NarraWidget : GlanceAppWidget() {
             "$elapsedStr / $durationStr"
         } else ""
 
+        val titleText = title ?: "No article playing"
+
         Box(
             modifier = GlanceModifier
                 .fillMaxSize()
@@ -112,19 +134,34 @@ class NarraWidget : GlanceAppWidget() {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 // Article Icon
-                // Remote images require manual downloading to Bitmap in Glance 1.1.1.
-                // For now, we use a placeholder.
+                val imageProvider = if (artwork != null) {
+                    ImageProvider(artwork)
+                } else {
+                    ImageProvider(R.drawable.ic_launcher_foreground)
+                }
+
+                val articleIconModifier = GlanceModifier
+                    .size(64.dp)
+                    .cornerRadius(12.dp)
+                    .background(GlanceTheme.colors.surface)
+
                 Box(
-                    modifier = GlanceModifier
-                        .size(64.dp)
-                        .cornerRadius(12.dp)
-                        .background(GlanceTheme.colors.surface),
+                    modifier = if (articleId != null) {
+                        articleIconModifier.clickable(
+                            actionStartActivity<MainActivity>(
+                                actionParametersOf(ARTICLE_ID_KEY to articleId)
+                            )
+                        )
+                    } else {
+                        articleIconModifier
+                    },
                     contentAlignment = Alignment.Center
                 ) {
                     Image(
-                        provider = ImageProvider(R.drawable.ic_launcher_foreground),
-                        contentDescription = "Placeholder",
-                        modifier = GlanceModifier.size(48.dp)
+                        provider = imageProvider,
+                        contentDescription = "Article artwork",
+                        modifier = GlanceModifier.fillMaxSize(),
+                        contentScale = androidx.glance.layout.ContentScale.Crop
                     )
                 }
 
@@ -137,10 +174,11 @@ class NarraWidget : GlanceAppWidget() {
                 ) {
                     // Row 1: Title
                     Text(
-                        text = title,
+                        text = titleText,
                         style = TextStyle(
                             color = GlanceTheme.colors.onSurface,
-                            fontWeight = FontWeight.Bold
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 16.sp
                         ),
                         maxLines = 1
                     )
@@ -158,54 +196,69 @@ class NarraWidget : GlanceAppWidget() {
 
                     // Row 3: Controls
                     Row(
-                        modifier = GlanceModifier.fillMaxWidth(),
+                        modifier = GlanceModifier.fillMaxWidth().height(36.dp).padding(horizontal = 12.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Spacer(modifier = GlanceModifier.defaultWeight())
-                        Image(
-                            provider = ImageProvider(R.drawable.ic_rewind),
-                            contentDescription = "Rewind",
-                            colorFilter = ColorFilter.tint(GlanceTheme.colors.onBackground),
-                            modifier = GlanceModifier.size(32.dp).clickable(
+                        Box(
+                            modifier = GlanceModifier.defaultWeight().fillMaxHeight().clickable(
                                 actionRunCallback<PlaybackActionCallback>(
                                     PlaybackActionCallback.createParameters(PlaybackActionCallback.ACTION_SKIP_BACKWARD)
                                 )
+                            ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Image(
+                                provider = ImageProvider(R.drawable.ic_rewind),
+                                contentDescription = "Rewind",
+                                colorFilter = ColorFilter.tint(GlanceTheme.colors.onBackground),
+                                modifier = GlanceModifier.size(32.dp)
                             )
-                        )
-                        Spacer(modifier = GlanceModifier.defaultWeight())
-                        Image(
-                            provider = ImageProvider(if (isPlaying) R.drawable.ic_pause else R.drawable.ic_play),
-                            contentDescription = if (isPlaying) "Pause" else "Play",
-                            colorFilter = ColorFilter.tint(GlanceTheme.colors.onBackground),
-                            modifier = GlanceModifier.size(32.dp).clickable(
+                        }
+                        Box(
+                            modifier = GlanceModifier.defaultWeight().fillMaxHeight().clickable(
                                 actionRunCallback<PlaybackActionCallback>(
                                     PlaybackActionCallback.createParameters(PlaybackActionCallback.ACTION_TOGGLE)
                                 )
+                            ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Image(
+                                provider = ImageProvider(if (isPlaying) R.drawable.ic_pause else R.drawable.ic_play),
+                                contentDescription = if (isPlaying) "Pause" else "Play",
+                                colorFilter = ColorFilter.tint(GlanceTheme.colors.onBackground),
+                                modifier = GlanceModifier.size(32.dp)
                             )
-                        )
-                        Spacer(modifier = GlanceModifier.defaultWeight())
-                        Image(
-                            provider = ImageProvider(R.drawable.ic_fast_forward),
-                            contentDescription = "Fast Forward",
-                            colorFilter = ColorFilter.tint(GlanceTheme.colors.onBackground),
-                            modifier = GlanceModifier.size(32.dp).clickable(
+                        }
+                        Box(
+                            modifier = GlanceModifier.defaultWeight().fillMaxHeight().clickable(
                                 actionRunCallback<PlaybackActionCallback>(
                                     PlaybackActionCallback.createParameters(PlaybackActionCallback.ACTION_SKIP_FORWARD)
                                 )
+                            ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Image(
+                                provider = ImageProvider(R.drawable.ic_fast_forward),
+                                contentDescription = "Fast Forward",
+                                colorFilter = ColorFilter.tint(GlanceTheme.colors.onBackground),
+                                modifier = GlanceModifier.size(32.dp)
                             )
-                        )
-                        Spacer(modifier = GlanceModifier.defaultWeight())
-                        Image(
-                            provider = ImageProvider(R.drawable.ic_skip_next),
-                            contentDescription = "Skip Next",
-                            colorFilter = ColorFilter.tint(GlanceTheme.colors.onBackground),
-                            modifier = GlanceModifier.size(32.dp).clickable(
+                        }
+                        Box(
+                            modifier = GlanceModifier.defaultWeight().fillMaxHeight().clickable(
                                 actionRunCallback<PlaybackActionCallback>(
                                     PlaybackActionCallback.createParameters(PlaybackActionCallback.ACTION_SKIP_NEXT)
                                 )
+                            ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Image(
+                                provider = ImageProvider(R.drawable.ic_skip_next),
+                                contentDescription = "Skip Next",
+                                colorFilter = ColorFilter.tint(GlanceTheme.colors.onBackground),
+                                modifier = GlanceModifier.size(32.dp)
                             )
-                        )
-                        Spacer(modifier = GlanceModifier.defaultWeight())
+                        }
                     }
                 }
             }
@@ -219,12 +272,14 @@ class NarraWidget : GlanceAppWidget() {
 fun NarraWidgetPreview() {
     GlanceTheme(colors = NarraWidget.DarkThemeColors) {
         NarraWidget().WidgetContent(
+            articleId = "sample_id",
             title = "Extremely Long Article Title That Should Be Truncated",
             isPlaying = true,
             progress = 0.5f,
             duration = 3600000L,
             showRemainingTime = true,
-            playbackSpeed = 1.0f
+            playbackSpeed = 1.0f,
+            artwork = null
         )
     }
 }

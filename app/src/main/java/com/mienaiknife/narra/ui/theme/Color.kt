@@ -20,14 +20,14 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 
-// Mockup 2 Colors
-private val NarraBlack = Color(0xFF191919)
-private val NarraDarkGrey = Color(0xFF282828)
-private val NarraCyan = Color(0xFF26a9be)
-private val NarraCyanTrack = NarraCyan.copy(alpha = 0.5f)
-private val NarraWhite = Color(0xFFededed)
-private val NarraGrey = Color(0xFF949494)
-private val NarraLightGrey = Color(0xFFe0e0e0)
+// Brand Colors
+val NarraBlack = Color(0xFF191919)
+val NarraDarkGrey = Color(0xFF282828)
+val NarraCyan = Color(0xFF1d8a9c) // Adjusted for better contrast on light backgrounds
+val NarraCyanTrack = NarraCyan.copy(alpha = 0.5f)
+val NarraWhite = Color(0xFFededed)
+val NarraGrey = Color(0xFF949494)
+val NarraLightGrey = Color(0xFFe0e0e0)
 
 val LightColorScheme = lightColorScheme(
     primary = NarraCyan,

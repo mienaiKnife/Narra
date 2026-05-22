@@ -108,7 +108,12 @@ fun AppNavigation(themeViewModel: ThemeViewModel, initialArticleId: String? = nu
                 bottom = bottomPadding
             )
         ) {
-            composable<NavDestination.Home> { HomeScreen(onArticleClick = { articleId -> navController.navigate(NavDestination.Reader(articleId)) }) }
+            composable<NavDestination.Home> { 
+                HomeScreen(
+                    onArticleClick = { articleId -> navController.navigate(NavDestination.Reader(articleId)) },
+                    onAddClick = { navController.navigate(NavDestination.Add) }
+                ) 
+            }
             composable<NavDestination.Queue> { 
                 QueueScreen(onNavigateToHistory = { navController.navigate(NavDestination.History) }) 
             }

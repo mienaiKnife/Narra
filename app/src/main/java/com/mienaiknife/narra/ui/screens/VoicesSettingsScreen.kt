@@ -218,7 +218,7 @@ fun VoicesSettingsContent(
 
         Column(
             modifier = Modifier
-                .fillMaxSize()
+                .fillMaxWidth()
                 .padding(horizontal = 16.dp)
                 .verticalScroll(scrollState)
         ) {

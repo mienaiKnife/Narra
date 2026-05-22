@@ -91,7 +91,13 @@ object UrlUtils {
     fun isPublicUrl(urlString: String): Boolean {
         return try {
             val url = URL(urlString)
+            val protocol = url.protocol.lowercase()
+            if (protocol != "http" && protocol != "https") {
+                return false
+            }
+            
             val host = url.host.lowercase()
+            if (host.isEmpty()) return false
 
             // 1. Basic check for localhost and local names
             if (host == "localhost" || host == "127.0.0.1" || host == "::1" || host.endsWith(".local") || host.contains(":") || host == "0.0.0.0") {

@@ -38,6 +38,7 @@ Run unit tests using the following command:
 
 ## Documentation
 
+- [User Guide](docs/USAGE.md) - Learn how to use Narra's features.
 - [Architecture](docs/ARCHITECTURE.md) - Learn about the project's technical design.
 - [TTS Engines](docs/TTS_ENGINES.md) - Guide for implementing and extending TTS providers.
 - [Content Parsing](docs/CONTENT_PARSING.md) - How we extract text from RSS, ebooks, and Web.

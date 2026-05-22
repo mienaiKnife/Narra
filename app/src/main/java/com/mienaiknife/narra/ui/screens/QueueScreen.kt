@@ -364,7 +364,7 @@ fun QueueScreenContent(
                         modifier = Modifier
                             .fillMaxSize(),
                         verticalArrangement = Arrangement.spacedBy(24.dp),
-                        contentPadding = PaddingValues(bottom = 16.dp)
+                        contentPadding = PaddingValues(bottom = 32.dp)
                     ) {
                         itemsIndexed(
                             items = articles,

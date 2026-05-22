@@ -16,7 +16,6 @@
 
 package com.mienaiknife.narra.tts.ondevice
 
-import android.content.Context
 import com.mienaiknife.narra.domain.TtsState
 import com.mienaiknife.narra.domain.repository.ModelRepository
 import com.mienaiknife.narra.playback.PlaybackSettingsManager
@@ -30,14 +29,12 @@ import org.mockito.Mockito.`when`
 
 class SherpaTtsEngineErrorTest {
 
-    private lateinit var context: Context
     private lateinit var modelRepository: ModelRepository
     private lateinit var settingsManager: PlaybackSettingsManager
     private lateinit var engine: SherpaTtsEngine
 
     @Before
     fun setup() {
-        context = mock(Context::class.java)
         modelRepository = mock(ModelRepository::class.java)
         settingsManager = mock(PlaybackSettingsManager::class.java)
         
@@ -48,7 +45,7 @@ class SherpaTtsEngineErrorTest {
         `when`(settingsManager.ttsSpeakerId).thenReturn(MutableStateFlow(0))
         `when`(settingsManager.sherpaSpeed).thenReturn(MutableStateFlow(1.0f))
 
-        engine = SherpaTtsEngine(context, modelRepository, settingsManager)
+        engine = SherpaTtsEngine(modelRepository, settingsManager)
     }
 
     @Test
@@ -56,6 +53,7 @@ class SherpaTtsEngineErrorTest {
         // Force the state to Idle to test our change specifically.
         val stateField = SherpaTtsEngine::class.java.getDeclaredField("_state")
         stateField.isAccessible = true
+        @Suppress("UNCHECKED_CAST")
         (stateField.get(engine) as MutableStateFlow<TtsState>).value = TtsState.Idle
         
         engine.speak("Hello", "1")
@@ -69,6 +67,7 @@ class SherpaTtsEngineErrorTest {
     fun testEnqueueTransitionsToErrorStateWhenNoModelSelected() {
         val stateField = SherpaTtsEngine::class.java.getDeclaredField("_state")
         stateField.isAccessible = true
+        @Suppress("UNCHECKED_CAST")
         (stateField.get(engine) as MutableStateFlow<TtsState>).value = TtsState.Idle
         
         engine.enqueue("Hello", "1")

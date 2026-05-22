@@ -247,7 +247,7 @@ fun HistoryScreenContent(
                         state = scrollState,
                         modifier = Modifier.fillMaxSize(),
                         verticalArrangement = Arrangement.spacedBy(24.dp),
-                        contentPadding = PaddingValues(bottom = 16.dp)
+                        contentPadding = PaddingValues(bottom = 32.dp)
                     ) {
                         items(articles, key = { it.id }) { article ->
                             QueueItem(

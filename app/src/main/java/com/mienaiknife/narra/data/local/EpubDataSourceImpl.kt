@@ -57,8 +57,13 @@ class EpubDataSourceImpl @Inject constructor(
             }
 
             val articles = spineReferences.mapIndexedNotNull { index, spineReference ->
-                val resource = spineReference.resource
-                val content = String(resource.data, charset(resource.inputEncoding ?: "UTF-8"))
+                val resource = spineReference.resource ?: return@mapIndexedNotNull null
+                
+                // Read data only when needed and use a specific buffer size if possible, 
+                // but epublib loads data into memory anyway. We can at least clear the reference 
+                // if we were handling raw bytes, but here we'll focus on efficient parsing.
+                val contentBytes = resource.data ?: return@mapIndexedNotNull null
+                val content = String(contentBytes, charset(resource.inputEncoding ?: "UTF-8"))
                 val doc = Jsoup.parse(content)
                 
                 val body = doc.body()

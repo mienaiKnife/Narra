@@ -37,7 +37,7 @@ import javax.inject.Singleton
 class DelegatingTtsEngine @Inject constructor(
     private val androidTtsEngine: AndroidTtsEngine,
     private val sherpaTtsEngine: SherpaTtsEngine,
-    private val settingsManager: PlaybackSettingsManager
+    private val settingsManager: PlaybackSettingsManager,
 ) : TtsEngine {
 
     private val _state = MutableStateFlow<TtsState>(TtsState.Idle)
@@ -59,7 +59,7 @@ class DelegatingTtsEngine @Inject constructor(
     }
 
     private fun switchEngine(newEngine: TtsEngine) {
-        if (currentEngine == newEngine && engineStateJob != null) return
+        if ((currentEngine == newEngine) && (engineStateJob != null)) return
         
         currentEngine.stop()
         currentEngine = newEngine

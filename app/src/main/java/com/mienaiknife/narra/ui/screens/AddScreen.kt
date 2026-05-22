@@ -59,11 +59,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
-import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.compose.rememberNavController
+import com.mienaiknife.narra.ui.components.AdaptiveText
 import com.mienaiknife.narra.ui.components.BottomNavBar
 import com.mienaiknife.narra.ui.theme.NarraTheme
 import com.mienaiknife.narra.ui.utils.UrlUtils
@@ -73,7 +75,7 @@ import kotlinx.coroutines.flow.collectLatest
 @Composable
 fun AddScreen(
     viewModel: HomeViewModel = hiltViewModel(),
-    onArticleAdded: () -> Unit = {}
+    onArticleAdded: () -> Unit = {},
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
     val context = LocalContext.current
@@ -99,6 +101,7 @@ fun AddScreen(
                 is HomeViewModel.UiEvent.ArticleAdded -> {
                     Toast.makeText(context, "Article added successfully", Toast.LENGTH_SHORT).show()
                     url = ""
+                    onArticleAdded()
                 }
                 is HomeViewModel.UiEvent.FeedSubscribed -> {
                     Toast.makeText(context, "Subscribed to ${event.feedName}", Toast.LENGTH_SHORT).show()
@@ -203,20 +206,24 @@ fun AddScreenContent(
                     },
                     modifier = Modifier
                         .weight(1f)
-                        .height(86.dp),
+                        .heightIn(min = 86.dp),
+                    contentPadding = PaddingValues(8.dp),
                     shape = RoundedCornerShape(16.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = MaterialTheme.colorScheme.surfaceContainer,
                         contentColor = MaterialTheme.colorScheme.onSurface
                     )
                 ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.padding(vertical = 4.dp)
+                    ) {
                         Icon(
                             imageVector = Icons.Default.Language,
                             contentDescription = null
                         )
                         Spacer(modifier = Modifier.height(8.dp))
-                        Text(
+                        AdaptiveText(
                             text = "Import webpage",
                             style = MaterialTheme.typography.bodyMedium,
                             textAlign = TextAlign.Center
@@ -235,20 +242,24 @@ fun AddScreenContent(
                     },
                     modifier = Modifier
                         .weight(1f)
-                        .height(86.dp),
+                        .heightIn(min = 86.dp),
+                    contentPadding = PaddingValues(8.dp),
                     shape = RoundedCornerShape(16.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = MaterialTheme.colorScheme.surfaceContainer,
                         contentColor = MaterialTheme.colorScheme.onSurface
                     )
                 ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.padding(vertical = 4.dp)
+                    ) {
                         Icon(
                             imageVector = Icons.Default.RssFeed,
                             contentDescription = null
                         )
                         Spacer(modifier = Modifier.height(8.dp))
-                        Text(
+                        AdaptiveText(
                             text = "Add feed",
                             style = MaterialTheme.typography.bodyMedium,
                             textAlign = TextAlign.Center
@@ -265,20 +276,23 @@ fun AddScreenContent(
                 },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(86.dp),
+                    .heightIn(min = 86.dp),
                 shape = RoundedCornerShape(16.dp),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = MaterialTheme.colorScheme.surfaceContainer,
                     contentColor = MaterialTheme.colorScheme.onSurface
                 )
             ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.padding(vertical = 8.dp)
+                ) {
                     Icon(
                         imageVector = Icons.Default.Description,
                         contentDescription = null
                     )
                     Spacer(modifier = Modifier.height(8.dp))
-                    Text(
+                    AdaptiveText(
                         text = "Upload a file",
                         style = MaterialTheme.typography.bodyMedium,
                         textAlign = TextAlign.Center

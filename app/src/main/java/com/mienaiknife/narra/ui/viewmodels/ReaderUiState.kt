@@ -23,6 +23,7 @@ data class ReaderUiState(
     val article: Article? = null,
     val blocks: List<ContentBlock> = emptyList(),
     val isLoading: Boolean = false,
+    val error: Throwable? = null,
     val isPlaying: Boolean = false,
     val currentPosition: Long = 0L,
     val duration: Long = 0L,

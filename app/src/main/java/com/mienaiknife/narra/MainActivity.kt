@@ -32,6 +32,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.mienaiknife.narra.service.SyncManager
 import com.mienaiknife.narra.ui.theme.NarraTheme
 import com.mienaiknife.narra.ui.theme.ThemeViewModel
+import com.mienaiknife.narra.ui.theme.getFontFamily
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 
@@ -54,7 +55,7 @@ class MainActivity : ComponentActivity() {
         installSplashScreen()
         super.onCreate(savedInstanceState)
         
-        val articleId = intent.getStringExtra("article_id")
+        initialArticleId = intent.getStringExtra("article_id")
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (ContextCompat.checkSelfPermission(
@@ -76,10 +77,11 @@ class MainActivity : ComponentActivity() {
             val isDarkMode = uiState.isDarkMode
             val isDynamicColor = uiState.isDynamicColor
             val useSystemTheme = uiState.useSystemTheme
+            val fontFamily = getFontFamily(uiState.readerFontFamily)
 
             val darkTheme = if (useSystemTheme) androidx.compose.foundation.isSystemInDarkTheme() else isDarkMode
 
-            NarraTheme(darkTheme = darkTheme, dynamicColor = isDynamicColor) {
+            NarraTheme(darkTheme = darkTheme, dynamicColor = isDynamicColor, fontFamily = fontFamily) {
                 AppNavigation(themeViewModel = themeViewModel, initialArticleId = initialArticleId)
             }
         }

@@ -59,6 +59,7 @@ import com.mienaiknife.narra.ui.components.SettingDropDownItem
 import com.mienaiknife.narra.ui.theme.NarraTheme
 import com.mienaiknife.narra.ui.theme.ThemeManager
 import com.mienaiknife.narra.ui.theme.ThemeViewModel
+import com.mienaiknife.narra.ui.theme.getFontFamily
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -255,7 +256,7 @@ fun UserInterfaceSettingsScreen(
 
             SettingDropDownItem(
                 title = "Font family",
-                subtitle = "Choose the font used for article content in the reader screen",
+                subtitle = "Choose the font used for the app's graphical interface",
                 selectedValue = uiState.readerFontFamily,
                 options = listOf("Roboto", "OpenDyslexic3"),
                 onValueChange = themeViewModel::setReaderFontFamily,
@@ -427,7 +428,8 @@ fun UserInterfaceSettingsScreenPreview() {
     val themeManager = remember { ThemeManager(context) }
     val themeViewModel = remember { ThemeViewModel(themeManager) }
     val navController = rememberNavController()
-    NarraTheme(darkTheme = true, dynamicColor = false) {
+    val fontFamily = getFontFamily("Roboto")
+    NarraTheme(darkTheme = true, dynamicColor = false, fontFamily = fontFamily) {
         Scaffold(
             bottomBar = { BottomNavBar(navController) }
         ) { innerPadding ->

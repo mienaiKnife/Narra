@@ -27,6 +27,7 @@ import com.mienaiknife.narra.ui.models.ContentBlock
 import com.mienaiknife.narra.ui.utils.HtmlParser
 import com.mienaiknife.narra.playback.PlaybackManager
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -37,6 +38,7 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 import kotlinx.coroutines.flow.combine
@@ -45,7 +47,7 @@ import kotlinx.coroutines.flow.combine
 class ReaderViewModel @Inject constructor(
     private val repository: ContentRepository,
     private val playbackManager: PlaybackManager,
-    savedStateHandle: SavedStateHandle
+    savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
 
     private val articleId: String = savedStateHandle.toRoute<NavDestination.Reader>().articleId
@@ -58,14 +60,45 @@ class ReaderViewModel @Inject constructor(
     }
 
     private val _blocks = MutableStateFlow<List<ContentBlock>>(emptyList())
-    private val _isLoading = MutableStateFlow(true)
+    private val _isLoading = MutableStateFlow(value = true)
+    private val _error = MutableStateFlow<Throwable?>(null)
     private val _searchQuery = MutableStateFlow("")
+
+    private val _searchResults = combine(_blocks, _searchQuery) { blocks, query ->
+        if (query.length >= 2) {
+            withContext(Dispatchers.Default) {
+                blocks.flatMapIndexed { index, block ->
+                    val text = block.text.text
+                    val results = mutableListOf<SearchResult>()
+                    var startIndex = 0
+                    while (startIndex < text.length) {
+                        val found = text.indexOf(query, startIndex, ignoreCase = true)
+                        if (found == -1) break
+                        results.add(
+                            SearchResult(
+                                paragraphIndex = index,
+                                wordRange = found until (found + query.length),
+                                previewText = text // Could be truncated
+                            )
+                        )
+                        startIndex = found + query.length
+                    }
+                    results
+                }
+            }
+        } else emptyList()
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = emptyList()
+    )
 
     @Suppress("UNCHECKED_CAST")
     val uiState: StateFlow<ReaderUiState> = combine(
         playbackManager.currentArticle,
         _blocks,
         _isLoading,
+        _error,
         playbackManager.isPlaying,
         playbackManager.currentPosition,
         playbackManager.duration,
@@ -75,46 +108,25 @@ class ReaderViewModel @Inject constructor(
         playbackManager.settingsManager.fastForwardSkipTime,
         playbackManager.settingsManager.rewindSkipTime,
         playbackManager.sleepTimerMillisLeft,
-        _searchQuery
+        _searchQuery,
+        _searchResults
     ) { flows ->
-        val blocks = flows[1] as List<ContentBlock>
-        val query = flows[12] as String
-        val searchResults = if (query.length >= 2) {
-            blocks.flatMapIndexed { index, block ->
-                val text = block.text.text
-                val results = mutableListOf<SearchResult>()
-                var startIndex = 0
-                while (startIndex < text.length) {
-                    val found = text.indexOf(query, startIndex, ignoreCase = true)
-                    if (found == -1) break
-                    results.add(
-                        SearchResult(
-                            paragraphIndex = index,
-                            wordRange = found until (found + query.length),
-                            previewText = text // Could be truncated
-                        )
-                    )
-                    startIndex = found + query.length
-                }
-                results
-            }
-        } else emptyList()
-
         ReaderUiState(
             article = flows[0] as Article?,
-            blocks = blocks,
+            blocks = flows[1] as List<ContentBlock>,
             isLoading = flows[2] as Boolean,
-            isPlaying = flows[3] as Boolean,
-            currentPosition = flows[4] as Long,
-            duration = flows[5] as Long,
-            playbackSpeed = flows[6] as Float,
-            currentParagraphIndex = flows[7] as Int,
-            currentWordRange = flows[8] as IntRange?,
-            fastForwardSkipTime = flows[9] as String,
-            rewindSkipTime = flows[10] as String,
-            sleepTimerMillisLeft = flows[11] as Long?,
-            searchQuery = query,
-            searchResults = searchResults
+            error = flows[3] as Throwable?,
+            isPlaying = flows[4] as Boolean,
+            currentPosition = flows[5] as Long,
+            duration = flows[6] as Long,
+            playbackSpeed = flows[7] as Float,
+            currentParagraphIndex = flows[8] as Int,
+            currentWordRange = flows[9] as IntRange?,
+            fastForwardSkipTime = flows[10] as String,
+            rewindSkipTime = flows[11] as String,
+            sleepTimerMillisLeft = flows[12] as Long?,
+            searchQuery = flows[13] as String,
+            searchResults = flows[14] as List<SearchResult>
         )
     }.stateIn(
         scope = viewModelScope,
@@ -129,7 +141,9 @@ class ReaderViewModel @Inject constructor(
         playbackManager.currentArticle
             .onEach { art ->
                 if (art != null) {
-                    val parsedBlocks = HtmlParser.parse(art.content)
+                    val parsedBlocks = withContext(Dispatchers.Default) {
+                        HtmlParser.parse(art.content)
+                    }
                     _blocks.value = parsedBlocks
                 } else {
                     _blocks.value = emptyList()
@@ -141,17 +155,21 @@ class ReaderViewModel @Inject constructor(
     fun loadArticle(id: String) {
         if (playbackManager.currentArticle.value?.id == id) {
             _isLoading.value = false
+            _error.value = null
             return
         }
 
         viewModelScope.launch {
             _isLoading.value = true
+            _error.value = null
             try {
                 var articleData = repository.getArticleById(id)
                 if (articleData != null) {
                     if (!articleData.isInQueue) {
                         repository.addToQueue(id).onFailure { error ->
                             _uiEvent.emit(UiEvent.ShowSnackbar(error.message ?: "Failed to download article"))
+                            _error.value = error
+                            return@launch
                         }
                         // Refresh data after adding to queue (which might have downloaded content)
                         articleData = repository.getArticleById(id)
@@ -159,14 +177,26 @@ class ReaderViewModel @Inject constructor(
 
                     if (articleData != null) {
                         // This triggers the Flow in PlaybackManager, which our init block observes
-                        val blocks = HtmlParser.parse(articleData.content)
+                        val blocks = withContext(Dispatchers.Default) {
+                            HtmlParser.parse(articleData.content)
+                        }
                         playbackManager.setCurrentArticle(articleData, blocks, playWhenReady = false)
+                    } else {
+                        _error.value = Exception("Article not found after adding to queue")
                     }
+                } else {
+                    _error.value = Exception("Article not found")
                 }
+            } catch (e: Exception) {
+                _error.value = e
             } finally {
                 _isLoading.value = false
             }
         }
+    }
+
+    fun retry() {
+        loadArticle(articleId)
     }
 
     fun togglePlayPause() = playbackManager.togglePlayPause()

@@ -31,6 +31,7 @@ Be aware these are coming so that current architectural decisions don't block th
 - Automatic readability/reader-mode heuristic improvements over time
 - Importing texts by scanning photos
 - User-customizable color themes
+- Support for more languages
 
 ## Tech Stack
 - Language: Kotlin
@@ -109,4 +110,4 @@ app/
   that depends on users registering with or authenticating against a server operated
   by this project
 
-And remember, your contribution is very much appreciated. Thank you for your help!
+Your contribution is very much appreciated. Thank you for your help!

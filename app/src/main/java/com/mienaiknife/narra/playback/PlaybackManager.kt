@@ -248,7 +248,11 @@ class PlaybackManager @Inject constructor(
                 .setUri("tts://${article.id}")
                 .setMediaMetadata(MediaMetadata.Builder()
                     .setTitle(article.title)
+                    .setSubtitle(article.source)
                     .setArtist(article.source)
+                    .setAlbumTitle(article.source)
+                    .setAlbumArtist(article.source)
+                    .setDisplayTitle(article.title)
                     .setArtworkUri(artworkUri)
                     .setIsPlayable(true)
                     .build())
@@ -510,7 +514,11 @@ class PlaybackManager @Inject constructor(
                 }
                 repository.updateArticleProgress(article.id, 0f, 0, 0)
                 ttsPlayer.speak(
-                    article.copy(currentParagraphIndex = 0, currentWordOffset = 0, progress = 0f),
+                    article.copy(
+                        currentParagraphIndex = 0,
+                        currentWordOffset = 0,
+                        progress = 0f
+                    ),
                     ttsTexts,
                     ttsPlayer.playWhenReady
                 )
@@ -550,7 +558,11 @@ class PlaybackManager @Inject constructor(
                 }
                 repository.updateArticleProgress(current.id, 0f, 0, 0)
                 ttsPlayer.speak(
-                    current.copy(currentParagraphIndex = 0, currentWordOffset = 0, progress = 0f),
+                    current.copy(
+                        currentParagraphIndex = 0,
+                        currentWordOffset = 0,
+                        progress = 0f
+                    ),
                     ttsTexts,
                     ttsPlayer.playWhenReady
                 )

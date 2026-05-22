@@ -16,7 +16,6 @@
 
 package com.mienaiknife.narra.tts.ondevice
 
-import android.content.Context
 import android.media.AudioAttributes
 import android.media.AudioFormat
 import android.media.AudioTrack
@@ -28,7 +27,6 @@ import com.mienaiknife.narra.domain.models.TtsModelType
 import com.mienaiknife.narra.domain.repository.ModelRepository
 import com.mienaiknife.narra.playback.PlaybackSettingsManager
 import com.k2fsa.sherpa.onnx.*
-import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -51,9 +49,8 @@ import javax.inject.Singleton
 
 @Singleton
 class SherpaTtsEngine @Inject constructor(
-    @param:ApplicationContext private val context: Context,
     private val modelRepository: ModelRepository,
-    private val settingsManager: PlaybackSettingsManager
+    private val settingsManager: PlaybackSettingsManager,
 ) : TtsEngine {
 
     private val _state = MutableStateFlow<TtsState>(TtsState.Initializing)
@@ -85,7 +82,7 @@ class SherpaTtsEngine @Inject constructor(
         val startChar: Int,
         val endChar: Int,
         val startSample: Int,
-        val endSample: Int
+        val endSample: Int,
     )
 
     data class SynthesizedAudio(
@@ -106,17 +103,15 @@ class SherpaTtsEngine @Inject constructor(
             if (sampleRate != other.sampleRate) return false
             if (utteranceId != other.utteranceId) return false
             if (text != other.text) return false
-            if (sessionId != other.sessionId) return false
-
-            return true
+            return sessionId == other.sessionId
         }
 
         override fun hashCode(): Int {
             var result = samples.contentHashCode()
-            result = 31 * result + sampleRate
-            result = 31 * result + utteranceId.hashCode()
-            result = 31 * result + text.hashCode()
-            result = 31 * result + sessionId
+            result = (31 * result) + sampleRate
+            result = (31 * result) + utteranceId.hashCode()
+            result = (31 * result) + text.hashCode()
+            result = (31 * result) + sessionId
             return result
         }
     }
@@ -148,9 +143,7 @@ class SherpaTtsEngine @Inject constructor(
                     currentSpeakerId = speakerId
                     // For Kokoro, we can change speaker without re-init, 
                     // but we might want to restart current synthesis to apply it immediately
-                    if (currentModelType == TtsModelType.KOKORO && _state.value is TtsState.Speaking) {
-                        // Optional: restart current paragraph synthesis
-                    }
+                    // TODO: Optional: restart current paragraph synthesis if currentModelType == TtsModelType.KOKORO && _state.value is TtsState.Speaking
                 }
             }
         }
@@ -167,9 +160,11 @@ class SherpaTtsEngine @Inject constructor(
         val modelMetadata = models.find { it.id == modelId }
         val modelType = modelMetadata?.type
 
-        if (modelId == currentModelId &&
+        if (
+            (modelId == currentModelId) &&
             (modelType == TtsModelType.KOKORO || noiseScale == lastNoiseScale) &&
-            lengthScale == lastLengthScale && tts != null
+            (lengthScale == lastLengthScale) &&
+            (tts != null)
         ) {
             return
         }
@@ -410,7 +405,7 @@ class SherpaTtsEngine @Inject constructor(
             audioTrack?.apply {
                 if (state == AudioTrack.STATE_UNINITIALIZED) return@apply
                 
-                setPlaybackParams(playbackParams.setSpeed(playbackSpeed))
+                playbackParams = playbackParams.setSpeed(playbackSpeed)
                 setVolume(volume)
                 if (playState != AudioTrack.PLAYSTATE_PLAYING) {
                     play()
@@ -451,7 +446,7 @@ class SherpaTtsEngine @Inject constructor(
                     
                     if (written == 0) {
                         // Buffer full, wait a bit longer to be power efficient
-                        kotlinx.coroutines.delay(100)
+                        delay(100)
                     }
                 }
                 
@@ -473,7 +468,7 @@ class SherpaTtsEngine @Inject constructor(
                         currentWord?.endChar ?: 0,
                         playedFrames
                     )
-                    kotlinx.coroutines.delay(30)
+                    delay(30)
                 }
             }
             

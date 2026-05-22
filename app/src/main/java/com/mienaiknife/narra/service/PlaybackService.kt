@@ -135,6 +135,7 @@ class PlaybackService : MediaLibraryService() {
 
                 widgetManager.updateState(
                     isPlaying = state.isPlaying,
+                    articleId = state.article?.id,
                     title = state.article?.title,
                     source = state.article?.source,
                     imageUrl = state.article?.imageUrl ?: state.article?.feedImageUrl,
@@ -394,7 +395,11 @@ class PlaybackService : MediaLibraryService() {
                 }
                 android.util.Log.d("PlaybackService", "Manual startForeground(1000) with MediaStyle in onCreate")
             } catch (e: Exception) {
-                android.util.Log.e("PlaybackService", "Failed to startForeground in onCreate", e)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && e is android.app.ForegroundServiceStartNotAllowedException) {
+                    android.util.Log.e("PlaybackService", "Foreground service start not allowed in onCreate", e)
+                } else {
+                    android.util.Log.e("PlaybackService", "Failed to startForeground in onCreate", e)
+                }
             }
         }
         
