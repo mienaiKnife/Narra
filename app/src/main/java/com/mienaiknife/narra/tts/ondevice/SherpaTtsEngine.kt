@@ -44,6 +44,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import java.io.File
+import kotlin.math.abs
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -215,6 +216,7 @@ class SherpaTtsEngine @Inject constructor(
                 currentModelType = modelType
                 lastNoiseScale = noiseScale
                 lastLengthScale = lengthScale
+                Log.i("SherpaTtsEngine", "Engine initialized successfully with model: $modelId, type: $modelType")
                 _state.value = TtsState.Ready
                 startLoops()
             } catch (e: Exception) {
@@ -340,7 +342,7 @@ class SherpaTtsEngine @Inject constructor(
                     val audio = engine.generate(request.text, currentSpeakerId ?: 0)
                     if (request.sessionId != currentSessionId) continue
                     
-                    val boundaries = estimateWordBoundaries(request.text, audio.samples.size)
+                    val boundaries = estimateWordBoundaries(request.text, audio.samples.size, audio.samples)
                     
                     synthesizedQueue.send(
                         SynthesizedAudio(
@@ -554,12 +556,23 @@ class SherpaTtsEngine @Inject constructor(
         }
     }
 
-    private fun estimateWordBoundaries(text: String, totalSamples: Int): List<WordBoundary> {
+    private fun estimateWordBoundaries(text: String, totalSamples: Int, samples: FloatArray): List<WordBoundary> {
         val boundaries = mutableListOf<WordBoundary>()
-        val totalChars = text.length
-        if (totalChars == 0) return boundaries
+        if (text.isEmpty() || totalSamples == 0) return boundaries
 
-        // Find all non-whitespace tokens
+        // 1. Detect actual speech bounds to avoid counting silence in the heuristic
+        val (speechStart, speechEnd) = detectSpeechBounds(samples)
+        val speechSamples = (speechEnd - speechStart).coerceAtLeast(0)
+        
+        if (speechSamples == 0) return boundaries
+
+        // 2. Calculate weighted length of the text
+        val weights = text.map { getCharWeight(it) }
+        val totalWeight = weights.sum()
+        
+        if (totalWeight == 0f) return boundaries
+
+        // 3. Find all non-whitespace tokens (words)
         val regex = Regex("\\S+")
         val matches = regex.findAll(text).toList()
         
@@ -569,15 +582,49 @@ class SherpaTtsEngine @Inject constructor(
             val startChar = match.range.first
             val endChar = match.range.last + 1
             
-            // Linear heuristic: map character position to sample position
-            // This assumes a constant speech rate throughout the paragraph
-            val startSample = (startChar.toFloat() / totalChars * totalSamples).toInt()
-            val endSample = (endChar.toFloat() / totalChars * totalSamples).toInt()
+            // Weight-based heuristic: sum weights of characters before and within the word
+            val weightBefore = weights.take(startChar).sum()
+            val weightInWord = weights.subList(startChar, endChar).sum()
+            
+            val startSample = speechStart + (weightBefore / totalWeight * speechSamples).toInt()
+            val endSample = speechStart + ((weightBefore + weightInWord) / totalWeight * speechSamples).toInt()
             
             boundaries.add(WordBoundary(startChar, endChar, startSample, endSample))
         }
         
         return boundaries
+    }
+
+    private fun detectSpeechBounds(samples: FloatArray): Pair<Int, Int> {
+        val threshold = 0.01f 
+        var start = 0
+        // Search first 20% for start
+        val startLimit = (samples.size * 0.2).toInt()
+        while (start < startLimit && start < samples.size && abs(samples[start]) < threshold) {
+            start++
+        }
+        
+        var end = samples.size - 1
+        // Search last 20% for end
+        val endLimit = (samples.size * 0.8).toInt()
+        while (end > endLimit && end > 0 && abs(samples[end]) < threshold) {
+            end--
+        }
+        
+        // If we didn't find clear bounds, use a small buffer
+        if (start >= startLimit) start = (samples.size * 0.05).toInt()
+        if (end <= endLimit) end = (samples.size * 0.95).toInt()
+        
+        return Pair(start, end)
+    }
+
+    private fun getCharWeight(c: Char): Float {
+        return when (c) {
+            '.', '!', '?' -> 3.0f // Longest pause
+            ',', ';', ':', '-' -> 2.0f // Medium pause
+            ' ' -> 0.6f // Slight gap between words
+            else -> 1.0f // Standard character duration
+        }
     }
 
     override fun release() {

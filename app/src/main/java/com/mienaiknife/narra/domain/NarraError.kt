@@ -34,7 +34,14 @@ sealed class NarraError : Throwable() {
 
     sealed class Storage : NarraError() {
         class DiskFull : Storage()
+        class FileNotFound : Storage()
         data class AccessDenied(override val message: String?) : Storage()
+    }
+
+    sealed class Model : NarraError() {
+        class NotFound : Model()
+        data class DownloadFailed(override val message: String?) : Model()
+        class InvalidFormat : Model()
     }
 
     data class Unknown(override val cause: Throwable?) : NarraError()

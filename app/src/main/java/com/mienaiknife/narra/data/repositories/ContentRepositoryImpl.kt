@@ -29,6 +29,7 @@ import com.mienaiknife.narra.data.models.Article
 import com.mienaiknife.narra.data.remote.RemoteFeedDataSource
 import com.mienaiknife.narra.data.remote.WebDataSource
 import com.mienaiknife.narra.data.settings.DownloadSettingsManager
+import com.mienaiknife.narra.domain.NarraError
 import com.mienaiknife.narra.domain.repository.ContentRepository
 import com.mienaiknife.narra.ui.utils.NetworkMonitor
 import com.mienaiknife.narra.utils.DateUtils
@@ -128,12 +129,12 @@ class ContentRepositoryImpl(
 
     private suspend fun checkConnection(): Result<Unit> {
         if (!networkMonitor.isOnline()) {
-            return Result.failure(com.mienaiknife.narra.domain.NarraError.Network.NoConnection())
+            return Result.failure(NarraError.Network.NoConnection())
         }
 
         val wifiOnly = downloadSettingsManager.downloadOverWifiOnly.first()
         if (wifiOnly && !networkMonitor.isOnWifi()) {
-            return Result.failure(com.mienaiknife.narra.domain.NarraError.Network.WifiRequired())
+            return Result.failure(NarraError.Network.WifiRequired())
         }
 
         return Result.success(Unit)
@@ -147,7 +148,7 @@ class ContentRepositoryImpl(
 
         val existingArticle = articleDao.getArticleByUrl(url)
         if (existingArticle != null && existingArticle.isInQueue) {
-            return@withContext Result.failure(com.mienaiknife.narra.domain.NarraError.Content.ArticleAlreadyInQueue())
+            return@withContext Result.failure(NarraError.Content.ArticleAlreadyInQueue())
         }
 
         webDataSource.downloadArticle(url).mapCatching { remoteArticle ->
@@ -203,11 +204,11 @@ class ContentRepositoryImpl(
     }
 
     override suspend fun addToQueue(id: String): Result<Unit> {
-        val article = articleDao.getArticleById(id) ?: return Result.failure(com.mienaiknife.narra.domain.NarraError.Content.NotFound())
+        val article = articleDao.getArticleById(id) ?: return Result.failure(NarraError.Content.NotFound())
         
         // If content is empty, trigger full download (which also handles image persistence)
         if (article.content.isNullOrEmpty()) {
-            val url = article.url ?: return Result.failure(com.mienaiknife.narra.domain.NarraError.Content.EmptyContent())
+            val url = article.url ?: return Result.failure(NarraError.Content.EmptyContent())
             return downloadWebPage(url).map { }
         }
 
@@ -379,7 +380,7 @@ class ContentRepositoryImpl(
             }
             Result.success(Unit)
         } catch (e: Exception) {
-            Result.failure(e)
+            Result.failure(NarraError.Unknown(e))
         }
     }
 
@@ -431,7 +432,7 @@ class ContentRepositoryImpl(
             val feeds = feedDao.getAllFeeds().first()
             opmlDataSource.generateOpml(outputStream, feeds)
         } catch (e: Exception) {
-            Result.failure(e)
+            Result.failure(NarraError.Unknown(e))
         }
     }
 
@@ -445,10 +446,10 @@ class ContentRepositoryImpl(
                 }
                 Result.success(Unit)
             } else {
-                Result.failure(Exception("Database file not found"))
+                Result.failure(NarraError.Storage.FileNotFound())
             }
         } catch (e: Exception) {
-            Result.failure(e)
+            Result.failure(NarraError.Unknown(e))
         }
     }
 
@@ -468,7 +469,7 @@ class ContentRepositoryImpl(
             }
             Result.success(Unit)
         } catch (e: Exception) {
-            Result.failure(e)
+            Result.failure(NarraError.Unknown(e))
         }
     }
 

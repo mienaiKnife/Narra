@@ -36,3 +36,5 @@ google-services.json
 .DS_Store
 /build
 /captures
+/app/src/main/java/com/mienaiknife/narra/.artifacts/
+/dummy-docs/

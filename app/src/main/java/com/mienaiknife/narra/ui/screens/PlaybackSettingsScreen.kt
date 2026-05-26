@@ -45,6 +45,8 @@ import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.res.stringResource
+import com.mienaiknife.narra.R
 import com.mienaiknife.narra.ui.components.flashHighlight
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -138,13 +140,13 @@ fun PlaybackSettingsContent(
             IconButton(onClick = onBack) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = "Back",
+                    contentDescription = stringResource(R.string.action_back),
                     modifier = Modifier.size(32.dp),
                     tint = MaterialTheme.colorScheme.onBackground
                 )
             }
             Text(
-                text = "Playback",
+                text = stringResource(R.string.settings_playback_title),
                 style = MaterialTheme.typography.headlineSmall,
                 color = MaterialTheme.colorScheme.onBackground
             )
@@ -159,7 +161,7 @@ fun PlaybackSettingsContent(
                 .padding(horizontal = 16.dp)
         ) {
             Text(
-                text = "Interruptions",
+                text = stringResource(R.string.settings_playback_interruptions_section),
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.padding(bottom = 8.dp)
@@ -180,11 +182,11 @@ fun PlaybackSettingsContent(
                         .padding(end = 8.dp)
                 ) {
                     Text(
-                        text = "Pause on disconnect",
+                        text = stringResource(R.string.settings_playback_pause_on_disconnect),
                         style = MaterialTheme.typography.bodyLarge
                     )
                     Text(
-                        text = "Pause playback when headphones or Bluetooth devices are disconnected",
+                        text = stringResource(R.string.settings_playback_pause_on_disconnect_desc),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -216,11 +218,11 @@ fun PlaybackSettingsContent(
                         .padding(end = 8.dp)
                 ) {
                     Text(
-                        text = "Pause for interruptions",
+                        text = stringResource(R.string.settings_playback_pause_for_interruptions),
                         style = MaterialTheme.typography.bodyLarge
                     )
                     Text(
-                        text = "Pause playback instead of lowering volume for notification sounds",
+                        text = stringResource(R.string.settings_playback_pause_for_interruptions_desc),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -238,15 +240,15 @@ fun PlaybackSettingsContent(
             }
 
             Text(
-                text = "Playback controls",
+                text = stringResource(R.string.settings_playback_controls_section),
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.padding(top = 24.dp, bottom = 8.dp)
             )
 
             SettingDropDownItem(
-                title = "Fast forward skip time",
-                subtitle = "Customize how much the fast forward button skips forward",
+                title = stringResource(R.string.settings_playback_ff_skip),
+                subtitle = stringResource(R.string.settings_playback_ff_skip_desc),
                 selectedValue = uiState.fastForwardSkipTime,
                 options = listOf("10s", "15s", "30s", "60s"),
                 onValueChange = onFastForwardTimeChange,
@@ -256,8 +258,8 @@ fun PlaybackSettingsContent(
             )
 
             SettingDropDownItem(
-                title = "Rewind skip time",
-                subtitle = "Customize how much the rewind button skips backwards",
+                title = stringResource(R.string.settings_playback_rw_skip),
+                subtitle = stringResource(R.string.settings_playback_rw_skip_desc),
                 selectedValue = uiState.rewindSkipTime,
                 options = listOf("10s", "15s", "30s", "60s"),
                 onValueChange = onRewindTimeChange,
@@ -267,8 +269,8 @@ fun PlaybackSettingsContent(
             )
 
             SettingDropDownItem(
-                title = "Fast forward hardware button",
-                subtitle = "Customize what the fast forward hardware button does",
+                title = stringResource(R.string.settings_playback_ff_hardware),
+                subtitle = stringResource(R.string.settings_playback_ff_hardware_desc),
                 selectedValue = uiState.fastForwardHardwareButton,
                 options = listOf("Fast forward", "Skip article", "Rewind", "Restart article"),
                 onValueChange = onFastForwardHardwareButtonChange,
@@ -278,8 +280,8 @@ fun PlaybackSettingsContent(
             )
 
             SettingDropDownItem(
-                title = "Rewind hardware button",
-                subtitle = "Customize what the rewind hardware button does",
+                title = stringResource(R.string.settings_playback_rw_hardware),
+                subtitle = stringResource(R.string.settings_playback_rw_hardware_desc),
                 selectedValue = uiState.rewindHardwareButton,
                 options = listOf("Fast forward", "Skip article", "Rewind", "Restart article"),
                 onValueChange = onRewindHardwareButtonChange,
@@ -289,7 +291,7 @@ fun PlaybackSettingsContent(
             )
             
             Text(
-                text = "Queue",
+                text = stringResource(R.string.settings_playback_queue_section),
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.padding(top = 24.dp, bottom = 8.dp)
@@ -310,11 +312,11 @@ fun PlaybackSettingsContent(
                         .padding(end = 8.dp)
                 ) {
                     Text(
-                        text = "Autoplay next text",
+                        text = stringResource(R.string.settings_playback_autoplay_next),
                         style = MaterialTheme.typography.bodyLarge
                     )
                     Text(
-                        text = "Automatically play the next text in the queue",
+                        text = stringResource(R.string.settings_playback_autoplay_next_desc),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -346,11 +348,11 @@ fun PlaybackSettingsContent(
                         .padding(end = 8.dp)
                 ) {
                     Text(
-                        text = "Play chime and title",
+                        text = stringResource(R.string.settings_playback_play_chime),
                         style = MaterialTheme.typography.bodyLarge
                     )
                     Text(
-                        text = "When autoplaying the next text in the queue, start by playing a chime and the title of the text",
+                        text = stringResource(R.string.settings_playback_play_chime_desc),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -368,8 +370,8 @@ fun PlaybackSettingsContent(
             }
 
             SettingDropDownItem(
-                title = "Chime sound",
-                subtitle = "Choose the sound to play before the title",
+                title = stringResource(R.string.settings_playback_chime_sound),
+                subtitle = stringResource(R.string.settings_playback_chime_sound_desc),
                 selectedValue = uiState.chimeSound,
                 options = listOf("music_box_chime_positive", "vibraphone_chime_positive"),
                 onValueChange = onChimeSoundChange,

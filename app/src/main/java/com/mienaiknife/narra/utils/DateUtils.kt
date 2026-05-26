@@ -34,7 +34,12 @@ object DateUtils {
         DateTimeFormatter.ISO_DATE_TIME,
         DateTimeFormatter.ISO_OFFSET_DATE_TIME,
         DateTimeFormatter.ISO_ZONED_DATE_TIME,
-        DateTimeFormatter.ofPattern("yyyy-MM-dd", Locale.US)
+        DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSX", Locale.US),
+        DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ssX", Locale.US),
+        DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss", Locale.US),
+        DateTimeFormatter.ofPattern("yyyy-MM-dd", Locale.US),
+        DateTimeFormatter.ofPattern("yyyy/MM/dd", Locale.US),
+        DateTimeFormatter.ofPattern("dd MMM yyyy", Locale.US)
     )
 
     private val htmlTagRegex = Regex("<[^>]*>")

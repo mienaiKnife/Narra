@@ -18,17 +18,22 @@ package com.mienaiknife.narra.ui.viewmodels
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.mienaiknife.narra.R
 import com.mienaiknife.narra.data.local.dao.FeedDao
 import com.mienaiknife.narra.data.local.entities.FeedEntity
 import com.mienaiknife.narra.data.models.SortOption
 import com.mienaiknife.narra.domain.repository.ContentRepository
+import com.mienaiknife.narra.ui.UiText
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import java.io.InputStream
+import java.io.OutputStream
 import javax.inject.Inject
 
 @HiltViewModel
@@ -39,6 +44,8 @@ class FeedsViewModel @Inject constructor(
 
     private val _isRefreshing = MutableStateFlow(false)
     private val _sortOption = MutableStateFlow(SortOption.TITLE_ASC)
+    private val _message = MutableStateFlow<UiText?>(null)
+    val message = _message.asStateFlow()
 
     val uiState: StateFlow<FeedsUiState> = combine(
         feedDao.getAllFeeds(),
@@ -104,5 +111,39 @@ class FeedsViewModel @Inject constructor(
                 _isRefreshing.value = false
             }
         }
+    }
+
+    fun importOpml(inputStream: InputStream?) {
+        if (inputStream == null) return
+        viewModelScope.launch {
+            inputStream.use {
+                repository.importOpml(it)
+                    .onSuccess { count ->
+                        _message.value = UiText.StringResource(R.string.message_imported_feeds, count)
+                    }
+                    .onFailure { error ->
+                        _message.value = UiText.StringResource(R.string.message_import_failed, error.message ?: "")
+                    }
+            }
+        }
+    }
+
+    fun exportOpml(outputStream: OutputStream?) {
+        if (outputStream == null) return
+        viewModelScope.launch {
+            outputStream.use {
+                repository.exportOpml(it)
+                    .onSuccess {
+                        _message.value = UiText.StringResource(R.string.message_exported_feeds)
+                    }
+                    .onFailure { error ->
+                        _message.value = UiText.StringResource(R.string.message_export_failed, error.message ?: "")
+                    }
+            }
+        }
+    }
+
+    fun clearMessage() {
+        _message.value = null
     }
 }

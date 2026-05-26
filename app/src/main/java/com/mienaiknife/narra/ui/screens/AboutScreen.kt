@@ -53,6 +53,8 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.navigation.compose.rememberNavController
+import androidx.compose.ui.res.stringResource
+import com.mienaiknife.narra.R
 import com.mienaiknife.narra.ui.components.BottomNavBar
 import com.mienaiknife.narra.ui.theme.NarraTheme
 
@@ -79,13 +81,13 @@ fun AboutScreen(onBack: () -> Unit, onNavigateToLicenses: () -> Unit) {
             IconButton(onClick = onBack) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = "Back",
+                    contentDescription = stringResource(R.string.action_back),
                     modifier = Modifier.size(32.dp),
                     tint = MaterialTheme.colorScheme.onBackground
                 )
             }
             Text(
-                text = "About Narra",
+                text = stringResource(R.string.settings_about_title),
                 style = MaterialTheme.typography.headlineSmall,
                 color = MaterialTheme.colorScheme.onBackground
             )
@@ -99,7 +101,7 @@ fun AboutScreen(onBack: () -> Unit, onNavigateToLicenses: () -> Unit) {
         ) {
             item {
                 ListItem(
-                    headlineContent = { Text("Version") },
+                    headlineContent = { Text(stringResource(R.string.about_version)) },
                     supportingContent = { Text(versionName) },
                     leadingContent = {
                         Icon(
@@ -116,8 +118,8 @@ fun AboutScreen(onBack: () -> Unit, onNavigateToLicenses: () -> Unit) {
 
             item {
                 ListItem(
-                    headlineContent = { Text("Code repository") },
-                    supportingContent = { Text("Report bugs, suggest features") },
+                    headlineContent = { Text(stringResource(R.string.about_code_repository)) },
+                    supportingContent = { Text(stringResource(R.string.about_code_repository_desc)) },
                     leadingContent = {
                         Icon(
                             Icons.Default.Code,
@@ -135,8 +137,8 @@ fun AboutScreen(onBack: () -> Unit, onNavigateToLicenses: () -> Unit) {
 
             item {
                 ListItem(
-                    headlineContent = { Text("Licenses") },
-                    supportingContent = { Text("Open source software used in Narra") },
+                    headlineContent = { Text(stringResource(R.string.reader_menu_licenses)) },
+                    supportingContent = { Text(stringResource(R.string.about_licenses_desc)) },
                     leadingContent = {
                         Icon(
                             Icons.Default.Description,
@@ -155,7 +157,7 @@ fun AboutScreen(onBack: () -> Unit, onNavigateToLicenses: () -> Unit) {
 
             item {
                 ListItem(
-                    headlineContent = { Text("Privacy policy") },
+                    headlineContent = { Text(stringResource(R.string.about_privacy_policy)) },
                     leadingContent = {
                         Icon(
                             Icons.Default.Info,

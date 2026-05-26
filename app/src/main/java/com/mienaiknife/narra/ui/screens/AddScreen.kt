@@ -60,11 +60,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.compose.rememberNavController
+import com.mienaiknife.narra.R
 import com.mienaiknife.narra.ui.components.AdaptiveText
 import com.mienaiknife.narra.ui.components.BottomNavBar
 import com.mienaiknife.narra.ui.theme.NarraTheme
@@ -92,23 +94,26 @@ fun AddScreen(
         }
     }
 
+    val articleAddedMessage = stringResource(R.string.add_article_added)
+    val epubImportedMessage = stringResource(R.string.add_epub_imported)
+
     LaunchedEffect(viewModel.uiEvent) {
         viewModel.uiEvent.collectLatest { event ->
             when (event) {
                 is HomeViewModel.UiEvent.ShowSnackbar -> {
-                    snackbarHostState.showSnackbar(event.message)
+                    snackbarHostState.showSnackbar(event.uiText.asString(context))
                 }
                 is HomeViewModel.UiEvent.ArticleAdded -> {
-                    Toast.makeText(context, "Article added successfully", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, articleAddedMessage, Toast.LENGTH_SHORT).show()
                     url = ""
                     onArticleAdded()
                 }
                 is HomeViewModel.UiEvent.FeedSubscribed -> {
-                    Toast.makeText(context, "Subscribed to ${event.feedName}", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, context.getString(R.string.add_feed_subscribed, event.feedName), Toast.LENGTH_SHORT).show()
                     url = ""
                 }
                 is HomeViewModel.UiEvent.EpubImported -> {
-                    Toast.makeText(context, "EPUB imported successfully", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, epubImportedMessage, Toast.LENGTH_SHORT).show()
                 }
             }
         }
@@ -157,7 +162,7 @@ fun AddScreenContent(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "Add",
+                text = stringResource(R.string.nav_add),
                 style = MaterialTheme.typography.headlineSmall
             )
         }
@@ -172,7 +177,7 @@ fun AddScreenContent(
             OutlinedTextField(
                 value = url,
                 onValueChange = onUrlChange,
-                placeholder = { Text("Paste a URL...") },
+                placeholder = { Text(stringResource(R.string.add_url_placeholder)) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
                 shape = RoundedCornerShape(24.dp),
@@ -181,7 +186,7 @@ fun AddScreenContent(
                         IconButton(onClick = { onUrlChange("") }) {
                             Icon(
                                 imageVector = Icons.Default.Clear,
-                                contentDescription = "Clear text"
+                                contentDescription = stringResource(R.string.action_clear)
                             )
                         }
                     }
@@ -224,7 +229,7 @@ fun AddScreenContent(
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         AdaptiveText(
-                            text = "Import webpage",
+                            text = stringResource(R.string.add_import_webpage),
                             style = MaterialTheme.typography.bodyMedium,
                             textAlign = TextAlign.Center
                         )
@@ -260,7 +265,7 @@ fun AddScreenContent(
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         AdaptiveText(
-                            text = "Add feed",
+                            text = stringResource(R.string.add_add_feed),
                             style = MaterialTheme.typography.bodyMedium,
                             textAlign = TextAlign.Center
                         )
@@ -293,7 +298,7 @@ fun AddScreenContent(
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     AdaptiveText(
-                        text = "Upload a file",
+                        text = stringResource(R.string.add_upload_file),
                         style = MaterialTheme.typography.bodyMedium,
                         textAlign = TextAlign.Center
                     )

@@ -35,34 +35,6 @@ import androidx.media3.common.MediaMetadata
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.PlaybackParameters
 import androidx.media3.common.Player
-import androidx.media3.common.Player.COMMAND_CHANGE_MEDIA_ITEMS
-import androidx.media3.common.Player.COMMAND_GET_AUDIO_ATTRIBUTES
-import androidx.media3.common.Player.COMMAND_GET_CURRENT_MEDIA_ITEM
-import androidx.media3.common.Player.COMMAND_GET_DEVICE_VOLUME
-import androidx.media3.common.Player.COMMAND_GET_METADATA
-import androidx.media3.common.Player.COMMAND_GET_TIMELINE
-import androidx.media3.common.Player.COMMAND_GET_TRACKS
-import androidx.media3.common.Player.COMMAND_GET_VOLUME
-import androidx.media3.common.Player.COMMAND_PLAY_PAUSE
-import androidx.media3.common.Player.COMMAND_PREPARE
-import androidx.media3.common.Player.COMMAND_RELEASE
-import androidx.media3.common.Player.COMMAND_SEEK_BACK
-import androidx.media3.common.Player.COMMAND_SEEK_FORWARD
-import androidx.media3.common.Player.COMMAND_SEEK_IN_CURRENT_MEDIA_ITEM
-import androidx.media3.common.Player.COMMAND_SEEK_TO_DEFAULT_POSITION
-import androidx.media3.common.Player.COMMAND_SEEK_TO_MEDIA_ITEM
-import androidx.media3.common.Player.COMMAND_SEEK_TO_NEXT
-import androidx.media3.common.Player.COMMAND_SEEK_TO_NEXT_MEDIA_ITEM
-import androidx.media3.common.Player.COMMAND_SEEK_TO_PREVIOUS
-import androidx.media3.common.Player.COMMAND_SEEK_TO_PREVIOUS_MEDIA_ITEM
-import androidx.media3.common.Player.COMMAND_SET_MEDIA_ITEM
-import androidx.media3.common.Player.COMMAND_SET_PLAYLIST_METADATA
-import androidx.media3.common.Player.COMMAND_SET_REPEAT_MODE
-import androidx.media3.common.Player.COMMAND_SET_SHUFFLE_MODE
-import androidx.media3.common.Player.COMMAND_SET_SPEED_AND_PITCH
-import androidx.media3.common.Player.COMMAND_SET_VOLUME
-import androidx.media3.common.Player.COMMAND_STOP
-import androidx.media3.common.Player.COMMAND_SET_DEVICE_VOLUME_WITH_FLAGS
 import androidx.media3.common.SimpleBasePlayer
 import androidx.media3.common.TrackSelectionParameters
 import androidx.media3.common.util.UnstableApi
@@ -76,8 +48,6 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -135,6 +105,8 @@ class TtsPlayer @Inject constructor(
     private var baseWordOffset = 0
     private var isEngineSpeaking = false
     private var isPreparing = false
+    private var _pauseForInterruptions = true
+    private var lastEnqueuedUtteranceId: String? = null
 
     private var _seekForwardIncrement = 15000L
     private var _seekBackIncrement = 15000L
@@ -142,9 +114,11 @@ class TtsPlayer @Inject constructor(
     private val audioFocusChangeListener = AudioManager.OnAudioFocusChangeListener { focusChange ->
         when (focusChange) {
             AudioManager.AUDIOFOCUS_GAIN -> {
+                _playbackSuppressionReason = PLAYBACK_SUPPRESSION_REASON_NONE
                 if (_playWhenReady) {
                     resumeInternal()
                 }
+                invalidateState()
             }
             AudioManager.AUDIOFOCUS_LOSS -> {
                 _playWhenReady = false
@@ -152,10 +126,19 @@ class TtsPlayer @Inject constructor(
                 invalidateState()
             }
             AudioManager.AUDIOFOCUS_LOSS_TRANSIENT -> {
+                _playbackSuppressionReason = PLAYBACK_SUPPRESSION_REASON_TRANSIENT_AUDIO_FOCUS_LOSS
                 pauseInternal()
+                invalidateState()
             }
             AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK -> {
-                // Not implemented, just keep playing
+                if (_pauseForInterruptions) {
+                    _playbackSuppressionReason = PLAYBACK_SUPPRESSION_REASON_TRANSIENT_AUDIO_FOCUS_LOSS
+                    pauseInternal()
+                    invalidateState()
+                } else {
+                    // Ducking is handled by system if we didn't set setWillPauseWhenDucked(true)
+                    // Or if we did, we should have paused above.
+                }
             }
         }
     }
@@ -198,8 +181,18 @@ class TtsPlayer @Inject constructor(
                 is TtsState.Ready -> {
                     isEngineSpeaking = false
                     if (_playWhenReady && _playbackState == STATE_READY && !isPreparing) {
-                        // Finished an utterance, wait for next or signal completion
-                        // If paragraphs ended, this will be handled by ttsEngine.enqueue chain
+                        if (lastEnqueuedUtteranceId != null &&
+                            currentParagraphIndex.toString() == lastEnqueuedUtteranceId
+                        ) {
+                            _playbackState = STATE_ENDED
+                            _playWhenReady = false
+                            // Don't abandon audio focus or release locks here.
+                            // The caller decides when to clean up via stop() or
+                            // starting new content, so autoplay transitions don't
+                            // lose audio focus or CPU wake locks in the background.
+                            unregisterNoisyReceiver()
+                            invalidateState()
+                        }
                     }
                 }
                 is TtsState.Error -> {
@@ -215,6 +208,7 @@ class TtsPlayer @Inject constructor(
 
         settingsManager.fastForwardSkipTime.onEach { _seekForwardIncrement = parseSkipTime(it) }.launchIn(scope)
         settingsManager.rewindSkipTime.onEach { _seekBackIncrement = parseSkipTime(it) }.launchIn(scope)
+        settingsManager.pauseForInterruptions.onEach { _pauseForInterruptions = it }.launchIn(scope)
 
         val powerManager = context.getSystemService(Context.POWER_SERVICE) as PowerManager
         wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "Narra:PlaybackWakeLock")
@@ -276,10 +270,14 @@ class TtsPlayer @Inject constructor(
             (currentParagraphIndex * 1000L + (progress * 1000L).toLong())
         } else 0L
 
-        val currentPlaybackState = if (playlist.isEmpty() && _playbackState != STATE_ENDED) {
-            if (isPreparing || _playWhenReady) STATE_BUFFERING else STATE_IDLE
+        val currentPlaybackState = if (playlist.isEmpty()) {
+            if (isPreparing) STATE_BUFFERING else STATE_IDLE
         } else if (isPreparing) {
             STATE_BUFFERING
+        } else if (_playbackState == STATE_IDLE && playlist.isNotEmpty()) {
+            // Force READY if we have a media item loaded, even if not playing.
+            // This ensures the session is seen as "active" by the system.
+            STATE_READY
         } else {
             _playbackState
         }
@@ -290,34 +288,34 @@ class TtsPlayer @Inject constructor(
             .setAvailableCommands(
                 Player.Commands.Builder()
                     .addAll(
-                        COMMAND_PLAY_PAUSE,
-                        COMMAND_PREPARE,
-                        COMMAND_STOP,
-                        COMMAND_SEEK_TO_DEFAULT_POSITION,
-                        COMMAND_SEEK_IN_CURRENT_MEDIA_ITEM,
-                        COMMAND_SEEK_TO_PREVIOUS_MEDIA_ITEM,
-                        COMMAND_SEEK_TO_PREVIOUS,
-                        COMMAND_SEEK_TO_NEXT_MEDIA_ITEM,
-                        COMMAND_SEEK_TO_NEXT,
-                        COMMAND_SEEK_TO_MEDIA_ITEM,
-                        COMMAND_SEEK_BACK,
-                        COMMAND_SEEK_FORWARD,
-                        COMMAND_SET_SPEED_AND_PITCH,
-                        COMMAND_SET_SHUFFLE_MODE,
-                        COMMAND_SET_REPEAT_MODE,
-                        COMMAND_GET_CURRENT_MEDIA_ITEM,
-                        COMMAND_GET_TIMELINE,
-                        COMMAND_GET_METADATA,
-                        COMMAND_SET_PLAYLIST_METADATA,
-                        COMMAND_SET_MEDIA_ITEM,
-                        COMMAND_CHANGE_MEDIA_ITEMS,
-                        COMMAND_GET_AUDIO_ATTRIBUTES,
-                        COMMAND_GET_VOLUME,
-                        COMMAND_GET_DEVICE_VOLUME,
-                        COMMAND_SET_VOLUME,
-                        COMMAND_SET_DEVICE_VOLUME_WITH_FLAGS,
-                        COMMAND_GET_TRACKS,
-                        COMMAND_RELEASE,
+                        Player.COMMAND_PLAY_PAUSE,
+                        Player.COMMAND_PREPARE,
+                        Player.COMMAND_STOP,
+                        Player.COMMAND_SEEK_TO_DEFAULT_POSITION,
+                        Player.COMMAND_SEEK_IN_CURRENT_MEDIA_ITEM,
+                        Player.COMMAND_SEEK_TO_PREVIOUS_MEDIA_ITEM,
+                        Player.COMMAND_SEEK_TO_PREVIOUS,
+                        Player.COMMAND_SEEK_TO_NEXT_MEDIA_ITEM,
+                        Player.COMMAND_SEEK_TO_NEXT,
+                        Player.COMMAND_SEEK_TO_MEDIA_ITEM,
+                        Player.COMMAND_SEEK_BACK,
+                        Player.COMMAND_SEEK_FORWARD,
+                        Player.COMMAND_SET_SPEED_AND_PITCH,
+                        Player.COMMAND_SET_SHUFFLE_MODE,
+                        Player.COMMAND_SET_REPEAT_MODE,
+                        Player.COMMAND_GET_CURRENT_MEDIA_ITEM,
+                        Player.COMMAND_GET_TIMELINE,
+                        Player.COMMAND_GET_METADATA,
+                        Player.COMMAND_SET_PLAYLIST_METADATA,
+                        Player.COMMAND_SET_MEDIA_ITEM,
+                        Player.COMMAND_CHANGE_MEDIA_ITEMS,
+                        Player.COMMAND_GET_AUDIO_ATTRIBUTES,
+                        Player.COMMAND_GET_VOLUME,
+                        Player.COMMAND_GET_DEVICE_VOLUME,
+                        Player.COMMAND_SET_VOLUME,
+                        Player.COMMAND_SET_DEVICE_VOLUME_WITH_FLAGS,
+                        Player.COMMAND_GET_TRACKS,
+                        Player.COMMAND_RELEASE,
                     ).build(),
             )
             .setPlayWhenReady(_playWhenReady, PLAY_WHEN_READY_CHANGE_REASON_USER_REQUEST)
@@ -336,11 +334,22 @@ class TtsPlayer @Inject constructor(
     }
 
     override fun handleSetPlayWhenReady(playWhenReady: Boolean): ListenableFuture<*> {
+        android.util.Log.d("TtsPlayer", "handleSetPlayWhenReady: current=$_playWhenReady, new=$playWhenReady")
+        if (_playWhenReady == playWhenReady) {
+            return Futures.immediateVoidFuture()
+        }
+        
         _playWhenReady = playWhenReady
         if (playWhenReady) {
-            if (requestAudioFocus() == AudioManager.AUDIOFOCUS_REQUEST_GRANTED) {
+            val focusResult = requestAudioFocus()
+            android.util.Log.d("TtsPlayer", "handleSetPlayWhenReady: requestAudioFocus result=$focusResult")
+            if (focusResult == AudioManager.AUDIOFOCUS_REQUEST_GRANTED) {
+                _playbackSuppressionReason = PLAYBACK_SUPPRESSION_REASON_NONE
                 resumeInternal()
+            } else if (focusResult == AudioManager.AUDIOFOCUS_REQUEST_DELAYED) {
+                _playbackSuppressionReason = PLAYBACK_SUPPRESSION_REASON_TRANSIENT_AUDIO_FOCUS_LOSS
             } else {
+                _playWhenReady = false
                 _playbackSuppressionReason = PLAYBACK_SUPPRESSION_REASON_TRANSIENT_AUDIO_FOCUS_LOSS
             }
         } else {
@@ -428,7 +437,19 @@ class TtsPlayer @Inject constructor(
         
         currentParagraphIndex = pIndex
         resumeWordOffset = wordOffset
-        currentWordRange = null
+        
+        // Find a word boundary for the highlight
+        val text = paragraphs[pIndex]
+        if (text.isNotEmpty()) {
+            val start = wordOffset.coerceIn(0, text.length - 1)
+            var end = start
+            while (end < text.length && !text[end].isWhitespace()) {
+                end++
+            }
+            currentWordRange = start until end
+        } else {
+            currentWordRange = null
+        }
         
         if (_playWhenReady) {
             resumeInternal()
@@ -444,6 +465,7 @@ class TtsPlayer @Inject constructor(
             focusRequest = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN)
                 .setAudioAttributes(attr)
                 .setAcceptsDelayedFocusGain(true)
+                .setWillPauseWhenDucked(_pauseForInterruptions)
                 .setOnAudioFocusChangeListener(audioFocusChangeListener)
                 .build()
             audioManager.requestAudioFocus(focusRequest!!)
@@ -458,6 +480,8 @@ class TtsPlayer @Inject constructor(
         
         if (result == AudioManager.AUDIOFOCUS_REQUEST_GRANTED) {
             _playbackSuppressionReason = PLAYBACK_SUPPRESSION_REASON_NONE
+        } else if (result == AudioManager.AUDIOFOCUS_REQUEST_DELAYED) {
+            _playbackSuppressionReason = PLAYBACK_SUPPRESSION_REASON_TRANSIENT_AUDIO_FOCUS_LOSS
         }
         return result
     }
@@ -476,6 +500,7 @@ class TtsPlayer @Inject constructor(
         isEngineSpeaking = false
         unregisterNoisyReceiver()
         releaseLocks()
+        lastEnqueuedUtteranceId = null
     }
 
     private fun resumeInternal() {
@@ -532,6 +557,7 @@ class TtsPlayer @Inject constructor(
         
         ttsEngine.stop()
         isEngineSpeaking = false
+        lastEnqueuedUtteranceId = null
 
         paragraphs = parsedParagraphs
         if (paragraphs.isEmpty()) {
@@ -552,7 +578,9 @@ class TtsPlayer @Inject constructor(
                 .setAlbumTitle(article.source)
                 .setAlbumArtist(article.source)
                 .setDisplayTitle(article.title) // Essential for Samsung "Now Bar"
+                .setMediaType(MediaMetadata.MEDIA_TYPE_PODCAST_EPISODE)
                 .setArtworkUri(artworkUri)
+                .setIsBrowsable(false)
                 .setIsPlayable(true)
                 .build())
             .build()
@@ -571,6 +599,23 @@ class TtsPlayer @Inject constructor(
         
         currentParagraphIndex = article.currentParagraphIndex.coerceIn(0, paragraphs.size - 1).takeIf { paragraphs.isNotEmpty() } ?: 0
         resumeWordOffset = article.currentWordOffset.coerceAtLeast(0)
+        
+        // Initialize highlight from saved offset
+        if (currentParagraphIndex in paragraphs.indices) {
+            val text = paragraphs[currentParagraphIndex]
+            val start = resumeWordOffset.coerceIn(0, text.length.let { if (it > 0) it - 1 else 0 })
+            if (text.isNotEmpty()) {
+                var end = start
+                while (end < text.length && !text[end].isWhitespace()) {
+                    end++
+                }
+                currentWordRange = start until end
+            } else {
+                currentWordRange = null
+            }
+        } else {
+            currentWordRange = null
+        }
         
         _playWhenReady = playWhenReady
         isPreparing = false
@@ -628,6 +673,7 @@ class TtsPlayer @Inject constructor(
 
     fun speakAnnouncement(text: String) {
         acquireLocks()
+        lastEnqueuedUtteranceId = null
         if (requestAudioFocus() == AudioManager.AUDIOFOCUS_REQUEST_GRANTED) {
             ttsEngine.speak(text, "announcement")
         }
@@ -641,6 +687,17 @@ class TtsPlayer @Inject constructor(
         if (!_playWhenReady && !isEngineSpeaking) {
             releaseLocks()
         }
+    }
+
+    /**
+     * Releases audio focus, locks, and noisy receiver without clearing
+     * playback state. Used when an article finishes and autoplay is off.
+     */
+    fun releasePlaybackResources() {
+        abandonAudioFocusInternal()
+        unregisterNoisyReceiver()
+        releaseLocks()
+        lastEnqueuedUtteranceId = null
     }
 
     private fun speakCurrentFrom(startIndex: Int, wordOffset: Int = 0) {
@@ -658,10 +715,12 @@ class TtsPlayer @Inject constructor(
                 ttsEngine.enqueue(text, i.toString())
             }
         }
+        lastEnqueuedUtteranceId = if (paragraphs.isNotEmpty()) (paragraphs.size - 1).toString() else null
     }
 
     fun seekToWord(paragraphIndex: Int, wordRange: IntRange, playWhenReady: Boolean = true) {
         if (paragraphIndex in paragraphs.indices) {
+            lastEnqueuedUtteranceId = null
             ttsEngine.stop()
             currentParagraphIndex = paragraphIndex
             currentWordRange = wordRange
@@ -688,7 +747,11 @@ class TtsPlayer @Inject constructor(
     override fun handleSetTrackSelectionParameters(trackSelectionParameters: TrackSelectionParameters): ListenableFuture<*> = Futures.immediateVoidFuture()
     
     @Deprecated("Deprecated in Player", ReplaceWith("handleSetVolume(volume)"))
-    override fun handleSetVolume(volume: Float): ListenableFuture<*> = Futures.immediateVoidFuture()
+    override fun handleSetVolume(volume: Float): ListenableFuture<*> {
+        ttsEngine.setVolume(volume)
+        invalidateState()
+        return Futures.immediateVoidFuture()
+    }
 
     override fun handleSetDeviceVolume(volume: Int, flags: Int): ListenableFuture<*> = Futures.immediateVoidFuture()
     override fun handleIncreaseDeviceVolume(flags: Int): ListenableFuture<*> = Futures.immediateVoidFuture()
@@ -698,6 +761,9 @@ class TtsPlayer @Inject constructor(
     override fun handleSetAudioAttributes(audioAttributes: AudioAttributes, handleAudioFocus: Boolean): ListenableFuture<*> {
         _audioAttributes = audioAttributes
         ttsEngine.setAudioAttributes(audioAttributes.usage, audioAttributes.contentType)
+        if (handleAudioFocus && _playWhenReady) {
+            requestAudioFocus()
+        }
         invalidateState()
         return Futures.immediateVoidFuture()
     }

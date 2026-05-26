@@ -18,9 +18,11 @@ package com.mienaiknife.narra.ui.viewmodels
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.mienaiknife.narra.R
 import com.mienaiknife.narra.data.settings.DownloadSettingsManager
 import com.mienaiknife.narra.data.settings.SyncSettingsManager
 import com.mienaiknife.narra.domain.repository.ContentRepository
+import com.mienaiknife.narra.ui.UiText
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -39,7 +41,7 @@ class DownloadsSettingsViewModel @Inject constructor(
     private val contentRepository: ContentRepository
 ) : ViewModel() {
 
-    private val _message = MutableStateFlow<String?>(null)
+    private val _message = MutableStateFlow<UiText?>(null)
 
     val uiState: StateFlow<DownloadsSettingsUiState> = combine(
         downloadSettingsManager.downloadOverWifiOnly,
@@ -59,7 +61,7 @@ class DownloadsSettingsViewModel @Inject constructor(
             autoExportUri = args[4] as String?,
             lastExportTimestamp = args[5] as Long,
             pendingImport = args[6] as Boolean,
-            message = args[7] as String?
+            message = args[7] as UiText?
         )
     }.stateIn(
         scope = viewModelScope,
@@ -122,10 +124,10 @@ class DownloadsSettingsViewModel @Inject constructor(
             inputStream.use {
                 contentRepository.importOpml(it)
                     .onSuccess { count ->
-                        _message.value = "Imported $count feeds"
+                        _message.value = UiText.StringResource(R.string.message_imported_feeds, count)
                     }
                     .onFailure { error ->
-                        _message.value = "Import failed: ${error.message}"
+                        _message.value = UiText.StringResource(R.string.message_import_failed, error.message ?: "")
                     }
             }
         }
@@ -137,10 +139,10 @@ class DownloadsSettingsViewModel @Inject constructor(
             outputStream.use {
                 contentRepository.exportOpml(it)
                     .onSuccess {
-                        _message.value = "Exported subscriptions"
+                        _message.value = UiText.StringResource(R.string.message_exported_feeds)
                     }
                     .onFailure { error ->
-                        _message.value = "Export failed: ${error.message}"
+                        _message.value = UiText.StringResource(R.string.message_export_failed, error.message ?: "")
                     }
             }
         }
@@ -152,10 +154,10 @@ class DownloadsSettingsViewModel @Inject constructor(
             outputStream.use {
                 contentRepository.backupDatabase(it)
                     .onSuccess {
-                        _message.value = "Backup created"
+                        _message.value = UiText.StringResource(R.string.message_backup_created)
                     }
                     .onFailure { error ->
-                        _message.value = "Backup failed: ${error.message}"
+                        _message.value = UiText.StringResource(R.string.message_backup_failed, error.message ?: "")
                     }
             }
         }
@@ -167,10 +169,10 @@ class DownloadsSettingsViewModel @Inject constructor(
             inputStream.use {
                 contentRepository.restoreDatabase(it)
                     .onSuccess {
-                        _message.value = "Database restored. Restart app."
+                        _message.value = UiText.StringResource(R.string.message_db_restored)
                     }
                     .onFailure { error ->
-                        _message.value = "Restore failed: ${error.message}"
+                        _message.value = UiText.StringResource(R.string.message_restore_failed, error.message ?: "")
                     }
             }
         }

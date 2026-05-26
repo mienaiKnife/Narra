@@ -16,8 +16,9 @@
 
 package com.mienaiknife.narra.ui.widget
 
-import android.content.ComponentName
 import android.content.Context
+import android.content.Intent
+import android.os.Build
 import androidx.glance.GlanceId
 import androidx.glance.action.ActionParameters
 import androidx.glance.appwidget.action.ActionCallback
@@ -47,38 +48,22 @@ class PlaybackActionCallback : ActionCallback {
         parameters: ActionParameters,
     ) {
         val action = parameters[KEY_ACTION] ?: ACTION_TOGGLE
-        val sessionToken = SessionToken(context, ComponentName(context, PlaybackService::class.java))
-        val controllerFuture = MediaController.Builder(context, sessionToken).buildAsync()
+        android.util.Log.d("PlaybackActionCallback", "onAction: action=$action")
+        
+        val intent = Intent(context, PlaybackService::class.java).apply {
+            this.action = action
+        }
         
         try {
-            val controller = controllerFuture.await()
-            when (action) {
-                ACTION_TOGGLE -> {
-                    if (controller.isPlaying) controller.pause() else controller.play()
-                }
-                ACTION_SKIP_FORWARD -> controller.seekForward()
-                ACTION_SKIP_BACKWARD -> controller.seekBack()
-                ACTION_SKIP_NEXT -> controller.seekToNext()
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                context.startForegroundService(intent)
+            } else {
+                context.startService(intent)
             }
-            controller.release()
         } catch (e: Exception) {
-            e.printStackTrace()
+            android.util.Log.e("PlaybackActionCallback", "Error starting service for action", e)
         }
     }
 }
 
-private suspend fun <T> ListenableFuture<T>.await(): T = suspendCancellableCoroutine { cont ->
-    addListener(
-        {
-            try {
-                cont.resume(get())
-            } catch (e: Exception) {
-                cont.resumeWithException(e)
-            }
-        },
-        MoreExecutors.directExecutor(),
-    )
-    cont.invokeOnCancellation {
-        cancel(false)
-    }
-}
+// Removed unused await extension

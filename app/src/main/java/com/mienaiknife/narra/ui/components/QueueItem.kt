@@ -50,6 +50,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
+import androidx.compose.ui.res.stringResource
+import com.mienaiknife.narra.R
 import com.mienaiknife.narra.data.models.Article
 import com.mienaiknife.narra.data.models.SampleArticles
 import com.mienaiknife.narra.ui.theme.NarraTheme
@@ -95,8 +97,8 @@ fun QueueItem(
             DropdownMenuItem(
                 text = {
                     Text(
-                        if (article.progress == 1f) "Mark as unplayed"
-                        else "Mark as played"
+                        if (article.progress == 1f) stringResource(R.string.reader_menu_unplayed)
+                        else stringResource(R.string.reader_menu_played)
                     )
                 },
                 onClick = {
@@ -113,7 +115,7 @@ fun QueueItem(
             )
             if (article.isInQueue) {
                 DropdownMenuItem(
-                    text = { Text("Remove from queue") },
+                    text = { Text(stringResource(R.string.reader_menu_remove_queue)) },
                     onClick = {
                         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                         onRemoveClick()
@@ -128,7 +130,7 @@ fun QueueItem(
                 )
             } else {
                 DropdownMenuItem(
-                    text = { Text("Add to queue") },
+                    text = { Text(stringResource(R.string.reader_menu_add_queue)) },
                     onClick = {
                         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                         onAddToQueueClick()
@@ -144,7 +146,7 @@ fun QueueItem(
             }
             if (!article.url.isNullOrBlank()) {
                 DropdownMenuItem(
-                    text = { Text("Visit site") },
+                    text = { Text(stringResource(R.string.reader_menu_visit_site)) },
                     onClick = {
                         uriHandler.openUri(article.url)
                         showMenu = false
@@ -174,6 +176,7 @@ private fun QueueItemRow(
     onPlayPauseClick: () -> Unit = {},
     dragModifier: Modifier? = null
 ) {
+    val context = androidx.compose.ui.platform.LocalContext.current
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -189,7 +192,7 @@ private fun QueueItemRow(
             ) {
                 Icon(
                     imageVector = Icons.Default.DragIndicator,
-                    contentDescription = "Reorder",
+                    contentDescription = stringResource(R.string.action_reorder),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.size(24.dp)
                 )
@@ -198,16 +201,18 @@ private fun QueueItemRow(
             Spacer(modifier = Modifier.width(16.dp))
         }
 
+        val progressPercent = ((article.progress ?: 0f) * 100).toInt()
+        val itemContentDescription = if (article.isInQueue) {
+            stringResource(R.string.queue_item_semantics_queue_desc, article.title, article.source, progressPercent)
+        } else {
+            stringResource(R.string.queue_item_semantics_desc, article.title, article.source)
+        }
+
         Row(
             modifier = Modifier
                 .weight(1f)
                 .semantics(mergeDescendants = true) {
-                    val progressPercent = ((article.progress ?: 0f) * 100).toInt()
-                    contentDescription = if (article.isInQueue) {
-                        "${article.title} by ${article.source}, $progressPercent percent completed"
-                    } else {
-                        "${article.title} by ${article.source}"
-                    }
+                    contentDescription = itemContentDescription
                 }
                 .combinedClickable(
                     onClick = onClick,
@@ -242,7 +247,7 @@ private fun QueueItemRow(
 
                 AsyncImage(
                     model = imageUrl,
-                    contentDescription = "Cover for ${article.title}",
+                    contentDescription = stringResource(R.string.home_cover_image_desc, article.title),
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Crop,
                     alpha = if (article.progress == 1f) 0.6f else 1f,
@@ -351,18 +356,19 @@ private fun QueueItemRow(
             modifier = Modifier
                 .padding(end = 16.dp)
                 .semantics {
+                    val context = context
                     contentDescription = when {
-                        !article.isInQueue -> "Add ${article.title} to queue"
-                        isPlaying -> "Pause ${article.title}"
-                        else -> "Play ${article.title}"
+                        !article.isInQueue -> context.getString(R.string.action_add_to_queue_desc, article.title)
+                        isPlaying -> context.getString(R.string.action_pause_desc, article.title)
+                        else -> context.getString(R.string.action_play_desc, article.title)
                     }
                 },
             enabled = !isDownloading
         ) {
-            val (icon, contentDescription) = when {
-                !article.isInQueue -> Icons.AutoMirrored.Outlined.PlaylistAdd to "Add to playlist"
-                isPlaying -> Icons.Default.Pause to "Pause"
-                else -> Icons.Default.PlayArrow to "Play"
+            val (icon, resId) = when {
+                !article.isInQueue -> Icons.AutoMirrored.Outlined.PlaylistAdd to R.string.reader_menu_add_queue
+                isPlaying -> Icons.Default.Pause to R.string.action_pause
+                else -> Icons.Default.PlayArrow to R.string.action_play
             }
 
             Box(
@@ -384,7 +390,7 @@ private fun QueueItemRow(
                 } else {
                     Icon(
                         imageVector = icon,
-                        contentDescription = contentDescription,
+                        contentDescription = stringResource(resId),
                         modifier = Modifier.size(24.dp),
                         tint = MaterialTheme.colorScheme.onSurface
                     )

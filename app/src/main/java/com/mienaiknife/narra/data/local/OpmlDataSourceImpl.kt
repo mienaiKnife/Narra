@@ -17,6 +17,7 @@
 package com.mienaiknife.narra.data.local
 
 import com.mienaiknife.narra.data.local.entities.FeedEntity
+import com.mienaiknife.narra.domain.NarraError
 import org.xmlpull.v1.XmlPullParser
 import org.xmlpull.v1.XmlPullParserFactory
 import java.io.InputStream
@@ -87,7 +88,7 @@ class OpmlDataSourceImpl @Inject constructor() : OpmlDataSource {
             }
             Result.success(feeds)
         } catch (e: Exception) {
-            Result.failure(e)
+            Result.failure(NarraError.Unknown(e))
         }
     }
 
@@ -128,7 +129,7 @@ class OpmlDataSourceImpl @Inject constructor() : OpmlDataSource {
             
             Result.success(Unit)
         } catch (e: Exception) {
-            Result.failure(e)
+            Result.failure(NarraError.Unknown(e))
         }
     }
 }

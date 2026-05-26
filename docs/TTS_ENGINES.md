@@ -1,6 +1,6 @@
 # TTS Engine Implementation Guide
 
-Narra is designed to be engine-agnostic. All speech synthesis is handled through the `TtsEngine` interface. This allows us to support everything from system-default voices to high-quality on-device AI and cloud providers.
+Narra is designed to be engine-agnostic, and our goal is to support a wide variety of TTS engines. All speech synthesis is handled through the `TtsEngine` interface.
 
 ## The `TtsEngine` Interface
 

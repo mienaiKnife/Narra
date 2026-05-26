@@ -39,6 +39,7 @@ class AndroidTtsEngine @Inject constructor(
 
     private var tts: TextToSpeech? = null
     private var isInitialized = false
+    private var currentVolume = 1.0f
     private val pendingRequests = mutableListOf<PendingRequest>()
 
     private sealed class PendingRequest {
@@ -111,7 +112,10 @@ class AndroidTtsEngine @Inject constructor(
             pendingRequests.add(PendingRequest.Speak(text, utteranceId))
             return
         }
-        tts?.speak(text, TextToSpeech.QUEUE_FLUSH, null, utteranceId)
+        val params = android.os.Bundle().apply {
+            putFloat(TextToSpeech.Engine.KEY_PARAM_VOLUME, currentVolume)
+        }
+        tts?.speak(text, TextToSpeech.QUEUE_FLUSH, params, utteranceId)
     }
 
     @Synchronized
@@ -120,7 +124,10 @@ class AndroidTtsEngine @Inject constructor(
             pendingRequests.add(PendingRequest.Enqueue(text, utteranceId))
             return
         }
-        tts?.speak(text, TextToSpeech.QUEUE_ADD, null, utteranceId)
+        val params = android.os.Bundle().apply {
+            putFloat(TextToSpeech.Engine.KEY_PARAM_VOLUME, currentVolume)
+        }
+        tts?.speak(text, TextToSpeech.QUEUE_ADD, params, utteranceId)
     }
 
     @Synchronized
@@ -146,9 +153,9 @@ class AndroidTtsEngine @Inject constructor(
 
     @Synchronized
     override fun setVolume(volume: Float) {
-        // TextToSpeech doesn't have a direct setVolume, 
-        // it uses the stream volume it's assigned to.
-        // We could use Bundle params in speak() but that's per-utterance.
+        currentVolume = volume
+        // Volume will be applied to the next speak/enqueue call.
+        // Android TTS doesn't support changing volume of currently playing utterance easily.
     }
 
     @Synchronized

@@ -18,6 +18,7 @@ package com.mienaiknife.narra.data.remote
 
 import com.mienaiknife.narra.data.local.entities.FeedEntity
 import com.mienaiknife.narra.data.models.Article
+import com.mienaiknife.narra.domain.NarraError
 import com.mienaiknife.narra.ui.utils.UrlUtils
 import com.mienaiknife.narra.utils.DateUtils
 import com.prof18.rssparser.RssParser
@@ -31,7 +32,7 @@ class RemoteFeedDataSourceImpl @Inject constructor(
 
     override suspend fun fetchFeedMetadata(url: String): Result<FeedEntity> {
         if (!UrlUtils.isPublicUrl(url)) {
-            return Result.failure(com.mienaiknife.narra.domain.NarraError.Network.NoConnection())
+            return Result.failure(NarraError.Network.NoConnection())
         }
 
         return try {
@@ -58,7 +59,7 @@ class RemoteFeedDataSourceImpl @Inject constructor(
             }
 
             if (channel == null) {
-                return Result.failure(com.mienaiknife.narra.domain.NarraError.Content.InvalidFeed())
+                return Result.failure(NarraError.Content.InvalidFeed())
             }
 
             var imageUrl = channel.image?.url
@@ -120,7 +121,7 @@ class RemoteFeedDataSourceImpl @Inject constructor(
                 )
             )
         } catch (e: Exception) {
-            Result.failure(e)
+            Result.failure(NarraError.Unknown(e))
         }
     }
 
@@ -162,7 +163,7 @@ class RemoteFeedDataSourceImpl @Inject constructor(
             }
             Result.success(RemoteFeedDataSource.FetchArticlesResult(articles, updatedTitle))
         } catch (e: Exception) {
-            Result.failure(e)
+            Result.failure(NarraError.Unknown(e))
         }
     }
 

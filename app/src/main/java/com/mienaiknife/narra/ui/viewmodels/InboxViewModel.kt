@@ -18,10 +18,12 @@ package com.mienaiknife.narra.ui.viewmodels
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.mienaiknife.narra.R
 import com.mienaiknife.narra.data.models.Article
 import com.mienaiknife.narra.data.models.SortOption
 import com.mienaiknife.narra.domain.repository.ContentRepository
 import com.mienaiknife.narra.playback.PlaybackManager
+import com.mienaiknife.narra.ui.UiText
 import com.mienaiknife.narra.ui.utils.HtmlParser
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -45,7 +47,7 @@ class InboxViewModel @Inject constructor(
     val uiEvent: SharedFlow<UiEvent> = _uiEvent.asSharedFlow()
 
     sealed class UiEvent {
-        data class ShowSnackbar(val message: String) : UiEvent()
+        data class ShowSnackbar(val uiText: UiText) : UiEvent()
     }
 
     private val _isRefreshing = MutableStateFlow(false)
@@ -125,7 +127,9 @@ class InboxViewModel @Inject constructor(
         viewModelScope.launch {
             _isRefreshing.value = true
             repository.refreshFeeds().onFailure { error ->
-                _uiEvent.emit(UiEvent.ShowSnackbar(error.message ?: "Failed to refresh feeds"))
+                val uiText = error.message?.let { UiText.DynamicString(it) }
+                    ?: UiText.StringResource(R.string.error_refresh_failed)
+                _uiEvent.emit(UiEvent.ShowSnackbar(uiText))
             }
             _isRefreshing.value = false
         }
@@ -137,7 +141,9 @@ class InboxViewModel @Inject constructor(
                 _downloadingArticleIds.value += article.id
             }
             repository.addToQueue(article.id).onFailure { error ->
-                _uiEvent.emit(UiEvent.ShowSnackbar(error.message ?: "Failed to add to queue"))
+                val uiText = error.message?.let { UiText.DynamicString(it) }
+                    ?: UiText.StringResource(R.string.error_generic)
+                _uiEvent.emit(UiEvent.ShowSnackbar(uiText))
             }.also {
                 _downloadingArticleIds.value -= article.id
             }

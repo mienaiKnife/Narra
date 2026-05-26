@@ -18,8 +18,10 @@ package com.mienaiknife.narra.ui.viewmodels
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.mienaiknife.narra.R
 import com.mienaiknife.narra.domain.repository.ContentRepository
 import com.mienaiknife.narra.domain.repository.ModelRepository
+import com.mienaiknife.narra.ui.UiText
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -48,7 +50,7 @@ class HomeViewModel @Inject constructor(
     val uiEvent: SharedFlow<UiEvent> = _uiEvent.asSharedFlow()
 
     sealed class UiEvent {
-        data class ShowSnackbar(val message: String) : UiEvent()
+        data class ShowSnackbar(val uiText: UiText) : UiEvent()
         object ArticleAdded : UiEvent()
         data class FeedSubscribed(val feedName: String) : UiEvent()
         object EpubImported : UiEvent()
@@ -85,7 +87,9 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch {
             _isRefreshing.value = true
             repository.refreshFeeds().onFailure { error ->
-                _uiEvent.emit(UiEvent.ShowSnackbar(error.message ?: "Failed to refresh feeds"))
+                val uiText = error.message?.let { UiText.DynamicString(it) }
+                    ?: UiText.StringResource(R.string.error_refresh_failed)
+                _uiEvent.emit(UiEvent.ShowSnackbar(uiText))
             }
             _isRefreshing.value = false
         }
@@ -98,7 +102,7 @@ class HomeViewModel @Inject constructor(
                     _uiEvent.emit(UiEvent.EpubImported)
                 }
                 .onFailure {
-                    _uiEvent.emit(UiEvent.ShowSnackbar("Failed to import EPUB"))
+                    _uiEvent.emit(UiEvent.ShowSnackbar(UiText.StringResource(R.string.error_import_epub_failed)))
                 }
         }
     }
@@ -110,17 +114,18 @@ class HomeViewModel @Inject constructor(
                     _uiEvent.emit(UiEvent.ArticleAdded)
                 }
                 .onFailure { error ->
-                    when (error.message) {
+                    val uiText = when (error.message) {
                         "Article already in queue" -> {
-                            _uiEvent.emit(UiEvent.ShowSnackbar("Article is already in your queue"))
+                            UiText.StringResource(R.string.error_article_already_in_queue)
                         }
                         "No internet connection" -> {
-                            _uiEvent.emit(UiEvent.ShowSnackbar("Cannot download article without internet connection"))
+                            UiText.StringResource(R.string.error_no_internet)
                         }
                         else -> {
-                            _uiEvent.emit(UiEvent.ShowSnackbar("Failed to download article"))
+                            UiText.StringResource(R.string.error_download_failed)
                         }
                     }
+                    _uiEvent.emit(UiEvent.ShowSnackbar(uiText))
                 }
         }
     }
@@ -132,7 +137,7 @@ class HomeViewModel @Inject constructor(
                     _uiEvent.emit(UiEvent.FeedSubscribed(feedName))
                 }
                 .onFailure {
-                    _uiEvent.emit(UiEvent.ShowSnackbar("Failed to subscribe to feed"))
+                    _uiEvent.emit(UiEvent.ShowSnackbar(UiText.StringResource(R.string.error_subscribe_failed)))
                 }
         }
     }

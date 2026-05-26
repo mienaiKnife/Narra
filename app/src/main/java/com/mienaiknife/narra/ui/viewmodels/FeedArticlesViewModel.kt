@@ -20,11 +20,13 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.toRoute
+import com.mienaiknife.narra.R
 import com.mienaiknife.narra.NavDestination
 import com.mienaiknife.narra.data.models.Article
 import com.mienaiknife.narra.data.models.SortOption
 import com.mienaiknife.narra.domain.repository.ContentRepository
 import com.mienaiknife.narra.playback.PlaybackManager
+import com.mienaiknife.narra.ui.UiText
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -48,7 +50,7 @@ class FeedArticlesViewModel @Inject constructor(
     val uiEvent: SharedFlow<UiEvent> = _uiEvent.asSharedFlow()
 
     sealed class UiEvent {
-        data class ShowSnackbar(val message: String) : UiEvent()
+        data class ShowSnackbar(val uiText: UiText) : UiEvent()
     }
 
     private val routeData = savedStateHandle.toRoute<NavDestination.Feed>()
@@ -130,7 +132,9 @@ class FeedArticlesViewModel @Inject constructor(
         viewModelScope.launch {
             _isRefreshing.value = true
             repository.refreshFeeds().onFailure { error ->
-                _uiEvent.emit(UiEvent.ShowSnackbar(error.message ?: "Failed to refresh feeds"))
+                val uiText = error.message?.let { UiText.DynamicString(it) }
+                    ?: UiText.StringResource(R.string.error_refresh_failed)
+                _uiEvent.emit(UiEvent.ShowSnackbar(uiText))
             }
             _isRefreshing.value = false
         }
@@ -143,7 +147,7 @@ class FeedArticlesViewModel @Inject constructor(
             }
             repository.addToQueue(article.id).onFailure { error ->
                 if (error.message == "No internet connection") {
-                    _uiEvent.emit(UiEvent.ShowSnackbar("Cannot download article without internet connection"))
+                    _uiEvent.emit(UiEvent.ShowSnackbar(UiText.StringResource(R.string.error_no_internet)))
                 }
             }.also {
                 _downloadingArticleIds.value -= article.id

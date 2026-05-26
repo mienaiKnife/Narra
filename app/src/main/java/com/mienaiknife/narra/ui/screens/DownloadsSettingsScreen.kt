@@ -47,6 +47,8 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
+import androidx.compose.ui.res.stringResource
+import com.mienaiknife.narra.R
 import com.mienaiknife.narra.ui.components.flashHighlight
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -79,7 +81,7 @@ fun DownloadsSettingsScreen(
 
     LaunchedEffect(uiState.message) {
         uiState.message?.let {
-            Toast.makeText(context, it, Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, it.asString(context), Toast.LENGTH_SHORT).show()
             viewModel.clearMessage()
         }
     }
@@ -142,8 +144,8 @@ fun DownloadsSettingsScreen(
     if (showDeleteConfirm.value) {
         AlertDialog(
             onDismissRequest = { showDeleteConfirm.value = false },
-            title = { Text("Delete Database") },
-            text = { Text("Are you sure you want to delete all your data? This cannot be undone.") },
+            title = { Text(stringResource(R.string.settings_downloads_delete_db)) },
+            text = { Text(stringResource(R.string.settings_downloads_delete_db_confirm)) },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -151,12 +153,12 @@ fun DownloadsSettingsScreen(
                         showDeleteConfirm.value = false
                     }
                 ) {
-                    Text("Delete", color = MaterialTheme.colorScheme.error)
+                    Text(stringResource(R.string.action_delete), color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showDeleteConfirm.value = false }) {
-                    Text("Cancel")
+                    Text(stringResource(R.string.action_cancel))
                 }
             }
         )
@@ -243,13 +245,13 @@ fun DownloadsSettingsContent(
             IconButton(onClick = onBack) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = "Back",
+                    contentDescription = stringResource(R.string.action_back),
                     modifier = Modifier.size(32.dp),
                     tint = MaterialTheme.colorScheme.onBackground
                 )
             }
             Text(
-                text = "Downloads",
+                text = stringResource(R.string.settings_downloads_title),
                 style = MaterialTheme.typography.headlineSmall,
                 color = MaterialTheme.colorScheme.onBackground
             )
@@ -264,7 +266,7 @@ fun DownloadsSettingsContent(
                 .padding(horizontal = 16.dp)
         ) {
             Text(
-                text = "Network",
+                text = stringResource(R.string.settings_downloads_network_section),
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.padding(vertical = 8.dp)
@@ -283,11 +285,11 @@ fun DownloadsSettingsContent(
                         .padding(end = 8.dp)
                 ) {
                     Text(
-                        text = "Download over Wi-Fi only",
+                        text = stringResource(R.string.settings_downloads_wifi_only),
                         style = MaterialTheme.typography.bodyLarge
                     )
                     Text(
-                        text = "Prevent Narra from using mobile data",
+                        text = stringResource(R.string.settings_downloads_wifi_only_desc),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -305,15 +307,15 @@ fun DownloadsSettingsContent(
             }
 
             Text(
-                text = "Automation",
+                text = stringResource(R.string.settings_downloads_automation_section),
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.padding(top = 24.dp, bottom = 8.dp)
             )
 
             SettingDropDownItem(
-                title = "Refresh inbox",
-                subtitle = "Specify an interval at which the inbox is automatically refreshed",
+                title = stringResource(R.string.settings_downloads_refresh_inbox),
+                subtitle = stringResource(R.string.settings_downloads_refresh_inbox_desc),
                 selectedValue = uiState.refreshInterval,
                 options = listOf("Never", "1 hour", "3 hours", "6 hours", "12 hours", "24 hours"),
                 onValueChange = onRefreshIntervalChange,
@@ -323,7 +325,52 @@ fun DownloadsSettingsContent(
             )
 
             Text(
-                text = "Database",
+                text = stringResource(R.string.settings_downloads_opml_section),
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(top = 24.dp, bottom = 8.dp)
+            )
+
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .bringIntoViewRequester(importFeedsRequester)
+                    .flashHighlight(highlightSetting == "importFeeds")
+                    .clickable { onImportOpml() }
+                    .padding(vertical = 8.dp)
+            ) {
+                Text(
+                    text = stringResource(R.string.settings_downloads_import_feeds),
+                    style = MaterialTheme.typography.bodyLarge
+                )
+                Text(
+                    text = stringResource(R.string.settings_downloads_import_feeds_desc),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .bringIntoViewRequester(exportFeedsRequester)
+                    .flashHighlight(highlightSetting == "exportFeeds")
+                    .clickable { onExportOpml() }
+                    .padding(vertical = 8.dp)
+            ) {
+                Text(
+                    text = stringResource(R.string.settings_downloads_export_feeds),
+                    style = MaterialTheme.typography.bodyLarge
+                )
+                Text(
+                    text = stringResource(R.string.settings_downloads_export_feeds_desc),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            Text(
+                text = stringResource(R.string.settings_downloads_database_section),
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.padding(top = 24.dp, bottom = 8.dp)
@@ -338,14 +385,22 @@ fun DownloadsSettingsContent(
                     .padding(vertical = 12.dp)
             ) {
                 Text(
-                    text = "Export database",
+                    text = stringResource(R.string.settings_downloads_export_db),
                     style = MaterialTheme.typography.bodyLarge
                 )
                 Text(
-                    text = "Back up your texts, feeds, and playback progress",
+                    text = stringResource(R.string.settings_downloads_export_db_desc),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+                if (uiState.lastExportTimestamp > 0) {
+                    Text(
+                        text = stringResource(R.string.settings_downloads_last_export, DateUtils.formatDateTime(uiState.lastExportTimestamp)),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(top = 4.dp)
+                    )
+                }
             }
 
             Column(
@@ -357,11 +412,11 @@ fun DownloadsSettingsContent(
                     .padding(vertical = 8.dp)
             ) {
                 Text(
-                    text = "Import database",
+                    text = stringResource(R.string.settings_downloads_import_db),
                     style = MaterialTheme.typography.bodyLarge
                 )
                 Text(
-                    text = "Restore your data from a backup",
+                    text = stringResource(R.string.settings_downloads_import_db_desc),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -381,11 +436,11 @@ fun DownloadsSettingsContent(
                         .padding(end = 8.dp)
                 ) {
                     Text(
-                        text = "Auto-export database",
+                        text = stringResource(R.string.settings_downloads_auto_export),
                         style = MaterialTheme.typography.bodyLarge
                     )
                     Text(
-                        text = "Automatically export database for external syncing (e.g. via Syncthing)",
+                        text = stringResource(R.string.settings_downloads_auto_export_desc),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -418,11 +473,11 @@ fun DownloadsSettingsContent(
                             .padding(end = 8.dp)
                     ) {
                         Text(
-                            text = "Auto-import database",
+                            text = stringResource(R.string.settings_downloads_auto_import),
                             style = MaterialTheme.typography.bodyLarge
                         )
                         Text(
-                            text = "Automatically check for a newer database and stage it for import",
+                            text = stringResource(R.string.settings_downloads_auto_import_desc),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -449,32 +504,32 @@ fun DownloadsSettingsContent(
                         .padding(vertical = 8.dp)
                 ) {
                     Text(
-                        text = "Auto-export location",
+                        text = stringResource(R.string.settings_downloads_auto_export_location),
                         style = MaterialTheme.typography.bodyLarge
                     )
                     Text(
                         text = if (uiState.autoExportUri != null) {
-                            "File set. Tap to change."
+                            stringResource(R.string.settings_downloads_auto_export_location_set)
                         } else {
-                            "Not set. Tap to pick a folder"
+                            stringResource(R.string.settings_downloads_auto_export_location_not_set)
                         },
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
 
-                if (uiState.lastExportTimestamp > 0) {
+                if (uiState.lastExportTimestamp > 0 && uiState.autoExportEnabled) {
                     Text(
-                        text = "Last auto-export: ${DateUtils.formatDateTime(uiState.lastExportTimestamp)}",
+                        text = stringResource(R.string.settings_downloads_last_export, DateUtils.formatDateTime(uiState.lastExportTimestamp)),
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.padding(bottom = 8.dp)
                     )
                 }
 
                 if (uiState.pendingImport) {
                     Text(
-                        text = "New database staged. Restart app to apply.",
+                        text = stringResource(R.string.settings_downloads_staged_message),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.padding(bottom = 8.dp)
@@ -491,57 +546,12 @@ fun DownloadsSettingsContent(
                     .padding(vertical = 8.dp)
             ) {
                 Text(
-                    text = "Delete database",
+                    text = stringResource(R.string.settings_downloads_delete_db),
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.error
                 )
                 Text(
-                    text = "Delete all articles, feeds, and playback progress from this device",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-
-            Text(
-                text = "OPML",
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.padding(top = 24.dp, bottom = 8.dp)
-            )
-
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .bringIntoViewRequester(importFeedsRequester)
-                    .flashHighlight(highlightSetting == "importFeeds")
-                    .clickable { onImportOpml() }
-                    .padding(vertical = 8.dp)
-            ) {
-                Text(
-                    text = "Import feeds",
-                    style = MaterialTheme.typography.bodyLarge
-                )
-                Text(
-                    text = "Import your subscriptions from another RSS reader",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .bringIntoViewRequester(exportFeedsRequester)
-                    .flashHighlight(highlightSetting == "exportFeeds")
-                    .clickable { onExportOpml() }
-                    .padding(vertical = 8.dp)
-            ) {
-                Text(
-                    text = "Export feeds",
-                    style = MaterialTheme.typography.bodyLarge
-                )
-                Text(
-                    text = "Transfer your subscriptions to another RSS reader",
+                    text = stringResource(R.string.settings_downloads_delete_db_desc),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

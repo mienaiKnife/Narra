@@ -50,6 +50,8 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.stringResource
+import com.mienaiknife.narra.R
 import com.mienaiknife.narra.data.models.SortOption
 import com.mienaiknife.narra.ui.theme.NarraTheme
 
@@ -108,7 +110,7 @@ fun SortBottomSheetContent(
             val sourceActive = selectedOption == SortOption.SOURCE_ASC || selectedOption == SortOption.SOURCE_DESC
 
             SortButton(
-                text = "Date",
+                text = stringResource(R.string.sort_date),
                 isActive = dateActive,
                 onClick = {
                     onOptionSelected(SortOption.DATE_DESC)
@@ -119,7 +121,7 @@ fun SortBottomSheetContent(
                 modifier = Modifier.weight(1f)
             )
             SortButton(
-                text = "Title",
+                text = stringResource(R.string.sort_title),
                 isActive = titleActive,
                 onClick = {
                     onOptionSelected(SortOption.TITLE_ASC)
@@ -130,7 +132,7 @@ fun SortBottomSheetContent(
                 modifier = Modifier.weight(1f)
             )
             SortButton(
-                text = "Source",
+                text = stringResource(R.string.sort_source),
                 isActive = sourceActive,
                 onClick = {
                     onOptionSelected(SortOption.SOURCE_ASC)
@@ -154,7 +156,7 @@ fun SortBottomSheetContent(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Keep sorted",
+                    text = stringResource(R.string.sort_keep_sorted),
                     style = MaterialTheme.typography.bodyLarge
                 )
                 Switch(
@@ -182,7 +184,7 @@ fun SortBottomSheetContent(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Show played",
+                    text = stringResource(R.string.sort_show_played),
                     style = MaterialTheme.typography.bodyLarge
                 )
                 Switch(

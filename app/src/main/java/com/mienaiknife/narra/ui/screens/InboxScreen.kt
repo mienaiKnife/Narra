@@ -36,10 +36,13 @@ import androidx.compose.runtime.*
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.compose.rememberNavController
+import com.mienaiknife.narra.R
 import com.mienaiknife.narra.data.models.Article
 import com.mienaiknife.narra.data.models.SampleArticles
 import com.mienaiknife.narra.data.models.SortOption
@@ -58,11 +61,13 @@ fun InboxScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
 
+    val context = LocalContext.current
+
     LaunchedEffect(Unit) {
         viewModel.uiEvent.collect { event ->
             when (event) {
                 is InboxViewModel.UiEvent.ShowSnackbar -> {
-                    snackbarHostState.showSnackbar(event.message)
+                    snackbarHostState.showSnackbar(event.uiText.asString(context))
                 }
             }
         }
@@ -142,7 +147,7 @@ fun InboxScreenContent(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "Inbox",
+                text = stringResource(R.string.nav_inbox),
                 style = MaterialTheme.typography.headlineSmall,
                 color = MaterialTheme.colorScheme.onBackground
             )
@@ -150,7 +155,7 @@ fun InboxScreenContent(
                 IconButton(onClick = { showMenu = true }) {
                     Icon(
                         imageVector = Icons.Default.Menu,
-                        contentDescription = "Menu",
+                        contentDescription = stringResource(R.string.action_menu),
                         modifier = Modifier.size(32.dp),
                         tint = MaterialTheme.colorScheme.onBackground
                     )
@@ -161,7 +166,7 @@ fun InboxScreenContent(
                     onDismissRequest = { showMenu = false }
                 ) {
                     DropdownMenuItem(
-                        text = { Text("Search") },
+                        text = { Text(stringResource(R.string.action_search)) },
                         onClick = { showMenu = false },
                         leadingIcon = {
                             Icon(
@@ -171,7 +176,7 @@ fun InboxScreenContent(
                         }
                     )
                     DropdownMenuItem(
-                        text = { Text("Sort") },
+                        text = { Text(stringResource(R.string.action_sort)) },
                         onClick = {
                             showMenu = false
                             showSortSheet.value = true
@@ -184,7 +189,7 @@ fun InboxScreenContent(
                         }
                     )
                     DropdownMenuItem(
-                        text = { Text("Refresh") },
+                        text = { Text(stringResource(R.string.action_refresh)) },
                         onClick = {
                             showMenu = false
                             onRefresh()
@@ -197,7 +202,7 @@ fun InboxScreenContent(
                         }
                     )
                     DropdownMenuItem(
-                        text = { Text("Clear") },
+                        text = { Text(stringResource(R.string.action_clear)) },
                         onClick = {
                             showMenu = false
                             onClearInbox()
@@ -210,7 +215,7 @@ fun InboxScreenContent(
                         }
                     )
                     DropdownMenuItem(
-                        text = { Text("Edit feeds") },
+                        text = { Text(stringResource(R.string.inbox_menu_edit_feeds)) },
                         onClick = {
                             showMenu = false
                             onEditFeeds()
@@ -252,7 +257,7 @@ fun InboxScreenContent(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = "No new articles from your feeds.",
+                        text = stringResource(R.string.inbox_empty_message),
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )

@@ -63,6 +63,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.res.stringResource
+import com.mienaiknife.narra.R
 import com.mienaiknife.narra.ui.components.flashHighlight
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -151,7 +153,10 @@ fun VoicesSettingsContent(
         }
     }
 
-    val engines = listOf("Android's native TTS", "On-device AI (Sherpa-ONNX)")
+    val engines = listOf(
+        stringResource(R.string.settings_voices_android_engine_name),
+        stringResource(R.string.settings_voices_ondevice_engine_name)
+    )
     val engineValues = listOf("android", "ondevice")
     var expanded by remember { mutableStateOf(false) }
 
@@ -202,13 +207,13 @@ fun VoicesSettingsContent(
             IconButton(onClick = onBack) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = "Back",
+                    contentDescription = stringResource(R.string.action_back),
                     modifier = Modifier.size(32.dp),
                     tint = MaterialTheme.colorScheme.onBackground
                 )
             }
             Text(
-                text = "Voices",
+                text = stringResource(R.string.settings_voices_title),
                 style = MaterialTheme.typography.headlineSmall,
                 color = MaterialTheme.colorScheme.onBackground
             )
@@ -223,7 +228,7 @@ fun VoicesSettingsContent(
                 .verticalScroll(scrollState)
         ) {
             Text(
-                text = "Engine selection",
+                text = stringResource(R.string.settings_voices_engine_selection),
                 style = MaterialTheme.typography.titleSmall,
                 color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.padding(vertical = 8.dp)
@@ -270,7 +275,7 @@ fun VoicesSettingsContent(
             when (uiState.selectedEngine) {
                 "android" -> {
                     Text(
-                        text = "Open Android's TTS settings",
+                        text = stringResource(R.string.settings_voices_android_settings),
                         style = MaterialTheme.typography.bodyLarge,
                         modifier = Modifier
                             .fillMaxWidth()
@@ -294,7 +299,7 @@ fun VoicesSettingsContent(
                     )
 
                     Text(
-                        text = "Voice settings",
+                        text = stringResource(R.string.settings_voices_voice_settings),
                         style = MaterialTheme.typography.titleSmall,
                         color = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.padding(vertical = 8.dp)
@@ -305,7 +310,7 @@ fun VoicesSettingsContent(
                         .flashHighlight(highlightSetting == "noiseScale")
                         .padding(horizontal = 8.dp)) {
                         Text(
-                            text = "Noise Scale (Expressiveness): ${"%.3f".format(uiState.sherpaNoiseScale)}",
+                            text = stringResource(R.string.settings_voices_noise_scale, uiState.sherpaNoiseScale),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onBackground
                         )
@@ -328,7 +333,7 @@ fun VoicesSettingsContent(
                         Spacer(modifier = Modifier.height(8.dp))
 
                         Text(
-                            text = "Length Scale: ${"%.2f".format(uiState.sherpaLengthScale)}",
+                            text = stringResource(R.string.settings_voices_length_scale, uiState.sherpaLengthScale),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onBackground,
                             modifier = Modifier
@@ -357,7 +362,7 @@ fun VoicesSettingsContent(
                         Spacer(modifier = Modifier.height(24.dp))
 
                         Text(
-                            text = "Kokoro Voice",
+                            text = stringResource(R.string.settings_voices_kokoro_voice),
                             style = MaterialTheme.typography.titleSmall,
                             color = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.padding(vertical = 8.dp)
@@ -405,7 +410,7 @@ fun VoicesSettingsContent(
                     Spacer(modifier = Modifier.height(24.dp))
 
                     Text(
-                        text = "Voice data",
+                        text = stringResource(R.string.settings_voices_voice_data),
                         style = MaterialTheme.typography.titleSmall,
                         color = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.padding(top = 8.dp, bottom = 8.dp)
@@ -479,7 +484,7 @@ fun TtsModelItem(
                 if (isSelected) {
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        "(Selected)",
+                        stringResource(R.string.settings_voices_selected_label),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.primary
                     )
@@ -496,7 +501,7 @@ fun TtsModelItem(
                 if (isDownloading) {
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = if (model.progress < 0.99f) "Downloading..." else "Finalizing...",
+                        text = if (model.progress < 0.99f) stringResource(R.string.settings_voices_downloading) else stringResource(R.string.settings_voices_finalizing),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.primary
                     )
@@ -515,7 +520,7 @@ fun TtsModelItem(
                 }
                 if (model.lastError != null && !isDownloading) {
                     Text(
-                        text = "Error: ${model.lastError}",
+                        text = stringResource(R.string.settings_voices_error, model.lastError ?: ""),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.error,
                         modifier = Modifier.padding(top = 4.dp)
@@ -533,7 +538,7 @@ fun TtsModelItem(
                         IconButton(onClick = onDelete) {
                             Icon(
                                 imageVector = Icons.Default.Delete,
-                                contentDescription = "Delete model",
+                                contentDescription = stringResource(R.string.settings_voices_delete_model_desc),
                                 tint = MaterialTheme.colorScheme.onSurface
                             )
                         }
@@ -543,7 +548,7 @@ fun TtsModelItem(
                         IconButton(onClick = onCancelDownload) {
                             Icon(
                                 imageVector = Icons.Default.Close,
-                                contentDescription = "Cancel download",
+                                contentDescription = stringResource(R.string.settings_voices_cancel_download_desc),
                                 tint = MaterialTheme.colorScheme.onSurface
                             )
                         }
@@ -553,7 +558,7 @@ fun TtsModelItem(
                         IconButton(onClick = onDownload) {
                             Icon(
                                 imageVector = Icons.Default.Download,
-                                contentDescription = "Download model",
+                                contentDescription = stringResource(R.string.settings_voices_download_model_desc),
                                 tint = MaterialTheme.colorScheme.onSurface
                             )
                         }

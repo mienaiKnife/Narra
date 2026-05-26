@@ -15,6 +15,269 @@
   limitations under the License.
   -->
 <resources>
-    <!-- TODO: Move hardcoded text strings here -->
     <string name="app_name">Narra</string>
+
+    <!-- Navigation -->
+    <string name="nav_home">Home</string>
+    <string name="nav_inbox">Inbox</string>
+    <string name="nav_queue">Queue</string>
+    <string name="nav_history">History</string>
+    <string name="nav_feeds">Feeds</string>
+    <string name="nav_add">Add</string>
+    <string name="nav_settings">Settings</string>
+
+    <!-- Home Screen -->
+    <string name="home_continue_listening">Continue listening</string>
+    <string name="home_new_from_feeds">New from your feeds</string>
+    <string name="home_favorites">Your favorites</string>
+    <string name="home_empty_title">Your library is empty</string>
+    <string name="home_empty_message">Add articles from RSS feeds, EPUB files, or web links to start listening.</string>
+    <string name="home_add_content">Add Content</string>
+    <string name="home_cover_image_desc">Cover image for %1$s</string>
+    <string name="home_article_semantics_desc">%1$s from %2$s, %3$d percent completed</string>
+
+    <!-- Inbox Screen -->
+    <string name="inbox_empty_message">No new articles from your feeds.</string>
+    <string name="inbox_menu_edit_feeds">Edit feeds</string>
+
+    <!-- Queue Screen -->
+    <string name="queue_empty_message">Your queue is empty. Add some texts to get started!</string>
+    <string name="queue_removed_message">Removed from queue</string>
+    <string name="queue_time_left_prefix">Time left: </string>
+    <string name="queue_and"> and </string>
+
+    <!-- History Screen -->
+    <string name="history_empty_message">Your history is empty.</string>
+
+    <!-- Add Screen -->
+    <string name="add_import_webpage">Import webpage</string>
+    <string name="add_add_feed">Add feed</string>
+    <string name="add_upload_file">Upload a file</string>
+    <string name="add_url_placeholder">Paste a URL…</string>
+    <string name="add_article_added">Article added successfully</string>
+    <string name="add_feed_subscribed">Subscribed to %1$s</string>
+    <string name="add_epub_imported">EPUB imported successfully</string>
+
+    <!-- Reader Screen -->
+    <string name="reader_sleep_timer">Sleep Timer</string>
+    <string name="reader_no_results">No results found</string>
+    <string name="reader_error_title">Something went wrong</string>
+
+    <!-- Settings Screen -->
+    <string name="settings_search_placeholder">Search settings…</string>
+    <string name="settings_ui_title">User interface</string>
+    <string name="settings_ui_subtitle">Appearance and behavior</string>
+    <string name="settings_playback_title">Playback</string>
+    <string name="settings_playback_subtitle">Headphone controls and queue</string>
+    <string name="settings_voices_title">Voices</string>
+    <string name="settings_voices_subtitle">Text to speech settings</string>
+    <string name="settings_downloads_title">Downloads</string>
+    <string name="settings_downloads_subtitle">Connections, updates, and data</string>
+    <string name="settings_about_title">About Narra</string>
+    <string name="settings_about_subtitle">Documentation, issue tracking, and licenses</string>
+
+    <!-- User Interface Settings -->
+    <string name="settings_ui_theme_section">Theme</string>
+    <string name="settings_ui_use_system_theme">Use system theme</string>
+    <string name="settings_ui_use_system_theme_desc">Make Narra match your system theme</string>
+    <string name="settings_ui_dark_mode">Dark mode</string>
+    <string name="settings_ui_dark_mode_desc">Make Narra always use dark mode. If unchecked, Narra will use light mode.</string>
+    <string name="settings_ui_dynamic_colors">Dynamic colors</string>
+    <string name="settings_ui_dynamic_colors_desc">Make the theme match your wallpaper</string>
+    <string name="settings_ui_reader_section">Reader screen</string>
+    <string name="settings_ui_auto_fullscreen">Auto fullscreen</string>
+    <string name="settings_ui_auto_fullscreen_desc">Automatically hide controls after a few seconds of playback</string>
+    <string name="settings_ui_tap_to_show">Tap to show controls</string>
+    <string name="settings_ui_tap_to_show_desc">When in fullscreen mode, tapping anywhere on the screen will show controls</string>
+    <string name="settings_ui_font_size_label">Font size: %1$d sp</string>
+    <string name="settings_ui_font_size_desc">Adjust the size of text in the reader screen</string>
+    <string name="settings_ui_text_info_section">Text information</string>
+    <string name="settings_ui_show_remaining_time">Show remaining time</string>
+    <string name="settings_ui_show_remaining_time_desc">Toggle between showing remaining time or total duration during playback</string>
+
+    <!-- Playback Settings -->
+    <string name="settings_playback_interruptions_section">Interruptions</string>
+    <string name="settings_playback_pause_on_disconnect">Pause on disconnect</string>
+    <string name="settings_playback_pause_on_disconnect_desc">Pause playback when headphones or Bluetooth devices are disconnected</string>
+    <string name="settings_playback_pause_for_interruptions">Pause for interruptions</string>
+    <string name="settings_playback_pause_for_interruptions_desc">Pause playback instead of lowering volume for notification sounds</string>
+    <string name="settings_playback_controls_section">Playback controls</string>
+    <string name="settings_playback_queue_section">Queue</string>
+    <string name="settings_playback_autoplay_next">Autoplay next text</string>
+    <string name="settings_playback_autoplay_next_desc">Automatically play the next text in the queue</string>
+    <string name="settings_playback_play_chime">Play chime and title</string>
+    <string name="settings_playback_play_chime_desc">When autoplaying the next text in the queue, start by playing a chime and the title</string>
+
+    <!-- Voices Settings -->
+    <string name="settings_voices_engine_selection">Engine selection</string>
+    <string name="settings_voices_android_settings">Open Android\'s TTS settings</string>
+    <string name="settings_voices_voice_settings">Voice settings</string>
+    <string name="settings_voices_noise_scale">Noise Scale (Expressiveness): %1$.3f</string>
+    <string name="settings_voices_length_scale">Length Scale: %1$.2f</string>
+    <string name="settings_voices_kokoro_voice">Kokoro Voice</string>
+    <string name="settings_voices_voice_data">Voice data</string>
+    <string name="settings_voices_error">Error: %1$s</string>
+
+    <!-- Downloads & Data Settings -->
+    <string name="settings_downloads_network_section">Network</string>
+    <string name="settings_downloads_wifi_only">Download over Wi-Fi only</string>
+    <string name="settings_downloads_wifi_only_desc">Prevent Narra from using mobile data</string>
+    <string name="settings_downloads_automation_section">Automation</string>
+    <string name="settings_downloads_database_section">Database</string>
+    <string name="settings_downloads_export_db">Export database</string>
+    <string name="settings_downloads_export_db_desc">Back up your texts, feeds, and playback progress</string>
+    <string name="settings_downloads_import_db">Import database</string>
+    <string name="settings_downloads_import_db_desc">Restore your data from a backup</string>
+    <string name="settings_downloads_auto_export">Auto-export database</string>
+    <string name="settings_downloads_auto_export_desc">Automatically export database for external syncing (e.g. via Syncthing)</string>
+    <string name="settings_downloads_auto_import">Auto-import database</string>
+    <string name="settings_downloads_auto_import_desc">Automatically check for a newer database and stage it for import</string>
+    <string name="settings_downloads_auto_export_location">Auto-export location</string>
+    <string name="settings_downloads_last_export">Last auto-export: %1$s</string>
+    <string name="settings_downloads_staged_message">New database staged. Restart app to apply.</string>
+    <string name="settings_downloads_delete_db">Delete database</string>
+    <string name="settings_downloads_delete_db_desc">Delete all articles, feeds, and playback progress from this device</string>
+    <string name="settings_downloads_opml_section">OPML</string>
+    <string name="settings_downloads_import_feeds">Import feeds</string>
+    <string name="settings_downloads_import_feeds_desc">Import your subscriptions from another RSS reader</string>
+    <string name="settings_downloads_export_feeds">Export feeds</string>
+    <string name="settings_downloads_export_feeds_desc">Transfer your subscriptions to another RSS reader</string>
+
+    <!-- Feed Articles Screen -->
+    <string name="feed_articles_empty_message">No articles found in this feed.</string>
+
+    <!-- Feeds Screen -->
+    <string name="feeds_empty_message">No feeds yet. Add one to get started!</string>
+
+    <!-- Sort Bottom Sheet -->
+    <string name="sort_date">Date</string>
+    <string name="sort_title">Title</string>
+    <string name="sort_source">Source</string>
+    <string name="sort_keep_sorted">Keep sorted</string>
+    <string name="sort_show_played">Show played</string>
+
+    <!-- Common Actions -->
+    <string name="action_undo">Undo</string>
+    <string name="action_search">Search</string>
+    <string name="action_sort">Sort</string>
+    <string name="action_refresh">Refresh</string>
+    <string name="action_clear">Clear</string>
+    <string name="action_menu">Menu</string>
+    <string name="action_back">Back</string>
+
+    <!-- Snackbars & Dialogs -->
+    <string name="error_refresh_failed">Failed to refresh feeds</string>
+    <string name="error_import_epub_failed">Failed to import EPUB</string>
+    <string name="error_article_already_in_queue">Article is already in your queue</string>
+    <string name="error_no_internet">Cannot download article without internet connection</string>
+    <string name="error_download_failed">Failed to download article</string>
+    <string name="error_subscribe_failed">Failed to subscribe to feed</string>
+    <string name="error_generic">Something went wrong</string>
+    <string name="error_article_not_found">Article not found</string>
+
+    <!-- Backup/Import Messages -->
+    <string name="message_imported_feeds">Imported %1$d feeds</string>
+    <string name="message_import_failed">Import failed: %1$s</string>
+    <string name="message_exported_feeds">Exported subscriptions</string>
+    <string name="message_export_failed">Export failed: %1$s</string>
+    <string name="message_backup_created">Backup created</string>
+    <string name="message_backup_failed">Backup failed: %1$s</string>
+    <string name="message_db_restored">Database restored. Restart app.</string>
+    <string name="message_restore_failed">Restore failed: %1$s</string>
+
+    <!-- Plurals Equivalents (templates) -->
+    <string name="unit_text">text</string>
+    <string name="unit_texts">texts</string>
+    <string name="unit_hour">hour</string>
+    <string name="unit_hours">hours</string>
+    <string name="unit_minute">minute</string>
+    <string name="unit_minutes">minutes</string>
+
+    <!-- Playback Service -->
+    <string name="notification_preparing">Preparing playback…</string>
+
+    <string name="settings_ui_reader_font_family">Font family</string>
+    <string name="settings_ui_reader_font_family_desc">Choose the font used for article content</string>
+    <string name="settings_ui_line_spacing">Line spacing</string>
+    <string name="settings_ui_line_spacing_desc">Adjust the vertical spacing between lines of text</string>
+    <string name="settings_ui_reader_font_size">Font size</string>
+    <string name="settings_ui_reader_font_size_desc">Adjust the text size for reading articles</string>
+    <string name="settings_playback_ff_skip">Fast forward skip time</string>
+    <string name="settings_playback_ff_skip_desc">Customize fast forward button skip time</string>
+    <string name="settings_playback_rw_skip">Rewind skip time</string>
+    <string name="settings_playback_rw_skip_desc">Customize rewind button skip time</string>
+    <string name="settings_playback_ff_hardware">Fast forward hardware button</string>
+    <string name="settings_playback_ff_hardware_desc">Customize fast forward hardware button behavior</string>
+    <string name="settings_playback_rw_hardware">Rewind hardware button</string>
+    <string name="settings_playback_rw_hardware_desc">Customize rewind hardware button behavior</string>
+    <string name="settings_playback_chime_sound">Chime sound</string>
+    <string name="settings_playback_chime_sound_desc">Choose the sound to play before the title</string>
+    <string name="settings_voices_engine_selection_desc">Choose between Android TTS and on-device AI</string>
+    <string name="settings_voices_android_settings_desc">Open system text-to-speech settings</string>
+    <string name="settings_voices_noise_scale_title">Noise Scale</string>
+    <string name="settings_voices_noise_scale_desc">Adjust expressiveness for AI voices</string>
+    <string name="settings_voices_length_scale_title">Length Scale</string>
+    <string name="settings_voices_length_scale_desc">Adjust playback speed for AI voices</string>
+    <string name="settings_voices_kokoro_voice_desc">Select specific Kokoro AI voice</string>
+    <string name="settings_voices_voice_data_desc">Download or delete TTS models</string>
+    <string name="settings_downloads_refresh_inbox">Refresh inbox</string>
+    <string name="settings_downloads_refresh_inbox_desc">Automatic inbox refresh interval</string>
+    <string name="settings_voices_android_engine_name">Android\'s native TTS</string>
+    <string name="settings_voices_ondevice_engine_name">On-device AI (Sherpa-ONNX)</string>
+    <string name="settings_voices_selected_label">(Selected)</string>
+    <string name="settings_voices_downloading">Downloading…</string>
+    <string name="settings_voices_finalizing">Finalizing…</string>
+    <string name="settings_voices_download_model_desc">Download model</string>
+    <string name="settings_voices_cancel_download_desc">Cancel download</string>
+    <string name="settings_voices_delete_model_desc">Delete model</string>
+    <string name="settings_downloads_delete_db_confirm">Are you sure you want to delete all your data? This cannot be undone.</string>
+    <string name="settings_downloads_auto_export_location_set">File set. Tap to change.</string>
+    <string name="settings_downloads_auto_export_location_not_set">Not set. Tap to pick a folder</string>
+    <string name="action_delete">Delete</string>
+    <string name="action_cancel">Cancel</string>
+    <string name="feeds_icon_desc">Feed icon</string>
+    <string name="feeds_notifications_desc">Notifications</string>
+    <string name="feeds_delete_feed">Delete feed</string>
+    <string name="reader_menu_favorite">Favorite</string>
+    <string name="reader_menu_unfavorite">Unfavorite</string>
+    <string name="reader_menu_sleep_timer_active">Sleep timer (%1$s)</string>
+    <string name="reader_menu_visit_site">Visit site</string>
+    <string name="reader_article_image_desc">Article image</string>
+    <string name="reader_scroll_to_current_position">Scroll to current position</string>
+    <string name="reader_playback_progress_desc">Playback progress: %1$d%%</string>
+    <string name="reader_playback_speed_desc">Playback Speed: current %1$.1fx</string>
+    <string name="reader_rewind_desc">Rewind %1$s</string>
+    <string name="reader_fast_forward_desc">Fast forward %1$s</string>
+    <string name="reader_next_article_desc">Next article</string>
+    <string name="reader_search_placeholder">Search in article…</string>
+    <string name="reader_paragraph_label">Paragraph %1$d of %2$d</string>
+    <string name="reader_paragraph_search_desc">Paragraph %1$d</string>
+    <string name="reader_open_link">Open link</string>
+    <string name="reader_go_back">Go Back</string>
+    <string name="reader_retry">Retry</string>
+    <string name="action_play">Play</string>
+    <string name="action_pause">Pause</string>
+    <string name="action_off">Off</string>
+    <string name="unit_5_minutes">5 minutes</string>
+    <string name="unit_15_minutes">15 minutes</string>
+    <string name="unit_30_minutes">30 minutes</string>
+    <string name="unit_45_minutes">45 minutes</string>
+    <string name="unit_1_hour">1 hour</string>
+    <string name="reader_menu_licenses">Licenses</string>
+    <string name="about_version">Version</string>
+    <string name="about_code_repository">Code repository</string>
+    <string name="about_code_repository_desc">Report bugs, suggest features</string>
+    <string name="about_licenses_desc">Open source software used in Narra</string>
+    <string name="about_privacy_policy">Privacy policy</string>
+    <string name="playback_notification_channel_desc">Media controls for background playback</string>
+    <string name="reader_menu_played">Mark as played</string>
+    <string name="reader_menu_unplayed">Mark as unplayed</string>
+    <string name="reader_menu_add_queue">Add to queue</string>
+    <string name="reader_menu_remove_queue">Remove from queue</string>
+    <string name="action_reorder">Reorder</string>
+    <string name="queue_item_semantics_desc">%1$s by %2$s</string>
+    <string name="queue_item_semantics_queue_desc">%1$s by %2$s, %3$d percent completed</string>
+    <string name="action_add_to_queue_desc">Add %1$s to queue</string>
+    <string name="action_pause_desc">Pause %1$s</string>
+    <string name="action_play_desc">Play %1$s</string>
 </resources>

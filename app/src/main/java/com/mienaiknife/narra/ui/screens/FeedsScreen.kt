@@ -17,6 +17,9 @@
 package com.mienaiknife.narra.ui.screens
 
 import android.content.res.Configuration
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
@@ -48,6 +51,8 @@ import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.NotificationsNone
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.RssFeed
+import androidx.compose.material.icons.filled.Upload
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -61,6 +66,7 @@ import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -69,11 +75,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.rememberNavController
+import androidx.compose.ui.res.stringResource
+import com.mienaiknife.narra.R
 import coil3.compose.AsyncImage
 import com.mienaiknife.narra.data.local.entities.FeedEntity
 import com.mienaiknife.narra.data.models.SortOption
@@ -90,6 +99,33 @@ fun FeedsScreen(
     viewModel: FeedsViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val message by viewModel.message.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+
+    LaunchedEffect(message) {
+        message?.let {
+            Toast.makeText(context, it.asString(context), Toast.LENGTH_SHORT).show()
+            viewModel.clearMessage()
+        }
+    }
+
+    val importLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        uri?.let {
+            val inputStream = context.contentResolver.openInputStream(it)
+            viewModel.importOpml(inputStream)
+        }
+    }
+
+    val exportLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("application/xml")
+    ) { uri ->
+        uri?.let {
+            val outputStream = context.contentResolver.openOutputStream(it)
+            viewModel.exportOpml(outputStream)
+        }
+    }
 
     FeedsScreenContent(
         onFeedClick = onNavigateToFeed,
@@ -100,7 +136,9 @@ fun FeedsScreen(
         onDeleteFeed = { viewModel.deleteFeed(it) },
         onToggleNotifications = { viewModel.toggleNotifications(it) },
         onRefresh = { viewModel.refresh() },
-        onSortOptionSelected = { viewModel.setSortOption(it) }
+        onSortOptionSelected = { viewModel.setSortOption(it) },
+        onImportOpml = { importLauncher.launch(arrayOf("application/xml", "text/xml", "application/octet-stream", "*/*")) },
+        onExportOpml = { exportLauncher.launch("narra-subscriptions.opml") }
     )
 }
 
@@ -115,7 +153,9 @@ fun FeedsScreenContent(
     onDeleteFeed: (FeedEntity) -> Unit = {},
     onToggleNotifications: (FeedEntity) -> Unit = {},
     onRefresh: () -> Unit = {},
-    onSortOptionSelected: (SortOption) -> Unit = {}
+    onSortOptionSelected: (SortOption) -> Unit = {},
+    onImportOpml: () -> Unit = {},
+    onExportOpml: () -> Unit = {}
 ) {
     var showMenu by remember { mutableStateOf(false) }
     val showSortSheet = remember { mutableStateOf(false) }
@@ -153,13 +193,13 @@ fun FeedsScreenContent(
                 IconButton(onClick = onBackClick) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Back",
+                        contentDescription = stringResource(R.string.action_back),
                         modifier = Modifier.size(32.dp),
                         tint = MaterialTheme.colorScheme.onBackground
                     )
                 }
                 Text(
-                    text = "Feeds",
+                    text = stringResource(R.string.nav_feeds),
                     style = MaterialTheme.typography.headlineSmall,
                     color = MaterialTheme.colorScheme.onBackground
                 )
@@ -169,7 +209,7 @@ fun FeedsScreenContent(
                 IconButton(onClick = { showMenu = true }) {
                     Icon(
                         imageVector = Icons.Default.Menu,
-                        contentDescription = "Menu",
+                        contentDescription = stringResource(R.string.action_menu),
                         modifier = Modifier.size(32.dp),
                         tint = MaterialTheme.colorScheme.onBackground
                     )
@@ -180,7 +220,7 @@ fun FeedsScreenContent(
                     onDismissRequest = { showMenu = false }
                 ) {
                     DropdownMenuItem(
-                        text = { Text("Search") },
+                        text = { Text(stringResource(R.string.action_search)) },
                         onClick = { showMenu = false },
                         leadingIcon = {
                             Icon(
@@ -190,7 +230,7 @@ fun FeedsScreenContent(
                         }
                     )
                     DropdownMenuItem(
-                        text = { Text("Sort") },
+                        text = { Text(stringResource(R.string.action_sort)) },
                         onClick = {
                             showMenu = false
                             showSortSheet.value = true
@@ -203,7 +243,7 @@ fun FeedsScreenContent(
                         }
                     )
                     DropdownMenuItem(
-                        text = { Text("Refresh") },
+                        text = { Text(stringResource(R.string.action_refresh)) },
                         onClick = {
                             showMenu = false
                             onRefresh()
@@ -211,6 +251,32 @@ fun FeedsScreenContent(
                         leadingIcon = {
                             Icon(
                                 Icons.Default.Refresh, contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onBackground
+                            )
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.settings_downloads_import_feeds)) },
+                        onClick = {
+                            showMenu = false
+                            onImportOpml()
+                        },
+                        leadingIcon = {
+                            Icon(
+                                Icons.Default.Upload, contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onBackground
+                            )
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.settings_downloads_export_feeds)) },
+                        onClick = {
+                            showMenu = false
+                            onExportOpml()
+                        },
+                        leadingIcon = {
+                            Icon(
+                                Icons.Default.Download, contentDescription = null,
                                 tint = MaterialTheme.colorScheme.onBackground
                             )
                         }
@@ -245,7 +311,7 @@ fun FeedsScreenContent(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = "No feeds yet. Add one to get started!",
+                        text = stringResource(R.string.feeds_empty_message),
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -326,7 +392,7 @@ fun FeedItem(
 
                 AsyncImage(
                     model = imageUrl,
-                    contentDescription = "Feed icon",
+                    contentDescription = stringResource(R.string.feeds_icon_desc),
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Crop,
                     onSuccess = { isImageLoaded = true }
@@ -359,7 +425,7 @@ fun FeedItem(
             IconButton(onClick = onToggleNotifications) {
                 Icon(
                     imageVector = if (feed.notificationsEnabled) Icons.Default.Notifications else Icons.Default.NotificationsNone,
-                    contentDescription = "Notifications",
+                    contentDescription = stringResource(R.string.feeds_notifications_desc),
                     modifier = Modifier.size(24.dp),
                     tint = if (feed.notificationsEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -371,7 +437,7 @@ fun FeedItem(
             onDismissRequest = { showMenu = false }
         ) {
             DropdownMenuItem(
-                text = { Text("Delete feed") },
+                text = { Text(stringResource(R.string.feeds_delete_feed)) },
                 onClick = {
                     showMenu = false
                     onDeleteClick()

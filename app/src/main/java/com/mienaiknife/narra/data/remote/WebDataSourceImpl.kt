@@ -37,7 +37,11 @@ class WebDataSourceImpl @Inject constructor() : WebDataSource {
         return try {
             val doc = Jsoup.connect(url)
                 .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36")
+                .header("Referer", "https://www.google.com/")
+                .timeout(15000)
                 .get()
+
+            preCleanDocument(doc)
 
             val readability4J = Readability4J(url, doc.outerHtml())
             val parsedArticle = readability4J.parse()
@@ -75,6 +79,19 @@ class WebDataSourceImpl @Inject constructor() : WebDataSource {
         }
     }
 
+    private fun preCleanDocument(doc: org.jsoup.nodes.Document) {
+        val junkSelectors = listOf(
+            "nav", "footer", "aside", "script", "style", "noscript", "iframe", "form",
+            ".social", ".share", ".ad-", ".banner", ".related", ".recommend", ".comment",
+            "#social", "#share", "#ad-", "#banner", "#related", "#recommend", "#comment",
+            "[class*=social]", "[class*=share]", "[class*=related]", "[class*=recommend]",
+            "[id*=social]", "[id*=share]", "[id*=related]", "[id*=recommend]"
+        )
+        junkSelectors.forEach { selector ->
+            doc.select(selector).remove()
+        }
+    }
+
     private fun extractPublishedDate(doc: org.jsoup.nodes.Document): String? {
         // Try JSON-LD first
         val jsonLdTags = doc.select("script[type=application/ld+json]")
@@ -104,15 +121,18 @@ class WebDataSourceImpl @Inject constructor() : WebDataSource {
         for (tag in jsonLdTags) {
             try {
                 val json = Json.parseToJsonElement(tag.data())
-                val image = findKeyInJson(json, "image")
+                val image = findKeyInJson(json, "image") 
+                    ?: findKeyInJson(json, "thumbnailUrl")
                 if (image != null) return image
             } catch (_: Exception) {
             }
         }
 
-        return doc.select("meta[property=og:image]").attr("content").ifEmpty { null }
+        return doc.select("meta[property=og:image:secure_url]").attr("content").ifEmpty { null }
+            ?: doc.select("meta[property=og:image]").attr("content").ifEmpty { null }
             ?: doc.select("meta[name=twitter:image]").attr("content").ifEmpty { null }
             ?: doc.select("meta[property=og:image:url]").attr("content").ifEmpty { null }
+            ?: doc.select("link[rel=image_src]").attr("href").ifEmpty { null }
             ?: byline?.ifEmpty { null }
     }
 

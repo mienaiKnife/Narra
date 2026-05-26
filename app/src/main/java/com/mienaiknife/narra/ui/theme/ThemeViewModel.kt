@@ -32,6 +32,7 @@ data class ThemeUiState(
     val isDynamicColor: Boolean = false,
     val useSystemTheme: Boolean = true,
     val readerFontFamily: String = "Roboto",
+    val lineSpacing: String = "1.0",
     val readerFontSize: Float = 18.0f,
     val showRemainingTime: Boolean = true,
     val tapToShowControls: Boolean = true,
@@ -64,6 +65,11 @@ open class ThemeViewModel @Inject constructor(
         viewModelScope.launch {
             themeManager.readerFontFamily.collect { fontFamily ->
                 _uiState.update { it.copy(readerFontFamily = fontFamily) }
+            }
+        }
+        viewModelScope.launch {
+            themeManager.lineSpacing.collect { spacing ->
+                _uiState.update { it.copy(lineSpacing = spacing) }
             }
         }
         viewModelScope.launch {
@@ -107,6 +113,10 @@ open class ThemeViewModel @Inject constructor(
 
     fun setReaderFontFamily(fontFamily: String) {
         themeManager.setReaderFontFamily(fontFamily)
+    }
+
+    fun setLineSpacing(lineSpacing: String) {
+        themeManager.setLineSpacing(lineSpacing)
     }
 
     fun setReaderFontSize(fontSize: Float) {

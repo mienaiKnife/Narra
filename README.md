@@ -38,11 +38,25 @@ Run unit tests using the following command:
 
 ## Documentation
 
-- [User Guide](docs/USAGE.md) - Learn how to use Narra's features.
-- [Architecture](docs/ARCHITECTURE.md) - Learn about the project's technical design.
-- [TTS Engines](docs/TTS_ENGINES.md) - Guide for implementing and extending TTS providers.
-- [Content Parsing](docs/CONTENT_PARSING.md) - How we extract text from RSS, ebooks, and Web.
-- [Playback Lifecycle](docs/PLAYBACK_LIFECYCLE.md) - Understanding the media service and audio flow.
-- [Testing Guide](docs/TESTING_GUIDE.md) - How to run and write tests for Narra.
-- [Privacy Policy](docs/PRIVACY.md) - Our commitment to your privacy.
-- [Roadmap](docs/ROADMAP.md) - Current status and future plans.
+- [User Guide](docs/USAGE.md) - Learn how to use Narra's features
+- [Architecture](docs/ARCHITECTURE.md) - Learn about the project's technical design
+- [TTS Engines](docs/TTS_ENGINES.md) - Guide for implementing and extending TTS providers
+- [Content Parsing](docs/CONTENT_PARSING.md) - How we extract text from RSS, ebooks, and Web
+- [Playback Lifecycle](docs/PLAYBACK_LIFECYCLE.md) - Understanding the media service and audio flow
+- [Testing Guide](docs/TESTING_GUIDE.md) - How to run and write tests for Narra
+- [Privacy Policy](docs/PRIVACY.md) - Our commitment to your privacy
+
+## Planned Features
+
+- PDF file importing and parsing
+- Self-hosted AI TTS server support (e.g. Kokoro, Coqui, Piper via local API)
+- Additional cloud AI TTS providers
+- Builds for other platforms (e.g. desktop and iOS via Kotlin Multiplatform, or a separate app)
+- OPML export and import for feed list portability
+- File-based backup and restore (no account required)
+- Optional sync via self-hosted compatible server (e.g. Nextcloud/gpodder-compatible API),
+  authenticated by server URL and credentials the user controls — no first-party accounts
+- Automatic readability/reader-mode heuristic improvements over time
+- Importing texts by scanning photos
+- User-customizable color themes
+- Support for more languages

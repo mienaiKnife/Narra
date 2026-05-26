@@ -72,6 +72,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.IntOffset
@@ -79,6 +81,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.compose.rememberNavController
+import com.mienaiknife.narra.R
 import com.mienaiknife.narra.data.models.Article
 import com.mienaiknife.narra.data.models.SampleArticles
 import com.mienaiknife.narra.data.models.SortOption
@@ -100,11 +103,12 @@ fun QueueScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
+    val context = LocalContext.current
     LaunchedEffect(Unit) {
         viewModel.uiEvent.collect { event ->
             when (event) {
                 is QueueViewModel.UiEvent.ShowSnackbar -> {
-                    snackbarHostState.showSnackbar(event.message)
+                    snackbarHostState.showSnackbar(event.uiText.asString(context))
                 }
             }
         }
@@ -127,8 +131,8 @@ fun QueueScreen(
                 viewModel.removeFromQueue(article)
                 scope.launch {
                     val result = snackbarHostState.showSnackbar(
-                        message = "Removed from queue",
-                        actionLabel = "Undo",
+                        message = context.getString(R.string.queue_removed_message),
+                        actionLabel = context.getString(R.string.action_undo),
                         duration = SnackbarDuration.Short
                     )
                     if (result == SnackbarResult.ActionPerformed) {
@@ -185,16 +189,16 @@ fun QueueScreenContent(
     val totalMinutes = TimeUnit.MILLISECONDS.toMinutes(totalRemainingTimeMs) % 60
 
     val timeLeftText = buildString {
-        append("Time left: ")
+        append(stringResource(R.string.queue_time_left_prefix))
         if (totalHours > 0) {
             append(totalHours)
             append(" ")
-            append(if (totalHours == 1L) "hour" else "hours")
-            append(" and ")
+            append(if (totalHours == 1L) stringResource(R.string.unit_hour) else stringResource(R.string.unit_hours))
+            append(stringResource(R.string.queue_and))
         }
         append(totalMinutes)
         append(" ")
-        append(if (totalMinutes == 1L) "minute" else "minutes")
+        append(if (totalMinutes == 1L) stringResource(R.string.unit_minute) else stringResource(R.string.unit_minutes))
     }
 
     if (showSortSheet.value) {
@@ -226,7 +230,7 @@ fun QueueScreenContent(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "Queue",
+                text = stringResource(R.string.nav_queue),
                 style = MaterialTheme.typography.headlineSmall,
                 color = MaterialTheme.colorScheme.onBackground
             )
@@ -234,7 +238,7 @@ fun QueueScreenContent(
                 IconButton(onClick = { showMenu = true }) {
                     Icon(
                         imageVector = Icons.Default.Menu,
-                        contentDescription = "Menu",
+                        contentDescription = stringResource(R.string.action_menu),
                         modifier = Modifier.size(32.dp),
                         tint = MaterialTheme.colorScheme.onBackground
                     )
@@ -245,7 +249,7 @@ fun QueueScreenContent(
                     onDismissRequest = { showMenu = false }
                 ) {
                     DropdownMenuItem(
-                        text = { Text("Search") },
+                        text = { Text(stringResource(R.string.action_search)) },
                         onClick = { showMenu = false },
                         leadingIcon = {
                             Icon(
@@ -255,7 +259,7 @@ fun QueueScreenContent(
                         }
                     )
                     DropdownMenuItem(
-                        text = { Text("Sort") },
+                        text = { Text(stringResource(R.string.action_sort)) },
                         onClick = {
                             showMenu = false
                             showSortSheet.value = true
@@ -268,7 +272,7 @@ fun QueueScreenContent(
                         }
                     )
                     DropdownMenuItem(
-                        text = { Text("Refresh") },
+                        text = { Text(stringResource(R.string.action_refresh)) },
                         onClick = {
                             showMenu = false
                             onRefresh()
@@ -281,7 +285,7 @@ fun QueueScreenContent(
                         }
                     )
                     DropdownMenuItem(
-                        text = { Text("History") },
+                        text = { Text(stringResource(R.string.nav_history)) },
                         onClick = {
                             showMenu = false
                             onHistoryClick()
@@ -294,7 +298,7 @@ fun QueueScreenContent(
                         }
                     )
                     DropdownMenuItem(
-                        text = { Text("Clear") },
+                        text = { Text(stringResource(R.string.action_clear)) },
                         onClick = {
                             showMenu = false
                             onClearQueue()
@@ -315,7 +319,7 @@ fun QueueScreenContent(
                 text = buildString {
                     append(articles.size)
                     append(" ")
-                    append(if (articles.size == 1) "text" else "texts")
+                    append(if (articles.size == 1) stringResource(R.string.unit_text) else stringResource(R.string.unit_texts))
                     append(" • ")
                     append(timeLeftText)
                 },
@@ -351,7 +355,7 @@ fun QueueScreenContent(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = "Your queue is empty. Add some texts to get started!",
+                        text = stringResource(R.string.queue_empty_message),
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = TextAlign.Center

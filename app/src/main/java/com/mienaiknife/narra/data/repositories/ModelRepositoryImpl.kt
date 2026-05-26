@@ -27,6 +27,7 @@ import androidx.work.workDataOf
 import com.mienaiknife.narra.data.local.dao.TtsModelDao
 import com.mienaiknife.narra.data.local.entities.TtsModelEntity
 import com.mienaiknife.narra.data.workers.DownloadWorker
+import com.mienaiknife.narra.domain.NarraError
 import com.mienaiknife.narra.domain.models.TtsModel
 import com.mienaiknife.narra.domain.models.TtsModelType
 import com.mienaiknife.narra.domain.repository.ModelRepository
@@ -164,7 +165,7 @@ class ModelRepositoryImpl @Inject constructor(
         val filesDirContent = context.filesDir.walkTopDown().joinToString { it.name }
         android.util.Log.i("ModelRepository", "Current filesDir content: $filesDirContent")
 
-        val entity = ttsModelDao.getModelById(modelId) ?: return@withContext Result.failure(Exception("Model not found"))
+        val entity = ttsModelDao.getModelById(modelId) ?: return@withContext Result.failure(NarraError.Model.NotFound())
         val model = entity.toDomain()
 
         val targetDir = File(modelsDir, modelId)
@@ -257,8 +258,9 @@ class ModelRepositoryImpl @Inject constructor(
             throw e
         } catch (e: Exception) {
             android.util.Log.e("ModelRepository", "Failed to download model $modelId", e)
+            val narraError = if (e is NarraError) e else NarraError.Model.DownloadFailed(e.message)
             ttsModelDao.updateError(modelId, e.message ?: "Unknown error")
-            Result.failure(e)
+            Result.failure(narraError)
         }
     }
 
@@ -283,9 +285,11 @@ class ModelRepositoryImpl @Inject constructor(
                     return
                 }
                 
-                if (!response.isSuccessful) throw Exception("Failed to download file: ${response.code} ${response.message}")
+                if (!response.isSuccessful) {
+                    throw NarraError.Network.ServerError(response.code, response.message)
+                }
                 
-                val body = response.body ?: throw Exception("Response body is null")
+                val body = response.body ?: throw NarraError.Model.DownloadFailed("Response body is null")
                 val contentLength = body.contentLength()
                 
                 val isPartial = response.code == 206
@@ -405,7 +409,7 @@ class ModelRepositoryImpl @Inject constructor(
             ttsModelDao.updateProgress(modelId, 0f)
             Result.success(Unit)
         } catch (e: Exception) {
-            Result.failure(e)
+            Result.failure(NarraError.Unknown(e))
         }
     }
 

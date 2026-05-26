@@ -48,6 +48,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -55,6 +57,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.compose.rememberNavController
+import com.mienaiknife.narra.R
 import com.mienaiknife.narra.data.models.Article
 import com.mienaiknife.narra.data.models.SampleArticles
 import com.mienaiknife.narra.ui.components.BottomNavBar
@@ -71,11 +74,12 @@ fun HistoryScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
 
+    val context = LocalContext.current
     LaunchedEffect(Unit) {
         viewModel.uiEvent.collect { event ->
             when (event) {
                 is HistoryViewModel.UiEvent.ShowSnackbar -> {
-                    snackbarHostState.showSnackbar(event.message)
+                    snackbarHostState.showSnackbar(event.uiText.asString(context))
                 }
             }
         }
@@ -143,13 +147,13 @@ fun HistoryScreenContent(
                 IconButton(onClick = onBackClick) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Back",
+                        contentDescription = stringResource(R.string.action_back),
                         modifier = Modifier.size(32.dp),
                         tint = MaterialTheme.colorScheme.onBackground
                     )
                 }
                 Text(
-                    text = "History",
+                    text = stringResource(R.string.nav_history),
                     style = MaterialTheme.typography.headlineSmall,
                     color = MaterialTheme.colorScheme.onBackground
                 )
@@ -159,7 +163,7 @@ fun HistoryScreenContent(
                 IconButton(onClick = { showMenu = true }) {
                     Icon(
                         imageVector = Icons.Default.Menu,
-                        contentDescription = "Menu",
+                        contentDescription = stringResource(R.string.action_menu),
                         modifier = Modifier.size(32.dp),
                         tint = MaterialTheme.colorScheme.onBackground
                     )
@@ -170,7 +174,7 @@ fun HistoryScreenContent(
                     onDismissRequest = { showMenu = false }
                 ) {
                     DropdownMenuItem(
-                        text = { Text("Search") },
+                        text = { Text(stringResource(R.string.action_search)) },
                         onClick = { showMenu = false },
                         leadingIcon = {
                             Icon(
@@ -180,7 +184,7 @@ fun HistoryScreenContent(
                         }
                     )
                     DropdownMenuItem(
-                        text = { Text("Refresh") },
+                        text = { Text(stringResource(R.string.action_refresh)) },
                         onClick = {
                             showMenu = false
                             onRefresh()
@@ -193,7 +197,7 @@ fun HistoryScreenContent(
                         }
                     )
                     DropdownMenuItem(
-                        text = { Text("Clear") },
+                        text = { Text(stringResource(R.string.action_clear)) },
                         onClick = {
                             showMenu = false
                             onClearHistory()
@@ -235,7 +239,7 @@ fun HistoryScreenContent(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = "Your history is empty.",
+                        text = stringResource(R.string.history_empty_message),
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )

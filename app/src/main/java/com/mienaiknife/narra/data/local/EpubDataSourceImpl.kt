@@ -69,14 +69,36 @@ class EpubDataSourceImpl @Inject constructor(
                 val body = doc.body()
                 
                 if (body.text().isNotBlank()) {
+                    // Pre-clean HTML for TTS: Remove interactive or decorative elements
+                    body.select("a, button, input, select, textarea").forEach { it.unwrap() }
+                    body.select("script, style, noscript, iframe, svg").remove()
+                    
+                    // Keep image alt text if available, otherwise remove img tags
+                    body.select("img").forEach { img ->
+                        val alt = img.attr("alt")
+                        if (alt.isNotBlank()) {
+                            img.replaceWith(org.jsoup.nodes.TextNode(" [Image: $alt] "))
+                        } else {
+                            img.remove()
+                        }
+                    }
+
                     val cleanText = body.html()
 
                     // Try to find a good title: TOC -> HTML title -> First heading -> resource title -> fallback
-                    val chapterTitle = tocMap[resource.href]
+                    var chapterTitle = tocMap[resource.href]
                         ?: doc.title().takeIf { it.isNotBlank() && it != bookTitle }
                         ?: doc.select("h1, h2, h3").firstOrNull()?.text()
                         ?: resource.title
                         ?: "Chapter ${index + 1}"
+                    
+                    // If title is just a number or generic "Chapter", try to append the start of the text
+                    if (chapterTitle.matches(Regex("^(?i)Chapter\\s*\\d*$|^\\d+$"))) {
+                        val firstSentence = body.text().take(40).substringBefore(".")
+                        if (firstSentence.isNotBlank() && firstSentence.length > 5) {
+                            chapterTitle = "$chapterTitle: $firstSentence..."
+                        }
+                    }
 
                     Article(
                         id = UUID.randomUUID().toString(),

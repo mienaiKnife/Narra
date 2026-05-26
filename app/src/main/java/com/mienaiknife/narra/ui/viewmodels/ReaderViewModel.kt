@@ -21,8 +21,10 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.toRoute
 import com.mienaiknife.narra.NavDestination
+import com.mienaiknife.narra.R
 import com.mienaiknife.narra.data.models.Article
 import com.mienaiknife.narra.domain.repository.ContentRepository
+import com.mienaiknife.narra.ui.UiText
 import com.mienaiknife.narra.ui.models.ContentBlock
 import com.mienaiknife.narra.ui.utils.HtmlParser
 import com.mienaiknife.narra.playback.PlaybackManager
@@ -56,7 +58,7 @@ class ReaderViewModel @Inject constructor(
     val uiEvent: SharedFlow<UiEvent> = _uiEvent.asSharedFlow()
 
     sealed class UiEvent {
-        data class ShowSnackbar(val message: String) : UiEvent()
+        data class ShowSnackbar(val uiText: UiText) : UiEvent()
     }
 
     private val _blocks = MutableStateFlow<List<ContentBlock>>(emptyList())
@@ -167,7 +169,9 @@ class ReaderViewModel @Inject constructor(
                 if (articleData != null) {
                     if (!articleData.isInQueue) {
                         repository.addToQueue(id).onFailure { error ->
-                            _uiEvent.emit(UiEvent.ShowSnackbar(error.message ?: "Failed to download article"))
+                            val uiText = error.message?.let { UiText.DynamicString(it) }
+                                ?: UiText.StringResource(R.string.error_download_failed)
+                            _uiEvent.emit(UiEvent.ShowSnackbar(uiText))
                             _error.value = error
                             return@launch
                         }

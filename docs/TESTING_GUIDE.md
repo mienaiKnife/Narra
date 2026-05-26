@@ -1,6 +1,6 @@
 # Testing Guide
 
-Quality is critical for an open-source project. This guide explains the testing strategy for Narra and how to run and write tests.
+This guide explains the testing strategy for Narra and how to run and write tests.
 
 ## Test Levels
 

@@ -47,6 +47,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.res.stringResource
+import com.mienaiknife.narra.R
 import com.mienaiknife.narra.ui.components.flashHighlight
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -77,6 +79,7 @@ fun UserInterfaceSettingsScreen(
     val darkModeRequester = remember { BringIntoViewRequester() }
     val dynamicColorsRequester = remember { BringIntoViewRequester() }
     val readerFontFamilyRequester = remember { BringIntoViewRequester() }
+    val lineSpacingRequester = remember { BringIntoViewRequester() }
     val tapToShowControlsRequester = remember { BringIntoViewRequester() }
     val readerFontSizeRequester = remember { BringIntoViewRequester() }
     val showRemainingTimeRequester = remember { BringIntoViewRequester() }
@@ -87,6 +90,7 @@ fun UserInterfaceSettingsScreen(
             "darkMode" -> darkModeRequester.bringIntoView()
             "dynamicColors" -> dynamicColorsRequester.bringIntoView()
             "readerFontFamily" -> readerFontFamilyRequester.bringIntoView()
+            "lineSpacing" -> lineSpacingRequester.bringIntoView()
             "tapToShowControls" -> tapToShowControlsRequester.bringIntoView()
             "readerFontSize" -> readerFontSizeRequester.bringIntoView()
             "showRemainingTime" -> showRemainingTimeRequester.bringIntoView()
@@ -109,13 +113,13 @@ fun UserInterfaceSettingsScreen(
             IconButton(onClick = onBack) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = "Back",
+                    contentDescription = stringResource(R.string.action_back),
                     modifier = Modifier.size(32.dp),
                     tint = MaterialTheme.colorScheme.onBackground
                 )
             }
             Text(
-                text = "User interface",
+                text = stringResource(R.string.settings_ui_title),
                 style = MaterialTheme.typography.headlineSmall,
                 color = MaterialTheme.colorScheme.onBackground
             )
@@ -130,7 +134,7 @@ fun UserInterfaceSettingsScreen(
                 .padding(horizontal = 16.dp)
         ) {
             Text(
-                text = "Theme",
+                text = stringResource(R.string.settings_ui_theme_section),
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.padding(bottom = 8.dp)
@@ -139,8 +143,8 @@ fun UserInterfaceSettingsScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .bringIntoViewRequester(showRemainingTimeRequester)
-                    .flashHighlight(highlightSetting == "showRemainingTime")
+                    .bringIntoViewRequester(useSystemThemeRequester)
+                    .flashHighlight(highlightSetting == "useSystemTheme")
                     .padding(vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -150,11 +154,11 @@ fun UserInterfaceSettingsScreen(
                         .padding(end = 8.dp)
                 ) {
                     Text(
-                        text = "Use system theme",
+                        text = stringResource(R.string.settings_ui_use_system_theme),
                         style = MaterialTheme.typography.bodyLarge
                     )
                     Text(
-                        text = "Make Narra match your system theme",
+                        text = stringResource(R.string.settings_ui_use_system_theme_desc),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -186,11 +190,11 @@ fun UserInterfaceSettingsScreen(
                             .padding(end = 8.dp)
                     ) {
                         Text(
-                            text = "Dark mode",
+                            text = stringResource(R.string.settings_ui_dark_mode),
                             style = MaterialTheme.typography.bodyLarge
                         )
                         Text(
-                            text = "Make Narra always use dark mode. If unchecked, Narra will use light mode",
+                            text = stringResource(R.string.settings_ui_dark_mode_desc),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -215,8 +219,8 @@ fun UserInterfaceSettingsScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .bringIntoViewRequester(showRemainingTimeRequester)
-                    .flashHighlight(highlightSetting == "showRemainingTime")
+                    .bringIntoViewRequester(dynamicColorsRequester)
+                    .flashHighlight(highlightSetting == "dynamicColors")
                     .padding(vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -226,11 +230,11 @@ fun UserInterfaceSettingsScreen(
                         .padding(end = 8.dp)
                 ) {
                     Text(
-                        text = "Dynamic colors",
+                        text = stringResource(R.string.settings_ui_dynamic_colors),
                         style = MaterialTheme.typography.bodyLarge
                     )
                     Text(
-                        text = "Make the theme match your wallpaper",
+                        text = stringResource(R.string.settings_ui_dynamic_colors_desc),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -248,21 +252,32 @@ fun UserInterfaceSettingsScreen(
             }
 
             Text(
-                text = "Reader screen",
+                text = stringResource(R.string.settings_ui_reader_section),
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.padding(top = 24.dp, bottom = 8.dp)
             )
 
             SettingDropDownItem(
-                title = "Font family",
-                subtitle = "Choose the font used for the app's graphical interface",
+                title = stringResource(R.string.settings_ui_reader_font_family),
+                subtitle = stringResource(R.string.settings_ui_reader_font_family_desc),
                 selectedValue = uiState.readerFontFamily,
                 options = listOf("Roboto", "OpenDyslexic3"),
                 onValueChange = themeViewModel::setReaderFontFamily,
                 modifier = Modifier
                     .bringIntoViewRequester(readerFontFamilyRequester)
                     .flashHighlight(highlightSetting == "readerFontFamily")
+            )
+
+            SettingDropDownItem(
+                title = stringResource(R.string.settings_ui_line_spacing),
+                subtitle = stringResource(R.string.settings_ui_line_spacing_desc),
+                selectedValue = uiState.lineSpacing,
+                options = listOf("1.0", "1.2", "1.4", "1.6", "1.8", "2.0"),
+                onValueChange = themeViewModel::setLineSpacing,
+                modifier = Modifier
+                    .bringIntoViewRequester(lineSpacingRequester)
+                    .flashHighlight(highlightSetting == "lineSpacing")
             )
 
             Row(
@@ -279,11 +294,11 @@ fun UserInterfaceSettingsScreen(
                         .padding(end = 8.dp)
                 ) {
                     Text(
-                        text = "Auto fullscreen",
+                        text = stringResource(R.string.settings_ui_auto_fullscreen),
                         style = MaterialTheme.typography.bodyLarge
                     )
                     Text(
-                        text = "Automatically hide controls after a few seconds of playback",
+                        text = stringResource(R.string.settings_ui_auto_fullscreen_desc),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -315,11 +330,11 @@ fun UserInterfaceSettingsScreen(
                             .padding(end = 8.dp)
                     ) {
                         Text(
-                            text = "Tap to show controls",
+                            text = stringResource(R.string.settings_ui_tap_to_show),
                             style = MaterialTheme.typography.bodyLarge
                         )
                         Text(
-                            text = "When in fullscreen mode, tapping anywhere on the screen will show the controls",
+                            text = stringResource(R.string.settings_ui_tap_to_show_desc),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -351,11 +366,11 @@ fun UserInterfaceSettingsScreen(
                 .flashHighlight(highlightSetting == "readerFontSize")
                 .padding(bottom = 16.dp)) {
                 Text(
-                    text = "Font size: ${uiState.readerFontSize.toInt()} sp",
+                    text = stringResource(R.string.settings_ui_font_size_label, uiState.readerFontSize.toInt()),
                     style = MaterialTheme.typography.bodyLarge
                 )
                 Text(
-                    text = "Adjust the size of text in the reader screen",
+                    text = stringResource(R.string.settings_ui_font_size_desc),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(bottom = 8.dp)
@@ -377,7 +392,7 @@ fun UserInterfaceSettingsScreen(
             }
 
             Text(
-                text = "Text information",
+                text = stringResource(R.string.settings_ui_text_info_section),
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.padding(top = 8.dp, bottom = 8.dp)
@@ -386,6 +401,8 @@ fun UserInterfaceSettingsScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .bringIntoViewRequester(showRemainingTimeRequester)
+                    .flashHighlight(highlightSetting == "showRemainingTime")
                     .padding(vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -395,11 +412,11 @@ fun UserInterfaceSettingsScreen(
                         .padding(end = 8.dp)
                 ) {
                     Text(
-                        text = "Show remaining time",
+                        text = stringResource(R.string.settings_ui_show_remaining_time),
                         style = MaterialTheme.typography.bodyLarge
                     )
                     Text(
-                        text = "Toggle between showing remaining time or total duration during playback",
+                        text = stringResource(R.string.settings_ui_show_remaining_time_desc),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )

@@ -73,6 +73,9 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.compose.rememberNavController
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import com.mienaiknife.narra.R
 import coil3.compose.AsyncImage
 import com.mienaiknife.narra.data.models.Article
 import com.mienaiknife.narra.data.models.SampleArticles
@@ -90,11 +93,12 @@ fun HomeScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
 
+    val context = LocalContext.current
     LaunchedEffect(Unit) {
         viewModel.uiEvent.collect { event ->
             when (event) {
                 is HomeViewModel.UiEvent.ShowSnackbar -> {
-                    snackbarHostState.showSnackbar(event.message)
+                    snackbarHostState.showSnackbar(event.uiText.asString(context))
                 }
                 else -> {}
             }
@@ -146,7 +150,7 @@ fun HomeScreenContent(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Home",
+                    text = stringResource(R.string.nav_home),
                     style = MaterialTheme.typography.headlineSmall,
                     color = MaterialTheme.colorScheme.onBackground
                 )
@@ -186,7 +190,7 @@ fun HomeScreenContent(
                     ) {
                         if (uiState.continueListening.isNotEmpty()) {
                             ArticleCarousel(
-                                title = "Continue listening",
+                                title = stringResource(R.string.home_continue_listening),
                                 articles = uiState.continueListening,
                                 onArticleClick = onArticleClick
                             )
@@ -195,7 +199,7 @@ fun HomeScreenContent(
 
                         if (uiState.newFromFeeds.isNotEmpty()) {
                             ArticleCarousel(
-                                title = "New from your feeds",
+                                title = stringResource(R.string.home_new_from_feeds),
                                 articles = uiState.newFromFeeds,
                                 onArticleClick = onArticleClick
                             )
@@ -204,7 +208,7 @@ fun HomeScreenContent(
 
                         if (uiState.favoriteArticles.isNotEmpty()) {
                             ArticleCarousel(
-                                title = "Your favorites",
+                                title = stringResource(R.string.home_favorites),
                                 articles = uiState.favoriteArticles,
                                 onArticleClick = onArticleClick
                             )
@@ -232,13 +236,13 @@ fun HomeScreenContent(
                             )
                             Spacer(modifier = Modifier.height(16.dp))
                             Text(
-                                text = "Your library is empty",
+                                text = stringResource(R.string.home_empty_title),
                                 style = MaterialTheme.typography.headlineSmall,
                                 color = MaterialTheme.colorScheme.onSurface
                             )
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(
-                                text = "Add articles from RSS feeds, EPUB files, or web links to start listening.",
+                                text = stringResource(R.string.home_empty_message),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 textAlign = TextAlign.Center
@@ -250,7 +254,7 @@ fun HomeScreenContent(
                             ) {
                                 Icon(Icons.Default.Add, contentDescription = null)
                                 Spacer(modifier = Modifier.width(8.dp))
-                                Text("Add Content")
+                                Text(stringResource(R.string.home_add_content))
                             }
                         }
                     }
@@ -294,12 +298,14 @@ fun ArticleCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val progressPercent = ((article.progress ?: 0f) * 100).toInt()
+    val contentDescriptionText = stringResource(R.string.home_article_semantics_desc, article.title, article.source, progressPercent)
+
     Card(
         modifier = modifier
             .width(140.dp)
             .semantics(mergeDescendants = true) {
-                val progressPercent = ((article.progress ?: 0f) * 100).toInt()
-                contentDescription = "${article.title} from ${article.source}, $progressPercent percent completed"
+                contentDescription = contentDescriptionText
             },
         onClick = onClick,
         shape = RoundedCornerShape(5.dp),
@@ -335,7 +341,7 @@ fun ArticleCard(
 
                 AsyncImage(
                     model = imageUrl,
-                    contentDescription = "Cover image for ${article.title}",
+                    contentDescription = stringResource(R.string.home_cover_image_desc, article.title),
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Crop,
                     alpha = if (article.progress == 1f) 0.6f else 1f,

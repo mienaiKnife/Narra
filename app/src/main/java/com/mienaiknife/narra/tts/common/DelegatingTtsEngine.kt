@@ -47,6 +47,11 @@ class DelegatingTtsEngine @Inject constructor(
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private var engineStateJob: Job? = null
 
+    private var currentSpeed = 1.0f
+    private var currentVolume = 1.0f
+    private var currentAudioUsage = android.media.AudioAttributes.USAGE_MEDIA
+    private var currentAudioContentType = android.media.AudioAttributes.CONTENT_TYPE_SPEECH
+
     init {
         scope.launch {
             settingsManager.ttsEngine.collectLatest { engineType ->
@@ -63,6 +68,11 @@ class DelegatingTtsEngine @Inject constructor(
         
         currentEngine.stop()
         currentEngine = newEngine
+        
+        // Apply current settings to the new engine
+        currentEngine.setPlaybackSpeed(currentSpeed)
+        currentEngine.setVolume(currentVolume)
+        currentEngine.setAudioAttributes(currentAudioUsage, currentAudioContentType)
         
         engineStateJob?.cancel()
         engineStateJob = scope.launch {
@@ -85,14 +95,18 @@ class DelegatingTtsEngine @Inject constructor(
     }
 
     override fun setPlaybackSpeed(speed: Float) {
+        currentSpeed = speed
         currentEngine.setPlaybackSpeed(speed)
     }
 
     override fun setAudioAttributes(usage: Int, contentType: Int) {
+        currentAudioUsage = usage
+        currentAudioContentType = contentType
         currentEngine.setAudioAttributes(usage, contentType)
     }
 
     override fun setVolume(volume: Float) {
+        currentVolume = volume
         currentEngine.setVolume(volume)
     }
 

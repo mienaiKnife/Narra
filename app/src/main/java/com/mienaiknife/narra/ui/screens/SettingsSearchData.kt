@@ -16,54 +16,56 @@
 
 package com.mienaiknife.narra.ui.screens
 
+import androidx.annotation.StringRes
 import com.mienaiknife.narra.NavDestination
+import com.mienaiknife.narra.R
 
 data class SearchableSetting(
     val id: String,
-    val title: String,
-    val subtitle: String,
+    @StringRes val titleRes: Int,
+    @StringRes val subtitleRes: Int,
     val destination: NavDestination,
     val keywords: List<String> = emptyList()
 )
 
 val allSearchableSettings = listOf(
     // User Interface
-    SearchableSetting("useSystemTheme", "Use system theme", "Make Narra match your system theme", NavDestination.SettingsUi("useSystemTheme"), listOf("appearance", "dark mode", "light mode")),
-    SearchableSetting("darkMode", "Dark mode", "Make Narra always use dark mode", NavDestination.SettingsUi("darkMode"), listOf("appearance", "theme")),
-    SearchableSetting("dynamicColors", "Dynamic colors", "Make the theme match your wallpaper", NavDestination.SettingsUi("dynamicColors"), listOf("appearance", "theme", "material you")),
-    SearchableSetting("readerFontFamily", "Font family", "Choose the font used for article content", NavDestination.SettingsUi("readerFontFamily"), listOf("reader", "typography")),
-    SearchableSetting("tapToShowControls", "Tap to show controls", "Tapping anywhere will show the controls", NavDestination.SettingsUi("tapToShowControls"), listOf("reader", "fullscreen")),
-    SearchableSetting("readerFontSize", "Font size", "Adjust the text size for reading articles", NavDestination.SettingsUi("readerFontSize"), listOf("reader", "text size", "typography")),
-    SearchableSetting("showRemainingTime", "Show remaining time", "Toggle between remaining time or total duration", NavDestination.SettingsUi("showRemainingTime"), listOf("playback", "reader")),
+    SearchableSetting("useSystemTheme", R.string.settings_ui_use_system_theme, R.string.settings_ui_use_system_theme_desc, NavDestination.SettingsUi("useSystemTheme"), listOf("appearance", "dark mode", "light mode")),
+    SearchableSetting("darkMode", R.string.settings_ui_dark_mode, R.string.settings_ui_dark_mode_desc, NavDestination.SettingsUi("darkMode"), listOf("appearance", "theme")),
+    SearchableSetting("dynamicColors", R.string.settings_ui_dynamic_colors, R.string.settings_ui_dynamic_colors_desc, NavDestination.SettingsUi("dynamicColors"), listOf("appearance", "theme", "material you")),
+    SearchableSetting("readerFontFamily", R.string.settings_ui_reader_font_family, R.string.settings_ui_reader_font_family_desc, NavDestination.SettingsUi("readerFontFamily"), listOf("reader", "typography")),
+    SearchableSetting("tapToShowControls", R.string.settings_ui_tap_to_show, R.string.settings_ui_tap_to_show_desc, NavDestination.SettingsUi("tapToShowControls"), listOf("reader", "fullscreen")),
+    SearchableSetting("readerFontSize", R.string.settings_ui_reader_font_size, R.string.settings_ui_reader_font_size_desc, NavDestination.SettingsUi("readerFontSize"), listOf("reader", "text size", "typography")),
+    SearchableSetting("showRemainingTime", R.string.settings_ui_show_remaining_time, R.string.settings_ui_show_remaining_time_desc, NavDestination.SettingsUi("showRemainingTime"), listOf("playback", "reader")),
 
     // Playback
-    SearchableSetting("pauseOnDisconnect", "Pause on disconnect", "Pause playback when headphones are disconnected", NavDestination.SettingsPlayback("pauseOnDisconnect"), listOf("headphones", "bluetooth")),
-    SearchableSetting("pauseForInterruptions", "Pause for interruptions", "Pause instead of lowering volume for notifications", NavDestination.SettingsPlayback("pauseForInterruptions"), listOf("notifications", "audio focus")),
-    SearchableSetting("fastForwardSkipTime", "Fast forward skip time", "Customize fast forward button skip time", NavDestination.SettingsPlayback("fastForwardSkipTime"), listOf("controls", "skip")),
-    SearchableSetting("rewindSkipTime", "Rewind skip time", "Customize rewind button skip time", NavDestination.SettingsPlayback("rewindSkipTime"), listOf("controls", "skip")),
-    SearchableSetting("fastForwardHardwareButton", "Fast forward hardware button", "Customize fast forward hardware button behavior", NavDestination.SettingsPlayback("fastForwardHardwareButton"), listOf("controls", "hardware", "remote")),
-    SearchableSetting("rewindHardwareButton", "Rewind hardware button", "Customize rewind hardware button behavior", NavDestination.SettingsPlayback("rewindHardwareButton"), listOf("controls", "hardware", "remote")),
-    SearchableSetting("autoPlayNext", "Autoplay next text", "Automatically play the next text in the queue", NavDestination.SettingsPlayback("autoPlayNext"), listOf("queue", "continuous")),
-    SearchableSetting("playChimeAndTitle", "Play chime and title", "Play a chime and title before next text", NavDestination.SettingsPlayback("playChimeAndTitle"), listOf("queue", "announcement")),
-    SearchableSetting("chimeSound", "Chime sound", "Choose the sound to play before the title", NavDestination.SettingsPlayback("chimeSound"), listOf("queue", "notification")),
+    SearchableSetting("pauseOnDisconnect", R.string.settings_playback_pause_on_disconnect, R.string.settings_playback_pause_on_disconnect_desc, NavDestination.SettingsPlayback("pauseOnDisconnect"), listOf("headphones", "bluetooth")),
+    SearchableSetting("pauseForInterruptions", R.string.settings_playback_pause_for_interruptions, R.string.settings_playback_pause_for_interruptions_desc, NavDestination.SettingsPlayback("pauseForInterruptions"), listOf("notifications", "audio focus")),
+    SearchableSetting("fastForwardSkipTime", R.string.settings_playback_ff_skip, R.string.settings_playback_ff_skip_desc, NavDestination.SettingsPlayback("fastForwardSkipTime"), listOf("controls", "skip")),
+    SearchableSetting("rewindSkipTime", R.string.settings_playback_rw_skip, R.string.settings_playback_rw_skip_desc, NavDestination.SettingsPlayback("rewindSkipTime"), listOf("controls", "skip")),
+    SearchableSetting("fastForwardHardwareButton", R.string.settings_playback_ff_hardware, R.string.settings_playback_ff_hardware_desc, NavDestination.SettingsPlayback("fastForwardHardwareButton"), listOf("controls", "hardware", "remote")),
+    SearchableSetting("rewindHardwareButton", R.string.settings_playback_rw_hardware, R.string.settings_playback_rw_hardware_desc, NavDestination.SettingsPlayback("rewindHardwareButton"), listOf("controls", "hardware", "remote")),
+    SearchableSetting("autoPlayNext", R.string.settings_playback_autoplay_next, R.string.settings_playback_autoplay_next_desc, NavDestination.SettingsPlayback("autoPlayNext"), listOf("queue", "continuous")),
+    SearchableSetting("playChimeAndTitle", R.string.settings_playback_play_chime, R.string.settings_playback_play_chime_desc, NavDestination.SettingsPlayback("playChimeAndTitle"), listOf("queue", "announcement")),
+    SearchableSetting("chimeSound", R.string.settings_playback_chime_sound, R.string.settings_playback_chime_sound_desc, NavDestination.SettingsPlayback("chimeSound"), listOf("queue", "notification")),
 
     // Voices
-    SearchableSetting("engineSelection", "Engine selection", "Choose between Android TTS and on-device AI", NavDestination.SettingsVoices("engineSelection"), listOf("tts", "sherpa", "onnx")),
-    SearchableSetting("androidTtsSettings", "Android's TTS settings", "Open system text-to-speech settings", NavDestination.SettingsVoices("androidTtsSettings"), listOf("tts", "system")),
-    SearchableSetting("noiseScale", "Noise Scale", "Adjust expressiveness for AI voices", NavDestination.SettingsVoices("noiseScale"), listOf("tts", "ai", "sherpa")),
-    SearchableSetting("lengthScale", "Length Scale", "Adjust playback speed for AI voices", NavDestination.SettingsVoices("lengthScale"), listOf("tts", "ai", "sherpa")),
-    SearchableSetting("kokoroVoice", "Kokoro Voice", "Select specific Kokoro AI voice", NavDestination.SettingsVoices("kokoroVoice"), listOf("tts", "ai", "kokoro")),
-    SearchableSetting("voiceData", "Voice data", "Download or delete TTS models", NavDestination.SettingsVoices("voiceData"), listOf("tts", "models", "download")),
+    SearchableSetting("engineSelection", R.string.settings_voices_engine_selection, R.string.settings_voices_engine_selection_desc, NavDestination.SettingsVoices("engineSelection"), listOf("tts", "sherpa", "onnx")),
+    SearchableSetting("androidTtsSettings", R.string.settings_voices_android_settings, R.string.settings_voices_android_settings_desc, NavDestination.SettingsVoices("androidTtsSettings"), listOf("tts", "system")),
+    SearchableSetting("noiseScale", R.string.settings_voices_noise_scale_title, R.string.settings_voices_noise_scale_desc, NavDestination.SettingsVoices("noiseScale"), listOf("tts", "ai", "sherpa")),
+    SearchableSetting("lengthScale", R.string.settings_voices_length_scale_title, R.string.settings_voices_length_scale_desc, NavDestination.SettingsVoices("lengthScale"), listOf("tts", "ai", "sherpa")),
+    SearchableSetting("kokoroVoice", R.string.settings_voices_kokoro_voice, R.string.settings_voices_kokoro_voice_desc, NavDestination.SettingsVoices("kokoroVoice"), listOf("tts", "ai", "kokoro")),
+    SearchableSetting("voiceData", R.string.settings_voices_voice_data, R.string.settings_voices_voice_data_desc, NavDestination.SettingsVoices("voiceData"), listOf("tts", "models", "download")),
 
     // Downloads
-    SearchableSetting("downloadOverWifiOnly", "Download over Wi-Fi only", "Prevent Narra from using mobile data", NavDestination.SettingsDownloads("downloadOverWifiOnly"), listOf("network", "data")),
-    SearchableSetting("refreshInterval", "Refresh inbox", "Automatic inbox refresh interval", NavDestination.SettingsDownloads("refreshInterval"), listOf("automation", "feeds")),
-    SearchableSetting("exportDatabase", "Export database", "Back up your data", NavDestination.SettingsDownloads("exportDatabase"), listOf("backup", "sync")),
-    SearchableSetting("importDatabase", "Import database", "Restore your data from backup", NavDestination.SettingsDownloads("importDatabase"), listOf("backup", "sync")),
-    SearchableSetting("autoExportDatabase", "Auto-export database", "Enable automatic database export", NavDestination.SettingsDownloads("autoExportDatabase"), listOf("backup", "sync", "syncthing")),
-    SearchableSetting("autoImportDatabase", "Auto-import database", "Enable automatic database import", NavDestination.SettingsDownloads("autoImportDatabase"), listOf("backup", "sync", "syncthing")),
-    SearchableSetting("autoExportLocation", "Auto-export location", "Choose where to auto-export data", NavDestination.SettingsDownloads("autoExportLocation"), listOf("backup", "sync")),
-    SearchableSetting("deleteDatabase", "Delete database", "Delete all your data", NavDestination.SettingsDownloads("deleteDatabase"), listOf("data", "reset", "clear")),
-    SearchableSetting("importFeeds", "Import feeds", "Import subscriptions from OPML", NavDestination.SettingsDownloads("importFeeds"), listOf("opml", "rss")),
-    SearchableSetting("exportFeeds", "Export feeds", "Export subscriptions to OPML", NavDestination.SettingsDownloads("exportFeeds"), listOf("opml", "rss"))
+    SearchableSetting("downloadOverWifiOnly", R.string.settings_downloads_wifi_only, R.string.settings_downloads_wifi_only_desc, NavDestination.SettingsDownloads("downloadOverWifiOnly"), listOf("network", "data")),
+    SearchableSetting("refreshInterval", R.string.settings_downloads_refresh_inbox, R.string.settings_downloads_refresh_inbox_desc, NavDestination.SettingsDownloads("refreshInterval"), listOf("automation", "feeds")),
+    SearchableSetting("exportDatabase", R.string.settings_downloads_export_db, R.string.settings_downloads_export_db_desc, NavDestination.SettingsDownloads("exportDatabase"), listOf("backup", "sync")),
+    SearchableSetting("importDatabase", R.string.settings_downloads_import_db, R.string.settings_downloads_import_db_desc, NavDestination.SettingsDownloads("importDatabase"), listOf("backup", "sync")),
+    SearchableSetting("autoExportDatabase", R.string.settings_downloads_auto_export, R.string.settings_downloads_auto_export_desc, NavDestination.SettingsDownloads("autoExportDatabase"), listOf("backup", "sync", "syncthing")),
+    SearchableSetting("autoImportDatabase", R.string.settings_downloads_auto_import, R.string.settings_downloads_auto_import_desc, NavDestination.SettingsDownloads("autoImportDatabase"), listOf("backup", "sync", "syncthing")),
+    SearchableSetting("autoExportLocation", R.string.settings_downloads_auto_export_location, R.string.settings_downloads_auto_export_location, NavDestination.SettingsDownloads("autoExportLocation"), listOf("backup", "sync")),
+    SearchableSetting("deleteDatabase", R.string.settings_downloads_delete_db, R.string.settings_downloads_delete_db_desc, NavDestination.SettingsDownloads("deleteDatabase"), listOf("data", "reset", "clear")),
+    SearchableSetting("importFeeds", R.string.settings_downloads_import_feeds, R.string.settings_downloads_import_feeds_desc, NavDestination.SettingsDownloads("importFeeds"), listOf("opml", "rss")),
+    SearchableSetting("exportFeeds", R.string.settings_downloads_export_feeds, R.string.settings_downloads_export_feeds_desc, NavDestination.SettingsDownloads("exportFeeds"), listOf("opml", "rss"))
 )

@@ -137,6 +137,8 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import coil3.compose.AsyncImage
+import androidx.compose.ui.res.stringResource
+import com.mienaiknife.narra.R
 import com.mienaiknife.narra.data.models.Article
 import com.mienaiknife.narra.data.models.SampleArticles
 import com.mienaiknife.narra.ui.components.NarraScrollbar
@@ -160,12 +162,13 @@ fun ReaderScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val themeUiState by themeViewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
+    val context = LocalContext.current
 
     LaunchedEffect(Unit) {
         viewModel.uiEvent.collect { event ->
             when (event) {
                 is ReaderViewModel.UiEvent.ShowSnackbar -> {
-                    snackbarHostState.showSnackbar(event.message)
+                    snackbarHostState.showSnackbar(event.uiText.asString(context))
                 }
             }
         }
@@ -199,6 +202,7 @@ fun ReaderScreen(
                     uiState = uiState,
                     readerFontFamily = getFontFamily(themeUiState.readerFontFamily),
                     readerFontSize = themeUiState.readerFontSize,
+                    lineSpacing = themeUiState.lineSpacing.toFloatOrNull() ?: 1.6f,
                     tapToShowControls = themeUiState.tapToShowControls,
                     autoFullscreen = themeUiState.autoFullscreen,
                     onBack = onBack,
@@ -230,6 +234,7 @@ fun ReaderContent(
     uiState: ReaderUiState,
     readerFontFamily: androidx.compose.ui.text.font.FontFamily,
     readerFontSize: Float,
+    lineSpacing: Float,
     tapToShowControls: Boolean,
     autoFullscreen: Boolean,
     onBack: () -> Unit,
@@ -331,6 +336,7 @@ fun ReaderContent(
             scrollState = scrollState,
             readerFontFamily = readerFontFamily,
             readerFontSize = readerFontSize,
+            lineSpacing = lineSpacing,
             isFollowing = isFollowing,
             onFollowingChange = { isFollowing = it },
             onControlsVisibleChange = { isControlsVisible = it },
@@ -443,7 +449,7 @@ fun ReaderTopBar(
                 IconButton(onClick = onBack) {
                     Icon(
                         imageVector = Icons.Default.KeyboardArrowDown,
-                        contentDescription = "Back",
+                        contentDescription = stringResource(R.string.action_back),
                         modifier = Modifier.size(32.dp),
                         tint = MaterialTheme.colorScheme.onBackground
                     )
@@ -483,7 +489,7 @@ fun ReaderTopBar(
                     IconButton(onClick = { onMenuExpandChange(true) }) {
                         Icon(
                             imageVector = Icons.Default.Menu,
-                            contentDescription = "Menu",
+                            contentDescription = stringResource(R.string.action_menu),
                             modifier = Modifier.size(32.dp),
                             tint = MaterialTheme.colorScheme.onBackground
                         )
@@ -494,7 +500,7 @@ fun ReaderTopBar(
                         onDismissRequest = { onMenuExpandChange(false) }
                     ) {
                         DropdownMenuItem(
-                            text = { Text("Search") },
+                            text = { Text(stringResource(R.string.action_search)) },
                             onClick = {
                                 onMenuExpandChange(false)
                                 onSearchClick()
@@ -508,7 +514,7 @@ fun ReaderTopBar(
                             }
                         )
                         DropdownMenuItem(
-                            text = { Text(if (article.isFavorite) "Unfavorite" else "Favorite") },
+                            text = { Text(if (article.isFavorite) stringResource(R.string.reader_menu_unfavorite) else stringResource(R.string.reader_menu_favorite)) },
                             onClick = {
                                 onMenuExpandChange(false)
                                 onToggleFavorite()
@@ -522,9 +528,9 @@ fun ReaderTopBar(
                             }
                         )
                         val sleepTimerText = if (sleepTimerMillis != null && sleepTimerMillis > 0) {
-                            "Sleep timer (${DateUtils.formatElapsedTime(sleepTimerMillis)})"
+                            stringResource(R.string.reader_menu_sleep_timer_active, DateUtils.formatElapsedTime(sleepTimerMillis))
                         } else {
-                            "Sleep timer"
+                            stringResource(R.string.reader_sleep_timer)
                         }
                         DropdownMenuItem(
                             text = { Text(sleepTimerText) },
@@ -541,7 +547,7 @@ fun ReaderTopBar(
                             }
                         )
                         DropdownMenuItem(
-                            text = { Text("Visit site") },
+                            text = { Text(stringResource(R.string.reader_menu_visit_site)) },
                             onClick = {
                                 onMenuExpandChange(false)
                                 article.url?.let { uriHandler.openUri(it) }
@@ -570,6 +576,7 @@ fun ReaderContentList(
     scrollState: LazyListState,
     readerFontFamily: androidx.compose.ui.text.font.FontFamily,
     readerFontSize: Float,
+    lineSpacing: Float,
     isFollowing: Boolean,
     onFollowingChange: (Boolean) -> Unit,
     onControlsVisibleChange: (Boolean) -> Unit,
@@ -657,7 +664,7 @@ fun ReaderContentList(
             val isCurrentParagraph = index == uiState.currentParagraphIndex
             
             if (isHeading && index > 0) {
-                Spacer(modifier = Modifier.height(32.dp))
+                Spacer(modifier = Modifier.height(((32 + 16 * (lineSpacing - 1)) * lineSpacing).dp))
             }
 
             val baseAnnotatedString = block.text
@@ -684,6 +691,7 @@ fun ReaderContentList(
                 }
             }
 
+            val baseLineHeight = readerFontSize * 1.6f
             val baseStyle = when (block) {
                 is ContentBlock.Heading -> {
                     val scaleFactor = readerFontSize / 18f
@@ -694,14 +702,14 @@ fun ReaderContentList(
                     }.copy(color = MaterialTheme.colorScheme.onBackground, fontFamily = readerFontFamily)
                 }
                 is ContentBlock.BlockQuote -> MaterialTheme.typography.bodyLarge.copy(
-                    lineHeight = (32 * (readerFontSize / 20f)).sp,
+                    lineHeight = (baseLineHeight * lineSpacing).sp,
                     fontSize = readerFontSize.sp,
                     fontStyle = androidx.compose.ui.text.font.FontStyle.Italic,
                     color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.8f),
                     fontFamily = readerFontFamily
                 )
                 else -> MaterialTheme.typography.bodyLarge.copy(
-                    lineHeight = (32 * (readerFontSize / 20f)).sp,
+                    lineHeight = (baseLineHeight * lineSpacing).sp,
                     fontSize = readerFontSize.sp,
                     color = MaterialTheme.colorScheme.onBackground,
                     fontFamily = readerFontFamily
@@ -723,7 +731,7 @@ fun ReaderContentList(
                     ) {
                         AsyncImage(
                             model = block.url,
-                            contentDescription = block.altText ?: "Article image",
+                            contentDescription = block.altText ?: stringResource(R.string.reader_article_image_desc),
                             modifier = Modifier.fillMaxWidth().clip(MaterialTheme.shapes.medium),
                             contentScale = ContentScale.Fit
                         )
@@ -761,6 +769,8 @@ fun ReaderContentList(
                         },
                         onMeasureWordY = { y ->
                             val isHeadingWithSpacer = block is ContentBlock.Heading && index > 0
+                            val headingSpacing = (32 + 16 * (lineSpacing - 1)) * lineSpacing
+                            val headingSpacerPx = with(density) { headingSpacing.dp.toPx() }
                             val internalOffset = (if (isHeadingWithSpacer) headingSpacerPx else 0f) + verticalPaddingPx
                             currentWordYInItem = y + internalOffset
                             currentWordYIndex = index
@@ -768,7 +778,7 @@ fun ReaderContentList(
                     )
                 }
             }
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(((16 + 8 * (lineSpacing - 1)) * lineSpacing).dp))
         }
         item { Spacer(modifier = Modifier.height(8.dp)) }
     }
@@ -818,7 +828,13 @@ fun BlockQuoteItem(
                     }
                 },
                 modifier = Modifier
-                    .wordHighlight(isCurrentParagraph, currentWordRange, layoutResult, MaterialTheme.colorScheme.primary.copy(alpha = 0.4f))
+                    .wordHighlight(
+                        isCurrentParagraph = isCurrentParagraph,
+                        currentWordRange = currentWordRange,
+                        layoutResult = layoutResult,
+                        highlightColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.4f),
+                        fontSizePx = with(LocalDensity.current) { baseStyle.fontSize.toPx() }
+                    )
                     .pointerInput(annotatedString) {
                         detectTapGestures(
                             onTap = { pos ->
@@ -844,7 +860,7 @@ fun BlockQuoteItem(
 
             DropdownMenu(expanded = contextMenuLink != null, onDismissRequest = { contextMenuLink = null }, offset = contextMenuOffset) {
                 DropdownMenuItem(
-                    text = { Text("Open link") },
+                    text = { Text(stringResource(R.string.reader_open_link)) },
                     onClick = { contextMenuLink?.let { uriHandler.openUri(it) }; contextMenuLink = null },
                     leadingIcon = { Icon(Icons.AutoMirrored.Filled.OpenInNew, contentDescription = null) }
                 )
@@ -890,7 +906,13 @@ fun ParagraphItem(
                 }
             },
             modifier = Modifier
-                .wordHighlight(isCurrentParagraph, currentWordRange, layoutResult, MaterialTheme.colorScheme.primary.copy(alpha = 0.4f))
+                .wordHighlight(
+                    isCurrentParagraph = isCurrentParagraph,
+                    currentWordRange = currentWordRange,
+                    layoutResult = layoutResult,
+                    highlightColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.4f),
+                    fontSizePx = with(LocalDensity.current) { baseStyle.fontSize.toPx() }
+                )
                 .pointerInput(annotatedString) {
                     detectTapGestures(
                         onTap = { pos ->
@@ -916,7 +938,7 @@ fun ParagraphItem(
 
         DropdownMenu(expanded = contextMenuLink != null, onDismissRequest = { contextMenuLink = null }, offset = contextMenuOffset) {
             DropdownMenuItem(
-                text = { Text("Open link") },
+                text = { Text(stringResource(R.string.reader_open_link)) },
                 onClick = { contextMenuLink?.let { uriHandler.openUri(it) }; contextMenuLink = null },
                 leadingIcon = { Icon(Icons.AutoMirrored.Filled.OpenInNew, contentDescription = null) }
             )
@@ -947,7 +969,7 @@ fun ReaderFab(
         ) {
             Icon(
                 imageVector = Icons.Default.CenterFocusStrong,
-                contentDescription = "Scroll to current position",
+                contentDescription = stringResource(R.string.reader_scroll_to_current_position),
                 tint = MaterialTheme.colorScheme.onPrimary,
                 modifier = Modifier.size(32.dp)
             )
@@ -986,6 +1008,7 @@ fun ReaderPlaybackControls(
             ) {
                 // Progress Bar
                 val progress = if (uiState.duration > 0) uiState.currentPosition.toFloat() / uiState.duration else 0f
+                val playbackProgressDesc = stringResource(R.string.reader_playback_progress_desc, (progress * 100).toInt())
                 LinearProgressIndicator(
                     progress = { progress },
                     modifier = Modifier
@@ -998,7 +1021,7 @@ fun ReaderPlaybackControls(
                                 range = 0f..uiState.duration.toFloat(),
                                 steps = 100
                             )
-                            contentDescription = "Playback progress: ${(progress * 100).toInt()}%"
+                            contentDescription = playbackProgressDesc
                         },
                     color = MaterialTheme.colorScheme.primary,
                     trackColor = MaterialTheme.colorScheme.primaryContainer,
@@ -1051,6 +1074,7 @@ fun ReaderPlaybackControls(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     // Speed Button
+                    val playbackSpeedDesc = stringResource(R.string.reader_playback_speed_desc, uiState.playbackSpeed)
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         IconButton(
                             onClick = {
@@ -1061,7 +1085,7 @@ fun ReaderPlaybackControls(
                                 .height(64.dp)
                                 .semantics {
                                     liveRegion = LiveRegionMode.Polite
-                                    contentDescription = "Playback Speed: current ${String.format(Locale.US, "%.1f", uiState.playbackSpeed)}x"
+                                    contentDescription = playbackSpeedDesc
                                 }
                         ) {
                             Icon(
@@ -1090,7 +1114,7 @@ fun ReaderPlaybackControls(
                         ) {
                             Icon(
                                 imageVector = Icons.Default.FastRewind,
-                                contentDescription = "Rewind ${uiState.rewindSkipTime}",
+                                contentDescription = stringResource(R.string.reader_rewind_desc, uiState.rewindSkipTime),
                                 modifier = Modifier.size(36.dp),
                                 tint = MaterialTheme.colorScheme.onBackground
                             )
@@ -1114,7 +1138,7 @@ fun ReaderPlaybackControls(
                         ) {
                             Icon(
                                 imageVector = if (uiState.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                                contentDescription = if (uiState.isPlaying) "Pause" else "Play",
+                                contentDescription = if (uiState.isPlaying) stringResource(R.string.action_pause) else stringResource(R.string.action_play),
                                 modifier = Modifier.size(48.dp),
                                 tint = MaterialTheme.colorScheme.onBackground
                             )
@@ -1133,7 +1157,7 @@ fun ReaderPlaybackControls(
                         ) {
                             Icon(
                                 imageVector = Icons.Default.FastForward,
-                                contentDescription = "Fast forward ${uiState.fastForwardSkipTime}",
+                                contentDescription = stringResource(R.string.reader_fast_forward_desc, uiState.fastForwardSkipTime),
                                 modifier = Modifier.size(36.dp),
                                 tint = MaterialTheme.colorScheme.onBackground
                             )
@@ -1154,7 +1178,7 @@ fun ReaderPlaybackControls(
                         ) {
                             Icon(
                                 imageVector = Icons.Default.SkipNext,
-                                contentDescription = "Next article",
+                                contentDescription = stringResource(R.string.reader_next_article_desc),
                                 modifier = Modifier.size(36.dp),
                                 tint = MaterialTheme.colorScheme.onBackground
                             )
@@ -1184,18 +1208,18 @@ fun ReaderSleepTimerSheet(
                 .padding(bottom = 32.dp)
         ) {
             Text(
-                text = "Sleep Timer",
+                text = stringResource(R.string.reader_sleep_timer),
                 style = MaterialTheme.typography.titleLarge,
                 modifier = Modifier.padding(16.dp)
             )
             
             val options = listOf(
-                "Off" to null,
-                "5 minutes" to 5,
-                "15 minutes" to 15,
-                "30 minutes" to 30,
-                "45 minutes" to 45,
-                "1 hour" to 60
+                stringResource(R.string.action_off) to null,
+                stringResource(R.string.unit_5_minutes) to 5,
+                stringResource(R.string.unit_15_minutes) to 15,
+                stringResource(R.string.unit_30_minutes) to 30,
+                stringResource(R.string.unit_45_minutes) to 45,
+                stringResource(R.string.unit_1_hour) to 60
             )
             
             options.forEach { (label, minutes) ->
@@ -1235,12 +1259,12 @@ fun ReaderSearchSheet(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(16.dp),
-                placeholder = { Text("Search in article...") },
+                placeholder = { Text(stringResource(R.string.reader_search_placeholder)) },
                 leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
                 trailingIcon = {
                     if (uiState.searchQuery.isNotEmpty()) {
                         IconButton(onClick = { onSearchQueryChange("") }) {
-                            Icon(Icons.Default.Close, contentDescription = "Clear")
+                            Icon(Icons.Default.Close, contentDescription = stringResource(R.string.action_clear))
                         }
                     }
                 },
@@ -1260,7 +1284,7 @@ fun ReaderSearchSheet(
                             )
                         },
                         overlineContent = {
-                            Text("Paragraph ${result.paragraphIndex + 1}")
+                            Text(stringResource(R.string.reader_paragraph_search_desc, result.paragraphIndex + 1))
                         },
                         modifier = Modifier.clickable {
                             onResultClick(result)
@@ -1272,7 +1296,7 @@ fun ReaderSearchSheet(
                 if (uiState.searchQuery.length >= 2 && uiState.searchResults.isEmpty()) {
                     item {
                         Text(
-                            text = "No results found",
+                            text = stringResource(R.string.reader_no_results),
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(32.dp),
@@ -1311,13 +1335,13 @@ fun ErrorView(
             )
             Spacer(modifier = Modifier.height(16.dp))
             Text(
-                text = "Something went wrong",
+                text = stringResource(R.string.reader_error_title),
                 style = MaterialTheme.typography.titleLarge,
                 color = MaterialTheme.colorScheme.onBackground
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = error.message ?: "An unexpected error occurred while loading the article.",
+                text = error.message ?: stringResource(R.string.error_generic),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center
@@ -1328,14 +1352,14 @@ fun ErrorView(
                     onClick = onBack,
                     modifier = Modifier.weight(1f)
                 ) {
-                    Text("Go Back")
+                    Text(stringResource(R.string.reader_go_back))
                 }
                 Spacer(modifier = Modifier.width(16.dp))
                 Button(
                     onClick = onRetry,
                     modifier = Modifier.weight(1f)
                 ) {
-                    Text("Retry")
+                    Text(stringResource(R.string.reader_retry))
                 }
             }
         }
@@ -1347,11 +1371,15 @@ private fun Modifier.wordHighlight(
     isCurrentParagraph: Boolean,
     currentWordRange: IntRange?,
     layoutResult: TextLayoutResult?,
-    highlightColor: Color
+    highlightColor: Color,
+    fontSizePx: Float
 ): Modifier {
     if (!isCurrentParagraph || currentWordRange == null || layoutResult == null) return this
 
-    val wordInfo = remember(currentWordRange, layoutResult) {
+    val density = LocalDensity.current
+    val paddingPx = with(density) { 2.dp.toPx() }
+
+    val wordInfo = remember(currentWordRange, layoutResult, fontSizePx, paddingPx) {
         val start = currentWordRange.first
         val end = currentWordRange.last + 1
         if (start < 0 || end > layoutResult.layoutInput.text.length) return@remember null
@@ -1369,13 +1397,23 @@ private fun Modifier.wordHighlight(
         val endRect = layoutResult.getBoundingBox(trimmedEnd - 1)
         
         // If the word wraps across lines, we only highlight the first part
-        val isSameLine = layoutResult.getLineForOffset(start) == layoutResult.getLineForOffset(trimmedEnd - 1)
+        val line = layoutResult.getLineForOffset(start)
+        val isSameLine = line == layoutResult.getLineForOffset(trimmedEnd - 1)
         
-        val offset = Offset(startRect.left, startRect.top)
+        // Use the baseline as the stable reference point for vertical alignment
+        val baseline = layoutResult.getLineBaseline(line)
+        
+        val rectHeight = (fontSizePx * 1.2f) + (paddingPx * 2)
+        // Center the highlight vertically relative to the baseline.
+        // A visual center for a line of text is typically about 0.3em above the baseline.
+        val highlightCenterY = baseline - (fontSizePx * 0.3f)
+        val highlightTop = highlightCenterY - (rectHeight / 2)
+        
+        val offset = Offset(startRect.left - paddingPx, highlightTop)
         val size = if (isSameLine) {
-            Size(endRect.right - startRect.left, startRect.height)
+            Size((endRect.right - startRect.left) + (paddingPx * 2), rectHeight)
         } else {
-            Size(startRect.width, startRect.height)
+            Size(startRect.width + (paddingPx * 2), rectHeight)
         }
         
         Pair(offset, size)
@@ -1420,6 +1458,7 @@ fun ReaderScreenPreview() {
             ),
             readerFontFamily = androidx.compose.ui.text.font.FontFamily.Default,
             readerFontSize = 20f,
+            lineSpacing = 1.6f,
             tapToShowControls = true,
             autoFullscreen = true,
             onBack = {},

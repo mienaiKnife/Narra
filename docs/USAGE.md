@@ -1,6 +1,6 @@
 # Narra User Guide
 
-Welcome to Narra! This guide explains how to use the app to listen to your favorite web articles, RSS feeds, and EPUB books.
+Welcome to Narra! This guide explains how to use the app to listen to web articles, RSS feeds, and EPUB books.
 
 ## Getting Started
 
@@ -19,13 +19,13 @@ To listen to a specific article from the web:
 
 ### 2. RSS Feeds
 Subscribe to blogs or news sites to automatically get new articles:
-1. Copy the RSS feed URL.
+1. Copy the RSS feed URL (for some websites, any URL to an article from the feed will work, but for others you'll have to find the link to the XML file for the feed).
 2. Go to the **Add** screen.
 3. Paste the URL and tap **Add feed**.
 4. New articles from this feed will appear in your **Inbox** as they are published.
 
-### 3. EPUB Files
-Import your own ebooks:
+### 3. Ebooks
+Currently, only EPUBs are supported, but PDF support is planned:
 1. Go to the **Add** screen.
 2. Tap **Upload a file**.
 3. Select an EPUB file from your device.

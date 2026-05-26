@@ -178,11 +178,10 @@ class PlaybackManager @Inject constructor(
                 if (playbackState == Player.STATE_ENDED) {
                     scope.launch {
                         if (settingsManager.autoPlayNext.first()) {
-                            // Keep CPU awake while we fetch next article
-                            ttsPlayer.acquireManualWakeLock()
                             playNextArticle(isAutomatic = true)
                         } else {
                             _isPlaying.value = false
+                            ttsPlayer.releasePlaybackResources()
                         }
                     }
                 }
@@ -290,8 +289,10 @@ class PlaybackManager @Inject constructor(
         return true
     }
 
-    private fun startPlaybackService() {
-        val intent = Intent(context, PlaybackService::class.java)
+    private fun startPlaybackService(action: String? = null) {
+        val intent = Intent(context, PlaybackService::class.java).apply {
+            if (action != null) this.action = action
+        }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             context.startForegroundService(intent)
         } else {
@@ -321,8 +322,8 @@ class PlaybackManager @Inject constructor(
             }
             _duration.value = 0L // TTS doesn't have fixed duration
             _currentPosition.value = 0L
-            _currentParagraphIndex.value = 0
-            _currentWordRange.value = null
+            _currentParagraphIndex.value = article.currentParagraphIndex
+            _currentWordRange.value = article.currentWordOffset.let { it until it + 1 } // Placeholder until TtsPlayer refines it
 
             transitionJob = scope.launch {
                 val actualBlocks = withContext(Dispatchers.Default) {
@@ -345,8 +346,6 @@ class PlaybackManager @Inject constructor(
                     val playChimeAndTitle = settingsManager.playChimeAndTitle.first()
 
                     if (playChimeAndTitle) {
-                        // Keep CPU awake for chime + announcement + content start
-                        ttsPlayer.acquireManualWakeLock()
                         try {
                             // Request audio focus before playing chime and announcement
                             ttsPlayer.requestAudioFocus()
@@ -378,12 +377,9 @@ class PlaybackManager @Inject constructor(
                             if (currentSpeed != 1.0f) {
                                 ttsPlayer.setPlaybackSpeed(currentSpeed)
                             }
-                        } finally {
-                            ttsPlayer.releaseManualWakeLock()
+                        } catch (e: Exception) {
+                            android.util.Log.e("PlaybackManager", "Error during autoplay transition", e)
                         }
-                    } else {
-                        // Even if no chime/title, ensure locks are eventually released
-                        ttsPlayer.releaseManualWakeLock()
                     }
                     
                     // Now start the actual article content

@@ -61,7 +61,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.stringResource
 import androidx.navigation.compose.rememberNavController
+import com.mienaiknife.narra.R
 import com.mienaiknife.narra.ui.components.BottomNavBar
 import com.mienaiknife.narra.ui.theme.NarraTheme
 
@@ -91,7 +93,7 @@ fun SettingsScreen(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "Settings",
+                text = stringResource(R.string.nav_settings),
                 style = MaterialTheme.typography.headlineSmall
             )
         }
@@ -99,6 +101,7 @@ fun SettingsScreen(
         Spacer(modifier = Modifier.height(16.dp))
 
         var expanded by remember { mutableStateOf(false) }
+        val context = androidx.compose.ui.platform.LocalContext.current
 
         @OptIn(ExperimentalMaterial3Api::class)
         ExposedDropdownMenuBox(
@@ -117,7 +120,7 @@ fun SettingsScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .menuAnchor(type = ExposedDropdownMenuAnchorType.PrimaryNotEditable),
-                placeholder = { Text("Search settings...") },
+                placeholder = { Text(stringResource(R.string.settings_search_placeholder)) },
                 leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
                 trailingIcon = {
                     if (searchQuery.isNotEmpty()) {
@@ -127,7 +130,7 @@ fun SettingsScreen(
                         }) {
                             Icon(
                                 imageVector = Icons.Default.Clear,
-                                contentDescription = "Clear search"
+                                contentDescription = stringResource(R.string.action_clear)
                             )
                         }
                     }
@@ -145,8 +148,12 @@ fun SettingsScreen(
                     emptyList()
                 } else {
                     allSearchableSettings.filter { item ->
-                        item.title.contains(searchQuery, ignoreCase = true) ||
-                                item.subtitle.contains(searchQuery, ignoreCase = true) ||
+                        // Using stringResource is not possible here as it's not a composable context (inside remember's lambda)
+                        // but actually, remember's lambda is NOT a composable context, but we are inside a Composable function.
+                        // However, allSearchableSettings uses resource IDs. We can use context.getString here.
+                        // To avoid the lint warning, we can suppress it or just accept it's necessary here.
+                        context.getString(item.titleRes).contains(searchQuery, ignoreCase = true) ||
+                                context.getString(item.subtitleRes).contains(searchQuery, ignoreCase = true) ||
                                 item.keywords.any { it.contains(searchQuery, ignoreCase = true) }
                     }.take(5)
                 }
@@ -162,9 +169,9 @@ fun SettingsScreen(
                         androidx.compose.material3.DropdownMenuItem(
                             text = {
                                 Column {
-                                    Text(result.title, style = MaterialTheme.typography.bodyLarge)
+                                    Text(stringResource(result.titleRes), style = MaterialTheme.typography.bodyLarge)
                                     Text(
-                                        result.subtitle,
+                                        stringResource(result.subtitleRes),
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
@@ -183,32 +190,32 @@ fun SettingsScreen(
 
         val settingsItems = listOf(
             SettingsItem(
-                title = "User interface",
-                subtitle = "Appearance and behavior",
+                title = stringResource(R.string.settings_ui_title),
+                subtitle = stringResource(R.string.settings_ui_subtitle),
                 icon = Icons.Default.StayCurrentPortrait,
                 onClick = onNavigateToUserInterface
             ),
             SettingsItem(
-                title = "Playback",
-                subtitle = "Headphone controls and queue",
+                title = stringResource(R.string.settings_playback_title),
+                subtitle = stringResource(R.string.settings_playback_subtitle),
                 icon = Icons.Default.Headphones,
                 onClick = onNavigateToPlayback
             ),
             SettingsItem(
-                title = "Voices",
-                subtitle = "Text to speech settings",
+                title = stringResource(R.string.settings_voices_title),
+                subtitle = stringResource(R.string.settings_voices_subtitle),
                 icon = Icons.Default.RecordVoiceOver, 
                 onClick = onNavigateToVoices
             ),
             SettingsItem(
-                title = "Downloads",
-                subtitle = "Connections, updates, and data",
+                title = stringResource(R.string.settings_downloads_title),
+                subtitle = stringResource(R.string.settings_downloads_subtitle),
                 icon = Icons.Default.Download,
                 onClick = onNavigateToDownloads
             ),
             SettingsItem(
-                title = "About Narra",
-                subtitle = "Documentation, issue tracking, and licenses",
+                title = stringResource(R.string.settings_about_title),
+                subtitle = stringResource(R.string.settings_about_subtitle),
                 icon = Icons.Default.Info,
                 onClick = onNavigateToAbout
             )

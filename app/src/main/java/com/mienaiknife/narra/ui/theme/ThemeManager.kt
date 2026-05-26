@@ -42,6 +42,7 @@ class ThemeManager(
     private val dynamicColorKey = booleanPreferencesKey("dynamic_color")
     private val useSystemThemeKey = booleanPreferencesKey("use_system_theme")
     private val readerFontFamilyKey = stringPreferencesKey("reader_font_family")
+    private val lineSpacingKey = stringPreferencesKey("line_spacing")
     private val readerFontSizeKey = floatPreferencesKey("reader_font_size")
     private val showRemainingTimeKey = booleanPreferencesKey("show_remaining_time")
     private val tapToShowControlsKey = booleanPreferencesKey("tap_to_show_controls")
@@ -51,6 +52,7 @@ class ThemeManager(
     private val _isDynamicColor = MutableStateFlow(value = false)
     private val _useSystemTheme = MutableStateFlow(value = true)
     private val _readerFontFamily = MutableStateFlow("Roboto")
+    private val _lineSpacing = MutableStateFlow("1.0")
     private val _readerFontSize = MutableStateFlow(18.0f)
     private val _showRemainingTime = MutableStateFlow(value = true)
     private val _tapToShowControls = MutableStateFlow(value = true)
@@ -60,6 +62,7 @@ class ThemeManager(
     val isDynamicColor: StateFlow<Boolean> = _isDynamicColor.asStateFlow()
     val useSystemTheme: StateFlow<Boolean> = _useSystemTheme.asStateFlow()
     val readerFontFamily: StateFlow<String> = _readerFontFamily.asStateFlow()
+    val lineSpacing: StateFlow<String> = _lineSpacing.asStateFlow()
     val readerFontSize: StateFlow<Float> = _readerFontSize.asStateFlow()
     val showRemainingTime: StateFlow<Boolean> = _showRemainingTime.asStateFlow()
     val tapToShowControls: StateFlow<Boolean> = _tapToShowControls.asStateFlow()
@@ -72,6 +75,7 @@ class ThemeManager(
                 _isDynamicColor.value = preferences[dynamicColorKey] ?: false
                 _useSystemTheme.value = preferences[useSystemThemeKey] ?: true
                 _readerFontFamily.value = preferences[readerFontFamilyKey] ?: "Roboto"
+                _lineSpacing.value = preferences[lineSpacingKey] ?: "1.0"
                 _readerFontSize.value = preferences[readerFontSizeKey] ?: 18.0f
                 _showRemainingTime.value = preferences[showRemainingTimeKey] ?: true
                 _tapToShowControls.value = preferences[tapToShowControlsKey] ?: true
@@ -101,6 +105,12 @@ class ThemeManager(
     fun setReaderFontFamily(fontFamily: String) {
         scope.launch {
             context.dataStore.edit { it[readerFontFamilyKey] = fontFamily }
+        }
+    }
+
+    fun setLineSpacing(lineSpacing: String) {
+        scope.launch {
+            context.dataStore.edit { it[lineSpacingKey] = lineSpacing }
         }
     }
 
