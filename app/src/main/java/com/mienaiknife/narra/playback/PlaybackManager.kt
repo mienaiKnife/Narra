@@ -29,7 +29,7 @@ import androidx.annotation.OptIn
 import androidx.media3.common.util.UnstableApi
 import androidx.core.net.toUri
 import androidx.media3.common.MediaMetadata
-import com.mienaiknife.narra.data.models.Article
+import com.mienaiknife.narra.domain.models.Article
 import com.mienaiknife.narra.domain.TtsState
 import com.mienaiknife.narra.domain.repository.ContentRepository
 import com.mienaiknife.narra.service.PlaybackService
@@ -329,11 +329,17 @@ class PlaybackManager @Inject constructor(
                 val actualBlocks = withContext(Dispatchers.Default) {
                     blocks ?: HtmlParser.parse(article.content)
                 }
+
+                val readAltText = settingsManager.readAltText.first()
+                val shortenHyperlinks = settingsManager.shortenHyperlinks.first()
+
                 val ttsTexts = withContext(Dispatchers.Default) {
                     actualBlocks.map { block ->
                         when (block) {
-                            is ContentBlock.Image -> block.altText?.let { "Image: $it" } ?: ""
-                            else -> block.text.toSpeakableText()
+                            is ContentBlock.Image -> if (readAltText) {
+                                block.altText?.let { context.getString(R.string.reader_image_prefix, it) } ?: ""
+                            } else ""
+                            else -> block.text.toSpeakableText(context, shortenLinks = shortenHyperlinks)
                         }
                     }
                 }
@@ -358,7 +364,7 @@ class PlaybackManager @Inject constructor(
                             val currentSpeed = _playbackSpeed.value
                             if (currentSpeed != 1.0f) ttsPlayer.setPlaybackSpeed(1.0f)
 
-                            ttsPlayer.speakAnnouncement("Now playing: ${article.title}")
+                            ttsPlayer.speakAnnouncement(context.getString(R.string.reader_now_playing, article.title))
 
                             // Wait for the announcement to start and then finish
                             // Increased timeout to 10s for slow TTS engines
@@ -499,12 +505,18 @@ class PlaybackManager @Inject constructor(
                 val blocks = withContext(Dispatchers.Default) {
                     HtmlParser.parse(article.content)
                 }
+
+                val readAltText = settingsManager.readAltText.first()
+                val shortenHyperlinks = settingsManager.shortenHyperlinks.first()
+
                 val ttsTexts = withContext(Dispatchers.Default) {
                     blocks.map { block ->
                         if (block is ContentBlock.Image) {
-                            block.altText?.let { "Image: $it" } ?: ""
+                            if (readAltText) {
+                                block.altText?.let { context.getString(R.string.reader_image_prefix, it) } ?: ""
+                            } else ""
                         } else {
-                            block.text.toSpeakableText()
+                            block.text.toSpeakableText(context, shortenLinks = shortenHyperlinks)
                         }
                     }
                 }
@@ -543,12 +555,18 @@ class PlaybackManager @Inject constructor(
                 val blocks = withContext(Dispatchers.Default) {
                     HtmlParser.parse(current.content)
                 }
+
+                val readAltText = settingsManager.readAltText.first()
+                val shortenHyperlinks = settingsManager.shortenHyperlinks.first()
+
                 val ttsTexts = withContext(Dispatchers.Default) {
                     blocks.map { block ->
                         if (block is ContentBlock.Image) {
-                            block.altText?.let { "Image: $it" } ?: ""
+                            if (readAltText) {
+                                block.altText?.let { context.getString(R.string.reader_image_prefix, it) } ?: ""
+                            } else ""
                         } else {
-                            block.text.toSpeakableText()
+                            block.text.toSpeakableText(context, shortenLinks = shortenHyperlinks)
                         }
                     }
                 }

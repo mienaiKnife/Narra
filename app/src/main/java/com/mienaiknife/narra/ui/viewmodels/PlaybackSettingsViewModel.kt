@@ -42,7 +42,9 @@ class PlaybackSettingsViewModel @Inject constructor(
         settingsManager.pauseForInterruptions,
         settingsManager.autoPlayNext,
         settingsManager.playChimeAndTitle,
-        settingsManager.chimeSound
+        settingsManager.chimeSound,
+        settingsManager.readAltText,
+        settingsManager.shortenHyperlinks
     ) { flows: Array<Any> ->
         PlaybackSettingsUiState(
             fastForwardSkipTime = flows[0] as String,
@@ -53,7 +55,9 @@ class PlaybackSettingsViewModel @Inject constructor(
             pauseForInterruptions = flows[5] as Boolean,
             autoPlayNext = flows[6] as Boolean,
             playChimeAndTitle = flows[7] as Boolean,
-            chimeSound = flows[8] as String
+            chimeSound = flows[8] as String,
+            readAltText = flows[9] as Boolean,
+            shortenHyperlinks = flows[10] as Boolean
         )
     }.stateIn(
         scope = viewModelScope,
@@ -112,6 +116,18 @@ class PlaybackSettingsViewModel @Inject constructor(
     fun setChimeSound(sound: String) {
         viewModelScope.launch {
             settingsManager.setChimeSound(sound)
+        }
+    }
+
+    fun setReadAltText(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsManager.setReadAltText(enabled)
+        }
+    }
+
+    fun setShortenHyperlinks(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsManager.setShortenHyperlinks(enabled)
         }
     }
 }

@@ -16,7 +16,7 @@
 
 package com.mienaiknife.narra.ui.viewmodels
 
-import com.mienaiknife.narra.data.models.Article
+import com.mienaiknife.narra.domain.models.Article
 
 data class HistoryUiState(
     val articles: List<Article> = emptyList(),

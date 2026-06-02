@@ -16,6 +16,7 @@
 
 package com.mienaiknife.narra.ui.utils
 
+import android.content.Context
 import androidx.core.net.toUri
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.AnnotatedString
@@ -211,7 +212,7 @@ object HtmlParser {
     }
 }
 
-fun AnnotatedString.toSpeakableText(): String {
+fun AnnotatedString.toSpeakableText(context: Context, shortenLinks: Boolean = true): String {
     val result = StringBuilder(text)
     
     // Handle footnotes: replace with spaces
@@ -234,6 +235,8 @@ fun AnnotatedString.toSpeakableText(): String {
     
     val allAnnotations = (footnotes + links).sortedBy { it.start }
     
+    val linkToPrefix = context.getString(com.mienaiknife.narra.R.string.reader_link_to)
+
     for (annotation in allAnnotations) {
         if (annotation.end <= lastIndex) continue
         
@@ -255,8 +258,8 @@ fun AnnotatedString.toSpeakableText(): String {
                 val linkText = text.substring(effectiveStart, annotation.end).trim()
                 val url = annotation.item
                 
-                if (isUrlLike(linkText)) {
-                    output.append(" link to ${simplifyUrl(url)} ")
+                if (shortenLinks && isUrlLike(linkText)) {
+                    output.append(linkToPrefix.format(simplifyUrl(url)))
                 } else {
                     output.append(linkText)
                 }

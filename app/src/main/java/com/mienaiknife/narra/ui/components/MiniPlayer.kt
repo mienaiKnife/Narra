@@ -59,7 +59,9 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import coil3.compose.AsyncImage
-import com.mienaiknife.narra.data.models.Article
+import androidx.compose.ui.res.stringResource
+import com.mienaiknife.narra.R
+import com.mienaiknife.narra.domain.models.Article
 import com.mienaiknife.narra.data.models.SampleArticles
 import com.mienaiknife.narra.ui.theme.NarraTheme
 import com.mienaiknife.narra.ui.viewmodels.PlaybackViewModel
@@ -92,15 +94,17 @@ fun MiniPlayerContent(
 ) {
     if (article == null) return
 
+    val contentDesc = if (isPlaying) {
+        stringResource(R.string.reader_playing_prefix, article.title)
+    } else {
+        stringResource(R.string.reader_paused_prefix, article.title)
+    }
+
     Surface(
         modifier = Modifier
             .fillMaxWidth()
             .semantics(mergeDescendants = true) {
-                contentDescription = if (isPlaying) {
-                    "Playing ${article.title}. Tap to open player."
-                } else {
-                    "Paused ${article.title}. Tap to open player."
-                }
+                contentDescription = contentDesc
             }
             .clickable { onExpand(article.id) },
         color = MaterialTheme.colorScheme.surfaceContainer,
@@ -138,7 +142,7 @@ fun MiniPlayerContent(
 
                     AsyncImage(
                         model = imageUrl,
-                        contentDescription = "Cover for ${article.title}",
+                        contentDescription = stringResource(R.string.reader_cover_desc, article.title),
                         modifier = Modifier.fillMaxSize(),
                         contentScale = ContentScale.Crop,
                         onSuccess = { isImageLoaded = true }
@@ -166,7 +170,7 @@ fun MiniPlayerContent(
                 IconButton(onClick = onTogglePlayPause) {
                     Icon(
                         imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                        contentDescription = if (isPlaying) "Pause" else "Play",
+                        contentDescription = if (isPlaying) stringResource(R.string.action_pause) else stringResource(R.string.action_play),
                         modifier = Modifier.size(32.dp)
                     )
                 }

@@ -25,5 +25,7 @@ data class PlaybackSettingsUiState(
     val pauseForInterruptions: Boolean = true,
     val autoPlayNext: Boolean = true,
     val playChimeAndTitle: Boolean = true,
-    val chimeSound: String = "music_box_chime_positive"
+    val chimeSound: String = "music_box_chime_positive",
+    val readAltText: Boolean = true,
+    val shortenHyperlinks: Boolean = true
 )

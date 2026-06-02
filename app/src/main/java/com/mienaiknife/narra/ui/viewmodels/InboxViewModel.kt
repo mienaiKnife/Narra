@@ -19,9 +19,10 @@ package com.mienaiknife.narra.ui.viewmodels
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mienaiknife.narra.R
-import com.mienaiknife.narra.data.models.Article
+import com.mienaiknife.narra.domain.models.Article
 import com.mienaiknife.narra.data.models.SortOption
-import com.mienaiknife.narra.domain.repository.ContentRepository
+import com.mienaiknife.narra.domain.repository.ArticleRepository
+import com.mienaiknife.narra.domain.repository.FeedRepository
 import com.mienaiknife.narra.playback.PlaybackManager
 import com.mienaiknife.narra.ui.UiText
 import com.mienaiknife.narra.ui.utils.HtmlParser
@@ -39,7 +40,8 @@ import javax.inject.Inject
 
 @HiltViewModel
 class InboxViewModel @Inject constructor(
-    private val repository: ContentRepository,
+    private val repository: ArticleRepository,
+    private val feedRepository: FeedRepository,
     private val playbackManager: PlaybackManager
 ) : ViewModel() {
 
@@ -126,10 +128,8 @@ class InboxViewModel @Inject constructor(
     fun refresh() {
         viewModelScope.launch {
             _isRefreshing.value = true
-            repository.refreshFeeds().onFailure { error ->
-                val uiText = error.message?.let { UiText.DynamicString(it) }
-                    ?: UiText.StringResource(R.string.error_refresh_failed)
-                _uiEvent.emit(UiEvent.ShowSnackbar(uiText))
+            feedRepository.refreshFeeds().onFailure { error ->
+                _uiEvent.emit(UiEvent.ShowSnackbar(UiText.fromError(error)))
             }
             _isRefreshing.value = false
         }
@@ -141,9 +141,7 @@ class InboxViewModel @Inject constructor(
                 _downloadingArticleIds.value += article.id
             }
             repository.addToQueue(article.id).onFailure { error ->
-                val uiText = error.message?.let { UiText.DynamicString(it) }
-                    ?: UiText.StringResource(R.string.error_generic)
-                _uiEvent.emit(UiEvent.ShowSnackbar(uiText))
+                _uiEvent.emit(UiEvent.ShowSnackbar(UiText.fromError(error)))
             }.also {
                 _downloadingArticleIds.value -= article.id
             }

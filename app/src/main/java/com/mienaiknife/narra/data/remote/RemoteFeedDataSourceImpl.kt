@@ -17,7 +17,7 @@
 package com.mienaiknife.narra.data.remote
 
 import com.mienaiknife.narra.data.local.entities.FeedEntity
-import com.mienaiknife.narra.data.models.Article
+import com.mienaiknife.narra.domain.models.Article
 import com.mienaiknife.narra.domain.NarraError
 import com.mienaiknife.narra.ui.utils.UrlUtils
 import com.mienaiknife.narra.utils.DateUtils
@@ -66,23 +66,23 @@ class RemoteFeedDataSourceImpl @Inject constructor(
             val link = channel.link
             var title = channel.title?.trim() ?: "Untitled Feed"
 
-            // If title looks like a URL or is very short/generic, try to get a better one
-            if (title.contains("://") || title.contains("www.") || title == "RSS" || title == "Atom" || title == "Untitled Feed") {
+            // If title looks like a URL or a domain name, try to get a better one
+            if (isUrlOrDomainLike(title)) {
                 if (link != null && UrlUtils.isPublicUrl(link)) {
                     try {
                         val doc = Jsoup.connect(link)
                             .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36")
                             .get()
                         val siteTitle = doc.title().trim()
-                        if (siteTitle.isNotEmpty() && !siteTitle.contains("://")) {
+                        if (siteTitle.isNotEmpty() && !isUrlOrDomainLike(siteTitle)) {
                             title = siteTitle
                         }
                     } catch (_: Exception) {}
                 }
             }
 
-            // Still a URL? Fallback to domain name
-            if (title.contains("://") || title.contains("www.")) {
+            // Still a URL or domain? Fallback to cleaned domain name if it's a URL
+            if (isUrlOrDomainLike(title) && title.contains("://")) {
                 title = UrlUtils.getDomainName(title)
             }
 
@@ -150,7 +150,7 @@ class RemoteFeedDataSourceImpl @Inject constructor(
                 Article(
                     id = UUID.randomUUID().toString(),
                     title = item.title ?: "Untitled",
-                    source = updatedTitle ?: feed.title,
+                    source = if (updatedTitle != null && !isUrlOrDomainLike(updatedTitle)) updatedTitle else feed.title,
                     content = "", // Content is fetched on demand or from item.content if available
                     publishedAt = item.pubDate,
                     publishedTimestamp = DateUtils.parseToTimestamp(item.pubDate),
@@ -165,6 +165,15 @@ class RemoteFeedDataSourceImpl @Inject constructor(
         } catch (e: Exception) {
             Result.failure(NarraError.Unknown(e))
         }
+    }
+
+    private fun isUrlOrDomainLike(text: String): Boolean {
+        return text.contains("://") || 
+               text.contains("www.") || 
+               text.matches(Regex(".*\\.[a-z]{2,6}$", RegexOption.IGNORE_CASE)) ||
+               text == "RSS" || 
+               text == "Atom" || 
+               text == "Untitled Feed"
     }
 
     private fun extractImageFromHtml(html: String?): String? {

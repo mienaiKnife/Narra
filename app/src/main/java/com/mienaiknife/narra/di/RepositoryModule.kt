@@ -31,7 +31,10 @@ import com.mienaiknife.narra.data.remote.WebDataSourceImpl
 import com.mienaiknife.narra.data.repositories.ContentRepositoryImpl
 import com.mienaiknife.narra.data.repositories.ModelRepositoryImpl
 import com.mienaiknife.narra.data.settings.DownloadSettingsManager
+import com.mienaiknife.narra.domain.repository.ArticleRepository
 import com.mienaiknife.narra.domain.repository.ContentRepository
+import com.mienaiknife.narra.domain.repository.FeedRepository
+import com.mienaiknife.narra.domain.repository.ImportExportRepository
 import com.mienaiknife.narra.domain.repository.ModelRepository
 import com.mienaiknife.narra.ui.utils.NetworkMonitor
 import com.mienaiknife.narra.ui.utils.NetworkMonitorImpl
@@ -84,6 +87,18 @@ object RepositoryModule {
             notificationHelper
         )
     }
+
+    @Provides
+    @Singleton
+    fun provideArticleRepository(contentRepository: ContentRepository): ArticleRepository = contentRepository
+
+    @Provides
+    @Singleton
+    fun provideFeedRepository(contentRepository: ContentRepository): FeedRepository = contentRepository
+
+    @Provides
+    @Singleton
+    fun provideImportExportRepository(contentRepository: ContentRepository): ImportExportRepository = contentRepository
 
     @Provides
     @Singleton

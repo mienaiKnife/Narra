@@ -14,7 +14,7 @@
   See the License for the specific language governing permissions and
   limitations under the License.
   -->
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <string name="app_name">Narra</string>
 
     <!-- Navigation -->
@@ -34,7 +34,7 @@
     <string name="home_empty_message">Add articles from RSS feeds, EPUB files, or web links to start listening.</string>
     <string name="home_add_content">Add Content</string>
     <string name="home_cover_image_desc">Cover image for %1$s</string>
-    <string name="home_article_semantics_desc">%1$s from %2$s, %3$d percent completed</string>
+    <string name="home_article_semantics_desc" tools:ignore="PluralsCandidate">%1$s from %2$s, %3$d percent completed</string>
 
     <!-- Inbox Screen -->
     <string name="inbox_empty_message">No new articles from your feeds.</string>
@@ -57,6 +57,7 @@
     <string name="add_article_added">Article added successfully</string>
     <string name="add_feed_subscribed">Subscribed to %1$s</string>
     <string name="add_epub_imported">EPUB imported successfully</string>
+    <string name="add_epub_fallback_title">Imported EPUB</string>
 
     <!-- Reader Screen -->
     <string name="reader_sleep_timer">Sleep Timer</string>
@@ -107,6 +108,11 @@
     <string name="settings_playback_autoplay_next_desc">Automatically play the next text in the queue</string>
     <string name="settings_playback_play_chime">Play chime and title</string>
     <string name="settings_playback_play_chime_desc">When autoplaying the next text in the queue, start by playing a chime and the title</string>
+    <string name="settings_playback_voice_behavior_section">Voice behavior</string>
+    <string name="settings_playback_read_alt_text">Read alt text</string>
+    <string name="settings_playback_read_alt_text_desc">Read descriptions of images when available</string>
+    <string name="settings_playback_shorten_hyperlinks">Shorten hyperlinks</string>
+    <string name="settings_playback_shorten_hyperlinks_desc">Read only the domain of links that don\'t have descriptive text</string>
 
     <!-- Voices Settings -->
     <string name="settings_voices_engine_selection">Engine selection</string>
@@ -176,7 +182,10 @@
     <string name="error_article_not_found">Article not found</string>
 
     <!-- Backup/Import Messages -->
-    <string name="message_imported_feeds">Imported %1$d feeds</string>
+    <plurals name="message_imported_feeds">
+        <item quantity="one">Imported %1$d feed</item>
+        <item quantity="other">Imported %1$d feeds</item>
+    </plurals>
     <string name="message_import_failed">Import failed: %1$s</string>
     <string name="message_exported_feeds">Exported subscriptions</string>
     <string name="message_export_failed">Export failed: %1$s</string>
@@ -186,15 +195,13 @@
     <string name="message_restore_failed">Restore failed: %1$s</string>
 
     <!-- Plurals Equivalents (templates) -->
-    <string name="unit_text">text</string>
-    <string name="unit_texts">texts</string>
-    <string name="unit_hour">hour</string>
-    <string name="unit_hours">hours</string>
-    <string name="unit_minute">minute</string>
-    <string name="unit_minutes">minutes</string>
 
     <!-- Playback Service -->
     <string name="notification_preparing">Preparing playback…</string>
+    <string name="widget_no_article">No article playing</string>
+    <string name="widget_artwork_desc">Article artwork</string>
+    <string name="widget_ff_desc">Fast Forward</string>
+    <string name="widget_skip_next_desc">Skip Next</string>
 
     <string name="settings_ui_reader_font_family">Font family</string>
     <string name="settings_ui_reader_font_family_desc">Choose the font used for article content</string>
@@ -250,11 +257,21 @@
     <string name="reader_fast_forward_desc">Fast forward %1$s</string>
     <string name="reader_next_article_desc">Next article</string>
     <string name="reader_search_placeholder">Search in article…</string>
-    <string name="reader_paragraph_label">Paragraph %1$d of %2$d</string>
     <string name="reader_paragraph_search_desc">Paragraph %1$d</string>
     <string name="reader_open_link">Open link</string>
     <string name="reader_go_back">Go Back</string>
     <string name="reader_retry">Retry</string>
+    <string name="reader_now_playing">Now playing: %1$s</string>
+    <string name="reader_image_prefix">Image: %1$s</string>
+    <string name="reader_playing_prefix">Playing %1$s. Tap to open player.</string>
+    <string name="reader_paused_prefix">Paused %1$s. Tap to open player.</string>
+    <string name="reader_cover_desc">Cover for %1$s</string>
+    <string name="reader_link_to"> link to %1$s </string>
+    <string name="reader_paragraph_semantics">Paragraph %1$d of %2$d</string>
+    <string name="reader_unknown">Unknown</string>
+    <string name="reader_preview">preview</string>
+    <string name="reader_female_suffix"> (Female)</string>
+    <string name="reader_male_suffix"> (Male)</string>
     <string name="action_play">Play</string>
     <string name="action_pause">Pause</string>
     <string name="action_off">Off</string>
@@ -264,6 +281,20 @@
     <string name="unit_45_minutes">45 minutes</string>
     <string name="unit_1_hour">1 hour</string>
     <string name="reader_menu_licenses">Licenses</string>
+
+    <plurals name="unit_minutes">
+        <item quantity="one">1 minute</item>
+        <item quantity="other">%1$d minutes</item>
+    </plurals>
+    <plurals name="unit_hours">
+        <item quantity="one">1 hour</item>
+        <item quantity="other">%1$d hours</item>
+    </plurals>
+    <plurals name="unit_texts">
+        <item quantity="one">1 text</item>
+        <item quantity="other">%1$d texts</item>
+    </plurals>
+
     <string name="about_version">Version</string>
     <string name="about_code_repository">Code repository</string>
     <string name="about_code_repository_desc">Report bugs, suggest features</string>
@@ -276,8 +307,14 @@
     <string name="reader_menu_remove_queue">Remove from queue</string>
     <string name="action_reorder">Reorder</string>
     <string name="queue_item_semantics_desc">%1$s by %2$s</string>
-    <string name="queue_item_semantics_queue_desc">%1$s by %2$s, %3$d percent completed</string>
+    <string name="queue_item_semantics_queue_desc" tools:ignore="PluralsCandidate">%1$s by %2$s, %3$d percent completed</string>
     <string name="action_add_to_queue_desc">Add %1$s to queue</string>
     <string name="action_pause_desc">Pause %1$s</string>
     <string name="action_play_desc">Play %1$s</string>
+
+    <!-- Playback Setting Options -->
+    <string name="setting_ff">Fast forward</string>
+    <string name="setting_skip_article">Skip article</string>
+    <string name="setting_rewind">Rewind</string>
+    <string name="setting_restart_article">Restart article</string>
 </resources>

@@ -42,7 +42,7 @@ import com.google.common.collect.ImmutableList
 import com.mienaiknife.narra.R
 import com.mienaiknife.narra.MainActivity
 import com.mienaiknife.narra.playback.PlaybackManager
-import com.mienaiknife.narra.data.models.Article
+import com.mienaiknife.narra.domain.models.Article
 import com.mienaiknife.narra.playback.TtsPlayer
 import com.mienaiknife.narra.ui.theme.ThemeManager
 import com.mienaiknife.narra.ui.widget.WidgetManager

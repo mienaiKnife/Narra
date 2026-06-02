@@ -21,12 +21,13 @@ import java.time.LocalDateTime
 import java.time.OffsetDateTime
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
+import java.time.format.FormatStyle
 import java.util.Locale
 import java.util.concurrent.TimeUnit
 
 object DateUtils {
-    private val outputWithYear = DateTimeFormatter.ofPattern("MMM d, yyyy", Locale.US)
-    private val outputWithoutYear = DateTimeFormatter.ofPattern("MMM d", Locale.US)
+    private fun getOutputWithYear() = DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM)
+    private fun getOutputWithoutYear() = DateTimeFormatter.ofPattern("MMM d", Locale.getDefault())
 
     private val inputFormatters = listOf(
         DateTimeFormatter.ofPattern("MMM d, yyyy", Locale.US),
@@ -39,19 +40,19 @@ object DateUtils {
         DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss", Locale.US),
         DateTimeFormatter.ofPattern("yyyy-MM-dd", Locale.US),
         DateTimeFormatter.ofPattern("yyyy/MM/dd", Locale.US),
-        DateTimeFormatter.ofPattern("dd MMM yyyy", Locale.US)
+        DateTimeFormatter.ofPattern("dd MMM yyyy", Locale.US),
     )
 
     private val htmlTagRegex = Regex("<[^>]*>")
     private val whitespaceRegex = Regex("\\s+")
-    private val dateTimeFormatter = DateTimeFormatter.ofPattern("MMM d, HH:mm", Locale.US)
+    private fun getDateTimeFormatter() = DateTimeFormatter.ofPattern("MMM d, HH:mm", Locale.getDefault())
 
     fun formatDateTime(timestamp: Long): String {
         val dateTime = LocalDateTime.ofInstant(
             java.time.Instant.ofEpochMilli(timestamp),
             java.time.ZoneId.systemDefault()
         )
-        return dateTime.format(dateTimeFormatter)
+        return dateTime.format(getDateTimeFormatter())
     }
 
     fun formatPublishedDate(publishedAt: String?): String? {
@@ -61,9 +62,9 @@ object DateUtils {
 
         val currentYear = LocalDate.now().year
         return if (date.year == currentYear) {
-            date.format(outputWithoutYear)
+            date.format(getOutputWithoutYear())
         } else {
-            date.format(outputWithYear)
+            date.format(getOutputWithYear())
         }
     }
 
@@ -113,9 +114,9 @@ object DateUtils {
         val totalHours = TimeUnit.MILLISECONDS.toHours(totalToUse)
 
         return if (totalHours > 0) {
-            String.format(Locale.US, "%d:%02d:%02d", hours, minutes, seconds)
+            String.format(Locale.getDefault(), "%d:%02d:%02d", hours, minutes, seconds)
         } else {
-            String.format(Locale.US, "%d:%02d", minutes, seconds)
+            String.format(Locale.getDefault(), "%d:%02d", minutes, seconds)
         }
     }
 

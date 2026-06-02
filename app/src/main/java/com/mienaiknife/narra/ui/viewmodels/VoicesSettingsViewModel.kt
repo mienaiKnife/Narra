@@ -24,6 +24,7 @@ import com.mienaiknife.narra.domain.models.TtsModel
 import com.mienaiknife.narra.domain.repository.ModelRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import com.mienaiknife.narra.playback.PlaybackSettingsManager
+import com.mienaiknife.narra.ui.UiText
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -41,7 +42,7 @@ class VoicesSettingsViewModel @Inject constructor(
     private val ttsEngine: TtsEngine
 ) : ViewModel() {
 
-    private val _errorMessage = MutableStateFlow<String?>(null)
+    private val _errorMessage = MutableStateFlow<UiText?>(null)
 
     init {
         viewModelScope.launch {
@@ -68,7 +69,7 @@ class VoicesSettingsViewModel @Inject constructor(
         val noiseScale = args[5] as Float
         val lengthScale = args[6] as Float
         val engineState = args[7] as TtsState
-        val errorMessage = args[8] as String?
+        val errorMessage = args[8] as UiText?
         VoicesSettingsUiState(models, engine, modelId, speakerId, speed, noiseScale, lengthScale, engineState, errorMessage)
     }.stateIn(
         scope = viewModelScope,

@@ -17,7 +17,7 @@
 package com.mienaiknife.narra.data.local
 
 import android.content.Context
-import com.mienaiknife.narra.data.models.Article
+import com.mienaiknife.narra.domain.models.Article
 import java.io.InputStream
 
 interface EpubDataSource {

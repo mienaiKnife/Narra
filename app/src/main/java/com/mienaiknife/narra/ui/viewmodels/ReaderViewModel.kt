@@ -21,9 +21,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.toRoute
 import com.mienaiknife.narra.NavDestination
-import com.mienaiknife.narra.R
-import com.mienaiknife.narra.data.models.Article
-import com.mienaiknife.narra.domain.repository.ContentRepository
+import com.mienaiknife.narra.domain.models.Article
+import com.mienaiknife.narra.domain.NarraError
+import com.mienaiknife.narra.domain.repository.ArticleRepository
 import com.mienaiknife.narra.ui.UiText
 import com.mienaiknife.narra.ui.models.ContentBlock
 import com.mienaiknife.narra.ui.utils.HtmlParser
@@ -47,7 +47,7 @@ import kotlinx.coroutines.flow.combine
 
 @HiltViewModel
 class ReaderViewModel @Inject constructor(
-    private val repository: ContentRepository,
+    private val repository: ArticleRepository,
     private val playbackManager: PlaybackManager,
     savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
@@ -63,7 +63,7 @@ class ReaderViewModel @Inject constructor(
 
     private val _blocks = MutableStateFlow<List<ContentBlock>>(emptyList())
     private val _isLoading = MutableStateFlow(value = true)
-    private val _error = MutableStateFlow<Throwable?>(null)
+    private val _error = MutableStateFlow<UiText?>(null)
     private val _searchQuery = MutableStateFlow("")
 
     private val _searchResults = combine(_blocks, _searchQuery) { blocks, query ->
@@ -117,7 +117,7 @@ class ReaderViewModel @Inject constructor(
             article = flows[0] as Article?,
             blocks = flows[1] as List<ContentBlock>,
             isLoading = flows[2] as Boolean,
-            error = flows[3] as Throwable?,
+            error = flows[3] as UiText?,
             isPlaying = flows[4] as Boolean,
             currentPosition = flows[5] as Long,
             duration = flows[6] as Long,
@@ -169,10 +169,8 @@ class ReaderViewModel @Inject constructor(
                 if (articleData != null) {
                     if (!articleData.isInQueue) {
                         repository.addToQueue(id).onFailure { error ->
-                            val uiText = error.message?.let { UiText.DynamicString(it) }
-                                ?: UiText.StringResource(R.string.error_download_failed)
-                            _uiEvent.emit(UiEvent.ShowSnackbar(uiText))
-                            _error.value = error
+                            _uiEvent.emit(UiEvent.ShowSnackbar(UiText.fromError(error)))
+                            _error.value = UiText.fromError(error)
                             return@launch
                         }
                         // Refresh data after adding to queue (which might have downloaded content)
@@ -186,13 +184,13 @@ class ReaderViewModel @Inject constructor(
                         }
                         playbackManager.setCurrentArticle(articleData, blocks, playWhenReady = false)
                     } else {
-                        _error.value = Exception("Article not found after adding to queue")
+                        _error.value = UiText.fromError(NarraError.Content.NotFound())
                     }
                 } else {
-                    _error.value = Exception("Article not found")
+                    _error.value = UiText.fromError(NarraError.Content.NotFound())
                 }
             } catch (e: Exception) {
-                _error.value = e
+                _error.value = UiText.fromError(NarraError.Unknown(e))
             } finally {
                 _isLoading.value = false
             }

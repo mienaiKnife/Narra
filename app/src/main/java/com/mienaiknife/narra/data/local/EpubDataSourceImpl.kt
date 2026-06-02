@@ -16,7 +16,11 @@
 
 package com.mienaiknife.narra.data.local
 
-import com.mienaiknife.narra.data.models.Article
+import com.mienaiknife.narra.domain.models.Article
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import nl.siegmann.epublib.domain.TOCReference
 import nl.siegmann.epublib.epub.EpubReader
 import org.jsoup.Jsoup
@@ -56,64 +60,66 @@ class EpubDataSourceImpl @Inject constructor(
                 imageDataSource.saveImage(resource.data, fileName)
             }
 
-            val articles = spineReferences.mapIndexedNotNull { index, spineReference ->
-                val resource = spineReference.resource ?: return@mapIndexedNotNull null
-                
-                // Read data only when needed and use a specific buffer size if possible, 
-                // but epublib loads data into memory anyway. We can at least clear the reference 
-                // if we were handling raw bytes, but here we'll focus on efficient parsing.
-                val contentBytes = resource.data ?: return@mapIndexedNotNull null
-                val content = String(contentBytes, charset(resource.inputEncoding ?: "UTF-8"))
-                val doc = Jsoup.parse(content)
-                
-                val body = doc.body()
-                
-                if (body.text().isNotBlank()) {
-                    // Pre-clean HTML for TTS: Remove interactive or decorative elements
-                    body.select("a, button, input, select, textarea").forEach { it.unwrap() }
-                    body.select("script, style, noscript, iframe, svg").remove()
-                    
-                    // Keep image alt text if available, otherwise remove img tags
-                    body.select("img").forEach { img ->
-                        val alt = img.attr("alt")
-                        if (alt.isNotBlank()) {
-                            img.replaceWith(org.jsoup.nodes.TextNode(" [Image: $alt] "))
+            val articles = coroutineScope {
+                spineReferences.mapIndexed { index, spineReference ->
+                    async(Dispatchers.Default) {
+                        val resource = spineReference.resource ?: return@async null
+
+                        // Read data
+                        val contentBytes = resource.data ?: return@async null
+                        val content = String(contentBytes, charset(resource.inputEncoding ?: "UTF-8"))
+                        val doc = Jsoup.parse(content)
+
+                        val body = doc.body()
+
+                        if (body.text().isNotBlank()) {
+                            // Pre-clean HTML for TTS: Remove interactive or decorative elements
+                            body.select("a, button, input, select, textarea").forEach { it.unwrap() }
+                            body.select("script, style, noscript, iframe, svg").remove()
+
+                            // Keep image alt text if available, otherwise remove img tags
+                            body.select("img").forEach { img ->
+                                val alt = img.attr("alt")
+                                if (alt.isNotBlank()) {
+                                    img.replaceWith(org.jsoup.nodes.TextNode(" [Image: $alt] "))
+                                } else {
+                                    img.remove()
+                                }
+                            }
+
+                            val cleanText = body.html()
+
+                            // Try to find a good title: TOC -> HTML title -> First heading -> resource title -> fallback
+                            var chapterTitle = tocMap[resource.href]
+                                ?: doc.title().takeIf { it.isNotBlank() && it != bookTitle }
+                                ?: doc.select("h1, h2, h3").firstOrNull()?.text()
+                                ?: resource.title
+                                ?: "Chapter ${index + 1}"
+
+                            // If title is just a number or generic "Chapter", try to append the start of the text
+                            if (chapterTitle.matches(Regex("^(?i)Chapter\\s*\\d*$|^\\d+$"))) {
+                                val firstSentence = body.text().take(40).substringBefore(".")
+                                if (firstSentence.isNotBlank() && firstSentence.length > 5) {
+                                    chapterTitle = "$chapterTitle: $firstSentence..."
+                                }
+                            }
+
+                            Article(
+                                id = UUID.randomUUID().toString(),
+                                title = chapterTitle.trim(),
+                                source = bookTitle,
+                                content = cleanText,
+                                imageUrl = coverImageUrl,
+                                url = "epub://${bookTitle.hashCode()}/$index",
+                                isInQueue = true,
+                                queueOrder = index,
+                                publishedAt = "By $author" // Reusing publishedAt for author info in EPUB context
+                            )
                         } else {
-                            img.remove()
+                            null
                         }
                     }
-
-                    val cleanText = body.html()
-
-                    // Try to find a good title: TOC -> HTML title -> First heading -> resource title -> fallback
-                    var chapterTitle = tocMap[resource.href]
-                        ?: doc.title().takeIf { it.isNotBlank() && it != bookTitle }
-                        ?: doc.select("h1, h2, h3").firstOrNull()?.text()
-                        ?: resource.title
-                        ?: "Chapter ${index + 1}"
-                    
-                    // If title is just a number or generic "Chapter", try to append the start of the text
-                    if (chapterTitle.matches(Regex("^(?i)Chapter\\s*\\d*$|^\\d+$"))) {
-                        val firstSentence = body.text().take(40).substringBefore(".")
-                        if (firstSentence.isNotBlank() && firstSentence.length > 5) {
-                            chapterTitle = "$chapterTitle: $firstSentence..."
-                        }
-                    }
-
-                    Article(
-                        id = UUID.randomUUID().toString(),
-                        title = chapterTitle.trim(),
-                        source = bookTitle,
-                        content = cleanText,
-                        imageUrl = coverImageUrl,
-                        url = "epub://${bookTitle.hashCode()}/$index",
-                        isInQueue = true,
-                        queueOrder = index,
-                        publishedAt = "By $author" // Reusing publishedAt for author info in EPUB context
-                    )
-                } else {
-                    null
-                }
+                }.awaitAll().filterNotNull()
             }
             Result.success(articles)
         } catch (e: Exception) {

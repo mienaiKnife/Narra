@@ -14,13 +14,16 @@
  * limitations under the License.
  */
 
-package com.mienaiknife.narra.ui.viewmodels
+package com.mienaiknife.narra.domain.repository
 
-import com.mienaiknife.narra.domain.models.Article
+import java.io.InputStream
+import java.io.OutputStream
 
-data class PlaybackUiState(
-    val currentArticle: Article? = null,
-    val isPlaying: Boolean = false,
-    val currentPosition: Long = 0,
-    val duration: Long = 0
-)
+interface ImportExportRepository {
+    suspend fun importEpub(inputStream: InputStream, title: String): Result<Unit>
+    suspend fun importOpml(inputStream: InputStream): Result<Int>
+    suspend fun exportOpml(outputStream: OutputStream): Result<Unit>
+    suspend fun backupDatabase(outputStream: OutputStream): Result<Unit>
+    suspend fun restoreDatabase(inputStream: InputStream): Result<Unit>
+    suspend fun deleteAllMetadata()
+}

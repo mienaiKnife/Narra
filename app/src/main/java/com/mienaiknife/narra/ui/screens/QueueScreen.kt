@@ -73,6 +73,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -82,7 +83,7 @@ import androidx.compose.ui.zIndex
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.compose.rememberNavController
 import com.mienaiknife.narra.R
-import com.mienaiknife.narra.data.models.Article
+import com.mienaiknife.narra.domain.models.Article
 import com.mienaiknife.narra.data.models.SampleArticles
 import com.mienaiknife.narra.data.models.SortOption
 import com.mienaiknife.narra.ui.components.BottomNavBar
@@ -114,39 +115,56 @@ fun QueueScreen(
         }
     }
 
+    val removedMessage = stringResource(R.string.queue_removed_message)
+    val undoAction = stringResource(R.string.action_undo)
+
     Box(modifier = Modifier.fillMaxSize()) {
-        QueueScreenContent(
-            articles = uiState.articles,
-            isRefreshing = uiState.isRefreshing,
-            currentArticle = uiState.currentArticle,
-            isPlaying = uiState.isPlaying,
-            playbackSpeed = uiState.playbackSpeed,
-            sortOption = uiState.sortOption,
-            keepSorted = uiState.keepSorted,
-            totalRemainingTimeMs = uiState.totalRemainingTimeMs,
-            downloadingArticleIds = uiState.downloadingArticleIds,
-            onPlayPauseClick = { article -> viewModel.onPlayPauseClick(article) },
-            onMarkAsPlayedClick = { article -> viewModel.togglePlayedStatus(article) },
-            onRemoveFromQueue = { article ->
-                viewModel.removeFromQueue(article)
-                scope.launch {
-                    val result = snackbarHostState.showSnackbar(
-                        message = context.getString(R.string.queue_removed_message),
-                        actionLabel = context.getString(R.string.action_undo),
-                        duration = SnackbarDuration.Short
-                    )
-                    if (result == SnackbarResult.ActionPerformed) {
-                        viewModel.addToQueue(article.id)
-                    }
+        when (val state = uiState) {
+            is com.mienaiknife.narra.ui.viewmodels.QueueUiState.Loading -> {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    androidx.compose.material3.CircularProgressIndicator()
                 }
-            },
-            onHistoryClick = onNavigateToHistory,
-            onClearQueue = { viewModel.clearQueue() },
-            onRefresh = { viewModel.refresh() },
-            onSortOptionSelected = { viewModel.setSortOption(it) },
-            onKeepSortedChange = { viewModel.setKeepSorted(it) },
-            onReorder = { from, to -> viewModel.reorderQueue(from, to) }
-        )
+            }
+            is com.mienaiknife.narra.ui.viewmodels.QueueUiState.Success -> {
+                QueueScreenContent(
+                    articles = state.articles,
+                    isRefreshing = state.isRefreshing,
+                    currentArticle = state.currentArticle,
+                    isPlaying = state.isPlaying,
+                    playbackSpeed = state.playbackSpeed,
+                    sortOption = state.sortOption,
+                    keepSorted = state.keepSorted,
+                    totalRemainingTimeMs = state.totalRemainingTimeMs,
+                    downloadingArticleIds = state.downloadingArticleIds,
+                    onPlayPauseClick = { article -> viewModel.onPlayPauseClick(article) },
+                    onMarkAsPlayedClick = { article -> viewModel.togglePlayedStatus(article) },
+                    onRemoveFromQueue = { article ->
+                        viewModel.removeFromQueue(article)
+                        scope.launch {
+                            val result = snackbarHostState.showSnackbar(
+                                message = removedMessage,
+                                actionLabel = undoAction,
+                                duration = SnackbarDuration.Short
+                            )
+                            if (result == SnackbarResult.ActionPerformed) {
+                                viewModel.addToQueue(article.id)
+                            }
+                        }
+                    },
+                    onHistoryClick = onNavigateToHistory,
+                    onClearQueue = { viewModel.clearQueue() },
+                    onRefresh = { viewModel.refresh() },
+                    onSortOptionSelected = { viewModel.setSortOption(it) },
+                    onKeepSortedChange = { viewModel.setKeepSorted(it) },
+                    onReorder = { from, to -> viewModel.reorderQueue(from, to) }
+                )
+            }
+            is com.mienaiknife.narra.ui.viewmodels.QueueUiState.Error -> {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text(state.message)
+                }
+            }
+        }
 
         SnackbarHost(
             hostState = snackbarHostState,
@@ -188,17 +206,18 @@ fun QueueScreenContent(
     val totalHours = TimeUnit.MILLISECONDS.toHours(totalRemainingTimeMs)
     val totalMinutes = TimeUnit.MILLISECONDS.toMinutes(totalRemainingTimeMs) % 60
 
+    val hoursText = if (totalHours > 0) pluralStringResource(R.plurals.unit_hours, totalHours.toInt(), totalHours) else ""
+    val minutesText = pluralStringResource(R.plurals.unit_minutes, totalMinutes.toInt(), totalMinutes)
+    val andText = stringResource(R.string.queue_and)
+    val timeLeftPrefix = stringResource(R.string.queue_time_left_prefix)
+
     val timeLeftText = buildString {
-        append(stringResource(R.string.queue_time_left_prefix))
+        append(timeLeftPrefix)
         if (totalHours > 0) {
-            append(totalHours)
-            append(" ")
-            append(if (totalHours == 1L) stringResource(R.string.unit_hour) else stringResource(R.string.unit_hours))
-            append(stringResource(R.string.queue_and))
+            append(hoursText)
+            append(andText)
         }
-        append(totalMinutes)
-        append(" ")
-        append(if (totalMinutes == 1L) stringResource(R.string.unit_minute) else stringResource(R.string.unit_minutes))
+        append(minutesText)
     }
 
     if (showSortSheet.value) {
@@ -315,11 +334,10 @@ fun QueueScreenContent(
         }
 
         if (articles.isNotEmpty()) {
+            val textsCountText = pluralStringResource(R.plurals.unit_texts, articles.size, articles.size)
             Text(
                 text = buildString {
-                    append(articles.size)
-                    append(" ")
-                    append(if (articles.size == 1) stringResource(R.string.unit_text) else stringResource(R.string.unit_texts))
+                    append(textsCountText)
                     append(" • ")
                     append(timeLeftText)
                 },

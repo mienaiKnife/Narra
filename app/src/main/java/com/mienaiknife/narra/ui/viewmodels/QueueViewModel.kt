@@ -18,9 +18,9 @@ package com.mienaiknife.narra.ui.viewmodels
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.mienaiknife.narra.R
-import com.mienaiknife.narra.data.models.Article
-import com.mienaiknife.narra.domain.repository.ContentRepository
+import com.mienaiknife.narra.domain.models.Article
+import com.mienaiknife.narra.domain.repository.ArticleRepository
+import com.mienaiknife.narra.domain.repository.FeedRepository
 import com.mienaiknife.narra.playback.PlaybackManager
 import com.mienaiknife.narra.ui.UiText
 import com.mienaiknife.narra.ui.utils.HtmlParser
@@ -40,7 +40,8 @@ import javax.inject.Inject
 
 @HiltViewModel
 class QueueViewModel @Inject constructor(
-    private val repository: ContentRepository,
+    private val repository: ArticleRepository,
+    private val feedRepository: FeedRepository,
     private val playbackManager: PlaybackManager
 ) : ViewModel() {
 
@@ -94,7 +95,7 @@ class QueueViewModel @Inject constructor(
             (adjustedDuration * (1f - progress)).toLong()
         }
 
-        QueueUiState(
+        QueueUiState.Success(
             articles = sortedArticles,
             isRefreshing = isRefreshing,
             sortOption = sort,
@@ -108,7 +109,7 @@ class QueueViewModel @Inject constructor(
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
-        initialValue = QueueUiState()
+        initialValue = QueueUiState.Loading
     )
 
     fun setSortOption(option: SortOption) {
@@ -157,7 +158,8 @@ class QueueViewModel @Inject constructor(
     }
 
     fun onPlayPauseClick(article: Article) {
-        if (uiState.value.currentArticle?.id == article.id) {
+        val currentState = uiState.value
+        if (currentState is QueueUiState.Success && currentState.currentArticle?.id == article.id) {
             playbackManager.togglePlayPause()
         } else {
             val blocks = HtmlParser.parse(article.content)
@@ -176,14 +178,13 @@ class QueueViewModel @Inject constructor(
             if (article.progress == 1f) {
                 repository.markAsUnplayed(article.id)
                 repository.addToQueue(article.id).onFailure { error ->
-                    val uiText = error.message?.let { UiText.DynamicString(it) }
-                        ?: UiText.StringResource(R.string.error_generic)
-                    _uiEvent.emit(UiEvent.ShowSnackbar(uiText))
+                    _uiEvent.emit(UiEvent.ShowSnackbar(UiText.fromError(error)))
                 }
             } else {
-                val isCurrentlyPlaying = uiState.value.currentArticle?.id == article.id
+                val currentState = uiState.value as? QueueUiState.Success ?: return@launch
+                val isCurrentlyPlaying = currentState.currentArticle?.id == article.id
                 val nextArticle = if (isCurrentlyPlaying) {
-                    val currentList = uiState.value.articles
+                    val currentList = currentState.articles
                     val currentIndex = currentList.indexOfFirst { it.id == article.id }
                     if (currentIndex != -1 && currentIndex < currentList.size - 1) {
                         currentList[currentIndex + 1]
@@ -207,9 +208,7 @@ class QueueViewModel @Inject constructor(
         viewModelScope.launch {
             _downloadingArticleIds.value += articleId
             repository.addToQueue(articleId).onFailure { error ->
-                val uiText = error.message?.let { UiText.DynamicString(it) }
-                    ?: UiText.StringResource(R.string.error_generic)
-                _uiEvent.emit(UiEvent.ShowSnackbar(uiText))
+                _uiEvent.emit(UiEvent.ShowSnackbar(UiText.fromError(error)))
             }.also {
                 _downloadingArticleIds.value -= articleId
             }
@@ -233,10 +232,8 @@ class QueueViewModel @Inject constructor(
     fun refresh() {
         viewModelScope.launch {
             _isRefreshing.value = true
-            repository.refreshFeeds().onFailure { error ->
-                val uiText = error.message?.let { UiText.DynamicString(it) }
-                    ?: UiText.StringResource(R.string.error_refresh_failed)
-                _uiEvent.emit(UiEvent.ShowSnackbar(uiText))
+            feedRepository.refreshFeeds().onFailure { error ->
+                _uiEvent.emit(UiEvent.ShowSnackbar(UiText.fromError(error)))
             }
             _isRefreshing.value = false
         }

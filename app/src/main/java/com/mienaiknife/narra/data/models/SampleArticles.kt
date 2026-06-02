@@ -16,6 +16,8 @@
 
 package com.mienaiknife.narra.data.models
 
+import com.mienaiknife.narra.domain.models.Article
+
 object SampleArticles {
     val sampleArticle1 = Article(
         id = "1",

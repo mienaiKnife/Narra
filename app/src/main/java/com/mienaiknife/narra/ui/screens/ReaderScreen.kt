@@ -109,6 +109,7 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -139,7 +140,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import coil3.compose.AsyncImage
 import androidx.compose.ui.res.stringResource
 import com.mienaiknife.narra.R
-import com.mienaiknife.narra.data.models.Article
+import com.mienaiknife.narra.domain.models.Article
 import com.mienaiknife.narra.data.models.SampleArticles
 import com.mienaiknife.narra.ui.components.NarraScrollbar
 import com.mienaiknife.narra.ui.models.ContentBlock
@@ -147,6 +148,7 @@ import com.mienaiknife.narra.ui.theme.NarraTheme
 import com.mienaiknife.narra.ui.theme.ThemeViewModel
 import com.mienaiknife.narra.ui.theme.getFontFamily
 import com.mienaiknife.narra.ui.utils.HtmlParser
+import com.mienaiknife.narra.ui.UiText
 import com.mienaiknife.narra.ui.viewmodels.ReaderUiState
 import com.mienaiknife.narra.ui.viewmodels.ReaderViewModel
 import com.mienaiknife.narra.utils.DateUtils
@@ -645,12 +647,14 @@ fun ReaderContentList(
         }
     }
 
+    val articleSemanticsDesc = stringResource(R.string.home_article_semantics_desc, article.title, article.source, 0)
+
     LazyColumn(
         state = scrollState,
         modifier = Modifier
             .fillMaxSize()
             .semantics {
-                contentDescription = "Article: ${article.title}"
+                contentDescription = articleSemanticsDesc
             },
         contentPadding = PaddingValues(
             top = topPadding,
@@ -670,13 +674,25 @@ fun ReaderContentList(
             val baseAnnotatedString = block.text
             val colorScheme = MaterialTheme.colorScheme
 
-            val annotatedString = remember(baseAnnotatedString, colorScheme) {
+            val currentWordRange = uiState.currentWordRange
+            val annotatedString = remember(baseAnnotatedString, colorScheme, isCurrentParagraph, currentWordRange) {
                 buildAnnotatedString {
                     append(baseAnnotatedString)
-                    baseAnnotatedString.getStringAnnotations("link", 0, baseAnnotatedString.length)
-                        .forEach { annotation ->
-                            addStyle(SpanStyle(color = colorScheme.primary), annotation.start, annotation.end)
+                    val links = baseAnnotatedString.getStringAnnotations("link", 0, baseAnnotatedString.length)
+                    links.forEach { annotation ->
+                        addStyle(SpanStyle(color = colorScheme.primary), annotation.start, annotation.end)
+                    }
+
+                    // Change highlighted link text to onSurface for better contrast with the highlight background
+                    if (isCurrentParagraph && currentWordRange != null) {
+                        links.forEach { link ->
+                            val intersectStart = maxOf(link.start, currentWordRange.first)
+                            val intersectEnd = minOf(link.end, currentWordRange.last + 1)
+                            if (intersectStart < intersectEnd) {
+                                addStyle(SpanStyle(color = colorScheme.onSurface), intersectStart, intersectEnd)
+                            }
                         }
+                    }
 
                     val words = baseAnnotatedString.text.split(Regex("(?<=\\s)|(?=\\s)"))
                     var currentOffset = 0
@@ -716,8 +732,9 @@ fun ReaderContentList(
                 )
             }
 
+            val paragraphContentDesc = stringResource(R.string.reader_paragraph_semantics, index + 1, blocks.size)
             val paragraphSemantics = Modifier.semantics {
-                contentDescription = "Paragraph ${index + 1} of ${blocks.size}"
+                contentDescription = paragraphContentDesc
             }
 
             when (block) {
@@ -728,6 +745,12 @@ fun ReaderContentList(
                             .padding(vertical = 8.dp)
                             .then(paragraphSemantics)
                             .then(if (isCurrentParagraph) Modifier.background(MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)) else Modifier)
+                            .onGloballyPositioned { coords ->
+                                if (isCurrentParagraph) {
+                                    currentWordYInItem = coords.size.height / 2f
+                                    currentWordYIndex = index
+                                }
+                            }
                     ) {
                         AsyncImage(
                             model = block.url,
@@ -1312,10 +1335,11 @@ fun ReaderSearchSheet(
 
 @Composable
 fun ErrorView(
-    error: Throwable,
+    error: UiText,
     onRetry: () -> Unit,
     onBack: () -> Unit
 ) {
+    val context = LocalContext.current
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -1341,7 +1365,7 @@ fun ErrorView(
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = error.message ?: stringResource(R.string.error_generic),
+                text = error.asString(context),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center

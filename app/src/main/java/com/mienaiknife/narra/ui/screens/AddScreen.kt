@@ -58,6 +58,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.ui.res.stringResource
@@ -81,7 +82,10 @@ fun AddScreen(
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
     val context = LocalContext.current
+    val resources = LocalResources.current
     var url by remember { mutableStateOf("") }
+
+    val epubFallbackTitle = stringResource(R.string.add_epub_fallback_title)
 
     val launcher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
@@ -89,7 +93,7 @@ fun AddScreen(
         uri?.let {
             val inputStream = context.contentResolver.openInputStream(it)
             if (inputStream != null) {
-                viewModel.importEpub(inputStream, "Imported EPUB")
+                viewModel.importEpub(inputStream, epubFallbackTitle)
             }
         }
     }
@@ -109,7 +113,8 @@ fun AddScreen(
                     onArticleAdded()
                 }
                 is HomeViewModel.UiEvent.FeedSubscribed -> {
-                    Toast.makeText(context, context.getString(R.string.add_feed_subscribed, event.feedName), Toast.LENGTH_SHORT).show()
+                    val message = resources.getString(R.string.add_feed_subscribed, event.feedName)
+                    Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
                     url = ""
                 }
                 is HomeViewModel.UiEvent.EpubImported -> {

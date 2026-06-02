@@ -16,17 +16,23 @@
 
 package com.mienaiknife.narra.ui.viewmodels
 
-import com.mienaiknife.narra.data.models.Article
 import com.mienaiknife.narra.data.models.SortOption
+import com.mienaiknife.narra.domain.models.Article
 
-data class QueueUiState(
-    val articles: List<Article> = emptyList(),
-    val isRefreshing: Boolean = false,
-    val sortOption: SortOption = SortOption.MANUAL,
-    val keepSorted: Boolean = false,
-    val currentArticle: Article? = null,
-    val isPlaying: Boolean = false,
-    val playbackSpeed: Float = 1.0f,
-    val downloadingArticleIds: Set<String> = emptySet(),
-    val totalRemainingTimeMs: Long = 0L
-)
+sealed interface QueueUiState {
+    data object Loading : QueueUiState
+
+    data class Success(
+        val articles: List<Article> = emptyList(),
+        val isRefreshing: Boolean = false,
+        val sortOption: SortOption = SortOption.DATE_DESC,
+        val keepSorted: Boolean = false,
+        val currentArticle: Article? = null,
+        val isPlaying: Boolean = false,
+        val playbackSpeed: Float = 1.0f,
+        val downloadingArticleIds: Set<String> = emptySet(),
+        val totalRemainingTimeMs: Long = 0L
+    ) : QueueUiState
+
+    data class Error(val message: String) : QueueUiState
+}

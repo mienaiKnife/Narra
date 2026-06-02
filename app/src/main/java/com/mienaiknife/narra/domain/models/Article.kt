@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.mienaiknife.narra.data.models
+package com.mienaiknife.narra.domain.models
 
 data class Article(
     val id: String,

@@ -52,7 +52,7 @@ import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import androidx.compose.ui.res.stringResource
 import com.mienaiknife.narra.R
-import com.mienaiknife.narra.data.models.Article
+import com.mienaiknife.narra.domain.models.Article
 import com.mienaiknife.narra.data.models.SampleArticles
 import com.mienaiknife.narra.ui.theme.NarraTheme
 import com.mienaiknife.narra.utils.DateUtils

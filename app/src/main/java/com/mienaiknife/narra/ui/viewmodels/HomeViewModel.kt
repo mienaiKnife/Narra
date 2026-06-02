@@ -19,7 +19,9 @@ package com.mienaiknife.narra.ui.viewmodels
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mienaiknife.narra.R
-import com.mienaiknife.narra.domain.repository.ContentRepository
+import com.mienaiknife.narra.domain.repository.ArticleRepository
+import com.mienaiknife.narra.domain.repository.FeedRepository
+import com.mienaiknife.narra.domain.repository.ImportExportRepository
 import com.mienaiknife.narra.domain.repository.ModelRepository
 import com.mienaiknife.narra.ui.UiText
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -36,7 +38,9 @@ import javax.inject.Inject
 
 @HiltViewModel
 class HomeViewModel @Inject constructor(
-    private val repository: ContentRepository,
+    private val articleRepository: ArticleRepository,
+    private val feedRepository: FeedRepository,
+    private val importExportRepository: ImportExportRepository,
     private val modelRepository: ModelRepository
 ) : ViewModel() {
 
@@ -59,12 +63,12 @@ class HomeViewModel @Inject constructor(
     private val _isRefreshing = MutableStateFlow(false)
 
     val uiState: StateFlow<HomeUiState> = combine(
-        repository.getQueueArticles(),
-        repository.getInboxArticles(),
-        repository.getFavoriteArticles(),
+        articleRepository.getQueueArticles(),
+        articleRepository.getInboxArticles(),
+        articleRepository.getFavoriteArticles(),
         _isRefreshing
     ) { queue, inbox, favorites, isRefreshing ->
-        HomeUiState(
+        HomeUiState.Success(
             continueListening = queue
                 .filter { (it.progress ?: 0f) > 0f && (it.progress ?: 0f) < 1f }
                 .sortedByDescending { it.publishedTimestamp ?: 0L }
@@ -74,19 +78,18 @@ class HomeViewModel @Inject constructor(
                 .sortedByDescending { it.publishedTimestamp ?: 0L }
                 .take(5),
             favoriteArticles = favorites.take(10),
-            isLoading = false,
             isRefreshing = isRefreshing
         )
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
-        initialValue = HomeUiState(isLoading = true)
+        initialValue = HomeUiState.Loading
     )
 
     fun refresh() {
         viewModelScope.launch {
             _isRefreshing.value = true
-            repository.refreshFeeds().onFailure { error ->
+            feedRepository.refreshFeeds().onFailure { error ->
                 val uiText = error.message?.let { UiText.DynamicString(it) }
                     ?: UiText.StringResource(R.string.error_refresh_failed)
                 _uiEvent.emit(UiEvent.ShowSnackbar(uiText))
@@ -97,7 +100,7 @@ class HomeViewModel @Inject constructor(
 
     fun importEpub(inputStream: java.io.InputStream, title: String) {
         viewModelScope.launch {
-            repository.importEpub(inputStream, title)
+            importExportRepository.importEpub(inputStream, title)
                 .onSuccess {
                     _uiEvent.emit(UiEvent.EpubImported)
                 }
@@ -109,35 +112,24 @@ class HomeViewModel @Inject constructor(
 
     fun downloadArticle(url: String) {
         viewModelScope.launch {
-            repository.downloadWebPage(url)
+            articleRepository.downloadWebPage(url)
                 .onSuccess {
                     _uiEvent.emit(UiEvent.ArticleAdded)
                 }
                 .onFailure { error ->
-                    val uiText = when (error.message) {
-                        "Article already in queue" -> {
-                            UiText.StringResource(R.string.error_article_already_in_queue)
-                        }
-                        "No internet connection" -> {
-                            UiText.StringResource(R.string.error_no_internet)
-                        }
-                        else -> {
-                            UiText.StringResource(R.string.error_download_failed)
-                        }
-                    }
-                    _uiEvent.emit(UiEvent.ShowSnackbar(uiText))
+                    _uiEvent.emit(UiEvent.ShowSnackbar(UiText.fromError(error)))
                 }
         }
     }
 
     fun subscribeToFeed(url: String) {
         viewModelScope.launch {
-            repository.subscribeToFeed(url)
+            feedRepository.subscribeToFeed(url)
                 .onSuccess { feedName ->
                     _uiEvent.emit(UiEvent.FeedSubscribed(feedName))
                 }
-                .onFailure {
-                    _uiEvent.emit(UiEvent.ShowSnackbar(UiText.StringResource(R.string.error_subscribe_failed)))
+                .onFailure { error ->
+                    _uiEvent.emit(UiEvent.ShowSnackbar(UiText.fromError(error)))
                 }
         }
     }

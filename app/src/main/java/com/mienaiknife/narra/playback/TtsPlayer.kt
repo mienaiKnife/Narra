@@ -41,7 +41,7 @@ import androidx.media3.common.util.UnstableApi
 import androidx.core.net.toUri
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
-import com.mienaiknife.narra.data.models.Article
+import com.mienaiknife.narra.domain.models.Article
 import com.mienaiknife.narra.domain.TtsEngine
 import com.mienaiknife.narra.domain.TtsState
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -79,7 +79,6 @@ class TtsPlayer @Inject constructor(
     val engineState: StateFlow<TtsState> = ttsEngine.state
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
-    private val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
 
     private var _playWhenReady = false
     private var _playbackState = STATE_IDLE
@@ -111,52 +110,29 @@ class TtsPlayer @Inject constructor(
     private var _seekForwardIncrement = 15000L
     private var _seekBackIncrement = 15000L
 
-    private val audioFocusChangeListener = AudioManager.OnAudioFocusChangeListener { focusChange ->
-        when (focusChange) {
-            AudioManager.AUDIOFOCUS_GAIN -> {
-                _playbackSuppressionReason = PLAYBACK_SUPPRESSION_REASON_NONE
-                if (_playWhenReady) {
-                    resumeInternal()
-                }
-                invalidateState()
+    private val audioFocusManager = AudioFocusManager(context) { hasFocus, shouldDuck ->
+        if (hasFocus) {
+            _playbackSuppressionReason = PLAYBACK_SUPPRESSION_REASON_NONE
+            if (_playWhenReady) {
+                resumeInternal()
             }
-            AudioManager.AUDIOFOCUS_LOSS -> {
-                _playWhenReady = false
-                pauseInternal()
-                invalidateState()
-            }
-            AudioManager.AUDIOFOCUS_LOSS_TRANSIENT -> {
+        } else {
+            if (shouldDuck && !_pauseForInterruptions) {
+                // Ducking handled by engine/system
+            } else {
                 _playbackSuppressionReason = PLAYBACK_SUPPRESSION_REASON_TRANSIENT_AUDIO_FOCUS_LOSS
                 pauseInternal()
-                invalidateState()
-            }
-            AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK -> {
-                if (_pauseForInterruptions) {
-                    _playbackSuppressionReason = PLAYBACK_SUPPRESSION_REASON_TRANSIENT_AUDIO_FOCUS_LOSS
-                    pauseInternal()
-                    invalidateState()
-                } else {
-                    // Ducking is handled by system if we didn't set setWillPauseWhenDucked(true)
-                    // Or if we did, we should have paused above.
-                }
             }
         }
+        invalidateState()
     }
 
-    private val noisyReceiver = object : BroadcastReceiver() {
-        override fun onReceive(context: Context?, intent: Intent?) {
-            if (AudioManager.ACTION_AUDIO_BECOMING_NOISY == intent?.action) {
-                _playWhenReady = false
-                pauseInternal()
-                invalidateState()
-            }
-        }
+    private val powerLockManager = PowerLockManager(context)
+    private val noisyAudioReceiver = NoisyAudioReceiver(context) {
+        _playWhenReady = false
+        pauseInternal()
+        invalidateState()
     }
-    private var isNoisyReceiverRegistered = false
-
-    private var focusRequest: AudioFocusRequest? = null
-    private var wakeLock: PowerManager.WakeLock? = null
-    private var wifiLock: WifiManager.WifiLock? = null
 
     init {
         ttsEngine.state.onEach { state ->
@@ -209,12 +185,6 @@ class TtsPlayer @Inject constructor(
         settingsManager.fastForwardSkipTime.onEach { _seekForwardIncrement = parseSkipTime(it) }.launchIn(scope)
         settingsManager.rewindSkipTime.onEach { _seekBackIncrement = parseSkipTime(it) }.launchIn(scope)
         settingsManager.pauseForInterruptions.onEach { _pauseForInterruptions = it }.launchIn(scope)
-
-        val powerManager = context.getSystemService(Context.POWER_SERVICE) as PowerManager
-        wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "Narra:PlaybackWakeLock")
-        
-        val wifiManager = context.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
-        wifiLock = wifiManager.createWifiLock(WifiManager.WIFI_MODE_FULL_HIGH_PERF, "Narra:PlaybackWifiLock")
     }
 
     private fun parseSkipTime(time: String): Long {
@@ -341,7 +311,7 @@ class TtsPlayer @Inject constructor(
         
         _playWhenReady = playWhenReady
         if (playWhenReady) {
-            val focusResult = requestAudioFocus()
+            val focusResult = audioFocusManager.requestAudioFocus()
             android.util.Log.d("TtsPlayer", "handleSetPlayWhenReady: requestAudioFocus result=$focusResult")
             if (focusResult == AudioManager.AUDIOFOCUS_REQUEST_GRANTED) {
                 _playbackSuppressionReason = PLAYBACK_SUPPRESSION_REASON_NONE
@@ -457,26 +427,7 @@ class TtsPlayer @Inject constructor(
     }
 
     fun requestAudioFocus(): Int {
-        val result = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val attr = AndroidAudioAttributes.Builder()
-                .setUsage(AndroidAudioAttributes.USAGE_MEDIA)
-                .setContentType(AndroidAudioAttributes.CONTENT_TYPE_SPEECH)
-                .build()
-            focusRequest = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN)
-                .setAudioAttributes(attr)
-                .setAcceptsDelayedFocusGain(true)
-                .setWillPauseWhenDucked(_pauseForInterruptions)
-                .setOnAudioFocusChangeListener(audioFocusChangeListener)
-                .build()
-            audioManager.requestAudioFocus(focusRequest!!)
-        } else {
-            @Suppress("DEPRECATION")
-            audioManager.requestAudioFocus(
-                audioFocusChangeListener,
-                AudioManager.STREAM_MUSIC,
-                AudioManager.AUDIOFOCUS_GAIN,
-            )
-        }
+        val result = audioFocusManager.requestAudioFocus()
         
         if (result == AudioManager.AUDIOFOCUS_REQUEST_GRANTED) {
             _playbackSuppressionReason = PLAYBACK_SUPPRESSION_REASON_NONE
@@ -487,66 +438,37 @@ class TtsPlayer @Inject constructor(
     }
 
     private fun abandonAudioFocusInternal() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            focusRequest?.let { audioManager.abandonAudioFocusRequest(it) }
-        } else {
-            @Suppress("DEPRECATION")
-            audioManager.abandonAudioFocus(audioFocusChangeListener)
-        }
+        audioFocusManager.abandonAudioFocus()
     }
 
     private fun pauseInternal() {
         ttsEngine.stop()
         isEngineSpeaking = false
-        unregisterNoisyReceiver()
-        releaseLocks()
+        noisyAudioReceiver.unregister()
+        powerLockManager.releaseLocks()
         lastEnqueuedUtteranceId = null
     }
 
     private fun resumeInternal() {
-        registerNoisyReceiver()
-        acquireLocks()
+        noisyAudioReceiver.register()
+        powerLockManager.acquireLocks()
         speakCurrentFrom(currentParagraphIndex, resumeWordOffset)
     }
 
     private fun registerNoisyReceiver() {
-        if (!isNoisyReceiverRegistered) {
-            context.registerReceiver(noisyReceiver, IntentFilter(AudioManager.ACTION_AUDIO_BECOMING_NOISY))
-            isNoisyReceiverRegistered = true
-        }
+        noisyAudioReceiver.register()
     }
 
     private fun unregisterNoisyReceiver() {
-        if (isNoisyReceiverRegistered) {
-            context.unregisterReceiver(noisyReceiver)
-            isNoisyReceiverRegistered = false
-        }
+        noisyAudioReceiver.unregister()
     }
 
     private fun acquireLocks() {
-        try {
-            if (wakeLock?.isHeld == false) {
-                wakeLock?.acquire(10 * 60 * 1000L /*10 minutes*/)
-            }
-            if (wifiLock?.isHeld == false) {
-                wifiLock?.acquire()
-            }
-        } catch (e: Exception) {
-            android.util.Log.e("TtsPlayer", "Error acquiring locks", e)
-        }
+        powerLockManager.acquireLocks()
     }
 
     private fun releaseLocks() {
-        try {
-            if (wakeLock?.isHeld == true) {
-                wakeLock?.release()
-            }
-            if (wifiLock?.isHeld == true) {
-                wifiLock?.release()
-            }
-        } catch (e: Exception) {
-            android.util.Log.e("TtsPlayer", "Error releasing locks", e)
-        }
+        powerLockManager.releaseLocks()
     }
 
     // TtsPlayer specific
@@ -672,21 +594,19 @@ class TtsPlayer @Inject constructor(
     }
 
     fun speakAnnouncement(text: String) {
-        acquireLocks()
+        powerLockManager.acquireLocks()
         lastEnqueuedUtteranceId = null
-        if (requestAudioFocus() == AudioManager.AUDIOFOCUS_REQUEST_GRANTED) {
+        if (audioFocusManager.requestAudioFocus() == AudioManager.AUDIOFOCUS_REQUEST_GRANTED) {
             ttsEngine.speak(text, "announcement")
         }
     }
 
     fun acquireManualWakeLock() {
-        acquireLocks()
+        powerLockManager.acquireManualWakeLock()
     }
 
     fun releaseManualWakeLock() {
-        if (!_playWhenReady && !isEngineSpeaking) {
-            releaseLocks()
-        }
+        powerLockManager.releaseManualWakeLock()
     }
 
     /**
@@ -694,9 +614,9 @@ class TtsPlayer @Inject constructor(
      * playback state. Used when an article finishes and autoplay is off.
      */
     fun releasePlaybackResources() {
-        abandonAudioFocusInternal()
-        unregisterNoisyReceiver()
-        releaseLocks()
+        audioFocusManager.abandonAudioFocus()
+        noisyAudioReceiver.unregister()
+        powerLockManager.releaseLocks()
         lastEnqueuedUtteranceId = null
     }
 

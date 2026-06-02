@@ -39,6 +39,8 @@ class PlaybackSettingsManager @Inject constructor(
     private val pauseForInterruptionsKey = androidx.datastore.preferences.core.booleanPreferencesKey("pause_for_interruptions")
     private val autoPlayNextKey = androidx.datastore.preferences.core.booleanPreferencesKey("auto_play_next")
     private val playChimeAndTitleKey = androidx.datastore.preferences.core.booleanPreferencesKey("play_chime_and_title")
+    private val readAltTextKey = androidx.datastore.preferences.core.booleanPreferencesKey("read_alt_text")
+    private val shortenHyperlinksKey = androidx.datastore.preferences.core.booleanPreferencesKey("shorten_hyperlinks")
     private val lastArticleIdKey = stringPreferencesKey("last_article_id")
     private val ttsEngineKey = stringPreferencesKey("tts_engine")
     private val ttsModelIdKey = stringPreferencesKey("tts_model_id")
@@ -60,11 +62,11 @@ class PlaybackSettingsManager @Inject constructor(
     }
 
     val fastForwardHardwareButton: Flow<String> = context.dataStore.data.map { prefs ->
-        prefs[fastForwardHardwareButtonKey] ?: "Fast forward"
+        prefs[fastForwardHardwareButtonKey] ?: "fast_forward"
     }
 
     val rewindHardwareButton: Flow<String> = context.dataStore.data.map { prefs ->
-        prefs[rewindHardwareButtonKey] ?: "Rewind"
+        prefs[rewindHardwareButtonKey] ?: "rewind"
     }
 
     val pauseOnDisconnect: Flow<Boolean> = context.dataStore.data.map { prefs ->
@@ -81,6 +83,14 @@ class PlaybackSettingsManager @Inject constructor(
 
     val playChimeAndTitle: Flow<Boolean> = context.dataStore.data.map { prefs ->
         prefs[playChimeAndTitleKey] ?: true
+    }
+
+    val readAltText: Flow<Boolean> = context.dataStore.data.map { prefs ->
+        prefs[readAltTextKey] ?: true
+    }
+
+    val shortenHyperlinks: Flow<Boolean> = context.dataStore.data.map { prefs ->
+        prefs[shortenHyperlinksKey] ?: true
     }
 
     val lastArticleId: Flow<String?> = context.dataStore.data.map { prefs ->
@@ -162,6 +172,18 @@ class PlaybackSettingsManager @Inject constructor(
     suspend fun setPlayChimeAndTitle(enabled: Boolean) {
         context.dataStore.edit { prefs ->
             prefs[playChimeAndTitleKey] = enabled
+        }
+    }
+
+    suspend fun setReadAltText(enabled: Boolean) {
+        context.dataStore.edit { prefs ->
+            prefs[readAltTextKey] = enabled
+        }
+    }
+
+    suspend fun setShortenHyperlinks(enabled: Boolean) {
+        context.dataStore.edit { prefs ->
+            prefs[shortenHyperlinksKey] = enabled
         }
     }
 

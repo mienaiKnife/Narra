@@ -16,43 +16,7 @@
 
 package com.mienaiknife.narra.domain.repository
 
-import com.mienaiknife.narra.data.models.Article
 import kotlinx.coroutines.flow.Flow
 
-interface ContentRepository {
-    fun getQueueArticles(): Flow<List<Article>>
-    fun getHistoryArticles(): Flow<List<Article>>
-    fun getInboxArticles(): Flow<List<Article>>
-    fun getFavoriteArticles(): Flow<List<Article>>
-    fun getAllArticles(): Flow<List<Article>>
-    fun getArticlesBySource(source: String): Flow<List<Article>>
-    fun getArticlesByFeedUrl(feedUrl: String): Flow<List<Article>>
-    fun searchArticles(query: String): Flow<List<Article>>
-    suspend fun getArticleById(id: String): Article?
-    suspend fun downloadWebPage(url: String): Result<Article>
-    suspend fun removeFromQueue(id: String)
-    suspend fun addToQueue(id: String): Result<Unit>
-    suspend fun deleteArticle(id: String)
-    suspend fun clearHistory()
-    suspend fun clearInbox()
-    suspend fun clearQueue()
-    suspend fun reorderQueue(fromIndex: Int, toIndex: Int)
-    suspend fun updateQueueOrder(articleIds: List<String>)
-    suspend fun subscribeToFeed(url: String): Result<String>
-    suspend fun refreshFeeds(): Result<Unit>
-    suspend fun updateFeed(feed: com.mienaiknife.narra.data.local.entities.FeedEntity)
-    suspend fun deleteFeed(url: String)
-    suspend fun importEpub(inputStream: java.io.InputStream, title: String): Result<Unit>
-    suspend fun importOpml(inputStream: java.io.InputStream): Result<Int>
-    suspend fun exportOpml(outputStream: java.io.OutputStream): Result<Unit>
-    suspend fun markAsFinished(id: String)
-    suspend fun markAsPlayed(id: String)
-    suspend fun markAsUnplayed(id: String)
-    suspend fun updateArticleProgress(id: String, progress: Float, paragraphIndex: Int, wordOffset: Int, duration: Long? = null)
-    suspend fun toggleFavorite(id: String)
-    suspend fun deleteAllMetadata()
-    suspend fun deleteAllFeeds()
-    suspend fun pruneOldArticleContent(maxAgeDays: Int)
-    suspend fun backupDatabase(outputStream: java.io.OutputStream): Result<Unit>
-    suspend fun restoreDatabase(inputStream: java.io.InputStream): Result<Unit>
-}
+interface ContentRepository : ArticleRepository, FeedRepository, ImportExportRepository
+

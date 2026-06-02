@@ -61,6 +61,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.navigation.compose.rememberNavController
 import com.mienaiknife.narra.R
@@ -101,7 +102,7 @@ fun SettingsScreen(
         Spacer(modifier = Modifier.height(16.dp))
 
         var expanded by remember { mutableStateOf(false) }
-        val context = androidx.compose.ui.platform.LocalContext.current
+        val resources = LocalResources.current
 
         @OptIn(ExperimentalMaterial3Api::class)
         ExposedDropdownMenuBox(
@@ -143,17 +144,17 @@ fun SettingsScreen(
                 singleLine = true
             )
 
-            val filteredSettings = remember(searchQuery) {
+            val filteredSettings = remember(searchQuery, resources) {
                 if (searchQuery.isBlank()) {
                     emptyList()
                 } else {
                     allSearchableSettings.filter { item ->
                         // Using stringResource is not possible here as it's not a composable context (inside remember's lambda)
                         // but actually, remember's lambda is NOT a composable context, but we are inside a Composable function.
-                        // However, allSearchableSettings uses resource IDs. We can use context.getString here.
+                        // However, allSearchableSettings uses resource IDs. We can use resources.getString here.
                         // To avoid the lint warning, we can suppress it or just accept it's necessary here.
-                        context.getString(item.titleRes).contains(searchQuery, ignoreCase = true) ||
-                                context.getString(item.subtitleRes).contains(searchQuery, ignoreCase = true) ||
+                        resources.getString(item.titleRes).contains(searchQuery, ignoreCase = true) ||
+                                resources.getString(item.subtitleRes).contains(searchQuery, ignoreCase = true) ||
                                 item.keywords.any { it.contains(searchQuery, ignoreCase = true) }
                     }.take(5)
                 }

@@ -19,7 +19,7 @@ package com.mienaiknife.narra.data.local.entities
 import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
-import com.mienaiknife.narra.data.models.Article
+import com.mienaiknife.narra.domain.models.Article
 
 @Entity(
     tableName = "articles",

@@ -22,7 +22,8 @@ import com.mienaiknife.narra.R
 import com.mienaiknife.narra.data.local.dao.FeedDao
 import com.mienaiknife.narra.data.local.entities.FeedEntity
 import com.mienaiknife.narra.data.models.SortOption
-import com.mienaiknife.narra.domain.repository.ContentRepository
+import com.mienaiknife.narra.domain.repository.FeedRepository
+import com.mienaiknife.narra.domain.repository.ImportExportRepository
 import com.mienaiknife.narra.ui.UiText
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -39,7 +40,8 @@ import javax.inject.Inject
 @HiltViewModel
 class FeedsViewModel @Inject constructor(
     feedDao: FeedDao,
-    private val repository: ContentRepository
+    private val feedRepository: FeedRepository,
+    private val importExportRepository: ImportExportRepository
 ) : ViewModel() {
 
     private val _isRefreshing = MutableStateFlow(false)
@@ -92,13 +94,13 @@ class FeedsViewModel @Inject constructor(
 
     fun deleteFeed(feed: FeedEntity) {
         viewModelScope.launch {
-            repository.deleteFeed(feed.url)
+            feedRepository.deleteFeed(feed.url)
         }
     }
 
     fun toggleNotifications(feed: FeedEntity) {
         viewModelScope.launch {
-            repository.updateFeed(feed.copy(notificationsEnabled = !feed.notificationsEnabled))
+            feedRepository.updateFeed(feed.copy(notificationsEnabled = !feed.notificationsEnabled))
         }
     }
 
@@ -106,7 +108,7 @@ class FeedsViewModel @Inject constructor(
         viewModelScope.launch {
             _isRefreshing.value = true
             try {
-                repository.refreshFeeds()
+                feedRepository.refreshFeeds()
             } finally {
                 _isRefreshing.value = false
             }
@@ -117,12 +119,12 @@ class FeedsViewModel @Inject constructor(
         if (inputStream == null) return
         viewModelScope.launch {
             inputStream.use {
-                repository.importOpml(it)
+                importExportRepository.importOpml(it)
                     .onSuccess { count ->
-                        _message.value = UiText.StringResource(R.string.message_imported_feeds, count)
+                        _message.value = UiText.PluralResource(R.plurals.message_imported_feeds, count, count)
                     }
                     .onFailure { error ->
-                        _message.value = UiText.StringResource(R.string.message_import_failed, error.message ?: "")
+                        _message.value = UiText.StringResource(R.string.message_import_failed, UiText.fromError(error))
                     }
             }
         }
@@ -132,7 +134,7 @@ class FeedsViewModel @Inject constructor(
         if (outputStream == null) return
         viewModelScope.launch {
             outputStream.use {
-                repository.exportOpml(it)
+                importExportRepository.exportOpml(it)
                     .onSuccess {
                         _message.value = UiText.StringResource(R.string.message_exported_feeds)
                     }

@@ -67,6 +67,14 @@ class DelegatingTtsEngine @Inject constructor(
         if ((currentEngine == newEngine) && (engineStateJob != null)) return
         
         currentEngine.stop()
+        
+        // Performance/Memory: If switching AWAY from SherpaTtsEngine, we might want to release its models.
+        // However, we don't want to release if the user might switch back quickly.
+        // For now, let's at least call release if it's the on-device engine and we're switching to android.
+        if (currentEngine is SherpaTtsEngine && newEngine is AndroidTtsEngine) {
+            currentEngine.release()
+        }
+
         currentEngine = newEngine
         
         // Apply current settings to the new engine

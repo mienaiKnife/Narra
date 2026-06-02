@@ -18,6 +18,7 @@ package com.mienaiknife.narra.ui.viewmodels
 
 import com.mienaiknife.narra.domain.TtsState
 import com.mienaiknife.narra.domain.models.TtsModel
+import com.mienaiknife.narra.ui.UiText
 
 data class VoicesSettingsUiState(
     val availableModels: List<TtsModel> = emptyList(),
@@ -28,5 +29,5 @@ data class VoicesSettingsUiState(
     val sherpaNoiseScale: Float = 0.667f,
     val sherpaLengthScale: Float = 1.0f,
     val engineState: TtsState = TtsState.Idle,
-    val errorMessage: String? = null
+    val errorMessage: UiText? = null
 )

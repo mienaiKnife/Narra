@@ -17,7 +17,7 @@
 package com.mienaiknife.narra.data.remote
 
 import com.mienaiknife.narra.data.local.entities.FeedEntity
-import com.mienaiknife.narra.data.models.Article
+import com.mienaiknife.narra.domain.models.Article
 
 interface RemoteFeedDataSource {
     /**

@@ -16,66 +16,80 @@
 
 package com.mienaiknife.narra.data.remote
 
-import com.mienaiknife.narra.data.models.Article
+import com.mienaiknife.narra.domain.models.Article
 import com.mienaiknife.narra.ui.utils.UrlUtils
 import com.mienaiknife.narra.utils.DateUtils
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import net.dankito.readability4j.Readability4J
+import okhttp3.OkHttpClient
+import okhttp3.Request
 import org.jsoup.Jsoup
 import java.util.UUID
 import javax.inject.Inject
 
-class WebDataSourceImpl @Inject constructor() : WebDataSource {
+class WebDataSourceImpl @Inject constructor(
+    private val okHttpClient: OkHttpClient
+) : WebDataSource {
 
     override suspend fun downloadArticle(url: String): Result<Article> {
         if (!UrlUtils.isPublicUrl(url)) {
             return Result.failure(com.mienaiknife.narra.domain.NarraError.Network.NoConnection())
         }
 
-        return try {
-            val doc = Jsoup.connect(url)
-                .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36")
-                .header("Referer", "https://www.google.com/")
-                .timeout(15000)
-                .get()
+        return withContext(Dispatchers.IO) {
+            try {
+                val request = Request.Builder()
+                    .url(url)
+                    .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36")
+                    .header("Referer", "https://www.google.com/")
+                    .build()
 
-            preCleanDocument(doc)
+                val response = okHttpClient.newCall(request).execute()
+                if (!response.isSuccessful) {
+                    return@withContext Result.failure(com.mienaiknife.narra.domain.NarraError.Network.ServerError(response.code, response.message))
+                }
 
-            val readability4J = Readability4J(url, doc.outerHtml())
-            val parsedArticle = readability4J.parse()
+                val html = response.body?.string() ?: return@withContext Result.failure(com.mienaiknife.narra.domain.NarraError.Content.ParsingFailed())
+                val doc = Jsoup.parse(html, url)
 
-            if (parsedArticle.content == null) {
-                return Result.failure(com.mienaiknife.narra.domain.NarraError.Content.ParsingFailed())
+                preCleanDocument(doc)
+
+                val readability4J = Readability4J(url, doc.outerHtml())
+                val parsedArticle = readability4J.parse()
+
+                if (parsedArticle.content == null) {
+                    return@withContext Result.failure(com.mienaiknife.narra.domain.NarraError.Content.ParsingFailed())
+                }
+
+                val publishedAt = extractPublishedDate(doc)
+                val imageUrl = extractImageUrl(doc, parsedArticle.byline)
+
+                val article = Article(
+                    id = UUID.randomUUID().toString(),
+                    title = (parsedArticle.title ?: doc.title()).ifEmpty { "Untitled" },
+                    source = doc.location().let {
+                        try { java.net.URL(it).host } catch (_: Exception) { null }
+                    } ?: "Web",
+                    content = parsedArticle.content ?: "",
+                    publishedAt = publishedAt,
+                    publishedTimestamp = DateUtils.parseToTimestamp(publishedAt),
+                    imageUrl = imageUrl,
+                    url = url,
+                    feedUrl = null,
+                    duration = DateUtils.estimateReadingTimeMs(parsedArticle.content),
+                    isInQueue = true
+                )
+
+                Result.success(article)
+            } catch (e: java.net.SocketTimeoutException) {
+                Result.failure(com.mienaiknife.narra.domain.NarraError.Network.Timeout())
+            } catch (e: Exception) {
+                Result.failure(com.mienaiknife.narra.domain.NarraError.Unknown(e))
             }
-
-            val publishedAt = extractPublishedDate(doc)
-            val imageUrl = extractImageUrl(doc, parsedArticle.byline)
-
-            val article = Article(
-                id = UUID.randomUUID().toString(),
-                title = (parsedArticle.title ?: doc.title()).ifEmpty { "Untitled" },
-                source = doc.location().let { 
-                    try { java.net.URL(it).host } catch (_: Exception) { null }
-                } ?: "Web",
-                content = parsedArticle.content ?: "",
-                publishedAt = publishedAt,
-                publishedTimestamp = DateUtils.parseToTimestamp(publishedAt),
-                imageUrl = imageUrl,
-                url = url,
-                feedUrl = null,
-                duration = DateUtils.estimateReadingTimeMs(parsedArticle.content),
-                isInQueue = true
-            )
-
-            Result.success(article)
-        } catch (e: org.jsoup.HttpStatusException) {
-            Result.failure(com.mienaiknife.narra.domain.NarraError.Network.ServerError(e.statusCode, e.message))
-        } catch (e: java.net.SocketTimeoutException) {
-            Result.failure(com.mienaiknife.narra.domain.NarraError.Network.Timeout())
-        } catch (e: Exception) {
-            Result.failure(com.mienaiknife.narra.domain.NarraError.Unknown(e))
         }
     }
 

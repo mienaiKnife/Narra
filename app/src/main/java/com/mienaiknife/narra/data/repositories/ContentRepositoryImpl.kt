@@ -25,7 +25,7 @@ import com.mienaiknife.narra.data.local.dao.ArticleDao
 import com.mienaiknife.narra.data.local.dao.FeedDao
 import com.mienaiknife.narra.data.local.entities.ArticleEntity
 import com.mienaiknife.narra.data.local.entities.toDomainModel
-import com.mienaiknife.narra.data.models.Article
+import com.mienaiknife.narra.domain.models.Article
 import com.mienaiknife.narra.data.remote.RemoteFeedDataSource
 import com.mienaiknife.narra.data.remote.WebDataSource
 import com.mienaiknife.narra.data.settings.DownloadSettingsManager
@@ -42,18 +42,20 @@ import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
 
-class ContentRepositoryImpl(
-    private val context: Context,
+import javax.inject.Inject
+
+class ContentRepositoryImpl @Inject constructor(
+    @dagger.hilt.android.qualifiers.ApplicationContext private val context: android.content.Context,
     private val appDatabase: AppDatabase,
     private val articleDao: ArticleDao,
     private val feedDao: FeedDao,
-    private val webDataSource: WebDataSource,
-    private val remoteFeedDataSource: RemoteFeedDataSource,
-    private val epubDataSource: EpubDataSource,
-    private val imageDataSource: ImageDataSource,
-    private val opmlDataSource: OpmlDataSource,
-    private val networkMonitor: NetworkMonitor,
-    private val downloadSettingsManager: DownloadSettingsManager,
+    private val webDataSource: com.mienaiknife.narra.data.remote.WebDataSource,
+    private val remoteFeedDataSource: com.mienaiknife.narra.data.remote.RemoteFeedDataSource,
+    private val epubDataSource: com.mienaiknife.narra.data.local.EpubDataSource,
+    private val imageDataSource: com.mienaiknife.narra.data.local.ImageDataSource,
+    private val opmlDataSource: com.mienaiknife.narra.data.local.OpmlDataSource,
+    private val networkMonitor: com.mienaiknife.narra.ui.utils.NetworkMonitor,
+    private val downloadSettingsManager: com.mienaiknife.narra.data.settings.DownloadSettingsManager,
     private val notificationHelper: com.mienaiknife.narra.utils.NotificationHelper
 ) : ContentRepository {
 
@@ -321,7 +323,7 @@ class ContentRepositoryImpl(
                     val articles = result.articles
                     val updatedTitle = result.feedTitle
                     
-                    if (updatedTitle != null && updatedTitle != feed.title) {
+                    if (updatedTitle != null && updatedTitle != feed.title && !isUrlOrDomainLike(updatedTitle)) {
                         feedDao.insertFeed(feed.copy(title = updatedTitle))
                     }
 
@@ -473,4 +475,12 @@ class ContentRepositoryImpl(
         }
     }
 
+    private fun isUrlOrDomainLike(text: String): Boolean {
+        return text.contains("://") || 
+               text.contains("www.") || 
+               text.matches(Regex(".*\\.[a-z]{2,6}$", RegexOption.IGNORE_CASE)) ||
+               text == "RSS" || 
+               text == "Atom" || 
+               text == "Untitled Feed"
+    }
 }

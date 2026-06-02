@@ -63,7 +63,9 @@ fun AboutScreen(onBack: () -> Unit, onNavigateToLicenses: () -> Unit) {
     val context = LocalContext.current
     val uriHandler = LocalUriHandler.current
     val isPreview = LocalInspectionMode.current
-    val versionName = if (isPreview) "0.1-preview" else getVersionName(context)
+    val unknownString = stringResource(R.string.reader_unknown)
+    val previewString = stringResource(R.string.reader_preview)
+    val versionName = if (isPreview) "0.1-$previewString" else getVersionName(context, unknownString)
 
     Column(
         modifier = Modifier
@@ -191,11 +193,11 @@ fun AboutScreenPreview() {
     }
 }
 
-private fun getVersionName(context: Context): String {
+private fun getVersionName(context: Context, unknownString: String): String {
     return try {
         val packageInfo = context.packageManager.getPackageInfo(context.packageName, 0)
-        packageInfo.versionName ?: "Unknown"
+        packageInfo.versionName ?: unknownString
     } catch (_: Exception) {
-        "Unknown"
+        unknownString
     }
 }

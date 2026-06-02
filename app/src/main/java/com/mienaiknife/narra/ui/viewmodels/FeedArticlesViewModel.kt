@@ -20,11 +20,11 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.toRoute
-import com.mienaiknife.narra.R
 import com.mienaiknife.narra.NavDestination
-import com.mienaiknife.narra.data.models.Article
+import com.mienaiknife.narra.domain.models.Article
 import com.mienaiknife.narra.data.models.SortOption
-import com.mienaiknife.narra.domain.repository.ContentRepository
+import com.mienaiknife.narra.domain.repository.ArticleRepository
+import com.mienaiknife.narra.domain.repository.FeedRepository
 import com.mienaiknife.narra.playback.PlaybackManager
 import com.mienaiknife.narra.ui.UiText
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -41,7 +41,8 @@ import javax.inject.Inject
 
 @HiltViewModel
 class FeedArticlesViewModel @Inject constructor(
-    private val repository: ContentRepository,
+    private val repository: ArticleRepository,
+    private val feedRepository: FeedRepository,
     private val playbackManager: PlaybackManager,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
@@ -131,10 +132,8 @@ class FeedArticlesViewModel @Inject constructor(
     fun refresh() {
         viewModelScope.launch {
             _isRefreshing.value = true
-            repository.refreshFeeds().onFailure { error ->
-                val uiText = error.message?.let { UiText.DynamicString(it) }
-                    ?: UiText.StringResource(R.string.error_refresh_failed)
-                _uiEvent.emit(UiEvent.ShowSnackbar(uiText))
+            feedRepository.refreshFeeds().onFailure { error ->
+                _uiEvent.emit(UiEvent.ShowSnackbar(UiText.fromError(error)))
             }
             _isRefreshing.value = false
         }
@@ -146,9 +145,7 @@ class FeedArticlesViewModel @Inject constructor(
                 _downloadingArticleIds.value += article.id
             }
             repository.addToQueue(article.id).onFailure { error ->
-                if (error.message == "No internet connection") {
-                    _uiEvent.emit(UiEvent.ShowSnackbar(UiText.StringResource(R.string.error_no_internet)))
-                }
+                _uiEvent.emit(UiEvent.ShowSnackbar(UiText.fromError(error)))
             }.also {
                 _downloadingArticleIds.value -= article.id
             }

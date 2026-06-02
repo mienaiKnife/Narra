@@ -16,14 +16,15 @@
 
 package com.mienaiknife.narra.ui.viewmodels
 
-import com.mienaiknife.narra.data.models.Article
+import com.mienaiknife.narra.domain.models.Article
+import com.mienaiknife.narra.ui.UiText
 import com.mienaiknife.narra.ui.models.ContentBlock
 
 data class ReaderUiState(
     val article: Article? = null,
     val blocks: List<ContentBlock> = emptyList(),
     val isLoading: Boolean = false,
-    val error: Throwable? = null,
+    val error: UiText? = null,
     val isPlaying: Boolean = false,
     val currentPosition: Long = 0L,
     val duration: Long = 0L,

@@ -98,7 +98,7 @@ fun VoicesSettingsScreen(
     val context = LocalContext.current
 
     uiState.errorMessage?.let {
-        Toast.makeText(context, it, Toast.LENGTH_LONG).show()
+        Toast.makeText(context, it.asString(context), Toast.LENGTH_LONG).show()
         viewModel.clearErrorMessage()
     }
 
@@ -161,17 +161,17 @@ fun VoicesSettingsContent(
     var expanded by remember { mutableStateOf(false) }
 
     val kokoroVoices = listOf(
-        "Amelie (Female)" to 5,
-        "Bella (Female)" to 1,
-        "Michael (Male)" to 6,
-        "Sarah (Female)" to 2,
-        "Nicole (Female)" to 3,
-        "Sky (Female)" to 4,
-        "George (Male)" to 7,
-        "Lewis (Male)" to 8,
-        "Alice (Female)" to 9,
-        "Lily (Female)" to 10,
-        "Julia (Female)" to 0
+        "Amelie" + stringResource(R.string.reader_female_suffix) to 5,
+        "Bella" + stringResource(R.string.reader_female_suffix) to 1,
+        "Michael" + stringResource(R.string.reader_male_suffix) to 6,
+        "Sarah" + stringResource(R.string.reader_female_suffix) to 2,
+        "Nicole" + stringResource(R.string.reader_female_suffix) to 3,
+        "Sky" + stringResource(R.string.reader_female_suffix) to 4,
+        "George" + stringResource(R.string.reader_male_suffix) to 7,
+        "Lewis" + stringResource(R.string.reader_male_suffix) to 8,
+        "Alice" + stringResource(R.string.reader_female_suffix) to 9,
+        "Lily" + stringResource(R.string.reader_female_suffix) to 10,
+        "Julia" + stringResource(R.string.reader_female_suffix) to 0
     ).sortedBy { it.first }
     var kokoroExpanded by remember { mutableStateOf(false) }
 
@@ -368,7 +368,7 @@ fun VoicesSettingsContent(
                             modifier = Modifier.padding(vertical = 8.dp)
                         )
 
-                        val currentVoice = kokoroVoices.find { it.second == uiState.selectedSpeakerId }?.first ?: "Unknown"
+                        val currentVoice = kokoroVoices.find { it.second == uiState.selectedSpeakerId }?.first ?: stringResource(R.string.reader_unknown)
 
                         ExposedDropdownMenuBox(
                             expanded = kokoroExpanded && !isInitializing,
@@ -520,7 +520,7 @@ fun TtsModelItem(
                 }
                 if (model.lastError != null && !isDownloading) {
                     Text(
-                        text = stringResource(R.string.settings_voices_error, model.lastError ?: ""),
+                        text = stringResource(R.string.settings_voices_error, model.lastError),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.error,
                         modifier = Modifier.padding(top = 4.dp)

@@ -16,12 +16,17 @@
 
 package com.mienaiknife.narra.ui.viewmodels
 
-import com.mienaiknife.narra.data.models.Article
+import com.mienaiknife.narra.domain.models.Article
 
-data class HomeUiState(
-    val continueListening: List<Article> = emptyList(),
-    val newFromFeeds: List<Article> = emptyList(),
-    val favoriteArticles: List<Article> = emptyList(),
-    val isLoading: Boolean = false,
-    val isRefreshing: Boolean = false
-)
+sealed interface HomeUiState {
+    data object Loading : HomeUiState
+    
+    data class Success(
+        val continueListening: List<Article>,
+        val newFromFeeds: List<Article>,
+        val favoriteArticles: List<Article>,
+        val isRefreshing: Boolean = false
+    ) : HomeUiState
+
+    data class Error(val message: String) : HomeUiState
+}

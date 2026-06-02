@@ -81,7 +81,9 @@ fun PlaybackSettingsScreen(
         onFastForwardTimeChange = { viewModel.setFastForwardSkipTime(it) },
         onRewindTimeChange = { viewModel.setRewindSkipTime(it) },
         onFastForwardHardwareButtonChange = { viewModel.setFastForwardHardwareButton(it) },
-        onRewindHardwareButtonChange = { viewModel.setRewindHardwareButton(it) }
+        onRewindHardwareButtonChange = { viewModel.setRewindHardwareButton(it) },
+        onReadAltTextChange = { viewModel.setReadAltText(it) },
+        onShortenHyperlinksChange = { viewModel.setShortenHyperlinks(it) }
     )
 }
 
@@ -98,7 +100,9 @@ fun PlaybackSettingsContent(
     onFastForwardTimeChange: (String) -> Unit,
     onRewindTimeChange: (String) -> Unit,
     onFastForwardHardwareButtonChange: (String) -> Unit,
-    onRewindHardwareButtonChange: (String) -> Unit
+    onRewindHardwareButtonChange: (String) -> Unit,
+    onReadAltTextChange: (Boolean) -> Unit,
+    onShortenHyperlinksChange: (Boolean) -> Unit
 ) {
     val pauseOnDisconnectRequester = remember { BringIntoViewRequester() }
     val pauseForInterruptionsRequester = remember { BringIntoViewRequester() }
@@ -109,6 +113,8 @@ fun PlaybackSettingsContent(
     val autoPlayNextRequester = remember { BringIntoViewRequester() }
     val playChimeAndTitleRequester = remember { BringIntoViewRequester() }
     val chimeSoundRequester = remember { BringIntoViewRequester() }
+    val readAltTextRequester = remember { BringIntoViewRequester() }
+    val shortenHyperlinksRequester = remember { BringIntoViewRequester() }
 
     LaunchedEffect(highlightSetting) {
         when (highlightSetting) {
@@ -121,6 +127,8 @@ fun PlaybackSettingsContent(
             "autoPlayNext" -> autoPlayNextRequester.bringIntoView()
             "playChimeAndTitle" -> playChimeAndTitleRequester.bringIntoView()
             "chimeSound" -> chimeSoundRequester.bringIntoView()
+            "readAltText" -> readAltTextRequester.bringIntoView()
+            "shortenHyperlinks" -> shortenHyperlinksRequester.bringIntoView()
         }
     }
 
@@ -268,12 +276,22 @@ fun PlaybackSettingsContent(
                     .flashHighlight(highlightSetting == "rewindSkipTime")
             )
 
+            val hardwareOptions = listOf(
+                "fast_forward" to stringResource(R.string.setting_ff),
+                "skip_article" to stringResource(R.string.setting_skip_article),
+                "rewind" to stringResource(R.string.setting_rewind),
+                "restart_article" to stringResource(R.string.setting_restart_article)
+            )
+
             SettingDropDownItem(
                 title = stringResource(R.string.settings_playback_ff_hardware),
                 subtitle = stringResource(R.string.settings_playback_ff_hardware_desc),
-                selectedValue = uiState.fastForwardHardwareButton,
-                options = listOf("Fast forward", "Skip article", "Rewind", "Restart article"),
-                onValueChange = onFastForwardHardwareButtonChange,
+                selectedValue = hardwareOptions.find { it.first == uiState.fastForwardHardwareButton }?.second ?: uiState.fastForwardHardwareButton,
+                options = hardwareOptions.map { it.second },
+                onValueChange = { selectedDisplay ->
+                    val key = hardwareOptions.find { it.second == selectedDisplay }?.first ?: selectedDisplay
+                    onFastForwardHardwareButtonChange(key)
+                },
                 modifier = Modifier
                     .bringIntoViewRequester(fastForwardHardwareButtonRequester)
                     .flashHighlight(highlightSetting == "fastForwardHardwareButton")
@@ -282,9 +300,12 @@ fun PlaybackSettingsContent(
             SettingDropDownItem(
                 title = stringResource(R.string.settings_playback_rw_hardware),
                 subtitle = stringResource(R.string.settings_playback_rw_hardware_desc),
-                selectedValue = uiState.rewindHardwareButton,
-                options = listOf("Fast forward", "Skip article", "Rewind", "Restart article"),
-                onValueChange = onRewindHardwareButtonChange,
+                selectedValue = hardwareOptions.find { it.first == uiState.rewindHardwareButton }?.second ?: uiState.rewindHardwareButton,
+                options = hardwareOptions.map { it.second },
+                onValueChange = { selectedDisplay ->
+                    val key = hardwareOptions.find { it.second == selectedDisplay }?.first ?: selectedDisplay
+                    onRewindHardwareButtonChange(key)
+                },
                 modifier = Modifier
                     .bringIntoViewRequester(rewindHardwareButtonRequester)
                     .flashHighlight(highlightSetting == "rewindHardwareButton")
@@ -379,6 +400,85 @@ fun PlaybackSettingsContent(
                     .bringIntoViewRequester(chimeSoundRequester)
                     .flashHighlight(highlightSetting == "chimeSound")
             )
+
+            Text(
+                text = stringResource(R.string.settings_playback_voice_behavior_section),
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(top = 24.dp, bottom = 8.dp)
+            )
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .bringIntoViewRequester(readAltTextRequester)
+                    .flashHighlight(highlightSetting == "readAltText")
+                    .clickable { onReadAltTextChange(!uiState.readAltText) }
+                    .padding(vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(end = 8.dp)
+                ) {
+                    Text(
+                        text = stringResource(R.string.settings_playback_read_alt_text),
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                    Text(
+                        text = stringResource(R.string.settings_playback_read_alt_text_desc),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Switch(
+                    checked = uiState.readAltText,
+                    onCheckedChange = onReadAltTextChange,
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = MaterialTheme.colorScheme.primary,
+                        checkedTrackColor = MaterialTheme.colorScheme.primaryContainer,
+                        uncheckedThumbColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                        uncheckedTrackColor = MaterialTheme.colorScheme.surfaceContainer
+                    )
+                )
+            }
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .bringIntoViewRequester(shortenHyperlinksRequester)
+                    .flashHighlight(highlightSetting == "shortenHyperlinks")
+                    .clickable { onShortenHyperlinksChange(!uiState.shortenHyperlinks) }
+                    .padding(vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(end = 8.dp)
+                ) {
+                    Text(
+                        text = stringResource(R.string.settings_playback_shorten_hyperlinks),
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                    Text(
+                        text = stringResource(R.string.settings_playback_shorten_hyperlinks_desc),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Switch(
+                    checked = uiState.shortenHyperlinks,
+                    onCheckedChange = onShortenHyperlinksChange,
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = MaterialTheme.colorScheme.primary,
+                        checkedTrackColor = MaterialTheme.colorScheme.primaryContainer,
+                        uncheckedThumbColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                        uncheckedTrackColor = MaterialTheme.colorScheme.surfaceContainer
+                    )
+                )
+            }
         }
     }
 }
@@ -404,7 +504,9 @@ fun PlaybackSettingsScreenPreview() {
                     onFastForwardTimeChange = {},
                     onRewindTimeChange = {},
                     onFastForwardHardwareButtonChange = {},
-                    onRewindHardwareButtonChange = {}
+                    onRewindHardwareButtonChange = {},
+                    onReadAltTextChange = {},
+                    onShortenHyperlinksChange = {}
                 )
             }
         }

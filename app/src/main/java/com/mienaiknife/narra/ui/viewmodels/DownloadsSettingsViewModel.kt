@@ -124,10 +124,10 @@ class DownloadsSettingsViewModel @Inject constructor(
             inputStream.use {
                 contentRepository.importOpml(it)
                     .onSuccess { count ->
-                        _message.value = UiText.StringResource(R.string.message_imported_feeds, count)
+                        _message.value = UiText.PluralResource(R.plurals.message_imported_feeds, count, count)
                     }
                     .onFailure { error ->
-                        _message.value = UiText.StringResource(R.string.message_import_failed, error.message ?: "")
+                        _message.value = UiText.StringResource(R.string.message_import_failed, UiText.fromError(error))
                     }
             }
         }

@@ -18,7 +18,7 @@ package com.mienaiknife.narra.data.local.entities
 
 import androidx.room.Embedded
 import androidx.room.Relation
-import com.mienaiknife.narra.data.models.Article
+import com.mienaiknife.narra.domain.models.Article
 
 data class ArticleWithFeed(
     @Embedded val article: ArticleEntity,

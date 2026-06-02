@@ -45,6 +45,8 @@ import androidx.glance.layout.width
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
+import androidx.datastore.preferences.core.Preferences
+import androidx.glance.LocalContext
 import androidx.glance.currentState
 import androidx.glance.ColorFilter
 import androidx.glance.action.actionParametersOf
@@ -72,7 +74,7 @@ class NarraWidget : GlanceAppWidget() {
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         provideContent {
-            val prefs = currentState<androidx.datastore.preferences.core.Preferences>()
+            val prefs = currentState<Preferences>()
             val imagePath = prefs[WidgetManager.KEY_IMAGE_PATH]
             val bitmap = if (!imagePath.isNullOrEmpty()) {
                 val file = File(imagePath)
@@ -84,7 +86,7 @@ class NarraWidget : GlanceAppWidget() {
             GlanceTheme(colors = DarkThemeColors) {
                 WidgetContent(
                     articleId = prefs[WidgetManager.KEY_ARTICLE_ID],
-                    title = prefs[WidgetManager.KEY_ARTICLE_TITLE] ?: "No article playing",
+                    title = prefs[WidgetManager.KEY_ARTICLE_TITLE] ?: LocalContext.current.getString(R.string.widget_no_article),
                     isPlaying = prefs[WidgetManager.KEY_IS_PLAYING] ?: false,
                     progress = prefs[WidgetManager.KEY_PROGRESS] ?: 0f,
                     duration = prefs[WidgetManager.KEY_DURATION] ?: 0L,
@@ -159,7 +161,7 @@ class NarraWidget : GlanceAppWidget() {
                 ) {
                     Image(
                         provider = imageProvider,
-                        contentDescription = "Article artwork",
+                        contentDescription = LocalContext.current.getString(R.string.widget_artwork_desc),
                         modifier = GlanceModifier.fillMaxSize(),
                         contentScale = androidx.glance.layout.ContentScale.Crop
                     )
@@ -224,7 +226,7 @@ class NarraWidget : GlanceAppWidget() {
                         ) {
                             Image(
                                 provider = ImageProvider(if (isPlaying) R.drawable.ic_pause else R.drawable.ic_play),
-                                contentDescription = if (isPlaying) "Pause" else "Play",
+                                contentDescription = if (isPlaying) LocalContext.current.getString(R.string.action_pause) else LocalContext.current.getString(R.string.action_play),
                                 colorFilter = ColorFilter.tint(GlanceTheme.colors.onBackground),
                                 modifier = GlanceModifier.size(32.dp)
                             )
@@ -239,7 +241,7 @@ class NarraWidget : GlanceAppWidget() {
                         ) {
                             Image(
                                 provider = ImageProvider(R.drawable.ic_fast_forward),
-                                contentDescription = "Fast Forward",
+                                contentDescription = LocalContext.current.getString(R.string.widget_ff_desc),
                                 colorFilter = ColorFilter.tint(GlanceTheme.colors.onBackground),
                                 modifier = GlanceModifier.size(32.dp)
                             )
@@ -254,7 +256,7 @@ class NarraWidget : GlanceAppWidget() {
                         ) {
                             Image(
                                 provider = ImageProvider(R.drawable.ic_skip_next),
-                                contentDescription = "Skip Next",
+                                contentDescription = LocalContext.current.getString(R.string.widget_skip_next_desc),
                                 colorFilter = ColorFilter.tint(GlanceTheme.colors.onBackground),
                                 modifier = GlanceModifier.size(32.dp)
                             )

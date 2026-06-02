@@ -1,7 +1,7 @@
 # AGENTS.md
 
 ## Project Overview
-This is an open source Android app that converts text from RSS feeds, imported EPUB files, and saved web articles into audio using text-to-speech (TTS), delivered in a podcast-like listening experience. The MVP targets native Android, with planned expansion to other platforms and additional features over time.
+Narra is an open source Android app that converts text from RSS feeds, imported EPUB files, and saved web articles into audio using text-to-speech (TTS), delivered in a podcast-like listening experience. The MVP targets native Android, with planned expansion to other platforms and additional features over time.
 
 ## License
 This project is licensed under the Apache License 2.0. All contributions must be compatible with this license. Add the standard Apache 2.0 header to all new source files.
@@ -50,7 +50,7 @@ Be aware these are coming so that current architectural decisions don't block th
 - Use coroutines and Flow for async work; avoid callbacks
 - Keep ViewModels free of Android framework dependencies where possible
 - One class per file; file name matches class name
-- Prefer `sealed class` for UI state modeling
+- Prefer `sealed interface` or `sealed class` for UI state modeling
 - Write self-documenting code; only add comments for non-obvious logic
 
 ## Architecture Notes
@@ -64,10 +64,11 @@ Be aware these are coming so that current architectural decisions don't block th
   that is separate from the `TtsEngine` interface itself
 - Do not bundle Sherpa-ONNX model files in the APK; they are too large and must be
   fetched on demand
-- RSS articles, EPUB content, and saved web articles all flow through a shared
-  `ContentRepository` that normalizes them into a common `Article` / `Chapter` model
-  before handing off to TTS; content source type is tracked on the model but is
-  otherwise transparent to the rest of the app
+- RSS articles, EPUB content, and saved web articles flow through specialized repositories
+  (`ArticleRepository`, `FeedRepository`, `ImportExportRepository`) that normalize them
+  into a common `Article` model before handing off to TTS. A composite `ContentRepository`
+  interface is provided for convenience. Content source type is tracked on the model but
+  is otherwise transparent to the rest of the app
 - Saved web articles are stored persistently like RSS articles; always persist the
   source URL so the content can be refreshed if the page changes
 - Playback state should be managed in a single `PlaybackService` (foreground service);
@@ -79,8 +80,8 @@ Be aware these are coming so that current architectural decisions don't block th
 app/
   src/main/
     java/com/<yourpackage>/
-      data/          # Repositories, data sources, models
-      domain/        # Use cases, interfaces (TtsEngine, ContentRepository, ModelRepository)
+      data/          # Data sources, local/remote implementations, Room entities
+      domain/        # Models (Article), repository interfaces, use cases
       tts/           # TTS engine implementations
         android/     # Android built-in TTS
         ondevice/    # On-device AI TTS (Sherpa-ONNX)
@@ -93,8 +94,9 @@ app/
 
 ## What to Ask Before Doing
 - If a task would require adding a new third-party dependency, confirm before adding it
-- If a feature touches the `TtsEngine` interface, `ContentRepository`, or `ModelRepository`
-  contracts, flag it — these are load-bearing abstractions
+- If a feature touches the `TtsEngine`, `ArticleRepository`, `FeedRepository`,
+  `ImportExportRepository`, or `ModelRepository` contracts, flag it — these are
+  load-bearing abstractions
 - If something is ambiguous between MVP scope and planned features, ask rather than assume
 
 ## Open Source Considerations

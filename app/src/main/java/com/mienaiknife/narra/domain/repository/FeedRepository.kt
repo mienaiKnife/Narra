@@ -14,13 +14,14 @@
  * limitations under the License.
  */
 
-package com.mienaiknife.narra.ui.viewmodels
+package com.mienaiknife.narra.domain.repository
 
-import com.mienaiknife.narra.domain.models.Article
+import com.mienaiknife.narra.data.local.entities.FeedEntity
 
-data class PlaybackUiState(
-    val currentArticle: Article? = null,
-    val isPlaying: Boolean = false,
-    val currentPosition: Long = 0,
-    val duration: Long = 0
-)
+interface FeedRepository {
+    suspend fun subscribeToFeed(url: String): Result<String>
+    suspend fun refreshFeeds(): Result<Unit>
+    suspend fun updateFeed(feed: FeedEntity)
+    suspend fun deleteFeed(url: String)
+    suspend fun deleteAllFeeds()
+}
