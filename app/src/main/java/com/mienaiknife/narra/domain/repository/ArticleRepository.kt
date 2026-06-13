@@ -38,6 +38,8 @@ interface ArticleRepository {
     suspend fun clearQueue()
     suspend fun reorderQueue(fromIndex: Int, toIndex: Int)
     suspend fun updateQueueOrder(articleIds: List<String>)
+    suspend fun markAllAsPlayedInFeed(feedUrl: String)
+    suspend fun markAllAsUnplayedInFeed(feedUrl: String)
     suspend fun markAsFinished(id: String)
     suspend fun markAsPlayed(id: String)
     suspend fun markAsUnplayed(id: String)

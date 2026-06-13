@@ -20,6 +20,7 @@ import android.content.Intent
 import android.content.res.Configuration
 import android.widget.Toast
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
@@ -85,6 +86,7 @@ import androidx.navigation.compose.rememberNavController
 import com.mienaiknife.narra.domain.TtsState
 import com.mienaiknife.narra.domain.models.TtsModel
 import com.mienaiknife.narra.ui.components.BottomNavBar
+import com.mienaiknife.narra.ui.theme.LocalNarraSpacing
 import com.mienaiknife.narra.ui.theme.NarraTheme
 import com.mienaiknife.narra.ui.viewmodels.VoicesSettingsViewModel
 
@@ -492,7 +494,10 @@ fun TtsModelItem(
             }
         },
         supportingContent = {
-            Column(modifier = Modifier.padding(top = 2.dp)) {
+            Column(
+                modifier = Modifier.padding(top = 2.dp),
+                verticalArrangement = Arrangement.spacedBy(LocalNarraSpacing.current.itemVertical)
+            ) {
                 Text(
                     text = "${model.language} • ${model.description}",
                     style = MaterialTheme.typography.bodyMedium,

@@ -26,6 +26,7 @@ import com.mienaiknife.narra.domain.models.Article
     indices = [
         Index(value = ["isInQueue", "queueOrder", "sortTimestamp"]),
         Index(value = ["isFromFeed", "sortTimestamp"]),
+        Index(value = ["isInInbox", "sortTimestamp"]),
         Index(value = ["isFavorite", "sortTimestamp"]),
         Index(value = ["feedUrl"]),
         Index(value = ["source", "sortTimestamp"]),
@@ -49,6 +50,7 @@ data class ArticleEntity(
     val currentWordOffset: Int = 0,
     val isFavorite: Boolean = false,
     val isFromFeed: Boolean = false,
+    val isInInbox: Boolean = false,
     val isInQueue: Boolean = true,
     val queueOrder: Int = 0,
     val publishedAt: String? = null,
@@ -82,6 +84,7 @@ fun ArticleEntity.toDomainModel(
         isFavorite = isFavorite,
         isFromFeed = isFromFeed,
         isInQueue = isInQueue,
+        isInInbox = isInInbox,
         queueOrder = queueOrder,
         publishedTimestamp = publishedTimestamp,
         duration = duration,

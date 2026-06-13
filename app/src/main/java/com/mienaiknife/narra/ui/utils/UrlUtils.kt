@@ -84,6 +84,15 @@ object UrlUtils {
         }
     }
 
+    fun isUrlOrDomainLike(text: String): Boolean {
+        return text.contains("://") || 
+               text.contains("www.") || 
+               text.matches(Regex(".*\\.[a-z]{2,6}$", RegexOption.IGNORE_CASE)) ||
+               text == "RSS" || 
+               text == "Atom" || 
+               text == "Untitled Feed"
+    }
+
     /**
      * Checks if the given URL is a public URL and not a local/private network address.
      * This is a basic SSRF protection measure.

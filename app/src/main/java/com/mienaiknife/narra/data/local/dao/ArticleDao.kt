@@ -41,7 +41,7 @@ interface ArticleDao {
     fun getAllArticles(): Flow<List<ArticleWithFeed>>
 
     @Transaction
-    @Query("SELECT * FROM articles WHERE isFromFeed = 1 AND isInQueue = 0 ORDER BY sortTimestamp DESC")
+    @Query("SELECT * FROM articles WHERE isInInbox = 1 AND isInQueue = 0 ORDER BY sortTimestamp DESC")
     fun getInboxArticles(): Flow<List<ArticleWithFeed>>
 
     @Transaction
@@ -85,17 +85,23 @@ interface ArticleDao {
     @Query("SELECT COALESCE(MAX(queueOrder), -1) + 1 FROM articles WHERE isInQueue = 1")
     suspend fun getNextQueueOrder(): Int
 
-    @Query("UPDATE articles SET isInQueue = 1, queueOrder = (SELECT COALESCE(MAX(queueOrder), -1) + 1 FROM articles WHERE isInQueue = 1), finishedAt = NULL, progress = (CASE WHEN progress >= 1.0 THEN 0.0 ELSE progress END), currentParagraphIndex = (CASE WHEN progress >= 1.0 THEN 0 ELSE currentParagraphIndex END), currentWordOffset = (CASE WHEN progress >= 1.0 THEN 0 ELSE currentWordOffset END) WHERE id = :id")
+    @Query("UPDATE articles SET isInQueue = 1, isInInbox = 0, queueOrder = (SELECT COALESCE(MAX(queueOrder), -1) + 1 FROM articles WHERE isInQueue = 1), finishedAt = NULL, progress = (CASE WHEN progress >= 1.0 THEN 0.0 ELSE progress END), currentParagraphIndex = (CASE WHEN progress >= 1.0 THEN 0 ELSE currentParagraphIndex END), currentWordOffset = (CASE WHEN progress >= 1.0 THEN 0 ELSE currentWordOffset END) WHERE id = :id")
     suspend fun addToQueue(id: String)
 
-    @Query("UPDATE articles SET isInQueue = 0, progress = 1.0, finishedAt = :finishedAt, lastPlayedAt = :finishedAt, content = NULL WHERE id = :id")
+    @Query("UPDATE articles SET isInQueue = 0, isInInbox = 0, progress = 1.0, finishedAt = :finishedAt, lastPlayedAt = :finishedAt, content = NULL WHERE id = :id")
     suspend fun markAsFinished(id: String, finishedAt: Long = System.currentTimeMillis())
 
-    @Query("UPDATE articles SET isInQueue = 0, progress = 1.0, finishedAt = :finishedAt, lastPlayedAt = :finishedAt, content = NULL WHERE id = :id")
+    @Query("UPDATE articles SET isInQueue = 0, isInInbox = 0, progress = 1.0, finishedAt = :finishedAt, lastPlayedAt = :finishedAt, content = NULL WHERE id = :id")
     suspend fun markAsPlayed(id: String, finishedAt: Long = System.currentTimeMillis())
 
     @Query("UPDATE articles SET progress = 0.0, finishedAt = NULL, currentParagraphIndex = 0, currentWordOffset = 0 WHERE id = :id")
     suspend fun markAsUnplayed(id: String)
+
+    @Query("UPDATE articles SET isInQueue = 0, isInInbox = 0, progress = 1.0, finishedAt = :finishedAt, lastPlayedAt = :finishedAt, content = NULL WHERE feedUrl = :feedUrl")
+    suspend fun markAllAsPlayedInFeed(feedUrl: String, finishedAt: Long = System.currentTimeMillis())
+
+    @Query("UPDATE articles SET progress = 0.0, finishedAt = NULL, currentParagraphIndex = 0, currentWordOffset = 0 WHERE feedUrl = :feedUrl")
+    suspend fun markAllAsUnplayedInFeed(feedUrl: String)
 
     @Transaction
     suspend fun clearHistory() {
@@ -109,7 +115,7 @@ interface ArticleDao {
     @Query("UPDATE articles SET finishedAt = NULL, lastPlayedAt = NULL WHERE isInQueue = 1")
     suspend fun resetHistoryInQueue()
 
-    @Query("DELETE FROM articles WHERE isInQueue = 0 AND isFromFeed = 1")
+    @Query("DELETE FROM articles WHERE isInQueue = 0 AND isInInbox = 0 AND isFromFeed = 1")
     suspend fun clearInbox()
 
     @Query("UPDATE articles SET isInQueue = 0, content = NULL")

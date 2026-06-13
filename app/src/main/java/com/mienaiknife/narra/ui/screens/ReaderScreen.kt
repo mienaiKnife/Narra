@@ -110,6 +110,7 @@ import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -154,6 +155,9 @@ import com.mienaiknife.narra.ui.viewmodels.ReaderViewModel
 import com.mienaiknife.narra.utils.DateUtils
 import kotlinx.coroutines.delay
 import java.util.Locale
+
+private val ReaderTopPadding = 105.dp
+private val ReaderBottomPadding = 220.dp
 
 @Composable
 fun ReaderScreen(
@@ -260,8 +264,25 @@ fun ReaderContent(
     var isSleepTimerSheetVisible by remember { mutableStateOf(false) }
     var isSearchSheetVisible by remember { mutableStateOf(false) }
 
+    val context = LocalContext.current
+    val view = LocalView.current
+    val isPreview = LocalInspectionMode.current
+    val configuration = LocalConfiguration.current
+    val density = LocalDensity.current
+
+    // Estimate the scroll offset needed to center the paragraph on the first frame.
+    // This reduces flicker before the actual word measurement is available.
+    val initialScrollOffset = remember(article.id) {
+        val screenHeightPx = with(density) { configuration.screenHeightDp.dp.toPx() }
+        val targetViewportY = screenHeightPx * 0.5f
+        val itemTopInViewport = if (currentParagraphIndex == 0) with(density) { ReaderTopPadding.toPx() } else 0f
+        // itemTopInViewport - offset = targetViewportY => offset = itemTopInViewport - targetViewportY
+        (itemTopInViewport - targetViewportY).toInt()
+    }
+
     val scrollState = rememberLazyListState(
-        initialFirstVisibleItemIndex = currentParagraphIndex
+        initialFirstVisibleItemIndex = currentParagraphIndex,
+        initialFirstVisibleItemScrollOffset = initialScrollOffset
     )
 
     val isAtTop by remember {
@@ -269,10 +290,6 @@ fun ReaderContent(
             scrollState.firstVisibleItemIndex == 0 && scrollState.firstVisibleItemScrollOffset == 0
         }
     }
-
-    val context = LocalContext.current
-    val view = LocalView.current
-    val isPreview = LocalInspectionMode.current
     
     // Keep screen on while in the reader
     if (!isPreview) {
@@ -339,6 +356,8 @@ fun ReaderContent(
             readerFontFamily = readerFontFamily,
             readerFontSize = readerFontSize,
             lineSpacing = lineSpacing,
+            topPadding = ReaderTopPadding,
+            bottomPadding = ReaderBottomPadding,
             isFollowing = isFollowing,
             onFollowingChange = { isFollowing = it },
             onControlsVisibleChange = { isControlsVisible = it },
@@ -579,6 +598,8 @@ fun ReaderContentList(
     readerFontFamily: androidx.compose.ui.text.font.FontFamily,
     readerFontSize: Float,
     lineSpacing: Float,
+    topPadding: androidx.compose.ui.unit.Dp,
+    bottomPadding: androidx.compose.ui.unit.Dp,
     isFollowing: Boolean,
     onFollowingChange: (Boolean) -> Unit,
     onControlsVisibleChange: (Boolean) -> Unit,
@@ -591,9 +612,6 @@ fun ReaderContentList(
     
     val density = LocalDensity.current
     val verticalPaddingPx = with(density) { 4.dp.toPx() }
-
-    val topPadding = 105.dp
-    val bottomPadding = 220.dp
 
     val isDragged by scrollState.interactionSource.collectIsDraggedAsState()
     LaunchedEffect(isDragged) {
@@ -609,17 +627,26 @@ fun ReaderContentList(
             val layoutInfo = scrollState.layoutInfo
             val viewportHeight = layoutInfo.viewportSize.height
             if (viewportHeight > 0) {
-                val visibleItem = layoutInfo.visibleItemsInfo.find { it.index == uiState.currentParagraphIndex }
                 val targetViewportY = viewportHeight * 0.5f
+                val visibleItem = layoutInfo.visibleItemsInfo.find { it.index == uiState.currentParagraphIndex }
+                
+                // Only use the measurement if it's for the current paragraph
+                val wordY = if (currentWordYIndex == uiState.currentParagraphIndex) currentWordYInItem else 0f
+                
+                // Calculate the scroll offset to center the word.
+                // For item 0, the "natural" top is at topPadding from viewport top. For others, it's at 0.
+                val itemTopInViewport = if (uiState.currentParagraphIndex == 0) with(density) { topPadding.toPx() } else 0f
+                // itemTopInViewport - scrollOffset + wordY = targetViewportY
+                val targetScrollOffset = (itemTopInViewport + wordY - targetViewportY).toInt()
 
                 if (visibleItem != null && currentWordYIndex == uiState.currentParagraphIndex) {
-                    val currentWordViewportY = visibleItem.offset - layoutInfo.viewportStartOffset + currentWordYInItem
+                    val currentWordViewportY = visibleItem.offset - layoutInfo.viewportStartOffset + wordY
                     val delta = currentWordViewportY - targetViewportY
                     
-                    if (kotlin.math.abs(delta) > with(density) { 5.dp.toPx() }) {
+                    if (kotlin.math.abs(delta) > with(density) { 2.dp.toPx() }) {
                         if (isInitialScroll) {
-                            scrollState.scrollToItem(uiState.currentParagraphIndex, (currentWordYInItem - targetViewportY).toInt())
-                            isInitialScroll = false
+                            scrollState.scrollToItem(uiState.currentParagraphIndex, targetScrollOffset)
+                            if (wordY > 0) isInitialScroll = false
                         } else {
                             scrollState.animateScrollBy(
                                 value = delta,
@@ -629,18 +656,17 @@ fun ReaderContentList(
                                 )
                             )
                         }
-                    } else if (isInitialScroll) {
+                    } else if (isInitialScroll && wordY > 0) {
                         isInitialScroll = false
                     }
                 } else {
-                    val scrollOffset = (currentWordYInItem - targetViewportY).toInt()
                     if (isInitialScroll) {
-                        scrollState.scrollToItem(uiState.currentParagraphIndex, scrollOffset)
-                        if (currentWordYInItem > 0 && currentWordYIndex == uiState.currentParagraphIndex) {
+                        scrollState.scrollToItem(uiState.currentParagraphIndex, targetScrollOffset)
+                        if (wordY > 0 && currentWordYIndex == uiState.currentParagraphIndex) {
                             isInitialScroll = false
                         }
                     } else {
-                        scrollState.animateScrollToItem(uiState.currentParagraphIndex, scrollOffset)
+                        scrollState.animateScrollToItem(uiState.currentParagraphIndex, targetScrollOffset)
                     }
                 }
             }

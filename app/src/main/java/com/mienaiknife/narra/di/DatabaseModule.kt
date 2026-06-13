@@ -18,6 +18,8 @@ package com.mienaiknife.narra.di
 
 import android.content.Context
 import androidx.room.Room
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 import com.mienaiknife.narra.data.local.AppDatabase
 import com.mienaiknife.narra.data.local.dao.ArticleDao
 import com.mienaiknife.narra.data.local.dao.FeedDao
@@ -93,12 +95,23 @@ object DatabaseModule {
 
         val factory = SupportOpenHelperFactory(passphrase)
 
+        val migration16to17 = object : Migration(16, 17) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE articles ADD COLUMN isInInbox INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_articles_isInInbox_sortTimestamp ON articles(isInInbox, sortTimestamp)")
+                
+                // For existing feed articles, mark them as in Inbox if they are not in queue and not played
+                db.execSQL("UPDATE articles SET isInInbox = 1 WHERE isFromFeed = 1 AND isInQueue = 0 AND progress < 1.0 AND finishedAt IS NULL")
+            }
+        }
+
         return Room.databaseBuilder(
             context,
             AppDatabase::class.java,
             AppDatabase.DATABASE_NAME
         )
             .openHelperFactory(factory)
+            .addMigrations(migration16to17)
             .fallbackToDestructiveMigration(dropAllTables = true)
             .build()
     }

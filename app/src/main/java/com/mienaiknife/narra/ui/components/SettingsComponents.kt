@@ -17,6 +17,7 @@
 package com.mienaiknife.narra.ui.components
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -34,6 +35,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.mienaiknife.narra.ui.theme.LocalNarraSpacing
 
 @Composable
 fun SettingDropDownItem(
@@ -59,7 +61,8 @@ fun SettingDropDownItem(
             Column(
                 modifier = Modifier
                     .weight(1f)
-                    .padding(end = 8.dp)
+                    .padding(end = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(LocalNarraSpacing.current.itemVertical)
             ) {
                 Text(
                     text = title,

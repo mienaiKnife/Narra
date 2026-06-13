@@ -1,6 +1,6 @@
 # Localization Guide
 
-Thank you for your interest in translating Narra! We want to make the app accessible to everyone, regardless of the language they speak.
+Thank you for your interest in translating Narra! We want to support as many languages as possible in order to make the app accessible to as many people as possible.
 
 ## How to Contribute a New Language
 

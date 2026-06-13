@@ -24,8 +24,6 @@ Be aware these are coming so that current architectural decisions don't block th
 - Self-hosted AI TTS server support (e.g. Kokoro, Coqui, Piper via local API)
 - Additional cloud AI TTS providers
 - Builds for other platforms (e.g. desktop and iOS via Kotlin Multiplatform, or a separate app)
-- OPML export and import for feed list portability
-- File-based backup and restore (no account required)
 - Optional sync via self-hosted compatible server (e.g. Nextcloud/gpodder-compatible API),
   authenticated by server URL and credentials the user controls — no first-party accounts
 - Automatic readability/reader-mode heuristic improvements over time
@@ -52,6 +50,12 @@ Be aware these are coming so that current architectural decisions don't block th
 - One class per file; file name matches class name
 - Prefer `sealed interface` or `sealed class` for UI state modeling
 - Write self-documenting code; only add comments for non-obvious logic
+- **Database Schema Changes**: Whenever modifying a Room `@Entity` (e.g., adding/removing fields, changing indices), you **MUST**:
+  1. Increment the `version` number in `AppDatabase.kt`.
+  2. Provide a `Migration` object in `DatabaseModule.kt` to handle the schema change.
+  3. Update any relevant `@Index` annotations in the entity class.
+  4. Ensure existing data is preserved or correctly migrated (e.g. setting default values for new columns).
+  **Failure to do this will cause the app to crash on startup for existing users.**
 
 ## Architecture Notes
 - TTS engines must be abstracted behind a common `TtsEngine` interface so Android TTS,
@@ -79,16 +83,20 @@ Be aware these are coming so that current architectural decisions don't block th
 ```
 app/
   src/main/
-    java/com/<yourpackage>/
-      data/          # Data sources, local/remote implementations, Room entities
+    java/com/mienaiknife/narra/
+      data/          # Data sources, local/remote implementations, Room entities, workers
       domain/        # Models (Article), repository interfaces, use cases
       tts/           # TTS engine implementations
         android/     # Android built-in TTS
         ondevice/    # On-device AI TTS (Sherpa-ONNX)
-        cloud/       # Cloud AI TTS providers
+        common/      # Delegating engine and shared logic
+        cloud/       # Cloud AI TTS providers (planned)
         selfhosted/  # Self-hosted AI TTS servers (planned)
-      ui/            # Composables, ViewModels, navigation
-      service/       # PlaybackService and media session
+      ui/            # Composables, ViewModels, navigation, theme
+      playback/      # TtsPlayer and PlaybackManager
+      service/       # PlaybackService and SyncManager
+      di/            # Hilt modules
+      utils/         # Core utilities
     res/
 ```
 

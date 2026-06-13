@@ -26,12 +26,22 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowCompat
+
+data class NarraSpacing(
+    val itemVertical: Dp = 4.dp
+)
+
+val LocalNarraSpacing = staticCompositionLocalOf { NarraSpacing() }
 
 @Composable
 fun NarraTheme(
@@ -51,7 +61,7 @@ fun NarraTheme(
     }
 
     val view = LocalView.current
-    if (!view.isInEditMode) {
+    if (!view.isInEditMode && view.context is Activity) {
         SideEffect {
             val window = (view.context as Activity).window
             val activityContext = view.context
@@ -78,9 +88,18 @@ fun NarraTheme(
         }
     }
 
+    val spacing = when (fontFamily) {
+        OpenDyslexic3 -> NarraSpacing(itemVertical = 0.dp)
+        else -> NarraSpacing(itemVertical = 4.dp)
+    }
+
     MaterialTheme(
         colorScheme = colorScheme,
-        typography = getTypography(fontFamily),
-        content = content
-    )
+        typography = getTypography(fontFamily)
+    ) {
+        CompositionLocalProvider(
+            LocalNarraSpacing provides spacing,
+            content = content
+        )
+    }
 }

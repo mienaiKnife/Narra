@@ -17,6 +17,7 @@
 package com.mienaiknife.narra.ui.screens
 
 import android.content.res.Configuration
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -58,6 +59,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.rememberNavController
 import com.mienaiknife.narra.ui.components.BottomNavBar
 import com.mienaiknife.narra.ui.components.SettingDropDownItem
+import com.mienaiknife.narra.ui.theme.LocalNarraSpacing
 import com.mienaiknife.narra.ui.theme.NarraTheme
 import com.mienaiknife.narra.ui.theme.ThemeManager
 import com.mienaiknife.narra.ui.theme.ThemeViewModel
@@ -151,7 +153,8 @@ fun UserInterfaceSettingsScreen(
                 Column(
                     modifier = Modifier
                         .weight(1f)
-                        .padding(end = 8.dp)
+                        .padding(end = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(LocalNarraSpacing.current.itemVertical)
                 ) {
                     Text(
                         text = stringResource(R.string.settings_ui_use_system_theme),
@@ -227,7 +230,8 @@ fun UserInterfaceSettingsScreen(
                 Column(
                     modifier = Modifier
                         .weight(1f)
-                        .padding(end = 8.dp)
+                        .padding(end = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(LocalNarraSpacing.current.itemVertical)
                 ) {
                     Text(
                         text = stringResource(R.string.settings_ui_dynamic_colors),
@@ -291,7 +295,8 @@ fun UserInterfaceSettingsScreen(
                 Column(
                     modifier = Modifier
                         .weight(1f)
-                        .padding(end = 8.dp)
+                        .padding(end = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(LocalNarraSpacing.current.itemVertical)
                 ) {
                     Text(
                         text = stringResource(R.string.settings_ui_auto_fullscreen),
@@ -409,7 +414,8 @@ fun UserInterfaceSettingsScreen(
                 Column(
                     modifier = Modifier
                         .weight(1f)
-                        .padding(end = 8.dp)
+                        .padding(end = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(LocalNarraSpacing.current.itemVertical)
                 ) {
                     Text(
                         text = stringResource(R.string.settings_ui_show_remaining_time),

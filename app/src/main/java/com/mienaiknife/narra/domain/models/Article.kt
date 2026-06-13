@@ -33,6 +33,7 @@ data class Article(
     val isFavorite: Boolean = false,
     val isFromFeed: Boolean = false,
     val isInQueue: Boolean = true,
+    val isInInbox: Boolean = false,
     val queueOrder: Int = 0,
     val publishedTimestamp: Long? = null,
     val duration: Long? = null,

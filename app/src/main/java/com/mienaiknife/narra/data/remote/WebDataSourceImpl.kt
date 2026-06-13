@@ -112,7 +112,9 @@ class WebDataSourceImpl @Inject constructor(
         for (tag in jsonLdTags) {
             try {
                 val json = Json.parseToJsonElement(tag.data())
-                val date = findKeyInJson(json, "datePublished") ?: findKeyInJson(json, "dateCreated")
+                val date = findKeyInJson(json, "datePublished") 
+                    ?: findKeyInJson(json, "dateCreated")
+                    ?: findKeyInJson(json, "uploadDate")
                 if (date != null) return date
             } catch (_: Exception) {
                 // Ignore malformed JSON-LD
@@ -125,8 +127,14 @@ class WebDataSourceImpl @Inject constructor(
             ?: doc.select("meta[property=og:pubdate]").attr("content").ifEmpty { null }
             ?: doc.select("meta[name=pubdate]").attr("content").ifEmpty { null }
             ?: doc.select("meta[name=date]").attr("content").ifEmpty { null }
+            ?: doc.select("meta[property=og:article:published_time]").attr("content").ifEmpty { null }
+            ?: doc.select("meta[name=dc.date]").attr("content").ifEmpty { null }
+            ?: doc.select("meta[name=dc.date.issued]").attr("content").ifEmpty { null }
+            ?: doc.select("meta[name=dcterms.created]").attr("content").ifEmpty { null }
+            // Specific Substack meta tag
+            ?: doc.select("meta[property=og:article:published_time]").attr("content").ifEmpty { null }
             ?: doc.select("time[itemprop=datePublished]").attr("datetime").ifEmpty { null }
-            ?: doc.select("time").attr("datetime").ifEmpty { null }
+            ?: doc.select("time[datetime]").firstOrNull()?.attr("datetime")?.ifEmpty { null }
     }
 
     private fun extractImageUrl(doc: org.jsoup.nodes.Document, byline: String?): String? {

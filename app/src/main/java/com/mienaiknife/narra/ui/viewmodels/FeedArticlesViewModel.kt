@@ -157,4 +157,16 @@ class FeedArticlesViewModel @Inject constructor(
             repository.deleteArticle(article.id)
         }
     }
+
+    fun markAllAsPlayed() {
+        viewModelScope.launch {
+            repository.markAllAsPlayedInFeed(feedUrl)
+        }
+    }
+
+    fun markAllAsUnplayed() {
+        viewModelScope.launch {
+            repository.markAllAsUnplayedInFeed(feedUrl)
+        }
+    }
 }

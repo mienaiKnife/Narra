@@ -16,6 +16,7 @@
 
 package com.mienaiknife.narra.ui.components
 
+import android.content.res.Configuration
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -26,9 +27,13 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.TextUnit
@@ -36,16 +41,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.isUnspecified
 import androidx.compose.ui.unit.sp
 
-/**
- * A wrapper around [Text] that automatically shrinks the font size to fit within the available width
- * if it detects visual overflow.
- *
- * By default, it will not shrink below the "nominal" size (the size specified in [style] at 1.0 font scale).
- * This ensures consistency at standard font scales while providing flexibility for accessibility.
- */
 @Composable
 fun AdaptiveText(
-    text: String,
+    text: AnnotatedString,
     style: TextStyle,
     modifier: Modifier = Modifier,
     textAlign: TextAlign? = null,
@@ -102,7 +100,42 @@ fun AdaptiveText(
     )
 }
 
-@Preview(showBackground = true, widthDp = 300)
+/**
+ * A wrapper around [Text] that automatically shrinks the font size to fit within the available width
+ * if it detects visual overflow.
+ *
+ * By default, it will not shrink below the "nominal" size (the size specified in [style] at 1.0 font scale).
+ * This ensures consistency at standard font scales while providing flexibility for accessibility.
+ */
+@Composable
+fun AdaptiveText(
+    text: String,
+    style: TextStyle,
+    modifier: Modifier = Modifier,
+    textAlign: TextAlign? = null,
+    maxLines: Int = Int.MAX_VALUE,
+    minFontSize: TextUnit = TextUnit.Unspecified,
+    overflow: TextOverflow = TextOverflow.Clip,
+    shrinkToFitContent: Boolean = false,
+) {
+    AdaptiveText(
+        text = AnnotatedString(text),
+        style = style,
+        modifier = modifier,
+        textAlign = textAlign,
+        maxLines = maxLines,
+        minFontSize = minFontSize,
+        overflow = overflow,
+        shrinkToFitContent = shrinkToFitContent
+    )
+}
+
+@Preview(
+    uiMode = Configuration.UI_MODE_NIGHT_YES,
+    showBackground = true,
+    widthDp = 300,
+    backgroundColor = 0xFF191919,
+)
 @Composable
 fun AdaptiveTextPreview() {
     val longTitle = "This is a very very long article title that definitely overflows its container"
@@ -139,6 +172,22 @@ fun AdaptiveTextPreview() {
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     shrinkToFitContent = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Text("AnnotatedString (Combined styles)", style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(top = 16.dp))
+                AdaptiveText(
+                    text = buildAnnotatedString {
+                        withStyle(style = MaterialTheme.typography.bodySmall.toSpanStyle()) {
+                            append("SOURCE • ")
+                        }
+                        withStyle(style = MaterialTheme.typography.bodyLarge.toSpanStyle().copy(fontWeight = FontWeight.Bold)) {
+                            append(longTitle)
+                        }
+                    },
+                    style = MaterialTheme.typography.bodyLarge,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.fillMaxWidth()
                 )
             }

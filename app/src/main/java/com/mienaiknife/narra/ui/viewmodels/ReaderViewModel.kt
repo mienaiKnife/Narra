@@ -113,10 +113,16 @@ class ReaderViewModel @Inject constructor(
         _searchQuery,
         _searchResults
     ) { flows ->
+        val article = flows[0] as Article?
+        val blocks = flows[1] as List<ContentBlock>
+        val isLoadingFlag = flows[2] as Boolean
+        
         ReaderUiState(
-            article = flows[0] as Article?,
-            blocks = flows[1] as List<ContentBlock>,
-            isLoading = flows[2] as Boolean,
+            article = article,
+            blocks = blocks,
+            // Keep loading if explicit flag is true OR if we have an article with content but no parsed blocks yet.
+            // This prevents the UI from initializing with 0 items, which would reset the scroll state.
+            isLoading = isLoadingFlag || (article != null && blocks.isEmpty() && article.content.isNotBlank()),
             error = flows[3] as UiText?,
             isPlaying = flows[4] as Boolean,
             currentPosition = flows[5] as Long,

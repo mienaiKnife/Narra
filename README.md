@@ -39,6 +39,8 @@ Run unit tests using the following command:
 ## Documentation
 
 - [User Guide](docs/USAGE.md) - Learn how to use Narra's features
+- [AGENTS.md](AGENTS.md) - Guide to the project for AI agents, which may also be useful for human contributors
+- [Localization](LOCALIZATION.md) - Guide to translating Narra into new languages
 - [Architecture](docs/ARCHITECTURE.md) - Learn about the project's technical design
 - [TTS Engines](docs/TTS_ENGINES.md) - Guide for implementing and extending TTS providers
 - [Content Parsing](docs/CONTENT_PARSING.md) - How we extract text from RSS, ebooks, and Web
@@ -52,8 +54,6 @@ Run unit tests using the following command:
 - Self-hosted AI TTS server support (e.g. Kokoro, Coqui, Piper via local API)
 - Additional cloud AI TTS providers
 - Builds for other platforms (e.g. desktop and iOS via Kotlin Multiplatform, or a separate app)
-- OPML export and import for feed list portability
-- File-based backup and restore (no account required)
 - Optional sync via self-hosted compatible server (e.g. Nextcloud/gpodder-compatible API),
   authenticated by server URL and credentials the user controls — no first-party accounts
 - Automatic readability/reader-mode heuristic improvements over time

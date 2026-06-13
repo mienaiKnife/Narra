@@ -50,7 +50,8 @@ app/
       utils/         # Core utilities (Security, Notifications)
       service/       # PlaybackService (Media3), SyncManager
       playback/      # TtsPlayer and PlaybackManager
-```
+      di/            # Hilt dependency injection modules
+```,targetContent:
 
 ## Technologies
 - **Language**: Kotlin

@@ -81,7 +81,9 @@ fun FeedArticlesScreen(
             onDeleteArticle = { viewModel.deleteArticle(it) },
             onRefresh = { viewModel.refresh() },
             onSortOptionSelected = { viewModel.setSortOption(it) },
-            onShowPlayedChange = { viewModel.setShowPlayed(it) }
+            onShowPlayedChange = { viewModel.setShowPlayed(it) },
+            onMarkAllAsPlayed = { viewModel.markAllAsPlayed() },
+            onMarkAllAsUnplayed = { viewModel.markAllAsUnplayed() }
         )
 
         SnackbarHost(
@@ -100,7 +102,9 @@ fun FeedArticlesScreenContent(
     onDeleteArticle: (Article) -> Unit,
     onRefresh: () -> Unit = {},
     onSortOptionSelected: (SortOption) -> Unit = {},
-    onShowPlayedChange: (Boolean) -> Unit = {}
+    onShowPlayedChange: (Boolean) -> Unit = {},
+    onMarkAllAsPlayed: () -> Unit = {},
+    onMarkAllAsUnplayed: () -> Unit = {}
 ) {
     var showMenu by remember { mutableStateOf(false) }
     val showSortSheet = remember { mutableStateOf(false) }
@@ -199,6 +203,34 @@ fun FeedArticlesScreenContent(
                         leadingIcon = {
                             Icon(
                                 Icons.Default.Refresh, contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onBackground
+                            )
+                        }
+                    )
+
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.action_mark_all_played)) },
+                        onClick = {
+                            showMenu = false
+                            onMarkAllAsPlayed()
+                        },
+                        leadingIcon = {
+                            Icon(
+                                Icons.Default.DoneAll, contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onBackground
+                            )
+                        }
+                    )
+
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.action_mark_all_unplayed)) },
+                        onClick = {
+                            showMenu = false
+                            onMarkAllAsUnplayed()
+                        },
+                        leadingIcon = {
+                            Icon(
+                                Icons.Default.RemoveDone, contentDescription = null,
                                 tint = MaterialTheme.colorScheme.onBackground
                             )
                         }

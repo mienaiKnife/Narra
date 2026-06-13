@@ -54,6 +54,7 @@ import androidx.compose.ui.res.stringResource
 import com.mienaiknife.narra.R
 import com.mienaiknife.narra.domain.models.Article
 import com.mienaiknife.narra.data.models.SampleArticles
+import com.mienaiknife.narra.ui.theme.LocalNarraSpacing
 import com.mienaiknife.narra.ui.theme.NarraTheme
 import com.mienaiknife.narra.utils.DateUtils
 
@@ -261,7 +262,10 @@ private fun QueueItemRow(
                 modifier = Modifier
                     .weight(1f)
                     .heightIn(min = 64.dp),
-                verticalArrangement = Arrangement.Center
+                verticalArrangement = Arrangement.spacedBy(
+                    LocalNarraSpacing.current.itemVertical,
+                    Alignment.CenterVertically
+                )
             ) {
                 val sourceText = buildString {
                     val formattedDate = DateUtils.formatPublishedDate(article.publishedAt)
@@ -269,7 +273,7 @@ private fun QueueItemRow(
                         append(formattedDate)
                         append(" • ")
                     }
-                    append(article.source)
+                    append(article.source)  
                 }
                 
                 val baseColor = if (article.progress == 1f) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f) else MaterialTheme.colorScheme.onSurface
@@ -295,7 +299,6 @@ private fun QueueItemRow(
                 val remainingTime = totalDuration - currentPosition
 
                 if (totalDuration > 0 && article.isInQueue) {
-                    Spacer(modifier = Modifier.height(4.dp))
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.fillMaxWidth()

@@ -18,6 +18,7 @@ package com.mienaiknife.narra.ui.screens
 
 import android.content.res.Configuration
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -57,6 +58,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.rememberNavController
 import com.mienaiknife.narra.ui.components.BottomNavBar
 import com.mienaiknife.narra.ui.components.SettingDropDownItem
+import com.mienaiknife.narra.ui.theme.LocalNarraSpacing
 import com.mienaiknife.narra.ui.theme.NarraTheme
 import com.mienaiknife.narra.ui.viewmodels.PlaybackSettingsUiState
 import com.mienaiknife.narra.ui.viewmodels.PlaybackSettingsViewModel
@@ -187,7 +189,8 @@ fun PlaybackSettingsContent(
                 Column(
                     modifier = Modifier
                         .weight(1f)
-                        .padding(end = 8.dp)
+                        .padding(end = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(LocalNarraSpacing.current.itemVertical)
                 ) {
                     Text(
                         text = stringResource(R.string.settings_playback_pause_on_disconnect),
@@ -223,7 +226,8 @@ fun PlaybackSettingsContent(
                 Column(
                     modifier = Modifier
                         .weight(1f)
-                        .padding(end = 8.dp)
+                        .padding(end = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(LocalNarraSpacing.current.itemVertical)
                 ) {
                     Text(
                         text = stringResource(R.string.settings_playback_pause_for_interruptions),
@@ -330,7 +334,8 @@ fun PlaybackSettingsContent(
                 Column(
                     modifier = Modifier
                         .weight(1f)
-                        .padding(end = 8.dp)
+                        .padding(end = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(LocalNarraSpacing.current.itemVertical)
                 ) {
                     Text(
                         text = stringResource(R.string.settings_playback_autoplay_next),
@@ -366,7 +371,8 @@ fun PlaybackSettingsContent(
                 Column(
                     modifier = Modifier
                         .weight(1f)
-                        .padding(end = 8.dp)
+                        .padding(end = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(LocalNarraSpacing.current.itemVertical)
                 ) {
                     Text(
                         text = stringResource(R.string.settings_playback_play_chime),
@@ -420,7 +426,8 @@ fun PlaybackSettingsContent(
                 Column(
                     modifier = Modifier
                         .weight(1f)
-                        .padding(end = 8.dp)
+                        .padding(end = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(LocalNarraSpacing.current.itemVertical)
                 ) {
                     Text(
                         text = stringResource(R.string.settings_playback_read_alt_text),
@@ -456,7 +463,8 @@ fun PlaybackSettingsContent(
                 Column(
                     modifier = Modifier
                         .weight(1f)
-                        .padding(end = 8.dp)
+                        .padding(end = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(LocalNarraSpacing.current.itemVertical)
                 ) {
                     Text(
                         text = stringResource(R.string.settings_playback_shorten_hyperlinks),

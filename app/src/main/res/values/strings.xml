@@ -43,8 +43,8 @@
     <!-- Queue Screen -->
     <string name="queue_empty_message">Your queue is empty. Add some texts to get started!</string>
     <string name="queue_removed_message">Removed from queue</string>
-    <string name="queue_time_left_prefix">Time left: </string>
-    <string name="queue_and"> and </string>
+    <string name="queue_time_left_prefix">"Time left: "</string>
+    <string name="queue_and">" and "</string>
 
     <!-- History Screen -->
     <string name="history_empty_message">Your history is empty.</string>
@@ -166,6 +166,8 @@
     <string name="action_undo">Undo</string>
     <string name="action_search">Search</string>
     <string name="action_sort">Sort</string>
+    <string name="action_mark_all_played">Mark all as played</string>
+    <string name="action_mark_all_unplayed">Mark all as unplayed</string>
     <string name="action_refresh">Refresh</string>
     <string name="action_clear">Clear</string>
     <string name="action_menu">Menu</string>
@@ -229,6 +231,8 @@
     <string name="settings_voices_voice_data_desc">Download or delete TTS models</string>
     <string name="settings_downloads_refresh_inbox">Refresh inbox</string>
     <string name="settings_downloads_refresh_inbox_desc">Automatic inbox refresh interval</string>
+    <string name="settings_downloads_inbox_limit">Initial Inbox limit</string>
+    <string name="settings_downloads_inbox_limit_desc">Number of recent articles to keep in the Inbox when adding a new feed.</string>
     <string name="settings_voices_android_engine_name">Android\'s native TTS</string>
     <string name="settings_voices_ondevice_engine_name">On-device AI (Sherpa-ONNX)</string>
     <string name="settings_voices_selected_label">(Selected)</string>

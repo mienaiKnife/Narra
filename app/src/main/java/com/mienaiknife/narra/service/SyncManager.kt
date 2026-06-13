@@ -17,16 +17,20 @@
 package com.mienaiknife.narra.service
 
 import androidx.room.InvalidationTracker
+import androidx.work.Constraints
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.ExistingWorkPolicy
+import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.workDataOf
 import com.mienaiknife.narra.data.local.AppDatabase
+import com.mienaiknife.narra.data.settings.DownloadSettingsManager
 import com.mienaiknife.narra.data.settings.SyncSettingsManager
 import com.mienaiknife.narra.data.workers.DatabaseExportWorker
 import com.mienaiknife.narra.data.workers.DatabaseImportWorker
+import com.mienaiknife.narra.data.workers.FeedRefreshWorker
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -49,6 +53,7 @@ import javax.inject.Singleton
 class SyncManager @Inject constructor(
     private val appDatabase: AppDatabase,
     private val syncSettingsManager: SyncSettingsManager,
+    private val downloadSettingsManager: DownloadSettingsManager,
     private val workManager: WorkManager
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
@@ -89,6 +94,17 @@ class SyncManager @Inject constructor(
                         cancelImportCheck()
                     }
                 }
+            }
+        }
+
+        scope.launch {
+            combine(
+                downloadSettingsManager.refreshInterval,
+                downloadSettingsManager.downloadOverWifiOnly
+            ) { interval, wifiOnly ->
+                interval to wifiOnly
+            }.collectLatest { (interval, wifiOnly) ->
+                scheduleFeedRefresh(interval, wifiOnly)
             }
         }
     }
@@ -159,8 +175,8 @@ class SyncManager @Inject constructor(
     private fun scheduleImportCheck() {
         val importRequest = PeriodicWorkRequestBuilder<DatabaseImportWorker>(1, TimeUnit.HOURS)
             .setConstraints(
-                androidx.work.Constraints.Builder()
-                    .setRequiredNetworkType(androidx.work.NetworkType.CONNECTED)
+                Constraints.Builder()
+                    .setRequiredNetworkType(NetworkType.CONNECTED)
                     .build()
             )
             .build()
@@ -174,5 +190,35 @@ class SyncManager @Inject constructor(
 
     private fun cancelImportCheck() {
         workManager.cancelUniqueWork("database_auto_import")
+    }
+
+    private fun scheduleFeedRefresh(interval: String, wifiOnly: Boolean) {
+        if (interval == "Never") {
+            workManager.cancelUniqueWork("feed_refresh")
+            return
+        }
+
+        val intervalMinutes = when (interval) {
+            "1 hour" -> 60L
+            "3 hours" -> 180L
+            "6 hours" -> 360L
+            "12 hours" -> 720L
+            "24 hours" -> 1440L
+            else -> 720L // Default to 12 hours
+        }
+
+        val constraints = Constraints.Builder()
+            .setRequiredNetworkType(if (wifiOnly) NetworkType.UNMETERED else NetworkType.CONNECTED)
+            .build()
+
+        val refreshRequest = PeriodicWorkRequestBuilder<FeedRefreshWorker>(intervalMinutes, TimeUnit.MINUTES)
+            .setConstraints(constraints)
+            .build()
+
+        workManager.enqueueUniquePeriodicWork(
+            "feed_refresh",
+            ExistingPeriodicWorkPolicy.UPDATE,
+            refreshRequest
+        )
     }
 }

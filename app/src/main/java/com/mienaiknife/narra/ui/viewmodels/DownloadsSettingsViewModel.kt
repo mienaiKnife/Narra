@@ -46,6 +46,7 @@ class DownloadsSettingsViewModel @Inject constructor(
     val uiState: StateFlow<DownloadsSettingsUiState> = combine(
         downloadSettingsManager.downloadOverWifiOnly,
         downloadSettingsManager.refreshInterval,
+        downloadSettingsManager.inboxInitialLimit,
         syncSettingsManager.autoExportEnabled,
         syncSettingsManager.autoImportEnabled,
         syncSettingsManager.autoExportUri,
@@ -56,12 +57,13 @@ class DownloadsSettingsViewModel @Inject constructor(
         DownloadsSettingsUiState(
             downloadOverWifiOnly = args[0] as Boolean,
             refreshInterval = args[1] as String,
-            autoExportEnabled = args[2] as Boolean,
-            autoImportEnabled = args[3] as Boolean,
-            autoExportUri = args[4] as String?,
-            lastExportTimestamp = args[5] as Long,
-            pendingImport = args[6] as Boolean,
-            message = args[7] as UiText?
+            inboxInitialLimit = args[2] as String,
+            autoExportEnabled = args[3] as Boolean,
+            autoImportEnabled = args[4] as Boolean,
+            autoExportUri = args[5] as String?,
+            lastExportTimestamp = args[6] as Long,
+            pendingImport = args[7] as Boolean,
+            message = args[8] as UiText?
         )
     }.stateIn(
         scope = viewModelScope,
@@ -78,6 +80,12 @@ class DownloadsSettingsViewModel @Inject constructor(
     fun setRefreshInterval(interval: String) {
         viewModelScope.launch {
             downloadSettingsManager.setRefreshInterval(interval)
+        }
+    }
+
+    fun setInboxInitialLimit(limit: String) {
+        viewModelScope.launch {
+            downloadSettingsManager.setInboxInitialLimit(limit)
         }
     }
 

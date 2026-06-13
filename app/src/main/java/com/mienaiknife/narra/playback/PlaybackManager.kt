@@ -225,12 +225,14 @@ class PlaybackManager @Inject constructor(
         if (playbackState == Player.STATE_ENDED || currentTime - lastPersistenceTime >= PERSISTENCE_THRESHOLD_MS) {
             lastPersistenceTime = currentTime
             scope.launch {
-                repository.updateArticleProgress(
-                    article.id,
-                    progress,
-                    if (playbackState == Player.STATE_ENDED) 0 else currentPara,
-                    currentWordOffset
-                )
+                withContext(kotlinx.coroutines.NonCancellable) {
+                    repository.updateArticleProgress(
+                        article.id,
+                        progress,
+                        if (playbackState == Player.STATE_ENDED) 0 else currentPara,
+                        currentWordOffset
+                    )
+                }
             }
         }
     }
@@ -306,7 +308,9 @@ class PlaybackManager @Inject constructor(
         playWhenReady: Boolean = true,
         isAutomatic: Boolean = false
     ) {
-        if (_currentArticle.value?.id != article.id) {
+        val isSameArticle = _currentArticle.value?.id == article.id
+        
+        if (!isSameArticle) {
             transitionJob?.cancel()
             
             _currentArticle.value = article
@@ -399,6 +403,16 @@ class PlaybackManager @Inject constructor(
                     }
                 }
             }
+        } else {
+            // If it's the same article, just update the article metadata (like favorite status)
+            // but DON'T reset the paragraph index or position.
+            _currentArticle.value = article
+            
+            // If playWhenReady is true and we're not already playing, start it
+            if (playWhenReady && !ttsPlayer.isPlaying) {
+                startPlaybackService()
+                ttsPlayer.play()
+            }
         }
     }
 
@@ -417,10 +431,14 @@ class PlaybackManager @Inject constructor(
             }
 
             if (nextArticle != null) {
-                repository.markAsFinished(finishedArticle.id)
+                withContext(kotlinx.coroutines.NonCancellable) {
+                    repository.markAsFinished(finishedArticle.id)
+                }
                 setCurrentArticle(nextArticle, isAutomatic = isAutomatic)
             } else {
-                repository.markAsFinished(finishedArticle.id)
+                withContext(kotlinx.coroutines.NonCancellable) {
+                    repository.markAsFinished(finishedArticle.id)
+                }
                 _currentArticle.value = null
                 _isPlaying.value = false
                 // Queue finished, stop player and release locks

@@ -32,6 +32,7 @@ import com.mienaiknife.narra.data.settings.DownloadSettingsManager
 import com.mienaiknife.narra.domain.NarraError
 import com.mienaiknife.narra.domain.repository.ContentRepository
 import com.mienaiknife.narra.ui.utils.NetworkMonitor
+import com.mienaiknife.narra.ui.utils.UrlUtils
 import com.mienaiknife.narra.utils.DateUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -156,30 +157,30 @@ class ContentRepositoryImpl @Inject constructor(
         webDataSource.downloadArticle(url).mapCatching { remoteArticle ->
             val nextOrder = articleDao.getNextQueueOrder()
             
-            val localImageUrl = remoteArticle.imageUrl?.let { imageUrl ->
+            val localImageUrl = (remoteArticle.imageUrl ?: existingArticle?.imageUrl)?.let { imageUrl ->
                 val fileName = "web_${remoteArticle.id.hashCode()}_${System.currentTimeMillis()}.png"
                 imageDataSource.downloadAndSaveImage(imageUrl, fileName)
             }
 
             val articleEntity = ArticleEntity(
                 id = existingArticle?.id ?: remoteArticle.id,
-                title = remoteArticle.title,
-                source = remoteArticle.source,
+                title = remoteArticle.title.takeIf { it != "Untitled" } ?: existingArticle?.title ?: "Untitled",
+                source = existingArticle?.source?.takeIf { existingArticle.isFromFeed || !UrlUtils.isUrlOrDomainLike(it) } ?: remoteArticle.source,
                 content = remoteArticle.content,
-                excerpt = remoteArticle.publishedAt, // Using publishedAt as excerpt if available from WebDataSource
-                imageUrl = remoteArticle.imageUrl,
-                localImageUrl = localImageUrl,
+                excerpt = remoteArticle.publishedAt ?: existingArticle?.publishedAt,
+                imageUrl = remoteArticle.imageUrl ?: existingArticle?.imageUrl,
+                localImageUrl = localImageUrl ?: existingArticle?.localImageUrl,
                 url = url,
-                feedUrl = remoteArticle.feedUrl,
-                progress = 0f,
-                currentParagraphIndex = 0,
-                currentWordOffset = 0,
-                publishedAt = remoteArticle.publishedAt,
-                publishedTimestamp = remoteArticle.publishedTimestamp,
+                feedUrl = remoteArticle.feedUrl ?: existingArticle?.feedUrl,
+                progress = existingArticle?.progress ?: 0f,
+                currentParagraphIndex = existingArticle?.currentParagraphIndex ?: 0,
+                currentWordOffset = existingArticle?.currentWordOffset ?: 0,
+                publishedAt = remoteArticle.publishedAt ?: existingArticle?.publishedAt,
+                publishedTimestamp = remoteArticle.publishedTimestamp ?: existingArticle?.publishedTimestamp,
                 duration = DateUtils.estimateReadingTimeMs(remoteArticle.content),
                 isInQueue = true,
                 queueOrder = nextOrder,
-                createdAt = System.currentTimeMillis(),
+                createdAt = existingArticle?.createdAt ?: System.currentTimeMillis(),
                 isFavorite = existingArticle?.isFavorite ?: false,
                 isFromFeed = existingArticle?.isFromFeed ?: false
             )
@@ -249,6 +250,14 @@ class ContentRepositoryImpl @Inject constructor(
 
     override suspend fun markAsUnplayed(id: String) {
         articleDao.markAsUnplayed(id)
+    }
+
+    override suspend fun markAllAsPlayedInFeed(feedUrl: String) {
+        articleDao.markAllAsPlayedInFeed(feedUrl)
+    }
+
+    override suspend fun markAllAsUnplayedInFeed(feedUrl: String) {
+        articleDao.markAllAsUnplayedInFeed(feedUrl)
     }
 
     override suspend fun updateArticleProgress(id: String, progress: Float, paragraphIndex: Int, wordOffset: Int, duration: Long?) {
@@ -323,11 +332,16 @@ class ContentRepositoryImpl @Inject constructor(
                     val articles = result.articles
                     val updatedTitle = result.feedTitle
                     
-                    if (updatedTitle != null && updatedTitle != feed.title && !isUrlOrDomainLike(updatedTitle)) {
+                    if (updatedTitle != null && updatedTitle != feed.title && !UrlUtils.isUrlOrDomainLike(updatedTitle)) {
                         feedDao.insertFeed(feed.copy(title = updatedTitle))
                     }
 
                     val isFirstImport = articleDao.getArticleCountByFeedUrl(feed.url) == 0
+                    val inboxLimitStr = downloadSettingsManager.inboxInitialLimit.first()
+                    val inboxLimit = when (inboxLimitStr) {
+                        "All" -> Int.MAX_VALUE
+                        else -> inboxLimitStr.toIntOrNull() ?: 5
+                    }
                     val sortedArticles = articles.sortedByDescending { it.publishedTimestamp ?: 0L }
 
                     for ((index, article) in sortedArticles.withIndex()) {
@@ -345,7 +359,7 @@ class ContentRepositoryImpl @Inject constructor(
                         }
 
                         if (existingArticle == null) {
-                            val isOldOnFirstImport = isFirstImport && index >= 5
+                            val isOldOnFirstImport = isFirstImport && index >= inboxLimit
 
                             val localImageUrl = article.imageUrl?.let { imageUrl ->
                                 val fileName = "feed_${article.id.hashCode()}_${System.currentTimeMillis()}.png"
@@ -365,10 +379,11 @@ class ContentRepositoryImpl @Inject constructor(
                                 publishedAt = article.publishedAt,
                                 publishedTimestamp = article.publishedTimestamp,
                                 isFromFeed = true,
+                                isInInbox = !isOldOnFirstImport,
                                 isInQueue = false,
-                                progress = if (isOldOnFirstImport) 1.0f else 0.0f,
-                                finishedAt = if (isOldOnFirstImport) System.currentTimeMillis() else null,
-                                lastPlayedAt = if (isOldOnFirstImport) System.currentTimeMillis() else null,
+                                progress = 0.0f,
+                                finishedAt = null,
+                                lastPlayedAt = null,
                                 createdAt = System.currentTimeMillis()
                             )
                             articleDao.insertArticle(articleEntity)
@@ -376,6 +391,13 @@ class ContentRepositoryImpl @Inject constructor(
                             if (feed.notificationsEnabled && articleEntity.progress < 1.0f) {
                                 notificationHelper.showNewArticleNotification(feed, articleEntity)
                             }
+                        } else if (!existingArticle.isFromFeed) {
+                            // Article exists but was imported from web; update it to link to feed
+                            articleDao.insertArticle(existingArticle.copy(
+                                isFromFeed = true,
+                                feedUrl = feed.url,
+                                source = updatedTitle ?: existingArticle.source
+                            ))
                         }
                     }
                 }
@@ -473,14 +495,5 @@ class ContentRepositoryImpl @Inject constructor(
         } catch (e: Exception) {
             Result.failure(NarraError.Unknown(e))
         }
-    }
-
-    private fun isUrlOrDomainLike(text: String): Boolean {
-        return text.contains("://") || 
-               text.contains("www.") || 
-               text.matches(Regex(".*\\.[a-z]{2,6}$", RegexOption.IGNORE_CASE)) ||
-               text == "RSS" || 
-               text == "Atom" || 
-               text == "Untitled Feed"
     }
 }

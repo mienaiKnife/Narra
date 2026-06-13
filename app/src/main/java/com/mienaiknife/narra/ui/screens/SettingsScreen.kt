@@ -66,6 +66,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.navigation.compose.rememberNavController
 import com.mienaiknife.narra.R
 import com.mienaiknife.narra.ui.components.BottomNavBar
+import com.mienaiknife.narra.ui.theme.LocalNarraSpacing
 import com.mienaiknife.narra.ui.theme.NarraTheme
 
 @Composable
@@ -169,7 +170,7 @@ fun SettingsScreen(
                     filteredSettings.forEach { result ->
                         androidx.compose.material3.DropdownMenuItem(
                             text = {
-                                Column {
+                                Column(verticalArrangement = Arrangement.spacedBy(LocalNarraSpacing.current.itemVertical)) {
                                     Text(stringResource(result.titleRes), style = MaterialTheme.typography.bodyLarge)
                                     Text(
                                         stringResource(result.subtitleRes),
@@ -257,7 +258,10 @@ fun SettingsListItem(item: SettingsItem) {
         )
         Column(
             modifier = Modifier.weight(1f),
-            verticalArrangement = Arrangement.Center
+            verticalArrangement = Arrangement.spacedBy(
+                LocalNarraSpacing.current.itemVertical,
+                Alignment.CenterVertically
+            )
         ) {
             Text(
                 text = item.title,

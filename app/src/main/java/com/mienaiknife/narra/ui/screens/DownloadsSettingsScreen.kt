@@ -22,6 +22,7 @@ import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -65,6 +66,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.rememberNavController
 import com.mienaiknife.narra.ui.components.BottomNavBar
 import com.mienaiknife.narra.ui.components.SettingDropDownItem
+import com.mienaiknife.narra.ui.theme.LocalNarraSpacing
 import com.mienaiknife.narra.ui.theme.NarraTheme
 import com.mienaiknife.narra.ui.viewmodels.DownloadsSettingsUiState
 import com.mienaiknife.narra.ui.viewmodels.DownloadsSettingsViewModel
@@ -169,6 +171,7 @@ fun DownloadsSettingsScreen(
         highlightSetting = highlightSetting,
         onDownloadOverWifiOnlyChange = { viewModel.setDownloadOverWifiOnly(it) },
         onRefreshIntervalChange = { viewModel.setRefreshInterval(it) },
+        onInboxInitialLimitChange = { viewModel.setInboxInitialLimit(it) },
         onImportOpml = { importLauncher.launch(arrayOf("application/xml", "text/xml", "application/octet-stream", "*/*")) },
         onExportOpml = { exportLauncher.launch("narra-subscriptions.opml") },
         onBackupDatabase = { backupLauncher.launch("narra-backup.db") },
@@ -193,6 +196,7 @@ fun DownloadsSettingsContent(
     highlightSetting: String? = null,
     onDownloadOverWifiOnlyChange: (Boolean) -> Unit,
     onRefreshIntervalChange: (String) -> Unit,
+    onInboxInitialLimitChange: (String) -> Unit,
     onImportOpml: () -> Unit,
     onExportOpml: () -> Unit,
     onBackupDatabase: () -> Unit,
@@ -205,6 +209,7 @@ fun DownloadsSettingsContent(
 ) {
     val downloadOverWifiOnlyRequester = remember { BringIntoViewRequester() }
     val refreshIntervalRequester = remember { BringIntoViewRequester() }
+    val inboxInitialLimitRequester = remember { BringIntoViewRequester() }
     val backupDatabaseRequester = remember { BringIntoViewRequester() }
     val restoreDatabaseRequester = remember { BringIntoViewRequester() }
     val autoExportEnabledRequester = remember { BringIntoViewRequester() }
@@ -218,6 +223,7 @@ fun DownloadsSettingsContent(
         when (highlightSetting) {
             "downloadOverWifiOnly" -> downloadOverWifiOnlyRequester.bringIntoView()
             "refreshInterval" -> refreshIntervalRequester.bringIntoView()
+            "inboxInitialLimit" -> inboxInitialLimitRequester.bringIntoView()
             "exportDatabase" -> backupDatabaseRequester.bringIntoView()
             "importDatabase" -> restoreDatabaseRequester.bringIntoView()
             "autoExportDatabase" -> autoExportEnabledRequester.bringIntoView()
@@ -282,7 +288,8 @@ fun DownloadsSettingsContent(
                 Column(
                     modifier = Modifier
                         .weight(1f)
-                        .padding(end = 8.dp)
+                        .padding(end = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(LocalNarraSpacing.current.itemVertical)
                 ) {
                     Text(
                         text = stringResource(R.string.settings_downloads_wifi_only),
@@ -324,6 +331,17 @@ fun DownloadsSettingsContent(
                     .flashHighlight(highlightSetting == "refreshInterval")
             )
 
+            SettingDropDownItem(
+                title = stringResource(R.string.settings_downloads_inbox_limit),
+                subtitle = stringResource(R.string.settings_downloads_inbox_limit_desc),
+                selectedValue = uiState.inboxInitialLimit,
+                options = listOf("1", "5", "10", "20", "50", "All"),
+                onValueChange = onInboxInitialLimitChange,
+                modifier = Modifier
+                    .bringIntoViewRequester(inboxInitialLimitRequester)
+                    .flashHighlight(highlightSetting == "inboxInitialLimit")
+            )
+
             Text(
                 text = stringResource(R.string.settings_downloads_opml_section),
                 style = MaterialTheme.typography.titleMedium,
@@ -337,7 +355,8 @@ fun DownloadsSettingsContent(
                     .bringIntoViewRequester(importFeedsRequester)
                     .flashHighlight(highlightSetting == "importFeeds")
                     .clickable { onImportOpml() }
-                    .padding(vertical = 8.dp)
+                    .padding(vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(LocalNarraSpacing.current.itemVertical)
             ) {
                 Text(
                     text = stringResource(R.string.settings_downloads_import_feeds),
@@ -356,7 +375,8 @@ fun DownloadsSettingsContent(
                     .bringIntoViewRequester(exportFeedsRequester)
                     .flashHighlight(highlightSetting == "exportFeeds")
                     .clickable { onExportOpml() }
-                    .padding(vertical = 8.dp)
+                    .padding(vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(LocalNarraSpacing.current.itemVertical)
             ) {
                 Text(
                     text = stringResource(R.string.settings_downloads_export_feeds),
@@ -382,7 +402,8 @@ fun DownloadsSettingsContent(
                     .bringIntoViewRequester(backupDatabaseRequester)
                     .flashHighlight(highlightSetting == "exportDatabase")
                     .clickable { onBackupDatabase() }
-                    .padding(vertical = 12.dp)
+                    .padding(vertical = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(LocalNarraSpacing.current.itemVertical)
             ) {
                 Text(
                     text = stringResource(R.string.settings_downloads_export_db),
@@ -409,7 +430,8 @@ fun DownloadsSettingsContent(
                     .bringIntoViewRequester(restoreDatabaseRequester)
                     .flashHighlight(highlightSetting == "importDatabase")
                     .clickable { onRestoreDatabase() }
-                    .padding(vertical = 8.dp)
+                    .padding(vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(LocalNarraSpacing.current.itemVertical)
             ) {
                 Text(
                     text = stringResource(R.string.settings_downloads_import_db),
@@ -433,7 +455,8 @@ fun DownloadsSettingsContent(
                 Column(
                     modifier = Modifier
                         .weight(1f)
-                        .padding(end = 8.dp)
+                        .padding(end = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(LocalNarraSpacing.current.itemVertical)
                 ) {
                     Text(
                         text = stringResource(R.string.settings_downloads_auto_export),
@@ -543,7 +566,8 @@ fun DownloadsSettingsContent(
                     .bringIntoViewRequester(deleteDatabaseRequester)
                     .flashHighlight(highlightSetting == "deleteDatabase")
                     .clickable { onDeleteDatabase() }
-                    .padding(vertical = 8.dp)
+                    .padding(vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(LocalNarraSpacing.current.itemVertical)
             ) {
                 Text(
                     text = stringResource(R.string.settings_downloads_delete_db),
@@ -579,6 +603,7 @@ fun DownloadsSettingsScreenPreview() {
                     highlightSetting = null,
                     onDownloadOverWifiOnlyChange = {},
                     onRefreshIntervalChange = {},
+                    onInboxInitialLimitChange = {},
                     onImportOpml = {},
                     onExportOpml = {},
                     onBackupDatabase = {},

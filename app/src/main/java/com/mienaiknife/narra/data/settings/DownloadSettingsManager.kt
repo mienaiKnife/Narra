@@ -33,6 +33,7 @@ class DownloadSettingsManager @Inject constructor(
 ) {
     private val downloadOverWifiOnlyKey = booleanPreferencesKey("download_over_wifi_only")
     private val refreshIntervalKey = stringPreferencesKey("refresh_interval")
+    private val inboxInitialLimitKey = stringPreferencesKey("inbox_initial_limit")
 
     val downloadOverWifiOnly: Flow<Boolean> = context.dataStore.data.map { prefs ->
         prefs[downloadOverWifiOnlyKey] ?: true
@@ -40,6 +41,10 @@ class DownloadSettingsManager @Inject constructor(
 
     val refreshInterval: Flow<String> = context.dataStore.data.map { prefs ->
         prefs[refreshIntervalKey] ?: "12 hours"
+    }
+
+    val inboxInitialLimit: Flow<String> = context.dataStore.data.map { prefs ->
+        prefs[inboxInitialLimitKey] ?: "5"
     }
 
     suspend fun setDownloadOverWifiOnly(enabled: Boolean) {
@@ -51,6 +56,12 @@ class DownloadSettingsManager @Inject constructor(
     suspend fun setRefreshInterval(interval: String) {
         context.dataStore.edit { prefs ->
             prefs[refreshIntervalKey] = interval
+        }
+    }
+
+    suspend fun setInboxInitialLimit(limit: String) {
+        context.dataStore.edit { prefs ->
+            prefs[inboxInitialLimitKey] = limit
         }
     }
 }

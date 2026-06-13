@@ -31,6 +31,7 @@ import com.mienaiknife.narra.domain.NarraError
 import com.mienaiknife.narra.domain.models.TtsModel
 import com.mienaiknife.narra.domain.models.TtsModelType
 import com.mienaiknife.narra.domain.repository.ModelRepository
+import com.mienaiknife.narra.utils.Log
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -300,7 +301,7 @@ class ModelRepositoryImpl @Inject constructor(
                 
                 val totalLength = if (isPartial) downloadedBytes + contentLength else contentLength
                 
-                android.util.Log.d("ModelRepository", "Downloading $url, isPartial: $isPartial, totalLength: $totalLength")
+                Log.d("ModelRepository", "Downloading $url, isPartial: $isPartial, totalLength: $totalLength")
                 
                 val bodyStream = body.byteStream()
                 
@@ -330,16 +331,16 @@ class ModelRepositoryImpl @Inject constructor(
                     }
                     onProgress(1.0f)
                 }
-                android.util.Log.d("ModelRepository", "Finished downloading $url")
+                Log.d("ModelRepository", "Finished downloading $url")
             }
         } catch (e: Exception) {
-            android.util.Log.e("ModelRepository", "Exception during download of $url", e)
+            Log.e("ModelRepository", "Exception during download of $url", e)
             throw e
         }
     }
 
     internal suspend fun extractTarBz2(archiveFile: File, targetDir: File) {
-        android.util.Log.i("ModelRepository", "Extracting ${archiveFile.name} to ${targetDir.absolutePath}")
+        Log.i("ModelRepository", "Extracting ${archiveFile.name} to ${targetDir.absolutePath}")
         val targetCanonicalPath = targetDir.canonicalPath
         withContext(Dispatchers.IO) {
             FileInputStream(archiveFile).use { fis ->
@@ -348,7 +349,7 @@ class ModelRepositoryImpl @Inject constructor(
                         var entry = tais.nextEntry
                         while (entry != null) {
                             yield()
-                            android.util.Log.i("ModelRepository", "Archive entry: ${entry.name}, isDirectory: ${entry.isDirectory}")
+                            Log.i("ModelRepository", "Archive entry: ${entry.name}, isDirectory: ${entry.isDirectory}")
                             val curFile = File(targetDir, entry.name)
                             
                             // Path traversal validation (Tar Slip protection)
@@ -358,7 +359,7 @@ class ModelRepositoryImpl @Inject constructor(
 
                             if (!entry.isDirectory) {
                                 curFile.parentFile?.mkdirs()
-                                android.util.Log.i("ModelRepository", "Writing to ${curFile.absolutePath}")
+                                Log.i("ModelRepository", "Writing to ${curFile.absolutePath}")
                                 FileOutputStream(curFile).use { fos ->
                                     // Custom copyTo with yield for cancellation
                                     val buffer = ByteArray(8192)

@@ -10,6 +10,7 @@
           <set>
             <option value="/var/home/grey/Documents/My Coding Projects/Android/Narra" />
             <option value="/var/home/grey/Documents/My Coding Projects/Android/Narra/app" />
+            <option value="/var/home/grey/Documents/My Coding Projects/Android/Narra/benchmark" />
           </set>
         </option>
       </GradleProjectSettings>

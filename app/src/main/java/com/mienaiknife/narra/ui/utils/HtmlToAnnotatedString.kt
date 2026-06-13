@@ -215,61 +215,49 @@ object HtmlParser {
 fun AnnotatedString.toSpeakableText(context: Context, shortenLinks: Boolean = true): String {
     val result = StringBuilder(text)
     
-    // Handle footnotes: replace with spaces
+    // 1. Handle footnotes: replace with spaces to preserve length
     val footnotes = getStringAnnotations("footnote", 0, length)
     for (annotation in footnotes) {
         for (i in annotation.start until annotation.end) {
-            result.setCharAt(i, ' ')
+            if (i < result.length) result.setCharAt(i, ' ')
         }
     }
 
-    // Handle links: if link text is just the URL, replace with a summary
+    if (!shortenLinks) return result.toString()
+
+    // 2. Handle links: shorten if they look like URLs, but preserve length via padding
     val links = getStringAnnotations("link", 0, length)
-    // Process links in reverse order to not mess up offsets if we were changing length,
-    // but here we are keeping indices aligned with the original text for simplicity
-    // and just replacing characters. Actually, since we might want to "speak" something
-    // different, we should build a new string.
-    
-    val output = StringBuilder()
-    var lastIndex = 0
-    
-    val allAnnotations = (footnotes + links).sortedBy { it.start }
-    
     val linkToPrefix = context.getString(com.mienaiknife.narra.R.string.reader_link_to)
 
-    for (annotation in allAnnotations) {
-        if (annotation.end <= lastIndex) continue
-        
-        val start = maxOf(lastIndex, annotation.start)
-        if (lastIndex < start) {
-            output.append(text.substring(lastIndex, start))
-        }
-        
-        if (annotation.tag == "footnote") {
-            // Footnotes are skipped (replaced by space to maintain cadence/separation)
-            output.append(" ")
-        } else if (annotation.tag == "link") {
-            // Use the part of the link text that we haven't processed yet if overlapping,
-            // but usually links don't overlap in a way that makes sense to split.
-            // For simplicity, if it's a link, we process the whole item but only if it starts after lastIndex
-            // or we adjust the substring.
-            val effectiveStart = maxOf(lastIndex, annotation.start)
-            if (effectiveStart < annotation.end) {
-                val linkText = text.substring(effectiveStart, annotation.end).trim()
-                val url = annotation.item
-                
-                if (shortenLinks && isUrlLike(linkText)) {
-                    output.append(linkToPrefix.format(simplifyUrl(url)))
-                } else {
-                    output.append(linkText)
+    for (annotation in links) {
+        val start = annotation.start
+        val end = annotation.end
+        val originalLength = end - start
+        if (originalLength <= 0) continue
+
+        val linkText = text.substring(start, end).trim()
+        if (isUrlLike(linkText)) {
+            val simplified = try {
+                linkToPrefix.format(simplifyUrl(annotation.item))
+            } catch (_: Exception) {
+                linkText
+            }
+            
+            if (simplified.length <= originalLength) {
+                val padded = simplified.padEnd(originalLength, ' ')
+                for (i in 0 until originalLength) {
+                    result.setCharAt(start + i, padded[i])
+                }
+            } else {
+                // Truncate if simplified text is somehow longer than original (rare for URLs)
+                for (i in 0 until originalLength) {
+                    result.setCharAt(start + i, simplified[i])
                 }
             }
         }
-        lastIndex = annotation.end
     }
-    output.append(text.substring(lastIndex))
     
-    return output.toString()
+    return result.toString()
 }
 
 private fun isUrlLike(text: String): Boolean {
