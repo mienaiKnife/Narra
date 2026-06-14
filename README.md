@@ -2,6 +2,9 @@
 
 Narra is a mobile app (currently Android exclusive) that allows users to listen to webpages and ebooks read aloud by TTS in a podcast-like experience. Choose from a wide variety of TTS voices, subscribe to the RSS feeds of your favourite blogs, and queue up several texts to listen to without ads.
 
+## Disclaimer
+This project was vibecoded by someone who didn't start the project with the skills required to write this code by hand. Gemini Flash 3 has been used extensively due to its integration with Android Studio. I understand that I have a lot to learn in order to be a good head dev for this project, and I am sharing this repo with the hope of getting it looked over by more qualified devs than myself. I can't guaruntee that data won't be lost when updating, so please keep backups of the articles and ebooks you add to the app (OPML exports are handy for backing up feeds.) The database backup feature probably shouldn't be counted on for backups right now.
+
 ## Getting Started
 
 Follow these steps to set up the development environment and build Narra.
