@@ -131,7 +131,7 @@ fun AboutScreen(onBack: () -> Unit, onNavigateToLicenses: () -> Unit) {
                         )
                     },
                     modifier = Modifier.clickable {
-                        // TODO: Open repository URL
+                        uriHandler.openUri("https://github.com/mienaiKnife/Narra")
                     },
                     colors = ListItemDefaults.colors(containerColor = Color.Transparent)
                 )
@@ -169,7 +169,7 @@ fun AboutScreen(onBack: () -> Unit, onNavigateToLicenses: () -> Unit) {
                         )
                     },
                     modifier = Modifier.clickable {
-                        // TODO: Open privacy policy URL
+                        uriHandler.openUri("https://github.com/mienaiKnife/Narra/blob/main/docs/PRIVACY.md")
                     },
                     colors = ListItemDefaults.colors(containerColor = Color.Transparent)
                 )
