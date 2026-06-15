@@ -28,8 +28,11 @@ import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.Column
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.platform.LocalLayoutDirection
@@ -75,7 +78,10 @@ fun AppNavigation(themeViewModel: ThemeViewModel, initialArticleId: String? = nu
     
     val isReaderScreen = navBackStackEntry?.destination?.hasRoute<NavDestination.Reader>() == true
 
+    val snackbarHostState = remember { SnackbarHostState() }
+
     Scaffold(
+        snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         bottomBar = {
             AnimatedVisibility(
                 visible = !isReaderScreen,
@@ -110,8 +116,15 @@ fun AppNavigation(themeViewModel: ThemeViewModel, initialArticleId: String? = nu
         ) {
             composable<NavDestination.Home> { 
                 HomeScreen(
+                    snackbarHostState = snackbarHostState,
                     onArticleClick = { articleId -> navController.navigate(NavDestination.Reader(articleId)) },
-                    onAddClick = { navController.navigate(NavDestination.Add) }
+                    onAddClick = { 
+                        navController.navigate(NavDestination.Add) {
+                            popUpTo(NavDestination.Home) { saveState = true }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    }
                 ) 
             }
             composable<NavDestination.Queue> { 
@@ -120,7 +133,12 @@ fun AppNavigation(themeViewModel: ThemeViewModel, initialArticleId: String? = nu
             composable<NavDestination.History> { 
                 HistoryScreen(onBack = { navController.popBackStack() }) 
             }
-            composable<NavDestination.Add> { AddScreen(onArticleAdded = { navController.navigate(NavDestination.Home) }) }
+            composable<NavDestination.Add> { 
+                AddScreen(
+                    snackbarHostState = snackbarHostState,
+                    onArticleAdded = { navController.navigate(NavDestination.Home) }
+                ) 
+            }
             composable<NavDestination.Inbox> {
                 InboxScreen(
                     onNavigateToFeeds = { navController.navigate(NavDestination.Feeds) }

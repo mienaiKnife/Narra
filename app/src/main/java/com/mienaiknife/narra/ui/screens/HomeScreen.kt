@@ -87,12 +87,12 @@ import com.mienaiknife.narra.ui.viewmodels.HomeViewModel
 
 @Composable
 fun HomeScreen(
+    snackbarHostState: SnackbarHostState,
     onArticleClick: (String) -> Unit,
     onAddClick: () -> Unit,
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val snackbarHostState = remember { SnackbarHostState() }
 
     val context = LocalContext.current
     LaunchedEffect(Unit) {
@@ -129,112 +129,103 @@ fun HomeScreenContent(
     val pullToRefreshState = rememberPullToRefreshState()
     val isRefreshing = (uiState as? com.mienaiknife.narra.ui.viewmodels.HomeUiState.Success)?.isRefreshing ?: false
 
-    Scaffold(
-        snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
-        containerColor = MaterialTheme.colorScheme.background,
+    Column(
         modifier = modifier
             .fillMaxSize()
-            .statusBarsPadding(),
-        contentWindowInsets = androidx.compose.foundation.layout.WindowInsets(0, 0, 0, 0)
-    ) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .padding(innerPadding)
-                .fillMaxSize()
-        ) {
-            Spacer(modifier = Modifier.height(16.dp))
+            .statusBarsPadding()
+    ) {
+        Spacer(modifier = Modifier.height(16.dp))
 
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(min = 48.dp)
-                    .padding(horizontal = 16.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = stringResource(R.string.nav_home),
-                    style = MaterialTheme.typography.headlineSmall,
-                    color = MaterialTheme.colorScheme.onBackground
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = 48.dp)
+                .padding(horizontal = 16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = stringResource(R.string.nav_home),
+                style = MaterialTheme.typography.headlineSmall,
+                color = MaterialTheme.colorScheme.onBackground
+            )
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        PullToRefreshBox(
+            isRefreshing = isRefreshing,
+            onRefresh = onRefresh,
+            state = pullToRefreshState,
+            modifier = Modifier.weight(1f),
+            indicator = {
+                PullToRefreshDefaults.Indicator(
+                    state = pullToRefreshState,
+                    isRefreshing = isRefreshing,
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.align(Alignment.TopCenter)
                 )
             }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            PullToRefreshBox(
-                isRefreshing = isRefreshing,
-                onRefresh = onRefresh,
-                state = pullToRefreshState,
-                modifier = Modifier.weight(1f),
-                indicator = {
-                    PullToRefreshDefaults.Indicator(
-                        state = pullToRefreshState,
-                        isRefreshing = isRefreshing,
-                        containerColor = MaterialTheme.colorScheme.surface,
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.align(Alignment.TopCenter)
-                    )
+        ) {
+            when (uiState) {
+                is com.mienaiknife.narra.ui.viewmodels.HomeUiState.Loading -> {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .verticalScroll(scrollState),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        androidx.compose.material3.CircularProgressIndicator()
+                    }
                 }
-            ) {
-                when (uiState) {
-                    is com.mienaiknife.narra.ui.viewmodels.HomeUiState.Loading -> {
-                        Box(
+                is com.mienaiknife.narra.ui.viewmodels.HomeUiState.Success -> {
+                    if (uiState.continueListening.isNotEmpty() || uiState.newFromFeeds.isNotEmpty() || uiState.favoriteArticles.isNotEmpty()) {
+                        Column(
                             modifier = Modifier
-                                .fillMaxSize()
-                                .verticalScroll(scrollState),
-                            contentAlignment = Alignment.Center
+                                .fillMaxWidth()
+                                .verticalScroll(scrollState)
                         ) {
-                            androidx.compose.material3.CircularProgressIndicator()
-                        }
-                    }
-                    is com.mienaiknife.narra.ui.viewmodels.HomeUiState.Success -> {
-                        if (uiState.continueListening.isNotEmpty() || uiState.newFromFeeds.isNotEmpty() || uiState.favoriteArticles.isNotEmpty()) {
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .verticalScroll(scrollState)
-                            ) {
-                                if (uiState.continueListening.isNotEmpty()) {
-                                    ArticleCarousel(
-                                        title = stringResource(R.string.home_continue_listening),
-                                        articles = uiState.continueListening,
-                                        onArticleClick = onArticleClick
-                                    )
-                                    Spacer(modifier = Modifier.height(24.dp))
-                                }
-
-                                if (uiState.newFromFeeds.isNotEmpty()) {
-                                    ArticleCarousel(
-                                        title = stringResource(R.string.home_new_from_feeds),
-                                        articles = uiState.newFromFeeds,
-                                        onArticleClick = onArticleClick
-                                    )
-                                    Spacer(modifier = Modifier.height(24.dp))
-                                }
-
-                                if (uiState.favoriteArticles.isNotEmpty()) {
-                                    ArticleCarousel(
-                                        title = stringResource(R.string.home_favorites),
-                                        articles = uiState.favoriteArticles,
-                                        onArticleClick = onArticleClick
-                                    )
-                                    Spacer(modifier = Modifier.height(24.dp))
-                                }
-
-                                Spacer(modifier = Modifier.height(32.dp))
+                            if (uiState.continueListening.isNotEmpty()) {
+                                ArticleCarousel(
+                                    title = stringResource(R.string.home_continue_listening),
+                                    articles = uiState.continueListening,
+                                    onArticleClick = onArticleClick
+                                )
+                                Spacer(modifier = Modifier.height(24.dp))
                             }
-                        } else {
-                            EmptyHomeContent(onAddClick, scrollState)
+
+                            if (uiState.newFromFeeds.isNotEmpty()) {
+                                ArticleCarousel(
+                                    title = stringResource(R.string.home_new_from_feeds),
+                                    articles = uiState.newFromFeeds,
+                                    onArticleClick = onArticleClick
+                                )
+                                Spacer(modifier = Modifier.height(24.dp))
+                            }
+
+                            if (uiState.favoriteArticles.isNotEmpty()) {
+                                ArticleCarousel(
+                                    title = stringResource(R.string.home_favorites),
+                                    articles = uiState.favoriteArticles,
+                                    onArticleClick = onArticleClick
+                                )
+                                Spacer(modifier = Modifier.height(24.dp))
+                            }
+
+                            Spacer(modifier = Modifier.height(32.dp))
                         }
+                    } else {
+                        EmptyHomeContent(onAddClick, scrollState)
                     }
-                    is com.mienaiknife.narra.ui.viewmodels.HomeUiState.Error -> {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .verticalScroll(scrollState),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(uiState.message)
-                        }
+                }
+                is com.mienaiknife.narra.ui.viewmodels.HomeUiState.Error -> {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .verticalScroll(scrollState),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(uiState.message)
                     }
                 }
             }

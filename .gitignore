@@ -34,7 +34,8 @@ google-services.json
 *.hprof
 
 .DS_Store
+.kotlin/
+**/.artifacts/
 /build
 /captures
-/app/src/main/java/com/mienaiknife/narra/.artifacts/
 /dummy-docs/

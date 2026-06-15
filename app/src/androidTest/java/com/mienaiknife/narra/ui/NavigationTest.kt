@@ -35,7 +35,11 @@ class NavigationTest {
     fun homeScreen_displaysEmptyState_whenNoArticles() {
         composeTestRule.setContent {
             HomeScreenContent(
-                uiState = HomeUiState(isLoading = false),
+                uiState = HomeUiState.Success(
+                    continueListening = emptyList(),
+                    newFromFeeds = emptyList(),
+                    favoriteArticles = emptyList()
+                ),
                 snackbarHostState = SnackbarHostState(),
                 onArticleClick = {},
                 onAddClick = {}
@@ -51,7 +55,11 @@ class NavigationTest {
         var addClicked = false
         composeTestRule.setContent {
             HomeScreenContent(
-                uiState = HomeUiState(isLoading = false),
+                uiState = HomeUiState.Success(
+                    continueListening = emptyList(),
+                    newFromFeeds = emptyList(),
+                    favoriteArticles = emptyList()
+                ),
                 snackbarHostState = SnackbarHostState(),
                 onArticleClick = {},
                 onAddClick = { addClicked = true }

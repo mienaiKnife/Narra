@@ -77,10 +77,10 @@ import kotlinx.coroutines.flow.collectLatest
 
 @Composable
 fun AddScreen(
+    snackbarHostState: SnackbarHostState,
     viewModel: HomeViewModel = hiltViewModel(),
     onArticleAdded: () -> Unit = {},
 ) {
-    val snackbarHostState = remember { SnackbarHostState() }
     val context = LocalContext.current
     val resources = LocalResources.current
     var url by remember { mutableStateOf("") }
@@ -131,11 +131,6 @@ fun AddScreen(
             onDownloadClick = { viewModel.downloadArticle(UrlUtils.cleanUrl(url)) },
             onSubscribeClick = { viewModel.subscribeToFeed(UrlUtils.cleanUrl(url)) },
             onUploadClick = { launcher.launch("application/epub+zip") }
-        )
-
-        SnackbarHost(
-            hostState = snackbarHostState,
-            modifier = Modifier.align(Alignment.BottomCenter)
         )
     }
 }

@@ -35,6 +35,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.navigation.NavController
 import androidx.navigation.NavDestination.Companion.hasRoute
+import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.mienaiknife.narra.NavDestination
@@ -63,6 +64,8 @@ fun BottomNavBar(navController: NavController) {
     NavigationBar {
         items.forEach { item ->
             val isSelected = when (item) {
+                BottomNavItem.Home -> currentDestination?.hasRoute<NavDestination.Home>() == true
+                BottomNavItem.Add -> currentDestination?.hasRoute<NavDestination.Add>() == true
                 BottomNavItem.Settings -> {
                     listOf(
                         NavDestination.Settings::class,
@@ -90,7 +93,7 @@ fun BottomNavBar(navController: NavController) {
                     ).any { currentDestination?.hasRoute(it) == true }
                 }
 
-                else -> currentDestination?.hasRoute(item.route::class) == true
+                else -> false
             }
 
             NavigationBarItem(
