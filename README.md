@@ -1,5 +1,9 @@
 # Narra
 
+|                                         Roboto Font                                         |                                            OpenDyslexic Font                                             |
+|:-------------------------------------------------------------------------------------------:|:--------------------------------------------------------------------------------------------------------:|
+| <img src="./docs/images/NarraReaderScreenRoboto.jpg" alt="Roboto Font Preview" width="300"> | <img src="./docs/images/NarraReaderScreenOpenDyslexic3.jpg" alt="OpenDyslexic Font Preview" width="300"> |
+
 Narra is a mobile app (currently Android exclusive) that allows users to listen to webpages and ebooks read aloud by TTS in a podcast-like experience. Choose from a wide variety of TTS voices, subscribe to the RSS feeds of your favourite blogs, and queue up several texts to listen to without ads.
 
 ## Disclaimer
