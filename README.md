@@ -1,8 +1,8 @@
 # Narra
 
-| <img alt="Preview of the Narra reader screen using the Roboto font family" src="./docs/images/NarraReaderScreenRoboto.jpg" width="300"/> | <img alt="Preview of the Narra reader screen using the OpenDyslexic3 font family" src="./docs/images/NarraReaderScreenOpenDyslexic3.jpg" width="300"/> |
-|:----------------------------------------------------------------------------------------------------------------------------------------:|:------------------------------------------------------------------------------------------------------------------------------------------------------:|
-|                                                           Roboto and dark mode                                                           |                                                              OpenDyslexic3 and light mode                                                              |
+| <img alt="Preview of the Narra reader screen using the Roboto font family" src="./docs/images/NarraReaderScreenRoboto.jpg" width="300"/> | <img alt="Preview of the Narra reader screen using the OpenDyslexic3 font family" src="./docs/images/NarraReaderScreenOpenDyslexic3Light.jpg" width="300"/> |
+|:----------------------------------------------------------------------------------------------------------------------------------------:|:-----------------------------------------------------------------------------------------------------------------------------------------------------------:|
+|                                                           Roboto and dark mode                                                           |                                                                OpenDyslexic3 and light mode                                                                 |
 
 Narra is a mobile app (currently Android exclusive) that allows users to listen to webpages and ebooks read aloud by TTS in a podcast-like experience. Choose from a wide variety of TTS voices, subscribe to the RSS feeds of your favourite blogs, and queue up several texts to listen to without ads.
 
