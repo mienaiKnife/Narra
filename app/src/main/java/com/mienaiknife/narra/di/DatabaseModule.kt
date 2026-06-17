@@ -97,7 +97,25 @@ object DatabaseModule {
 
         val migration16to17 = object : Migration(16, 17) {
             override fun migrate(db: SupportSQLiteDatabase) {
-                db.execSQL("ALTER TABLE articles ADD COLUMN isInInbox INTEGER NOT NULL DEFAULT 0")
+                // Check if column exists before adding it (idempotency fix)
+                val cursor = db.query("PRAGMA table_info(articles)")
+                var columnExists = false
+                while (cursor.moveToNext()) {
+                    val nameIndex = cursor.getColumnIndex("name")
+                    if (nameIndex != -1) {
+                        val name = cursor.getString(nameIndex)
+                        if (name == "isInInbox") {
+                            columnExists = true
+                            break
+                        }
+                    }
+                }
+                cursor.close()
+
+                if (!columnExists) {
+                    db.execSQL("ALTER TABLE articles ADD COLUMN isInInbox INTEGER NOT NULL DEFAULT 0")
+                }
+
                 db.execSQL("CREATE INDEX IF NOT EXISTS index_articles_isInInbox_sortTimestamp ON articles(isInInbox, sortTimestamp)")
                 
                 // For existing feed articles, mark them as in Inbox if they are not in queue and not played
