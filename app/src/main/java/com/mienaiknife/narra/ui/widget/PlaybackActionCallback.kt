@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.mienaiknife.narra.ui.widget
 
 import android.content.Context
@@ -22,14 +21,7 @@ import android.os.Build
 import androidx.glance.GlanceId
 import androidx.glance.action.ActionParameters
 import androidx.glance.appwidget.action.ActionCallback
-import androidx.media3.session.MediaController
-import androidx.media3.session.SessionToken
-import com.google.common.util.concurrent.ListenableFuture
-import com.google.common.util.concurrent.MoreExecutors
 import com.mienaiknife.narra.service.PlaybackService
-import kotlinx.coroutines.suspendCancellableCoroutine
-import kotlin.coroutines.resume
-import kotlin.coroutines.resumeWithException
 
 class PlaybackActionCallback : ActionCallback {
     companion object {
@@ -49,11 +41,12 @@ class PlaybackActionCallback : ActionCallback {
     ) {
         val action = parameters[KEY_ACTION] ?: ACTION_TOGGLE
         android.util.Log.d("PlaybackActionCallback", "onAction: action=$action")
-        
-        val intent = Intent(context, PlaybackService::class.java).apply {
-            this.action = action
-        }
-        
+
+        val intent =
+            Intent(context, PlaybackService::class.java).apply {
+                this.action = action
+            }
+
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 context.startForegroundService(intent)

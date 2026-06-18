@@ -13,13 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.mienaiknife.narra.data.repositories
 
 import android.content.Context
-import com.mienaiknife.narra.data.local.dao.TtsModelDao
-import okhttp3.OkHttpClient
 import androidx.work.WorkManager
+import com.mienaiknife.narra.data.local.dao.TtsModelDao
+import kotlinx.coroutines.runBlocking
+import okhttp3.OkHttpClient
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry
 import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream
 import org.apache.commons.compress.compressors.bzip2.BZip2CompressorOutputStream
@@ -30,12 +30,10 @@ import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.`when`
-import kotlinx.coroutines.runBlocking
 import java.io.File
 import java.io.FileOutputStream
 
 class ModelRepositorySecurityTest {
-
     @get:Rule
     val tempFolder = TemporaryFolder()
 
@@ -51,7 +49,7 @@ class ModelRepositorySecurityTest {
 
         val filesDir = tempFolder.newFolder("files")
         `when`(mockContext.filesDir).thenReturn(filesDir)
-        
+
         repository = ModelRepositoryImpl(mockContext, mockDao, mockClient, mockWorkManager)
         targetDir = tempFolder.newFolder("target")
     }
@@ -59,7 +57,7 @@ class ModelRepositorySecurityTest {
     @Test
     fun `extractTarBz2 throws SecurityException on path traversal`() {
         val archiveFile = tempFolder.newFile("malicious.tar.bz2")
-        
+
         // Create a malicious tar.bz2 with a ../ entry
         FileOutputStream(archiveFile).use { fos ->
             BZip2CompressorOutputStream(fos).use { bzos ->
@@ -81,11 +79,11 @@ class ModelRepositorySecurityTest {
             }
         }
     }
-    
+
     @Test
     fun `extractTarBz2 succeeds on valid entries`() = runBlocking {
         val archiveFile = tempFolder.newFile("valid.tar.bz2")
-        
+
         FileOutputStream(archiveFile).use { fos ->
             BZip2CompressorOutputStream(fos).use { bzos ->
                 TarArchiveOutputStream(bzos).use { tos ->
@@ -100,7 +98,7 @@ class ModelRepositorySecurityTest {
         }
 
         repository.extractTarBz2(archiveFile, targetDir)
-        
+
         val extractedFile = File(targetDir, "model.onnx")
         org.junit.Assert.assertTrue(extractedFile.exists())
         org.junit.Assert.assertEquals("model content", extractedFile.readText())

@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.mienaiknife.narra.service
 
 import androidx.room.InvalidationTracker
@@ -50,11 +49,13 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class SyncManager @Inject constructor(
+class SyncManager
+@Inject
+constructor(
     private val appDatabase: AppDatabase,
     private val syncSettingsManager: SyncSettingsManager,
     private val downloadSettingsManager: DownloadSettingsManager,
-    private val workManager: WorkManager
+    private val workManager: WorkManager,
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private val exportTrigger = MutableSharedFlow<String>(replay = 0, extraBufferCapacity = 1)
@@ -80,7 +81,7 @@ class SyncManager @Inject constructor(
             combine(
                 syncSettingsManager.autoExportEnabled,
                 syncSettingsManager.autoImportEnabled,
-                syncSettingsManager.autoExportUri
+                syncSettingsManager.autoExportUri,
             ) { export, import, uri ->
                 Triple(export, import, uri)
             }.collectLatest { (export, import, uri) ->
@@ -100,7 +101,7 @@ class SyncManager @Inject constructor(
         scope.launch {
             combine(
                 downloadSettingsManager.refreshInterval,
-                downloadSettingsManager.downloadOverWifiOnly
+                downloadSettingsManager.downloadOverWifiOnly,
             ) { interval, wifiOnly ->
                 interval to wifiOnly
             }.collectLatest { (interval, wifiOnly) ->
@@ -118,15 +119,15 @@ class SyncManager @Inject constructor(
             if (syncSettingsManager.pendingImport.first()) {
                 val stagedFile = context.getDatabasePath("narra_db_staged")
                 val dbFile = context.getDatabasePath(AppDatabase.DATABASE_NAME)
-                
+
                 if (stagedFile.exists()) {
                     try {
                         appDatabase.close()
-                        
+
                         // Delete sidecar files
                         File(dbFile.path + "-wal").delete()
                         File(dbFile.path + "-shm").delete()
-                        
+
                         FileInputStream(stagedFile).use { input ->
                             FileOutputStream(dbFile).use { output ->
                                 input.copyTo(output)
@@ -144,14 +145,15 @@ class SyncManager @Inject constructor(
     }
 
     private suspend fun observeChanges(uriString: String) {
-        val observer = object : InvalidationTracker.Observer(arrayOf("articles", "feeds")) {
-            override fun onInvalidated(tables: Set<String>) {
-                exportTrigger.tryEmit(uriString)
+        val observer =
+            object : InvalidationTracker.Observer(arrayOf("articles", "feeds")) {
+                override fun onInvalidated(tables: Set<String>) {
+                    exportTrigger.tryEmit(uriString)
+                }
             }
-        }
-        
+
         appDatabase.invalidationTracker.addObserver(observer)
-        
+
         try {
             // Keep observing as long as this collectLatest block is active
             awaitCancellation()
@@ -161,30 +163,32 @@ class SyncManager @Inject constructor(
     }
 
     private fun enqueueExport(uri: String) {
-        val exportRequest = OneTimeWorkRequestBuilder<DatabaseExportWorker>()
-            .setInputData(workDataOf("uri" to uri))
-            .build()
+        val exportRequest =
+            OneTimeWorkRequestBuilder<DatabaseExportWorker>()
+                .setInputData(workDataOf("uri" to uri))
+                .build()
 
         workManager.enqueueUniqueWork(
             "database_auto_export",
             ExistingWorkPolicy.REPLACE,
-            exportRequest
+            exportRequest,
         )
     }
 
     private fun scheduleImportCheck() {
-        val importRequest = PeriodicWorkRequestBuilder<DatabaseImportWorker>(1, TimeUnit.HOURS)
-            .setConstraints(
-                Constraints.Builder()
-                    .setRequiredNetworkType(NetworkType.CONNECTED)
-                    .build()
-            )
-            .build()
+        val importRequest =
+            PeriodicWorkRequestBuilder<DatabaseImportWorker>(1, TimeUnit.HOURS)
+                .setConstraints(
+                    Constraints
+                        .Builder()
+                        .setRequiredNetworkType(NetworkType.CONNECTED)
+                        .build(),
+                ).build()
 
         workManager.enqueueUniquePeriodicWork(
             "database_auto_import",
             ExistingPeriodicWorkPolicy.KEEP,
-            importRequest
+            importRequest,
         )
     }
 
@@ -192,33 +196,40 @@ class SyncManager @Inject constructor(
         workManager.cancelUniqueWork("database_auto_import")
     }
 
-    private fun scheduleFeedRefresh(interval: String, wifiOnly: Boolean) {
+    private fun scheduleFeedRefresh(
+        interval: String,
+        wifiOnly: Boolean,
+    ) {
         if (interval == "Never") {
             workManager.cancelUniqueWork("feed_refresh")
             return
         }
 
-        val intervalMinutes = when (interval) {
-            "1 hour" -> 60L
-            "3 hours" -> 180L
-            "6 hours" -> 360L
-            "12 hours" -> 720L
-            "24 hours" -> 1440L
-            else -> 720L // Default to 12 hours
-        }
+        val intervalMinutes =
+            when (interval) {
+                "1 hour" -> 60L
+                "3 hours" -> 180L
+                "6 hours" -> 360L
+                "12 hours" -> 720L
+                "24 hours" -> 1440L
+                else -> 720L // Default to 12 hours
+            }
 
-        val constraints = Constraints.Builder()
-            .setRequiredNetworkType(if (wifiOnly) NetworkType.UNMETERED else NetworkType.CONNECTED)
-            .build()
+        val constraints =
+            Constraints
+                .Builder()
+                .setRequiredNetworkType(if (wifiOnly) NetworkType.UNMETERED else NetworkType.CONNECTED)
+                .build()
 
-        val refreshRequest = PeriodicWorkRequestBuilder<FeedRefreshWorker>(intervalMinutes, TimeUnit.MINUTES)
-            .setConstraints(constraints)
-            .build()
+        val refreshRequest =
+            PeriodicWorkRequestBuilder<FeedRefreshWorker>(intervalMinutes, TimeUnit.MINUTES)
+                .setConstraints(constraints)
+                .build()
 
         workManager.enqueueUniquePeriodicWork(
             "feed_refresh",
             ExistingPeriodicWorkPolicy.UPDATE,
-            refreshRequest
+            refreshRequest,
         )
     }
 }

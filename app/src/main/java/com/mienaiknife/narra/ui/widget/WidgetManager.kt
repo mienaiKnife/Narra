@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.mienaiknife.narra.ui.widget
 
 import android.content.Context
@@ -32,7 +31,9 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class WidgetManager @Inject constructor(
+class WidgetManager
+@Inject
+constructor(
     @param:ApplicationContext private val context: Context,
 ) {
     companion object {
@@ -60,9 +61,9 @@ class WidgetManager @Inject constructor(
         playbackSpeed: Float,
     ) {
         val glanceId = GlanceAppWidgetManager(context).getGlanceIds(NarraWidget::class.java).firstOrNull() ?: return
-        
+
         var shouldDownloadImage = false
-        
+
         updateAppWidgetState(context, NarraWidget().stateDefinition, glanceId) { prefs ->
             val mutablePrefs = prefs.toMutablePreferences()
             val currentImageUrl = prefs[KEY_ARTICLE_IMAGE_URL] ?: ""
@@ -86,27 +87,30 @@ class WidgetManager @Inject constructor(
             }
             mutablePrefs
         }
-        
+
         if (shouldDownloadImage && imageUrl != null) {
             enqueueImageDownload(imageUrl)
         }
-        
+
         NarraWidget().update(context, glanceId)
     }
 
     private fun enqueueImageDownload(imageUrl: String) {
-        val data = Data.Builder()
-            .putString("image_url", imageUrl)
-            .build()
-        
-        val request = OneTimeWorkRequestBuilder<WidgetImageWorker>()
-            .setInputData(data)
-            .build()
-        
+        val data =
+            Data
+                .Builder()
+                .putString("image_url", imageUrl)
+                .build()
+
+        val request =
+            OneTimeWorkRequestBuilder<WidgetImageWorker>()
+                .setInputData(data)
+                .build()
+
         WorkManager.getInstance(context).enqueueUniqueWork(
             "widget_image_download",
             ExistingWorkPolicy.REPLACE,
-            request
+            request,
         )
     }
 }

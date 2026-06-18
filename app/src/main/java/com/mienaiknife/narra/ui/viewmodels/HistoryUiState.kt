@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.mienaiknife.narra.ui.viewmodels
 
 import com.mienaiknife.narra.domain.models.Article
@@ -24,5 +23,5 @@ data class HistoryUiState(
     val currentArticle: Article? = null,
     val isPlaying: Boolean = false,
     val playbackSpeed: Float = 1.0f,
-    val downloadingArticleIds: Set<String> = emptySet()
+    val downloadingArticleIds: Set<String> = emptySet(),
 )

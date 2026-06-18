@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.mienaiknife.narra.data.local
 
 /**
@@ -24,11 +23,17 @@ interface ImageDataSource {
      * Downloads an image from the given URL and saves it to a persistent local file.
      * Returns the absolute path to the saved image file, or null if the download fails.
      */
-    suspend fun downloadAndSaveImage(url: String, fileName: String): String?
+    suspend fun downloadAndSaveImage(
+        url: String,
+        fileName: String,
+    ): String?
 
     /**
      * Saves a byte array as an image to a persistent local file.
      * Returns the absolute path to the saved image file.
      */
-    suspend fun saveImage(data: ByteArray, fileName: String): String?
+    suspend fun saveImage(
+        data: ByteArray,
+        fileName: String,
+    ): String?
 }

@@ -21,6 +21,31 @@ plugins {
     alias(libs.plugins.hilt)
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.paparazzi)
+    alias(libs.plugins.spotless)
+}
+
+spotless {
+    kotlin {
+        target("**/*.kt")
+        targetExclude("**/build/**/*.kt")
+        ktlint("1.5.0")
+            .editorConfigOverride(
+                mapOf(
+                    "ktlint_standard_function-naming" to "disabled",
+                    "ktlint_standard_backing-property-naming" to "disabled",
+                    "ktlint_standard_no-wildcard-imports" to "disabled",
+                    "ktlint_standard_max-line-length" to "disabled",
+                    "ktlint_standard_property-naming" to "disabled",
+                    "ktlint_standard_comment-wrapping" to "disabled",
+                    "ktlint_standard_filename" to "disabled",
+                ),
+            )
+        licenseHeaderFile(rootProject.file("license.header"))
+    }
+    kotlinGradle {
+        target("**/*.gradle.kts")
+        ktlint()
+    }
 }
 
 android {
@@ -50,7 +75,7 @@ android {
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
+                "proguard-rules.pro",
             )
         }
     }
@@ -122,8 +147,8 @@ dependencies {
     implementation(libs.androidx.security.crypto)
     implementation(libs.androidx.glance.appwidget)
     implementation(libs.androidx.glance.material3)
-    debugImplementation(libs.androidx.glance.preview)
-    debugImplementation(libs.androidx.glance.appwidget.preview)
+    implementation(libs.androidx.glance.preview)
+    implementation(libs.androidx.glance.appwidget.preview)
     ksp(libs.androidx.hilt.compiler)
     testImplementation(libs.junit)
     testImplementation(libs.mockito.core)

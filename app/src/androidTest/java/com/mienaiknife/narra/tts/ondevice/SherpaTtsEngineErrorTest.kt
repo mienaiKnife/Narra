@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.mienaiknife.narra.tts.ondevice
 
 import com.mienaiknife.narra.domain.TtsState
@@ -28,7 +27,6 @@ import org.mockito.Mockito.mock
 import org.mockito.Mockito.`when`
 
 class SherpaTtsEngineErrorTest {
-
     private lateinit var modelRepository: ModelRepository
     private lateinit var settingsManager: PlaybackSettingsManager
     private lateinit var engine: SherpaTtsEngine
@@ -37,7 +35,7 @@ class SherpaTtsEngineErrorTest {
     fun setup() {
         modelRepository = mock(ModelRepository::class.java)
         settingsManager = mock(PlaybackSettingsManager::class.java)
-        
+
         // Mocking settings flows to avoid null pointer exceptions during init
         `when`(settingsManager.ttsModelId).thenReturn(MutableStateFlow(null))
         `when`(settingsManager.sherpaNoiseScale).thenReturn(MutableStateFlow(0.667f))
@@ -55,9 +53,9 @@ class SherpaTtsEngineErrorTest {
         stateField.isAccessible = true
         @Suppress("UNCHECKED_CAST")
         (stateField.get(engine) as MutableStateFlow<TtsState>).value = TtsState.Idle
-        
+
         engine.speak("Hello", "1")
-        
+
         val currentState = engine.state.value
         assertTrue(currentState is TtsState.Error)
         assertEquals("No Sherpa-ONNX model selected", (currentState as TtsState.Error).message)
@@ -69,9 +67,9 @@ class SherpaTtsEngineErrorTest {
         stateField.isAccessible = true
         @Suppress("UNCHECKED_CAST")
         (stateField.get(engine) as MutableStateFlow<TtsState>).value = TtsState.Idle
-        
+
         engine.enqueue("Hello", "1")
-        
+
         val currentState = engine.state.value
         assertTrue(currentState is TtsState.Error)
         assertEquals("No Sherpa-ONNX model selected", (currentState as TtsState.Error).message)

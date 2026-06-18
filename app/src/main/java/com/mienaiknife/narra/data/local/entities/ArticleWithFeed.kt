@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.mienaiknife.narra.data.local.entities
 
 import androidx.room.Embedded
@@ -24,14 +23,12 @@ data class ArticleWithFeed(
     @Embedded val article: ArticleEntity,
     @Relation(
         parentColumn = "feedUrl",
-        entityColumn = "url"
+        entityColumn = "url",
     )
-    val feed: FeedEntity?
+    val feed: FeedEntity?,
 )
 
-fun ArticleWithFeed.toDomainModel(): Article {
-    return article.toDomainModel(
-        feedImageUrl = feed?.imageUrl,
-        sourceOverride = if (article.isFromFeed) feed?.title else null
-    )
-}
+fun ArticleWithFeed.toDomainModel(): Article = article.toDomainModel(
+    feedImageUrl = feed?.imageUrl,
+    sourceOverride = if (article.isFromFeed) feed?.title else null,
+)

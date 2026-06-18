@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.mienaiknife.narra.data.models
 
 enum class SortOption {
@@ -23,5 +22,5 @@ enum class SortOption {
     TITLE_ASC,
     TITLE_DESC,
     SOURCE_ASC,
-    SOURCE_DESC
+    SOURCE_DESC,
 }

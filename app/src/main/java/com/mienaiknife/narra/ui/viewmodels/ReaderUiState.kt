@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.mienaiknife.narra.ui.viewmodels
 
 import com.mienaiknife.narra.domain.models.Article
@@ -35,11 +34,11 @@ data class ReaderUiState(
     val rewindSkipTime: String = "10s",
     val sleepTimerMillisLeft: Long? = null,
     val searchQuery: String = "",
-    val searchResults: List<SearchResult> = emptyList()
+    val searchResults: List<SearchResult> = emptyList(),
 )
 
 data class SearchResult(
     val paragraphIndex: Int,
     val wordRange: IntRange,
-    val previewText: String
+    val previewText: String,
 )

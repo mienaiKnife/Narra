@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.mienaiknife.narra.data.local
 
 import android.content.Context
@@ -26,18 +25,22 @@ import java.io.File
 import java.io.FileOutputStream
 import javax.inject.Inject
 
-class ImageDataSourceImpl @Inject constructor(
+class ImageDataSourceImpl
+@Inject
+constructor(
     @ApplicationContext private val context: Context,
-    private val okHttpClient: OkHttpClient
+    private val okHttpClient: OkHttpClient,
 ) : ImageDataSource {
-
     private val imagesDir: File by lazy {
         File(context.filesDir, "images").apply {
             if (!exists()) mkdirs()
         }
     }
 
-    override suspend fun downloadAndSaveImage(url: String, fileName: String): String? = withContext(Dispatchers.IO) {
+    override suspend fun downloadAndSaveImage(
+        url: String,
+        fileName: String,
+    ): String? = withContext(Dispatchers.IO) {
         try {
             val request = Request.Builder().url(url).build()
             okHttpClient.newCall(request).execute().use { response ->
@@ -55,7 +58,10 @@ class ImageDataSourceImpl @Inject constructor(
         }
     }
 
-    override suspend fun saveImage(data: ByteArray, fileName: String): String? = withContext(Dispatchers.IO) {
+    override suspend fun saveImage(
+        data: ByteArray,
+        fileName: String,
+    ): String? = withContext(Dispatchers.IO) {
         try {
             val file = File(imagesDir, fileName)
             FileOutputStream(file).use { output ->

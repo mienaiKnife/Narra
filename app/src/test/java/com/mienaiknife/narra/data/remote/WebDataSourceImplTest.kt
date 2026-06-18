@@ -13,19 +13,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.mienaiknife.narra.data.remote
 
 import com.mienaiknife.narra.domain.NarraError
-import okhttp3.OkHttpClient
 import kotlinx.coroutines.runBlocking
+import okhttp3.OkHttpClient
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.mockito.kotlin.mock
 
 class WebDataSourceImplTest {
-
     private lateinit var webDataSource: WebDataSource
     private val okHttpClient: OkHttpClient = mock()
 

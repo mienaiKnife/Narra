@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.mienaiknife.narra.utils
 
 import java.time.LocalDate
@@ -27,31 +26,35 @@ import java.util.concurrent.TimeUnit
 
 object DateUtils {
     private fun getOutputWithYear() = DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM)
+
     private fun getOutputWithoutYear() = DateTimeFormatter.ofPattern("MMM d", Locale.getDefault())
 
-    private val inputFormatters = listOf(
-        DateTimeFormatter.ofPattern("MMM d, yyyy", Locale.US),
-        DateTimeFormatter.RFC_1123_DATE_TIME,
-        DateTimeFormatter.ISO_DATE_TIME,
-        DateTimeFormatter.ISO_OFFSET_DATE_TIME,
-        DateTimeFormatter.ISO_ZONED_DATE_TIME,
-        DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSX", Locale.US),
-        DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ssX", Locale.US),
-        DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss", Locale.US),
-        DateTimeFormatter.ofPattern("yyyy-MM-dd", Locale.US),
-        DateTimeFormatter.ofPattern("yyyy/MM/dd", Locale.US),
-        DateTimeFormatter.ofPattern("dd MMM yyyy", Locale.US),
-    )
+    private val inputFormatters =
+        listOf(
+            DateTimeFormatter.ofPattern("MMM d, yyyy", Locale.US),
+            DateTimeFormatter.RFC_1123_DATE_TIME,
+            DateTimeFormatter.ISO_DATE_TIME,
+            DateTimeFormatter.ISO_OFFSET_DATE_TIME,
+            DateTimeFormatter.ISO_ZONED_DATE_TIME,
+            DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSX", Locale.US),
+            DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ssX", Locale.US),
+            DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss", Locale.US),
+            DateTimeFormatter.ofPattern("yyyy-MM-dd", Locale.US),
+            DateTimeFormatter.ofPattern("yyyy/MM/dd", Locale.US),
+            DateTimeFormatter.ofPattern("dd MMM yyyy", Locale.US),
+        )
 
     private val htmlTagRegex = Regex("<[^>]*>")
     private val whitespaceRegex = Regex("\\s+")
+
     private fun getDateTimeFormatter() = DateTimeFormatter.ofPattern("MMM d, HH:mm", Locale.getDefault())
 
     fun formatDateTime(timestamp: Long): String {
-        val dateTime = LocalDateTime.ofInstant(
-            java.time.Instant.ofEpochMilli(timestamp),
-            java.time.ZoneId.systemDefault()
-        )
+        val dateTime =
+            LocalDateTime.ofInstant(
+                java.time.Instant.ofEpochMilli(timestamp),
+                java.time.ZoneId.systemDefault(),
+            )
         return dateTime.format(getDateTimeFormatter())
     }
 
@@ -73,16 +76,28 @@ object DateUtils {
         for (formatter in inputFormatters) {
             try {
                 return ZonedDateTime.parse(dateString, formatter).toInstant().toEpochMilli()
-            } catch (_: Exception) {}
+            } catch (_: Exception) {
+            }
             try {
                 return OffsetDateTime.parse(dateString, formatter).toInstant().toEpochMilli()
-            } catch (_: Exception) {}
+            } catch (_: Exception) {
+            }
             try {
-                return LocalDateTime.parse(dateString, formatter).atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli()
-            } catch (_: Exception) {}
+                return LocalDateTime
+                    .parse(dateString, formatter)
+                    .atZone(java.time.ZoneId.systemDefault())
+                    .toInstant()
+                    .toEpochMilli()
+            } catch (_: Exception) {
+            }
             try {
-                return LocalDate.parse(dateString, formatter).atStartOfDay(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli()
-            } catch (_: Exception) {}
+                return LocalDate
+                    .parse(dateString, formatter)
+                    .atStartOfDay(java.time.ZoneId.systemDefault())
+                    .toInstant()
+                    .toEpochMilli()
+            } catch (_: Exception) {
+            }
         }
         return null
     }
@@ -91,21 +106,28 @@ object DateUtils {
         for (formatter in inputFormatters) {
             try {
                 return ZonedDateTime.parse(dateString, formatter).toLocalDate()
-            } catch (_: Exception) {}
+            } catch (_: Exception) {
+            }
             try {
                 return OffsetDateTime.parse(dateString, formatter).toLocalDate()
-            } catch (_: Exception) {}
+            } catch (_: Exception) {
+            }
             try {
                 return LocalDateTime.parse(dateString, formatter).toLocalDate()
-            } catch (_: Exception) {}
+            } catch (_: Exception) {
+            }
             try {
                 return LocalDate.parse(dateString, formatter)
-            } catch (_: Exception) {}
+            } catch (_: Exception) {
+            }
         }
         return null
     }
 
-    fun formatElapsedTime(millis: Long, referenceDuration: Long = 0L): String {
+    fun formatElapsedTime(
+        millis: Long,
+        referenceDuration: Long = 0L,
+    ): String {
         val totalToUse = maxOf(millis, referenceDuration)
         val hours = TimeUnit.MILLISECONDS.toHours(millis)
         val minutes = TimeUnit.MILLISECONDS.toMinutes(millis) % 60
@@ -120,7 +142,10 @@ object DateUtils {
         }
     }
 
-    fun estimateReadingTimeMs(text: String?, speed: Float = 1.0f): Long {
+    fun estimateReadingTimeMs(
+        text: String?,
+        speed: Float = 1.0f,
+    ): Long {
         if (text.isNullOrBlank()) return 0L
         // Strip HTML tags roughly using pre-compiled regex
         val plainText = text.replace(htmlTagRegex, "")

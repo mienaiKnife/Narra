@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.mienaiknife.narra.ui.viewmodels
 
 import com.mienaiknife.narra.ui.UiText
@@ -27,5 +26,5 @@ data class DownloadsSettingsUiState(
     val autoImportEnabled: Boolean = false,
     val autoExportUri: String? = null,
     val lastExportTimestamp: Long = 0L,
-    val pendingImport: Boolean = false
+    val pendingImport: Boolean = false,
 )

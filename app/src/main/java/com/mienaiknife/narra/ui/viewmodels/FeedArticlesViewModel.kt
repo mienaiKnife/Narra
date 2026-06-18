@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.mienaiknife.narra.ui.viewmodels
 
 import androidx.lifecycle.SavedStateHandle
@@ -21,8 +20,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.toRoute
 import com.mienaiknife.narra.NavDestination
-import com.mienaiknife.narra.domain.models.Article
 import com.mienaiknife.narra.data.models.SortOption
+import com.mienaiknife.narra.domain.models.Article
 import com.mienaiknife.narra.domain.repository.ArticleRepository
 import com.mienaiknife.narra.domain.repository.FeedRepository
 import com.mienaiknife.narra.playback.PlaybackManager
@@ -44,7 +43,7 @@ class FeedArticlesViewModel @Inject constructor(
     private val repository: ArticleRepository,
     private val feedRepository: FeedRepository,
     private val playbackManager: PlaybackManager,
-    savedStateHandle: SavedStateHandle
+    savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
 
     private val _uiEvent = MutableSharedFlow<UiEvent>()
@@ -70,7 +69,7 @@ class FeedArticlesViewModel @Inject constructor(
         _sortOption,
         _showPlayed,
         _downloadingArticleIds,
-        playbackManager.playbackSpeed
+        playbackManager.playbackSpeed,
     ) { args: Array<Any?> ->
         val articles = args[0] as List<Article>
         val isRefreshing = args[1] as Boolean
@@ -99,18 +98,17 @@ class FeedArticlesViewModel @Inject constructor(
             showPlayed = showPlayed,
             playbackSpeed = playbackSpeed,
             feedTitle = currentFeedTitle,
-            downloadingArticleIds = downloadingIds
+            downloadingArticleIds = downloadingIds,
         )
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
-        initialValue = FeedArticlesUiState(feedTitle = initialFeedTitle)
+        initialValue = FeedArticlesUiState(feedTitle = initialFeedTitle),
     )
 
     fun setShowPlayed(show: Boolean) {
         _showPlayed.value = show
     }
-
 
     fun setSortOption(option: SortOption) {
         if (_sortOption.value == option) {

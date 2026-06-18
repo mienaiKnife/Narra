@@ -13,12 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.mienaiknife.narra.data.workers
 
 import android.content.Context
-import androidx.core.net.toUri
 import android.provider.DocumentsContract
+import androidx.core.net.toUri
 import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
@@ -31,12 +30,13 @@ import kotlinx.coroutines.withContext
 import java.io.FileOutputStream
 
 @HiltWorker
-class DatabaseImportWorker @AssistedInject constructor(
+class DatabaseImportWorker
+@AssistedInject
+constructor(
     @Assisted private val context: Context,
     @Assisted params: WorkerParameters,
-    private val syncSettingsManager: SyncSettingsManager
+    private val syncSettingsManager: SyncSettingsManager,
 ) : CoroutineWorker(context, params) {
-
     override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
         if (!syncSettingsManager.autoImportEnabled.first()) return@withContext Result.success()
 
@@ -50,7 +50,7 @@ class DatabaseImportWorker @AssistedInject constructor(
             // If the remote file is newer than what we last staged
             if (lastModified > localLastKnown + 5000) { // 5s buffer
                 android.util.Log.i("DatabaseImportWorker", "Newer database detected. Staging for import.")
-                
+
                 val stagedFile = context.getDatabasePath("narra_db_staged")
                 context.contentResolver.openInputStream(uri)?.use { input ->
                     FileOutputStream(stagedFile).use { output ->
@@ -60,7 +60,7 @@ class DatabaseImportWorker @AssistedInject constructor(
 
                 syncSettingsManager.setRemoteLastModified(lastModified)
                 syncSettingsManager.setPendingImport(true)
-                
+
                 android.util.Log.i("DatabaseImportWorker", "Database successfully staged.")
             }
             Result.success()
@@ -70,16 +70,16 @@ class DatabaseImportWorker @AssistedInject constructor(
         }
     }
 
-    private fun getRemoteModifiedTime(uri: android.net.Uri): Long? {
-        return try {
-            context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
-                if (cursor.moveToFirst()) {
-                    val index = cursor.getColumnIndex(DocumentsContract.Document.COLUMN_LAST_MODIFIED)
-                    if (index != -1) cursor.getLong(index) else null
-                } else null
+    private fun getRemoteModifiedTime(uri: android.net.Uri): Long? = try {
+        context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
+            if (cursor.moveToFirst()) {
+                val index = cursor.getColumnIndex(DocumentsContract.Document.COLUMN_LAST_MODIFIED)
+                if (index != -1) cursor.getLong(index) else null
+            } else {
+                null
             }
-        } catch (e: Exception) {
-            null
         }
+    } catch (e: Exception) {
+        null
     }
 }

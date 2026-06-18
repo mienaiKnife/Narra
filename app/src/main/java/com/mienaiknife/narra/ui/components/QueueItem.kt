@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.mienaiknife.narra.ui.components
 
 import android.content.res.Configuration
@@ -41,20 +40,20 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
-import androidx.compose.ui.res.pluralStringResource
-import androidx.compose.ui.res.stringResource
 import com.mienaiknife.narra.R
-import com.mienaiknife.narra.domain.models.Article
 import com.mienaiknife.narra.data.models.SampleArticles
+import com.mienaiknife.narra.domain.models.Article
 import com.mienaiknife.narra.ui.theme.LocalNarraSpacing
 import com.mienaiknife.narra.ui.theme.NarraTheme
 import com.mienaiknife.narra.utils.DateUtils
@@ -71,7 +70,7 @@ fun QueueItem(
     onRemoveClick: () -> Unit = {},
     onAddToQueueClick: () -> Unit = {},
     onMarkAsPlayedClick: () -> Unit = {},
-    dragModifier: Modifier? = null
+    dragModifier: Modifier? = null,
 ) {
     var showMenu by remember { mutableStateOf(false) }
     val uriHandler = LocalUriHandler.current
@@ -89,18 +88,21 @@ fun QueueItem(
                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                 if (article.isInQueue) onPlayPauseClick() else onAddToQueueClick()
             },
-            dragModifier = dragModifier
+            dragModifier = dragModifier,
         )
 
         DropdownMenu(
             expanded = showMenu,
-            onDismissRequest = { showMenu = false }
+            onDismissRequest = { showMenu = false },
         ) {
             DropdownMenuItem(
                 text = {
                     Text(
-                        if (article.progress == 1f) stringResource(R.string.reader_menu_unplayed)
-                        else stringResource(R.string.reader_menu_played)
+                        if (article.progress == 1f) {
+                            stringResource(R.string.reader_menu_unplayed)
+                        } else {
+                            stringResource(R.string.reader_menu_played)
+                        },
                     )
                 },
                 onClick = {
@@ -111,9 +113,9 @@ fun QueueItem(
                 leadingIcon = {
                     Icon(
                         imageVector = Icons.Default.CheckCircle,
-                        contentDescription = null
+                        contentDescription = null,
                     )
-                }
+                },
             )
             if (article.isInQueue) {
                 DropdownMenuItem(
@@ -126,9 +128,9 @@ fun QueueItem(
                     leadingIcon = {
                         Icon(
                             imageVector = Icons.Default.Delete,
-                            contentDescription = null
+                            contentDescription = null,
                         )
-                    }
+                    },
                 )
             } else {
                 DropdownMenuItem(
@@ -141,9 +143,9 @@ fun QueueItem(
                     leadingIcon = {
                         Icon(
                             imageVector = Icons.AutoMirrored.Outlined.PlaylistAdd,
-                            contentDescription = null
+                            contentDescription = null,
                         )
-                    }
+                    },
                 )
             }
             if (!article.url.isNullOrBlank()) {
@@ -156,9 +158,9 @@ fun QueueItem(
                     leadingIcon = {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.OpenInNew,
-                            contentDescription = null
+                            contentDescription = null,
                         )
-                    }
+                    },
                 )
             }
         }
@@ -176,27 +178,27 @@ private fun QueueItemRow(
     showRemainingTime: Boolean = true,
     onClick: () -> Unit = {},
     onPlayPauseClick: () -> Unit = {},
-    dragModifier: Modifier? = null
+    dragModifier: Modifier? = null,
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
     Row(
         modifier = modifier
             .fillMaxWidth()
             .background(MaterialTheme.colorScheme.background),
-        verticalAlignment = Alignment.CenterVertically
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         if (dragModifier != null && article.isInQueue) {
             Box(
                 modifier = Modifier
                     .size(width = 32.dp, height = 48.dp)
                     .then(dragModifier),
-                contentAlignment = Alignment.Center
+                contentAlignment = Alignment.Center,
             ) {
                 Icon(
                     imageVector = Icons.Default.DragIndicator,
                     contentDescription = stringResource(R.string.action_reorder),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(24.dp)
+                    modifier = Modifier.size(24.dp),
                 )
             }
         } else {
@@ -218,9 +220,9 @@ private fun QueueItemRow(
                 }
                 .combinedClickable(
                     onClick = onClick,
-                    onLongClick = onClick
+                    onLongClick = onClick,
                 ),
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             // Thumbnail Placeholder
             Box(
@@ -228,7 +230,7 @@ private fun QueueItemRow(
                     .size(64.dp)
                     .clip(RoundedCornerShape(12.dp))
                     .background(MaterialTheme.colorScheme.surfaceContainer),
-                contentAlignment = Alignment.Center
+                contentAlignment = Alignment.Center,
             ) {
                 val imageUrl = article.localImageUrl ?: article.imageUrl ?: article.feedImageUrl ?: article.url?.let { "https://www.google.com/s2/favicons?domain=$it&sz=128" }
                 var isImageLoaded by remember(imageUrl) { mutableStateOf(false) }
@@ -243,7 +245,7 @@ private fun QueueItemRow(
                         imageVector = placeholderIcon,
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(32.dp)
+                        modifier = Modifier.size(32.dp),
                     )
                 }
 
@@ -253,7 +255,7 @@ private fun QueueItemRow(
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Crop,
                     alpha = if (article.progress == 1f) 0.6f else 1f,
-                    onSuccess = { isImageLoaded = true }
+                    onSuccess = { isImageLoaded = true },
                 )
             }
 
@@ -265,8 +267,8 @@ private fun QueueItemRow(
                     .heightIn(min = 64.dp),
                 verticalArrangement = Arrangement.spacedBy(
                     LocalNarraSpacing.current.itemVertical,
-                    Alignment.CenterVertically
-                )
+                    Alignment.CenterVertically,
+                ),
             ) {
                 val sourceText = buildString {
                     val formattedDate = DateUtils.formatPublishedDate(article.publishedAt)
@@ -274,9 +276,9 @@ private fun QueueItemRow(
                         append(formattedDate)
                         append(" • ")
                     }
-                    append(article.source)  
+                    append(article.source)
                 }
-                
+
                 val baseColor = if (article.progress == 1f) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f) else MaterialTheme.colorScheme.onSurface
                 val variantColor = if (article.progress == 1f) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f) else MaterialTheme.colorScheme.onSurfaceVariant
 
@@ -284,13 +286,13 @@ private fun QueueItemRow(
                     text = sourceText,
                     style = MaterialTheme.typography.bodySmall.copy(color = variantColor),
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                    overflow = TextOverflow.Ellipsis,
                 )
                 AdaptiveText(
                     text = article.title,
                     style = MaterialTheme.typography.bodyMedium.copy(color = baseColor),
                     maxLines = if (article.isInQueue) 2 else 3,
-                    overflow = TextOverflow.Ellipsis
+                    overflow = TextOverflow.Ellipsis,
                 )
 
                 val nominalDuration = article.duration ?: remember(article.content) { DateUtils.estimateReadingTimeMs(article.content) }
@@ -302,10 +304,10 @@ private fun QueueItemRow(
                 if (totalDuration > 0 && article.isInQueue) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth(),
                     ) {
                         val inProgress = progress > 0f && progress < 1f
-                        
+
                         if (inProgress) {
                             Text(
                                 text = DateUtils.formatElapsedTime(currentPosition, totalDuration),
@@ -324,7 +326,7 @@ private fun QueueItemRow(
                                 color = MaterialTheme.colorScheme.primary,
                                 trackColor = MaterialTheme.colorScheme.primaryContainer,
                                 gapSize = 5.dp,
-                                drawStopIndicator = {}
+                                drawStopIndicator = {},
                             )
 
                             Spacer(modifier = Modifier.width(8.dp))
@@ -367,7 +369,7 @@ private fun QueueItemRow(
                         else -> context.getString(R.string.action_play_desc, article.title)
                     }
                 },
-            enabled = !isDownloading
+            enabled = !isDownloading,
         ) {
             val (icon, resId) = when {
                 !article.isInQueue -> Icons.AutoMirrored.Outlined.PlaylistAdd to R.string.reader_menu_add_queue
@@ -381,22 +383,22 @@ private fun QueueItemRow(
                     .border(
                         width = 1.5.dp,
                         color = MaterialTheme.colorScheme.onSurface,
-                        shape = CircleShape
+                        shape = CircleShape,
                     ),
-                contentAlignment = Alignment.Center
+                contentAlignment = Alignment.Center,
             ) {
                 if (isDownloading) {
                     CircularProgressIndicator(
                         modifier = Modifier.size(28.dp),
                         strokeWidth = 2.dp,
-                        color = MaterialTheme.colorScheme.onSurface
+                        color = MaterialTheme.colorScheme.onSurface,
                     )
                 } else {
                     Icon(
                         imageVector = icon,
                         contentDescription = stringResource(resId),
                         modifier = Modifier.size(24.dp),
-                        tint = MaterialTheme.colorScheme.onSurface
+                        tint = MaterialTheme.colorScheme.onSurface,
                     )
                 }
             }
@@ -404,11 +406,10 @@ private fun QueueItemRow(
     }
 }
 
-
 @Preview(
     uiMode = Configuration.UI_MODE_NIGHT_YES,
     showBackground = true,
-    backgroundColor = 0xFF191919
+    backgroundColor = 0xFF191919,
 )
 @Composable
 fun QueueItemPreview() {
@@ -417,7 +418,7 @@ fun QueueItemPreview() {
             QueueItem(
                 article = SampleArticles.sampleArticle1,
                 isPlaying = false,
-                dragModifier = Modifier
+                dragModifier = Modifier,
             )
         }
     }

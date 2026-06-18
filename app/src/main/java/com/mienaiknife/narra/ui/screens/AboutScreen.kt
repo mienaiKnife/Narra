@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.mienaiknife.narra.ui.screens
 
 import android.content.Context
@@ -50,10 +49,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.navigation.compose.rememberNavController
-import androidx.compose.ui.res.stringResource
 import com.mienaiknife.narra.R
 import com.mienaiknife.narra.ui.components.BottomNavBar
 import com.mienaiknife.narra.ui.theme.NarraTheme
@@ -70,7 +69,7 @@ fun AboutScreen(onBack: () -> Unit, onNavigateToLicenses: () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .statusBarsPadding()
+            .statusBarsPadding(),
     ) {
         Spacer(modifier = Modifier.height(16.dp))
 
@@ -78,20 +77,20 @@ fun AboutScreen(onBack: () -> Unit, onNavigateToLicenses: () -> Unit) {
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp),
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             IconButton(onClick = onBack) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                     contentDescription = stringResource(R.string.action_back),
                     modifier = Modifier.size(32.dp),
-                    tint = MaterialTheme.colorScheme.onBackground
+                    tint = MaterialTheme.colorScheme.onBackground,
                 )
             }
             Text(
                 text = stringResource(R.string.settings_about_title),
                 style = MaterialTheme.typography.headlineSmall,
-                color = MaterialTheme.colorScheme.onBackground
+                color = MaterialTheme.colorScheme.onBackground,
             )
         }
 
@@ -99,7 +98,7 @@ fun AboutScreen(onBack: () -> Unit, onNavigateToLicenses: () -> Unit) {
 
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(bottom = 32.dp)
+            contentPadding = PaddingValues(bottom = 32.dp),
         ) {
             item {
                 ListItem(
@@ -110,12 +109,11 @@ fun AboutScreen(onBack: () -> Unit, onNavigateToLicenses: () -> Unit) {
                             Icons.Default.Info,
                             contentDescription = null,
                             modifier = Modifier.size(24.dp),
-                            tint = MaterialTheme.colorScheme.onBackground
+                            tint = MaterialTheme.colorScheme.onBackground,
                         )
                     },
-                    colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+                    colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                 )
-
             }
 
             item {
@@ -127,13 +125,13 @@ fun AboutScreen(onBack: () -> Unit, onNavigateToLicenses: () -> Unit) {
                             Icons.Default.Code,
                             contentDescription = null,
                             modifier = Modifier.size(24.dp),
-                            tint = MaterialTheme.colorScheme.onBackground
+                            tint = MaterialTheme.colorScheme.onBackground,
                         )
                     },
                     modifier = Modifier.clickable {
                         uriHandler.openUri("https://github.com/mienaiKnife/Narra")
                     },
-                    colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+                    colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                 )
             }
 
@@ -146,15 +144,14 @@ fun AboutScreen(onBack: () -> Unit, onNavigateToLicenses: () -> Unit) {
                             Icons.Default.Description,
                             contentDescription = null,
                             modifier = Modifier.size(24.dp),
-                            tint = MaterialTheme.colorScheme.onBackground
+                            tint = MaterialTheme.colorScheme.onBackground,
                         )
                     },
                     modifier = Modifier.clickable {
                         onNavigateToLicenses()
                     },
-                    colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+                    colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                 )
-
             }
 
             item {
@@ -165,13 +162,13 @@ fun AboutScreen(onBack: () -> Unit, onNavigateToLicenses: () -> Unit) {
                             Icons.Default.Info,
                             contentDescription = null,
                             modifier = Modifier.size(24.dp),
-                            tint = MaterialTheme.colorScheme.onBackground
+                            tint = MaterialTheme.colorScheme.onBackground,
                         )
                     },
                     modifier = Modifier.clickable {
                         uriHandler.openUri("https://github.com/mienaiKnife/Narra/blob/main/docs/PRIVACY.md")
                     },
-                    colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+                    colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                 )
             }
         }
@@ -184,7 +181,7 @@ fun AboutScreenPreview() {
     val navController = rememberNavController()
     NarraTheme(darkTheme = true, dynamicColor = false) {
         Scaffold(
-            bottomBar = { BottomNavBar(navController) }
+            bottomBar = { BottomNavBar(navController) },
         ) { innerPadding ->
             Box(modifier = Modifier.padding(innerPadding)) {
                 AboutScreen(onBack = {}, onNavigateToLicenses = {})
@@ -193,11 +190,9 @@ fun AboutScreenPreview() {
     }
 }
 
-private fun getVersionName(context: Context, unknownString: String): String {
-    return try {
-        val packageInfo = context.packageManager.getPackageInfo(context.packageName, 0)
-        packageInfo.versionName ?: unknownString
-    } catch (_: Exception) {
-        unknownString
-    }
+private fun getVersionName(context: Context, unknownString: String): String = try {
+    val packageInfo = context.packageManager.getPackageInfo(context.packageName, 0)
+    packageInfo.versionName ?: unknownString
+} catch (_: Exception) {
+    unknownString
 }

@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.mienaiknife.narra.ui.screens
 
 import androidx.compose.ui.test.assertIsDisplayed
@@ -28,21 +27,21 @@ import org.junit.Rule
 import org.junit.Test
 
 class PlaybackScreenTest {
-
     @get:Rule
     val composeTestRule = createComposeRule()
 
     @Test
     fun playbackScreen_displaysArticleDetails() {
         val article = SampleArticles.all.first()
-        
+
         composeTestRule.setContent {
             ReaderContent(
-                uiState = ReaderUiState(
+                uiState =
+                ReaderUiState(
                     article = article,
                     isPlaying = false,
                     currentPosition = 0L,
-                    duration = 100000L
+                    duration = 100000L,
                 ),
                 readerFontFamily = FontFamily.Default,
                 readerFontSize = 18f,
@@ -58,7 +57,7 @@ class PlaybackScreenTest {
                 onCycleSpeed = {},
                 onToggleFavorite = {},
                 onSetSleepTimer = {},
-                onSetSearchQuery = {}
+                onSetSearchQuery = {},
             )
         }
 
@@ -69,12 +68,13 @@ class PlaybackScreenTest {
     @Test
     fun playbackScreen_callsTogglePlayPause_whenClicked() {
         var toggleClicked = false
-        
+
         composeTestRule.setContent {
             ReaderContent(
-                uiState = ReaderUiState(
+                uiState =
+                ReaderUiState(
                     article = SampleArticles.all.first(),
-                    isPlaying = false
+                    isPlaying = false,
                 ),
                 readerFontFamily = FontFamily.Default,
                 readerFontSize = 18f,
@@ -90,7 +90,7 @@ class PlaybackScreenTest {
                 onCycleSpeed = {},
                 onToggleFavorite = {},
                 onSetSleepTimer = {},
-                onSetSearchQuery = {}
+                onSetSearchQuery = {},
             )
         }
 

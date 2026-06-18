@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.mienaiknife.narra.ui.components
 
 import android.content.res.Configuration
@@ -35,18 +34,17 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.navigation.NavController
 import androidx.navigation.NavDestination.Companion.hasRoute
-import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.mienaiknife.narra.NavDestination
 import com.mienaiknife.narra.ui.theme.NarraTheme
 
 sealed class BottomNavItem<T : Any>(val route: T, val icon: ImageVector, val label: String) {
-    data object Home    : BottomNavItem<NavDestination.Home>(NavDestination.Home,    Icons.Filled.Home,    "Home")
-    data object Queue   : BottomNavItem<NavDestination.Queue>(NavDestination.Queue,   Icons.AutoMirrored.Filled.PlaylistPlay, "Queue")
-    data object Add     : BottomNavItem<NavDestination.Add>(NavDestination.Add,     Icons.Filled.Add,     "Add")
-    data object Inbox   : BottomNavItem<NavDestination.Inbox>(NavDestination.Inbox,   Icons.Filled.Inbox,   "Inbox")
-    data object Settings: BottomNavItem<NavDestination.Settings>(NavDestination.Settings, Icons.Filled.Settings, "Settings")
+    data object Home : BottomNavItem<NavDestination.Home>(NavDestination.Home, Icons.Filled.Home, "Home")
+    data object Queue : BottomNavItem<NavDestination.Queue>(NavDestination.Queue, Icons.AutoMirrored.Filled.PlaylistPlay, "Queue")
+    data object Add : BottomNavItem<NavDestination.Add>(NavDestination.Add, Icons.Filled.Add, "Add")
+    data object Inbox : BottomNavItem<NavDestination.Inbox>(NavDestination.Inbox, Icons.Filled.Inbox, "Inbox")
+    data object Settings : BottomNavItem<NavDestination.Settings>(NavDestination.Settings, Icons.Filled.Settings, "Settings")
 }
 
 @Composable
@@ -56,7 +54,7 @@ fun BottomNavBar(navController: NavController) {
         BottomNavItem.Queue,
         BottomNavItem.Add,
         BottomNavItem.Inbox,
-        BottomNavItem.Settings
+        BottomNavItem.Settings,
     )
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
@@ -74,14 +72,14 @@ fun BottomNavBar(navController: NavController) {
                         NavDestination.SettingsVoices::class,
                         NavDestination.SettingsDownloads::class,
                         NavDestination.SettingsAbout::class,
-                        NavDestination.SettingsLicenses::class
+                        NavDestination.SettingsLicenses::class,
                     ).any { currentDestination?.hasRoute(it) == true }
                 }
 
                 BottomNavItem.Queue -> {
                     listOf(
                         NavDestination.Queue::class,
-                        NavDestination.History::class
+                        NavDestination.History::class,
                     ).any { currentDestination?.hasRoute(it) == true }
                 }
 
@@ -89,7 +87,7 @@ fun BottomNavBar(navController: NavController) {
                     listOf(
                         NavDestination.Inbox::class,
                         NavDestination.Feeds::class,
-                        NavDestination.Feed::class
+                        NavDestination.Feed::class,
                     ).any { currentDestination?.hasRoute(it) == true }
                 }
 
@@ -112,8 +110,8 @@ fun BottomNavBar(navController: NavController) {
                 colors = NavigationBarItemDefaults.colors(
                     selectedIconColor = MaterialTheme.colorScheme.onBackground,
                     selectedTextColor = MaterialTheme.colorScheme.onBackground,
-                    indicatorColor = MaterialTheme.colorScheme.primaryContainer
-                )
+                    indicatorColor = MaterialTheme.colorScheme.primaryContainer,
+                ),
             )
         }
     }

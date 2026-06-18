@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.mienaiknife.narra.ui.utils
 
 import android.content.Context
@@ -24,8 +23,10 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class NetworkMonitorImpl @Inject constructor(
-    @param:ApplicationContext private val context: Context
+class NetworkMonitorImpl
+@Inject
+constructor(
+    @param:ApplicationContext private val context: Context,
 ) : NetworkMonitor {
     override fun isOnline(): Boolean {
         val connectivityManager =

@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.mienaiknife.narra.ui.screens
 
 import android.content.res.Configuration
@@ -59,10 +58,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import androidx.navigation.compose.rememberNavController
 import com.mienaiknife.narra.R
 import com.mienaiknife.narra.ui.components.BottomNavBar
@@ -76,14 +75,14 @@ fun SettingsScreen(
     onNavigateToVoices: () -> Unit,
     onNavigateToDownloads: () -> Unit,
     onNavigateToAbout: () -> Unit,
-    navigateToDestination: (com.mienaiknife.narra.NavDestination) -> Unit = {}
+    navigateToDestination: (com.mienaiknife.narra.NavDestination) -> Unit = {},
 ) {
     var searchQuery by remember { mutableStateOf("") }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .statusBarsPadding()
+            .statusBarsPadding(),
     ) {
         Spacer(modifier = Modifier.height(16.dp))
 
@@ -92,11 +91,11 @@ fun SettingsScreen(
                 .fillMaxWidth()
                 .heightIn(min = 48.dp)
                 .padding(horizontal = 16.dp),
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
                 text = stringResource(R.string.nav_settings),
-                style = MaterialTheme.typography.headlineSmall
+                style = MaterialTheme.typography.headlineSmall,
             )
         }
 
@@ -111,7 +110,7 @@ fun SettingsScreen(
             onExpandedChange = { expanded = it },
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp)
+                .padding(horizontal = 16.dp),
         ) {
             OutlinedTextField(
                 value = searchQuery,
@@ -132,7 +131,7 @@ fun SettingsScreen(
                         }) {
                             Icon(
                                 imageVector = Icons.Default.Clear,
-                                contentDescription = stringResource(R.string.action_clear)
+                                contentDescription = stringResource(R.string.action_clear),
                             )
                         }
                     }
@@ -140,9 +139,9 @@ fun SettingsScreen(
                 shape = RoundedCornerShape(24.dp),
                 colors = OutlinedTextFieldDefaults.colors(
                     unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
-                    focusedBorderColor = MaterialTheme.colorScheme.primary
+                    focusedBorderColor = MaterialTheme.colorScheme.primary,
                 ),
-                singleLine = true
+                singleLine = true,
             )
 
             val filteredSettings = remember(searchQuery, resources) {
@@ -155,8 +154,8 @@ fun SettingsScreen(
                         // However, allSearchableSettings uses resource IDs. We can use resources.getString here.
                         // To avoid the lint warning, we can suppress it or just accept it's necessary here.
                         resources.getString(item.titleRes).contains(searchQuery, ignoreCase = true) ||
-                                resources.getString(item.subtitleRes).contains(searchQuery, ignoreCase = true) ||
-                                item.keywords.any { it.contains(searchQuery, ignoreCase = true) }
+                            resources.getString(item.subtitleRes).contains(searchQuery, ignoreCase = true) ||
+                            item.keywords.any { it.contains(searchQuery, ignoreCase = true) }
                     }.take(5)
                 }
             }
@@ -165,7 +164,7 @@ fun SettingsScreen(
                 ExposedDropdownMenu(
                     expanded = expanded,
                     onDismissRequest = { expanded = false },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
                 ) {
                     filteredSettings.forEach { result ->
                         androidx.compose.material3.DropdownMenuItem(
@@ -175,7 +174,7 @@ fun SettingsScreen(
                                     Text(
                                         stringResource(result.subtitleRes),
                                         style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
                                 }
                             },
@@ -183,7 +182,7 @@ fun SettingsScreen(
                                 navigateToDestination(result.destination)
                                 searchQuery = ""
                                 expanded = false
-                            }
+                            },
                         )
                     }
                 }
@@ -195,37 +194,37 @@ fun SettingsScreen(
                 title = stringResource(R.string.settings_ui_title),
                 subtitle = stringResource(R.string.settings_ui_subtitle),
                 icon = Icons.Default.StayCurrentPortrait,
-                onClick = onNavigateToUserInterface
+                onClick = onNavigateToUserInterface,
             ),
             SettingsItem(
                 title = stringResource(R.string.settings_playback_title),
                 subtitle = stringResource(R.string.settings_playback_subtitle),
                 icon = Icons.Default.Headphones,
-                onClick = onNavigateToPlayback
+                onClick = onNavigateToPlayback,
             ),
             SettingsItem(
                 title = stringResource(R.string.settings_voices_title),
                 subtitle = stringResource(R.string.settings_voices_subtitle),
-                icon = Icons.Default.RecordVoiceOver, 
-                onClick = onNavigateToVoices
+                icon = Icons.Default.RecordVoiceOver,
+                onClick = onNavigateToVoices,
             ),
             SettingsItem(
                 title = stringResource(R.string.settings_downloads_title),
                 subtitle = stringResource(R.string.settings_downloads_subtitle),
                 icon = Icons.Default.Download,
-                onClick = onNavigateToDownloads
+                onClick = onNavigateToDownloads,
             ),
             SettingsItem(
                 title = stringResource(R.string.settings_about_title),
                 subtitle = stringResource(R.string.settings_about_subtitle),
                 icon = Icons.Default.Info,
-                onClick = onNavigateToAbout
-            )
+                onClick = onNavigateToAbout,
+            ),
         )
 
         LazyColumn(
             modifier = Modifier.fillMaxWidth(),
-            contentPadding = PaddingValues(vertical = 8.dp)
+            contentPadding = PaddingValues(vertical = 8.dp),
         ) {
             items(settingsItems) { item ->
                 SettingsListItem(item)
@@ -238,7 +237,7 @@ data class SettingsItem(
     val title: String,
     val subtitle: String,
     val icon: ImageVector,
-    val onClick: () -> Unit
+    val onClick: () -> Unit,
 )
 
 @Composable
@@ -248,30 +247,30 @@ fun SettingsListItem(item: SettingsItem) {
             .fillMaxWidth()
             .clickable(onClick = item.onClick)
             .padding(horizontal = 16.dp, vertical = 16.dp),
-        verticalAlignment = Alignment.CenterVertically
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(
             imageVector = item.icon,
             contentDescription = null,
             modifier = Modifier.padding(end = 16.dp),
-            tint = MaterialTheme.colorScheme.onSurface
+            tint = MaterialTheme.colorScheme.onSurface,
         )
         Column(
             modifier = Modifier.weight(1f),
             verticalArrangement = Arrangement.spacedBy(
                 LocalNarraSpacing.current.itemVertical,
-                Alignment.CenterVertically
-            )
+                Alignment.CenterVertically,
+            ),
         ) {
             Text(
                 text = item.title,
                 style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurface
+                color = MaterialTheme.colorScheme.onSurface,
             )
             Text(
                 text = item.subtitle,
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
     }
@@ -283,7 +282,7 @@ fun SettingsScreenPreview() {
     val navController = rememberNavController()
     NarraTheme(darkTheme = true, dynamicColor = false) {
         Scaffold(
-            bottomBar = { BottomNavBar(navController) }
+            bottomBar = { BottomNavBar(navController) },
         ) { innerPadding ->
             Box(modifier = Modifier.padding(innerPadding)) {
                 SettingsScreen(
@@ -292,7 +291,7 @@ fun SettingsScreenPreview() {
                     onNavigateToVoices = {},
                     onNavigateToDownloads = {},
                     onNavigateToAbout = {},
-                    navigateToDestination = {}
+                    navigateToDestination = {},
                 )
             }
         }

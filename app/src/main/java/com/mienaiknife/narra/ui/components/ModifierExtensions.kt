@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.mienaiknife.narra.ui.components
 
 import androidx.compose.animation.animateColorAsState
@@ -32,7 +31,7 @@ import kotlinx.coroutines.delay
 
 fun Modifier.flashHighlight(enabled: Boolean): Modifier = composed {
     var isHighlighted by remember { mutableStateOf(false) }
-    
+
     LaunchedEffect(enabled) {
         if (enabled) {
             delay(300) // Delay to wait for navigation/scroll to settle
@@ -43,13 +42,14 @@ fun Modifier.flashHighlight(enabled: Boolean): Modifier = composed {
     }
 
     val backgroundColor by animateColorAsState(
-        targetValue = if (isHighlighted) {
+        targetValue =
+        if (isHighlighted) {
             MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
         } else {
             Color.Transparent
         },
         animationSpec = tween(durationMillis = 500),
-        label = "flashHighlight"
+        label = "flashHighlight",
     )
 
     this.background(backgroundColor)

@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.mienaiknife.narra.di
 
 import com.mienaiknife.narra.data.local.EpubDataSource
@@ -49,12 +48,9 @@ import javax.inject.Singleton
 @Module
 @InstallIn(SingletonComponent::class)
 object RepositoryModule {
-
     @Provides
     @Singleton
-    fun provideRssParser(): RssParser {
-        return RssParserBuilder().build()
-    }
+    fun provideRssParser(): RssParser = RssParserBuilder().build()
 
     @Provides
     @Singleton
@@ -70,23 +66,21 @@ object RepositoryModule {
         networkMonitor: NetworkMonitor,
         downloadSettingsManager: DownloadSettingsManager,
         imageDataSource: ImageDataSource,
-        notificationHelper: com.mienaiknife.narra.utils.NotificationHelper
-    ): ContentRepository {
-        return ContentRepositoryImpl(
-            context,
-            database,
-            articleDao,
-            feedDao,
-            webDataSource,
-            remoteFeedDataSource,
-            epubDataSource,
-            imageDataSource,
-            opmlDataSource,
-            networkMonitor,
-            downloadSettingsManager,
-            notificationHelper
-        )
-    }
+        notificationHelper: com.mienaiknife.narra.utils.NotificationHelper,
+    ): ContentRepository = ContentRepositoryImpl(
+        context,
+        database,
+        articleDao,
+        feedDao,
+        webDataSource,
+        remoteFeedDataSource,
+        epubDataSource,
+        imageDataSource,
+        opmlDataSource,
+        networkMonitor,
+        downloadSettingsManager,
+        notificationHelper,
+    )
 
     @Provides
     @Singleton
@@ -103,10 +97,9 @@ object RepositoryModule {
     @Provides
     @Singleton
     fun provideNotificationHelper(
-        @dagger.hilt.android.qualifiers.ApplicationContext context: android.content.Context
-    ): com.mienaiknife.narra.utils.NotificationHelper {
-        return com.mienaiknife.narra.utils.NotificationHelper(context)
-    }
+        @dagger.hilt.android.qualifiers.ApplicationContext context: android.content.Context,
+    ): com.mienaiknife.narra.utils.NotificationHelper = com.mienaiknife.narra.utils
+        .NotificationHelper(context)
 
     @Provides
     @Singleton
@@ -134,7 +127,5 @@ object RepositoryModule {
 
     @Provides
     @Singleton
-    fun provideNetworkMonitor(networkMonitorImpl: NetworkMonitorImpl): NetworkMonitor {
-        return networkMonitorImpl
-    }
+    fun provideNetworkMonitor(networkMonitorImpl: NetworkMonitorImpl): NetworkMonitor = networkMonitorImpl
 }

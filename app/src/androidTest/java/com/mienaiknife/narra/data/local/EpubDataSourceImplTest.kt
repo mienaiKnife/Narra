@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.mienaiknife.narra.data.local
 
 import android.content.Context
@@ -25,7 +24,6 @@ import org.mockito.kotlin.mock
 import java.io.ByteArrayInputStream
 
 class EpubDataSourceImplTest {
-
     private lateinit var epubDataSource: EpubDataSource
     private val imageDataSource: ImageDataSource = mock()
     private val context: Context = mock()

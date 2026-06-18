@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.mienaiknife.narra.utils
 
 /**
@@ -22,7 +21,7 @@ package com.mienaiknife.narra.utils
  */
 object Log {
     private var isTesting = false
-    
+
     init {
         try {
             // Check if we are running in a unit test environment (no Android framework)
@@ -30,9 +29,9 @@ object Log {
             val logClass = Class.forName("android.util.Log")
             // Try to access a method that might be missing or native
             logClass.getMethod("d", String::class.java, String::class.java)
-            
+
             // If we are in a Robolectric or real Android environment, this might work.
-            // But in a pure JUnit test with the "mockable android jar", 
+            // But in a pure JUnit test with the "mockable android jar",
             // the methods exist but are either empty or throw exceptions if not configured.
             // The UnsatisfiedLinkError suggests a native method call failed.
         } catch (e: Exception) {
@@ -40,7 +39,10 @@ object Log {
         }
     }
 
-    fun d(tag: String, msg: String) {
+    fun d(
+        tag: String,
+        msg: String,
+    ) {
         if (isTesting) {
             println("D/$tag: $msg")
         } else {
@@ -53,7 +55,10 @@ object Log {
         }
     }
 
-    fun i(tag: String, msg: String) {
+    fun i(
+        tag: String,
+        msg: String,
+    ) {
         if (isTesting) {
             println("I/$tag: $msg")
         } else {
@@ -66,7 +71,11 @@ object Log {
         }
     }
 
-    fun e(tag: String, msg: String, tr: Throwable? = null) {
+    fun e(
+        tag: String,
+        msg: String,
+        tr: Throwable? = null,
+    ) {
         if (isTesting) {
             println("E/$tag: $msg")
             tr?.printStackTrace()
@@ -81,7 +90,10 @@ object Log {
         }
     }
 
-    fun w(tag: String, msg: String) {
+    fun w(
+        tag: String,
+        msg: String,
+    ) {
         if (isTesting) {
             println("W/$tag: $msg")
         } else {

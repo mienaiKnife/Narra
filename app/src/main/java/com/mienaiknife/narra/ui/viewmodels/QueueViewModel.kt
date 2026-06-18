@@ -13,18 +13,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.mienaiknife.narra.ui.viewmodels
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.mienaiknife.narra.data.models.SortOption
 import com.mienaiknife.narra.domain.models.Article
 import com.mienaiknife.narra.domain.repository.ArticleRepository
 import com.mienaiknife.narra.domain.repository.FeedRepository
 import com.mienaiknife.narra.playback.PlaybackManager
 import com.mienaiknife.narra.ui.UiText
 import com.mienaiknife.narra.ui.utils.HtmlParser
-import com.mienaiknife.narra.data.models.SortOption
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -42,7 +41,7 @@ import javax.inject.Inject
 class QueueViewModel @Inject constructor(
     private val repository: ArticleRepository,
     private val feedRepository: FeedRepository,
-    private val playbackManager: PlaybackManager
+    private val playbackManager: PlaybackManager,
 ) : ViewModel() {
 
     private val _uiEvent = MutableSharedFlow<UiEvent>()
@@ -66,10 +65,10 @@ class QueueViewModel @Inject constructor(
         combine(
             playbackManager.currentArticle,
             playbackManager.isPlaying,
-            playbackManager.playbackSpeed
+            playbackManager.playbackSpeed,
         ) { current, playing, speed ->
             Triple(current, playing, speed)
-        }
+        },
     ) { articles, settings, downloadingIds, playback ->
         val (isRefreshing, sort, keep) = settings
         val (currentArticle, isPlaying, speed) = playback
@@ -104,12 +103,12 @@ class QueueViewModel @Inject constructor(
             isPlaying = isPlaying,
             playbackSpeed = speed,
             downloadingArticleIds = downloadingIds,
-            totalRemainingTimeMs = totalRemainingTimeMs
+            totalRemainingTimeMs = totalRemainingTimeMs,
         )
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
-        initialValue = QueueUiState.Loading
+        initialValue = QueueUiState.Loading,
     )
 
     fun setSortOption(option: SortOption) {
@@ -188,8 +187,12 @@ class QueueViewModel @Inject constructor(
                     val currentIndex = currentList.indexOfFirst { it.id == article.id }
                     if (currentIndex != -1 && currentIndex < currentList.size - 1) {
                         currentList[currentIndex + 1]
-                    } else null
-                } else null
+                    } else {
+                        null
+                    }
+                } else {
+                    null
+                }
 
                 repository.markAsPlayed(article.id)
 

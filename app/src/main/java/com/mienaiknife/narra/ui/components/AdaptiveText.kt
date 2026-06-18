@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.mienaiknife.narra.ui.components
 
 import android.content.res.Configuration
@@ -66,8 +65,12 @@ fun AdaptiveText(
         if (shrinkToFitContent) {
             if (minFontSize.isUnspecified) 10.sp else minFontSize
         } else {
-            if (minFontSize.isUnspecified) scaleLimit else {
-                if (scaleLimit.isUnspecified) minFontSize else {
+            if (minFontSize.isUnspecified) {
+                scaleLimit
+            } else {
+                if (scaleLimit.isUnspecified) {
+                    minFontSize
+                } else {
                     if (minFontSize > scaleLimit) minFontSize else scaleLimit
                 }
             }
@@ -96,7 +99,7 @@ fun AdaptiveText(
             } else {
                 readyToDraw = true
             }
-        }
+        },
     )
 }
 
@@ -126,7 +129,7 @@ fun AdaptiveText(
         maxLines = maxLines,
         minFontSize = minFontSize,
         overflow = overflow,
-        shrinkToFitContent = shrinkToFitContent
+        shrinkToFitContent = shrinkToFitContent,
     )
 }
 
@@ -139,7 +142,7 @@ fun AdaptiveText(
 @Composable
 fun AdaptiveTextPreview() {
     val longTitle = "This is a very very long article title that definitely overflows its container"
-    
+
     MaterialTheme {
         Surface {
             Column(modifier = Modifier.padding(16.dp)) {
@@ -149,19 +152,19 @@ fun AdaptiveTextPreview() {
                     style = MaterialTheme.typography.bodyLarge,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
                 )
 
                 Text("Scale 1.5 (Should shrink to fit)", style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(top = 16.dp))
                 CompositionLocalProvider(
-                    LocalDensity provides Density(density = LocalDensity.current.density, fontScale = 1.5f)
+                    LocalDensity provides Density(density = LocalDensity.current.density, fontScale = 1.5f),
                 ) {
                     AdaptiveText(
                         text = longTitle,
                         style = MaterialTheme.typography.bodyLarge,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth(),
                     )
                 }
 
@@ -172,7 +175,7 @@ fun AdaptiveTextPreview() {
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     shrinkToFitContent = true,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
                 )
 
                 Text("AnnotatedString (Combined styles)", style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(top = 16.dp))
@@ -188,7 +191,7 @@ fun AdaptiveTextPreview() {
                     style = MaterialTheme.typography.bodyLarge,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
                 )
             }
         }

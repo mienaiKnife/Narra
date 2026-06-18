@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.mienaiknife.narra.tts.android
 
 import android.content.Context
@@ -30,10 +29,11 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class AndroidTtsEngine @Inject constructor(
-    @param:ApplicationContext private val context: Context
+class AndroidTtsEngine
+@Inject
+constructor(
+    @param:ApplicationContext private val context: Context,
 ) : TtsEngine {
-
     private val _state = MutableStateFlow<TtsState>(TtsState.Initializing)
     override val state: StateFlow<TtsState> = _state.asStateFlow()
 
@@ -43,60 +43,79 @@ class AndroidTtsEngine @Inject constructor(
     private val pendingRequests = mutableListOf<PendingRequest>()
 
     private sealed class PendingRequest {
-        data class Speak(val text: String, val utteranceId: String) : PendingRequest()
-        data class Enqueue(val text: String, val utteranceId: String) : PendingRequest()
+        data class Speak(
+            val text: String,
+            val utteranceId: String,
+        ) : PendingRequest()
+
+        data class Enqueue(
+            val text: String,
+            val utteranceId: String,
+        ) : PendingRequest()
     }
 
     init {
-        tts = TextToSpeech(context) { status ->
-            synchronized(this) {
-                if (status == TextToSpeech.SUCCESS) {
-                    tts?.let { engine ->
-                        engine.language = Locale.getDefault()
-                        engine.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
-                            override fun onStart(utteranceId: String?) {
-                                utteranceId?.let { id ->
-                                    _state.value = TtsState.Speaking(id)
-                                }
-                            }
+        tts =
+            TextToSpeech(context) { status ->
+                synchronized(this) {
+                    if (status == TextToSpeech.SUCCESS) {
+                        tts?.let { engine ->
+                            engine.language = Locale.getDefault()
+                            engine.setOnUtteranceProgressListener(
+                                object : UtteranceProgressListener() {
+                                    override fun onStart(utteranceId: String?) {
+                                        utteranceId?.let { id ->
+                                            _state.value = TtsState.Speaking(id)
+                                        }
+                                    }
 
-                            override fun onRangeStart(utteranceId: String?, start: Int, end: Int, frame: Int) {
-                                utteranceId?.let { id ->
-                                    _state.value = TtsState.Speaking(id, start, end, frame)
-                                }
-                            }
+                                    override fun onRangeStart(
+                                        utteranceId: String?,
+                                        start: Int,
+                                        end: Int,
+                                        frame: Int,
+                                    ) {
+                                        utteranceId?.let { id ->
+                                            _state.value = TtsState.Speaking(id, start, end, frame)
+                                        }
+                                    }
 
-                            override fun onDone(utteranceId: String?) {
-                                _state.value = TtsState.Ready
-                            }
+                                    override fun onDone(utteranceId: String?) {
+                                        _state.value = TtsState.Ready
+                                    }
 
-                            @Deprecated("Deprecated in Java")
-                            override fun onError(utteranceId: String?) {
-                                _state.value = TtsState.Error("Error speaking utterance: $utteranceId")
-                            }
+                                    @Deprecated("Deprecated in Java")
+                                    override fun onError(utteranceId: String?) {
+                                        _state.value = TtsState.Error("Error speaking utterance: $utteranceId")
+                                    }
 
-                            override fun onError(utteranceId: String?, errorCode: Int) {
-                                _state.value = TtsState.Error("Error speaking utterance: $utteranceId, code: $errorCode")
-                            }
-                        })
-                        isInitialized = true
-                        _state.value = TtsState.Ready
-                        processPendingRequests()
+                                    override fun onError(
+                                        utteranceId: String?,
+                                        errorCode: Int,
+                                    ) {
+                                        _state.value = TtsState.Error("Error speaking utterance: $utteranceId, code: $errorCode")
+                                    }
+                                },
+                            )
+                            isInitialized = true
+                            _state.value = TtsState.Ready
+                            processPendingRequests()
+                        }
+                    } else {
+                        _state.value = TtsState.Error("Failed to initialize Android TTS")
+                        pendingRequests.clear()
                     }
-                } else {
-                    _state.value = TtsState.Error("Failed to initialize Android TTS")
-                    pendingRequests.clear()
                 }
             }
-        }
     }
 
     private fun processPendingRequests() {
-        val requests = synchronized(this) {
-            val list = ArrayList(pendingRequests)
-            pendingRequests.clear()
-            list
-        }
+        val requests =
+            synchronized(this) {
+                val list = ArrayList(pendingRequests)
+                pendingRequests.clear()
+                list
+            }
         requests.forEach { request ->
             when (request) {
                 is PendingRequest.Speak -> speak(request.text, request.utteranceId)
@@ -106,27 +125,35 @@ class AndroidTtsEngine @Inject constructor(
     }
 
     @Synchronized
-    override fun speak(text: String, utteranceId: String) {
+    override fun speak(
+        text: String,
+        utteranceId: String,
+    ) {
         if (!isInitialized) {
             pendingRequests.clear()
             pendingRequests.add(PendingRequest.Speak(text, utteranceId))
             return
         }
-        val params = android.os.Bundle().apply {
-            putFloat(TextToSpeech.Engine.KEY_PARAM_VOLUME, currentVolume)
-        }
+        val params =
+            android.os.Bundle().apply {
+                putFloat(TextToSpeech.Engine.KEY_PARAM_VOLUME, currentVolume)
+            }
         tts?.speak(text, TextToSpeech.QUEUE_FLUSH, params, utteranceId)
     }
 
     @Synchronized
-    override fun enqueue(text: String, utteranceId: String) {
+    override fun enqueue(
+        text: String,
+        utteranceId: String,
+    ) {
         if (!isInitialized) {
             pendingRequests.add(PendingRequest.Enqueue(text, utteranceId))
             return
         }
-        val params = android.os.Bundle().apply {
-            putFloat(TextToSpeech.Engine.KEY_PARAM_VOLUME, currentVolume)
-        }
+        val params =
+            android.os.Bundle().apply {
+                putFloat(TextToSpeech.Engine.KEY_PARAM_VOLUME, currentVolume)
+            }
         tts?.speak(text, TextToSpeech.QUEUE_ADD, params, utteranceId)
     }
 
@@ -143,11 +170,16 @@ class AndroidTtsEngine @Inject constructor(
     }
 
     @Synchronized
-    override fun setAudioAttributes(usage: Int, contentType: Int) {
-        val attr = android.media.AudioAttributes.Builder()
-            .setUsage(usage)
-            .setContentType(contentType)
-            .build()
+    override fun setAudioAttributes(
+        usage: Int,
+        contentType: Int,
+    ) {
+        val attr =
+            android.media.AudioAttributes
+                .Builder()
+                .setUsage(usage)
+                .setContentType(contentType)
+                .build()
         tts?.setAudioAttributes(attr)
     }
 

@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.mienaiknife.narra.ui.viewmodels
 
 import app.cash.turbine.test
@@ -38,7 +37,6 @@ import org.mockito.kotlin.whenever
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class HomeViewModelTest {
-
     private val articleRepository: ArticleRepository = mock()
     private val feedRepository: FeedRepository = mock()
     private val importExportRepository: ImportExportRepository = mock()
@@ -50,7 +48,7 @@ class HomeViewModelTest {
     @Before
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
-        
+
         whenever(articleRepository.getQueueArticles()).thenReturn(flowOf(emptyList()))
         whenever(articleRepository.getInboxArticles()).thenReturn(flowOf(emptyList()))
         whenever(articleRepository.getFavoriteArticles()).thenReturn(flowOf(emptyList()))
@@ -75,9 +73,9 @@ class HomeViewModelTest {
     @Test
     fun `refresh updates isRefreshing state`() = runTest {
         whenever(feedRepository.refreshFeeds()).thenReturn(Result.success(Unit))
-        
+
         viewModel.refresh()
-        
+
         viewModel.uiState.test {
             // First item might be the initial state or the state after combine
             val state = awaitItem()

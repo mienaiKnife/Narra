@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.mienaiknife.narra.data.workers
 
 import android.app.NotificationChannel
@@ -30,15 +29,15 @@ import com.mienaiknife.narra.domain.repository.ModelRepository
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import kotlinx.coroutines.CancellationException
-import javax.inject.Inject
 
 @HiltWorker
-class DownloadWorker @AssistedInject constructor(
+class DownloadWorker
+@AssistedInject
+constructor(
     @Assisted context: Context,
     @Assisted params: WorkerParameters,
-    private val modelRepository: ModelRepository
+    private val modelRepository: ModelRepository,
 ) : CoroutineWorker(context, params) {
-
     companion object {
         private const val NOTIFICATION_ID = 2001
         private const val CHANNEL_ID = "download_channel"
@@ -46,7 +45,7 @@ class DownloadWorker @AssistedInject constructor(
 
     override suspend fun doWork(): Result {
         val modelId = inputData.getString("modelId") ?: return Result.failure()
-        
+
         // Use setForeground to make it a foreground service
         try {
             setForeground(createForegroundInfo(modelId))
@@ -54,7 +53,7 @@ class DownloadWorker @AssistedInject constructor(
             android.util.Log.e("DownloadWorker", "Failed to set foreground", e)
             // Continue anyway, it might still work as a background worker
         }
-        
+
         return try {
             val result = modelRepository.downloadModel(modelId)
             if (result.isSuccess) {
@@ -75,25 +74,28 @@ class DownloadWorker @AssistedInject constructor(
     private fun createForegroundInfo(modelId: String): ForegroundInfo {
         val title = "Downloading TTS Model"
         val content = "Downloading $modelId..."
-        
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(
-                CHANNEL_ID,
-                "Downloads",
-                NotificationManager.IMPORTANCE_LOW
-            )
+            val channel =
+                NotificationChannel(
+                    CHANNEL_ID,
+                    "Downloads",
+                    NotificationManager.IMPORTANCE_LOW,
+                )
             val manager = applicationContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             manager.createNotificationChannel(channel)
         }
 
-        val notification = NotificationCompat.Builder(applicationContext, CHANNEL_ID)
-            .setContentTitle(title)
-            .setTicker(title)
-            .setContentText(content)
-            .setSmallIcon(android.R.drawable.stat_sys_download)
-            .setOngoing(true)
-            .setPriority(NotificationCompat.PRIORITY_LOW)
-            .build()
+        val notification =
+            NotificationCompat
+                .Builder(applicationContext, CHANNEL_ID)
+                .setContentTitle(title)
+                .setTicker(title)
+                .setContentText(content)
+                .setSmallIcon(android.R.drawable.stat_sys_download)
+                .setOngoing(true)
+                .setPriority(NotificationCompat.PRIORITY_LOW)
+                .build()
 
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             ForegroundInfo(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)

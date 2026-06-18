@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.mienaiknife.narra.playback
 
 import android.content.Context
@@ -27,99 +26,139 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class PlaybackSettingsManager @Inject constructor(
-    @param:ApplicationContext private val context: Context
+class PlaybackSettingsManager
+@Inject
+constructor(
+    @param:ApplicationContext private val context: Context,
 ) {
     private val chimeSoundKey = stringPreferencesKey("chime_sound")
     private val fastForwardSkipTimeKey = stringPreferencesKey("fast_forward_skip_time")
     private val rewindSkipTimeKey = stringPreferencesKey("rewind_skip_time")
     private val fastForwardHardwareButtonKey = stringPreferencesKey("fast_forward_hardware_button")
     private val rewindHardwareButtonKey = stringPreferencesKey("rewind_hardware_button")
-    private val pauseOnDisconnectKey = androidx.datastore.preferences.core.booleanPreferencesKey("pause_on_disconnect")
-    private val pauseForInterruptionsKey = androidx.datastore.preferences.core.booleanPreferencesKey("pause_for_interruptions")
-    private val autoPlayNextKey = androidx.datastore.preferences.core.booleanPreferencesKey("auto_play_next")
-    private val playChimeAndTitleKey = androidx.datastore.preferences.core.booleanPreferencesKey("play_chime_and_title")
-    private val readAltTextKey = androidx.datastore.preferences.core.booleanPreferencesKey("read_alt_text")
-    private val shortenHyperlinksKey = androidx.datastore.preferences.core.booleanPreferencesKey("shorten_hyperlinks")
+    private val pauseOnDisconnectKey =
+        androidx.datastore.preferences.core
+            .booleanPreferencesKey("pause_on_disconnect")
+    private val pauseForInterruptionsKey =
+        androidx.datastore.preferences.core
+            .booleanPreferencesKey("pause_for_interruptions")
+    private val autoPlayNextKey =
+        androidx.datastore.preferences.core
+            .booleanPreferencesKey("auto_play_next")
+    private val playChimeAndTitleKey =
+        androidx.datastore.preferences.core
+            .booleanPreferencesKey("play_chime_and_title")
+    private val readAltTextKey =
+        androidx.datastore.preferences.core
+            .booleanPreferencesKey("read_alt_text")
+    private val shortenHyperlinksKey =
+        androidx.datastore.preferences.core
+            .booleanPreferencesKey("shorten_hyperlinks")
     private val lastArticleIdKey = stringPreferencesKey("last_article_id")
     private val ttsEngineKey = stringPreferencesKey("tts_engine")
     private val ttsModelIdKey = stringPreferencesKey("tts_model_id")
-    private val ttsSpeakerIdKey = androidx.datastore.preferences.core.intPreferencesKey("tts_speaker_id")
-    private val sherpaSpeedKey = androidx.datastore.preferences.core.floatPreferencesKey("sherpa_speed")
-    private val sherpaNoiseScaleKey = androidx.datastore.preferences.core.floatPreferencesKey("sherpa_noise_scale")
-    private val sherpaLengthScaleKey = androidx.datastore.preferences.core.floatPreferencesKey("sherpa_length_scale")
+    private val ttsSpeakerIdKey =
+        androidx.datastore.preferences.core
+            .intPreferencesKey("tts_speaker_id")
+    private val sherpaSpeedKey =
+        androidx.datastore.preferences.core
+            .floatPreferencesKey("sherpa_speed")
+    private val sherpaNoiseScaleKey =
+        androidx.datastore.preferences.core
+            .floatPreferencesKey("sherpa_noise_scale")
+    private val sherpaLengthScaleKey =
+        androidx.datastore.preferences.core
+            .floatPreferencesKey("sherpa_length_scale")
 
-    val chimeSound: Flow<String> = context.dataStore.data.map { prefs ->
-        prefs[chimeSoundKey] ?: "music_box_chime_positive"
-    }
+    val chimeSound: Flow<String> =
+        context.dataStore.data.map { prefs ->
+            prefs[chimeSoundKey] ?: "music_box_chime_positive"
+        }
 
-    val fastForwardSkipTime: Flow<String> = context.dataStore.data.map { prefs ->
-        prefs[fastForwardSkipTimeKey] ?: "30s"
-    }
+    val fastForwardSkipTime: Flow<String> =
+        context.dataStore.data.map { prefs ->
+            prefs[fastForwardSkipTimeKey] ?: "30s"
+        }
 
-    val rewindSkipTime: Flow<String> = context.dataStore.data.map { prefs ->
-        prefs[rewindSkipTimeKey] ?: "10s"
-    }
+    val rewindSkipTime: Flow<String> =
+        context.dataStore.data.map { prefs ->
+            prefs[rewindSkipTimeKey] ?: "10s"
+        }
 
-    val fastForwardHardwareButton: Flow<String> = context.dataStore.data.map { prefs ->
-        prefs[fastForwardHardwareButtonKey] ?: "fast_forward"
-    }
+    val fastForwardHardwareButton: Flow<String> =
+        context.dataStore.data.map { prefs ->
+            prefs[fastForwardHardwareButtonKey] ?: "fast_forward"
+        }
 
-    val rewindHardwareButton: Flow<String> = context.dataStore.data.map { prefs ->
-        prefs[rewindHardwareButtonKey] ?: "rewind"
-    }
+    val rewindHardwareButton: Flow<String> =
+        context.dataStore.data.map { prefs ->
+            prefs[rewindHardwareButtonKey] ?: "rewind"
+        }
 
-    val pauseOnDisconnect: Flow<Boolean> = context.dataStore.data.map { prefs ->
-        prefs[pauseOnDisconnectKey] ?: true
-    }
+    val pauseOnDisconnect: Flow<Boolean> =
+        context.dataStore.data.map { prefs ->
+            prefs[pauseOnDisconnectKey] ?: true
+        }
 
-    val pauseForInterruptions: Flow<Boolean> = context.dataStore.data.map { prefs ->
-        prefs[pauseForInterruptionsKey] ?: true
-    }
+    val pauseForInterruptions: Flow<Boolean> =
+        context.dataStore.data.map { prefs ->
+            prefs[pauseForInterruptionsKey] ?: true
+        }
 
-    val autoPlayNext: Flow<Boolean> = context.dataStore.data.map { prefs ->
-        prefs[autoPlayNextKey] ?: true
-    }
+    val autoPlayNext: Flow<Boolean> =
+        context.dataStore.data.map { prefs ->
+            prefs[autoPlayNextKey] ?: true
+        }
 
-    val playChimeAndTitle: Flow<Boolean> = context.dataStore.data.map { prefs ->
-        prefs[playChimeAndTitleKey] ?: true
-    }
+    val playChimeAndTitle: Flow<Boolean> =
+        context.dataStore.data.map { prefs ->
+            prefs[playChimeAndTitleKey] ?: true
+        }
 
-    val readAltText: Flow<Boolean> = context.dataStore.data.map { prefs ->
-        prefs[readAltTextKey] ?: true
-    }
+    val readAltText: Flow<Boolean> =
+        context.dataStore.data.map { prefs ->
+            prefs[readAltTextKey] ?: true
+        }
 
-    val shortenHyperlinks: Flow<Boolean> = context.dataStore.data.map { prefs ->
-        prefs[shortenHyperlinksKey] ?: true
-    }
+    val shortenHyperlinks: Flow<Boolean> =
+        context.dataStore.data.map { prefs ->
+            prefs[shortenHyperlinksKey] ?: true
+        }
 
-    val lastArticleId: Flow<String?> = context.dataStore.data.map { prefs ->
-        prefs[lastArticleIdKey]
-    }
+    val lastArticleId: Flow<String?> =
+        context.dataStore.data.map { prefs ->
+            prefs[lastArticleIdKey]
+        }
 
-    val ttsEngine: Flow<String> = context.dataStore.data.map { prefs ->
-        prefs[ttsEngineKey] ?: "android"
-    }
+    val ttsEngine: Flow<String> =
+        context.dataStore.data.map { prefs ->
+            prefs[ttsEngineKey] ?: "android"
+        }
 
-    val ttsModelId: Flow<String?> = context.dataStore.data.map { prefs ->
-        prefs[ttsModelIdKey]
-    }
+    val ttsModelId: Flow<String?> =
+        context.dataStore.data.map { prefs ->
+            prefs[ttsModelIdKey]
+        }
 
-    val ttsSpeakerId: Flow<Int> = context.dataStore.data.map { prefs ->
-        prefs[ttsSpeakerIdKey] ?: 0
-    }
+    val ttsSpeakerId: Flow<Int> =
+        context.dataStore.data.map { prefs ->
+            prefs[ttsSpeakerIdKey] ?: 0
+        }
 
-    val sherpaSpeed: Flow<Float> = context.dataStore.data.map { prefs ->
-        prefs[sherpaSpeedKey] ?: 1.0f
-    }
+    val sherpaSpeed: Flow<Float> =
+        context.dataStore.data.map { prefs ->
+            prefs[sherpaSpeedKey] ?: 1.0f
+        }
 
-    val sherpaNoiseScale: Flow<Float> = context.dataStore.data.map { prefs ->
-        prefs[sherpaNoiseScaleKey] ?: 0.667f
-    }
+    val sherpaNoiseScale: Flow<Float> =
+        context.dataStore.data.map { prefs ->
+            prefs[sherpaNoiseScaleKey] ?: 0.667f
+        }
 
-    val sherpaLengthScale: Flow<Float> = context.dataStore.data.map { prefs ->
-        prefs[sherpaLengthScaleKey] ?: 1.0f
-    }
+    val sherpaLengthScale: Flow<Float> =
+        context.dataStore.data.map { prefs ->
+            prefs[sherpaLengthScaleKey] ?: 1.0f
+        }
 
     suspend fun setFastForwardSkipTime(time: String) {
         context.dataStore.edit { prefs ->

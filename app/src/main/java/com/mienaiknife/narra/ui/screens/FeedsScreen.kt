@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.mienaiknife.narra.ui.screens
 
 import android.content.res.Configuration
@@ -46,14 +45,14 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.NotificationsNone
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.RssFeed
-import androidx.compose.material.icons.filled.Upload
-import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Upload
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -76,14 +75,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.rememberNavController
-import androidx.compose.ui.res.stringResource
-import com.mienaiknife.narra.R
 import coil3.compose.AsyncImage
+import com.mienaiknife.narra.R
 import com.mienaiknife.narra.data.local.entities.FeedEntity
 import com.mienaiknife.narra.data.models.SortOption
 import com.mienaiknife.narra.ui.components.BottomNavBar
@@ -96,7 +95,7 @@ import com.mienaiknife.narra.ui.viewmodels.FeedsViewModel
 fun FeedsScreen(
     onNavigateToFeed: (String, String) -> Unit,
     onBack: () -> Unit,
-    viewModel: FeedsViewModel = hiltViewModel()
+    viewModel: FeedsViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val message by viewModel.message.collectAsStateWithLifecycle()
@@ -110,7 +109,7 @@ fun FeedsScreen(
     }
 
     val importLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.OpenDocument()
+        contract = ActivityResultContracts.OpenDocument(),
     ) { uri ->
         uri?.let {
             val inputStream = context.contentResolver.openInputStream(it)
@@ -119,7 +118,7 @@ fun FeedsScreen(
     }
 
     val exportLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.CreateDocument("application/xml")
+        contract = ActivityResultContracts.CreateDocument("application/xml"),
     ) { uri ->
         uri?.let {
             val outputStream = context.contentResolver.openOutputStream(it)
@@ -138,7 +137,7 @@ fun FeedsScreen(
         onRefresh = { viewModel.refresh() },
         onSortOptionSelected = { viewModel.setSortOption(it) },
         onImportOpml = { importLauncher.launch(arrayOf("application/xml", "text/xml", "application/octet-stream", "*/*")) },
-        onExportOpml = { exportLauncher.launch("narra-subscriptions.opml") }
+        onExportOpml = { exportLauncher.launch("narra-subscriptions.opml") },
     )
 }
 
@@ -155,7 +154,7 @@ fun FeedsScreenContent(
     onRefresh: () -> Unit = {},
     onSortOptionSelected: (SortOption) -> Unit = {},
     onImportOpml: () -> Unit = {},
-    onExportOpml: () -> Unit = {}
+    onExportOpml: () -> Unit = {},
 ) {
     var showMenu by remember { mutableStateOf(false) }
     val showSortSheet = remember { mutableStateOf(false) }
@@ -168,7 +167,7 @@ fun FeedsScreenContent(
                 onSortOptionSelected(option)
                 showSortSheet.value = false
             },
-            onDismissRequest = { showSortSheet.value = false }
+            onDismissRequest = { showSortSheet.value = false },
         )
     }
 
@@ -176,7 +175,7 @@ fun FeedsScreenContent(
         modifier = Modifier
             .fillMaxSize()
             .statusBarsPadding()
-            .background(MaterialTheme.colorScheme.background)
+            .background(MaterialTheme.colorScheme.background),
     ) {
         Spacer(modifier = Modifier.height(16.dp))
 
@@ -184,24 +183,24 @@ fun FeedsScreenContent(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp),
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             Row(
                 modifier = Modifier.weight(1f),
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 IconButton(onClick = onBackClick) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                         contentDescription = stringResource(R.string.action_back),
                         modifier = Modifier.size(32.dp),
-                        tint = MaterialTheme.colorScheme.onBackground
+                        tint = MaterialTheme.colorScheme.onBackground,
                     )
                 }
                 Text(
                     text = stringResource(R.string.nav_feeds),
                     style = MaterialTheme.typography.headlineSmall,
-                    color = MaterialTheme.colorScheme.onBackground
+                    color = MaterialTheme.colorScheme.onBackground,
                 )
             }
 
@@ -211,23 +210,24 @@ fun FeedsScreenContent(
                         imageVector = Icons.Default.Menu,
                         contentDescription = stringResource(R.string.action_menu),
                         modifier = Modifier.size(32.dp),
-                        tint = MaterialTheme.colorScheme.onBackground
+                        tint = MaterialTheme.colorScheme.onBackground,
                     )
                 }
 
                 DropdownMenu(
                     expanded = showMenu,
-                    onDismissRequest = { showMenu = false }
+                    onDismissRequest = { showMenu = false },
                 ) {
                     DropdownMenuItem(
                         text = { Text(stringResource(R.string.action_search)) },
                         onClick = { showMenu = false },
                         leadingIcon = {
                             Icon(
-                                Icons.Default.Search, contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onBackground
+                                Icons.Default.Search,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onBackground,
                             )
-                        }
+                        },
                     )
                     DropdownMenuItem(
                         text = { Text(stringResource(R.string.action_sort)) },
@@ -237,10 +237,11 @@ fun FeedsScreenContent(
                         },
                         leadingIcon = {
                             Icon(
-                                Icons.AutoMirrored.Filled.Sort, contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onBackground
+                                Icons.AutoMirrored.Filled.Sort,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onBackground,
                             )
-                        }
+                        },
                     )
                     DropdownMenuItem(
                         text = { Text(stringResource(R.string.action_refresh)) },
@@ -250,10 +251,11 @@ fun FeedsScreenContent(
                         },
                         leadingIcon = {
                             Icon(
-                                Icons.Default.Refresh, contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onBackground
+                                Icons.Default.Refresh,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onBackground,
                             )
-                        }
+                        },
                     )
                     DropdownMenuItem(
                         text = { Text(stringResource(R.string.settings_downloads_import_feeds)) },
@@ -263,10 +265,11 @@ fun FeedsScreenContent(
                         },
                         leadingIcon = {
                             Icon(
-                                Icons.Default.Upload, contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onBackground
+                                Icons.Default.Upload,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onBackground,
                             )
-                        }
+                        },
                     )
                     DropdownMenuItem(
                         text = { Text(stringResource(R.string.settings_downloads_export_feeds)) },
@@ -276,10 +279,11 @@ fun FeedsScreenContent(
                         },
                         leadingIcon = {
                             Icon(
-                                Icons.Default.Download, contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onBackground
+                                Icons.Default.Download,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onBackground,
                             )
-                        }
+                        },
                     )
                 }
             }
@@ -298,9 +302,9 @@ fun FeedsScreenContent(
                     isRefreshing = isRefreshing,
                     containerColor = MaterialTheme.colorScheme.surface,
                     color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.align(Alignment.TopCenter)
+                    modifier = Modifier.align(Alignment.TopCenter),
                 )
-            }
+            },
         ) {
             if (feeds.isEmpty()) {
                 Box(
@@ -308,12 +312,12 @@ fun FeedsScreenContent(
                         .fillMaxSize()
                         .verticalScroll(rememberScrollState())
                         .padding(horizontal = 16.dp),
-                    contentAlignment = Alignment.Center
+                    contentAlignment = Alignment.Center,
                 ) {
                     Text(
                         text = stringResource(R.string.feeds_empty_message),
                         style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
             } else {
@@ -325,7 +329,7 @@ fun FeedsScreenContent(
                             .fillMaxSize()
                             .padding(horizontal = 16.dp),
                         verticalArrangement = Arrangement.spacedBy(16.dp),
-                        contentPadding = PaddingValues(bottom = 24.dp)
+                        contentPadding = PaddingValues(bottom = 24.dp),
                     ) {
                         items(feeds) { feed ->
                             FeedItem(
@@ -334,14 +338,14 @@ fun FeedsScreenContent(
                                     onFeedClick(feed.url, feed.title)
                                 },
                                 onDeleteClick = { onDeleteFeed(feed) },
-                                onToggleNotifications = { onToggleNotifications(feed) }
+                                onToggleNotifications = { onToggleNotifications(feed) },
                             )
                         }
                     }
 
                     NarraScrollbar(
                         lazyListState = scrollState,
-                        modifier = Modifier.align(Alignment.CenterEnd)
+                        modifier = Modifier.align(Alignment.CenterEnd),
                     )
                 }
             }
@@ -355,7 +359,7 @@ fun FeedItem(
     feed: FeedEntity,
     onClick: () -> Unit,
     onDeleteClick: () -> Unit,
-    onToggleNotifications: () -> Unit
+    onToggleNotifications: () -> Unit,
 ) {
     var showMenu by remember { mutableStateOf(false) }
 
@@ -366,9 +370,9 @@ fun FeedItem(
                 .height(64.dp)
                 .combinedClickable(
                     onClick = onClick,
-                    onLongClick = { showMenu = true }
+                    onLongClick = { showMenu = true },
                 ),
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             // Square favicon or placeholder image
             Box(
@@ -376,7 +380,7 @@ fun FeedItem(
                     .size(64.dp)
                     .clip(RoundedCornerShape(12.dp))
                     .background(MaterialTheme.colorScheme.surfaceContainer),
-                contentAlignment = Alignment.Center
+                contentAlignment = Alignment.Center,
             ) {
                 val imageUrl = feed.imageUrl ?: "https://www.google.com/s2/favicons?domain=${feed.url}&sz=128"
                 var isImageLoaded by remember(imageUrl) { mutableStateOf(false) }
@@ -386,7 +390,7 @@ fun FeedItem(
                         imageVector = Icons.Default.RssFeed,
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(32.dp)
+                        modifier = Modifier.size(32.dp),
                     )
                 }
 
@@ -395,7 +399,7 @@ fun FeedItem(
                     contentDescription = stringResource(R.string.feeds_icon_desc),
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Crop,
-                    onSuccess = { isImageLoaded = true }
+                    onSuccess = { isImageLoaded = true },
                 )
             }
 
@@ -403,20 +407,20 @@ fun FeedItem(
 
             // Feed name
             Column(
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
             ) {
                 Text(
                     text = feed.title,
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onBackground,
-                    maxLines = 1
+                    maxLines = 1,
                 )
                 if (feed.description != null) {
                     Text(
                         text = feed.description,
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 2
+                        maxLines = 2,
                     )
                 }
             }
@@ -427,14 +431,14 @@ fun FeedItem(
                     imageVector = if (feed.notificationsEnabled) Icons.Default.Notifications else Icons.Default.NotificationsNone,
                     contentDescription = stringResource(R.string.feeds_notifications_desc),
                     modifier = Modifier.size(24.dp),
-                    tint = if (feed.notificationsEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                    tint = if (feed.notificationsEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         }
 
         DropdownMenu(
             expanded = showMenu,
-            onDismissRequest = { showMenu = false }
+            onDismissRequest = { showMenu = false },
         ) {
             DropdownMenuItem(
                 text = { Text(stringResource(R.string.feeds_delete_feed)) },
@@ -442,7 +446,7 @@ fun FeedItem(
                     showMenu = false
                     onDeleteClick()
                 },
-                leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null) }
+                leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null) },
             )
         }
     }
@@ -455,17 +459,17 @@ fun FeedsScreenPreview() {
     val sampleFeeds = listOf(
         FeedEntity(url = "1", title = "The Verge", description = "Tech news and more"),
         FeedEntity(url = "2", title = "Android Central", description = "Android news and reviews"),
-        FeedEntity(url = "3", title = "9to5Google", description = "Google and Android news")
+        FeedEntity(url = "3", title = "9to5Google", description = "Google and Android news"),
     )
     NarraTheme(darkTheme = true, dynamicColor = false) {
         Scaffold(
-            bottomBar = { BottomNavBar(navController) }
+            bottomBar = { BottomNavBar(navController) },
         ) { innerPadding ->
             Box(modifier = Modifier.padding(innerPadding)) {
                 FeedsScreenContent(
                     onFeedClick = { _, _ -> },
                     feeds = sampleFeeds,
-                    onBackClick = {}
+                    onBackClick = {},
                 )
             }
         }

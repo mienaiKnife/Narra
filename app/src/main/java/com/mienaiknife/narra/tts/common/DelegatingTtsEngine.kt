@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.mienaiknife.narra.tts.common
 
 import com.mienaiknife.narra.domain.TtsEngine
@@ -34,12 +33,13 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class DelegatingTtsEngine @Inject constructor(
+class DelegatingTtsEngine
+@Inject
+constructor(
     private val androidTtsEngine: AndroidTtsEngine,
     private val sherpaTtsEngine: SherpaTtsEngine,
     private val settingsManager: PlaybackSettingsManager,
 ) : TtsEngine {
-
     private val _state = MutableStateFlow<TtsState>(TtsState.Idle)
     override val state: StateFlow<TtsState> = _state.asStateFlow()
 
@@ -65,9 +65,9 @@ class DelegatingTtsEngine @Inject constructor(
 
     private fun switchEngine(newEngine: TtsEngine) {
         if ((currentEngine == newEngine) && (engineStateJob != null)) return
-        
+
         currentEngine.stop()
-        
+
         // Performance/Memory: If switching AWAY from SherpaTtsEngine, we might want to release its models.
         // However, we don't want to release if the user might switch back quickly.
         // For now, let's at least call release if it's the on-device engine and we're switching to android.
@@ -76,25 +76,32 @@ class DelegatingTtsEngine @Inject constructor(
         }
 
         currentEngine = newEngine
-        
+
         // Apply current settings to the new engine
         currentEngine.setPlaybackSpeed(currentSpeed)
         currentEngine.setVolume(currentVolume)
         currentEngine.setAudioAttributes(currentAudioUsage, currentAudioContentType)
-        
+
         engineStateJob?.cancel()
-        engineStateJob = scope.launch {
-            currentEngine.state.collect {
-                _state.value = it
+        engineStateJob =
+            scope.launch {
+                currentEngine.state.collect {
+                    _state.value = it
+                }
             }
-        }
     }
 
-    override fun speak(text: String, utteranceId: String) {
+    override fun speak(
+        text: String,
+        utteranceId: String,
+    ) {
         currentEngine.speak(text, utteranceId)
     }
 
-    override fun enqueue(text: String, utteranceId: String) {
+    override fun enqueue(
+        text: String,
+        utteranceId: String,
+    ) {
         currentEngine.enqueue(text, utteranceId)
     }
 
@@ -107,7 +114,10 @@ class DelegatingTtsEngine @Inject constructor(
         currentEngine.setPlaybackSpeed(speed)
     }
 
-    override fun setAudioAttributes(usage: Int, contentType: Int) {
+    override fun setAudioAttributes(
+        usage: Int,
+        contentType: Int,
+    ) {
         currentAudioUsage = usage
         currentAudioContentType = contentType
         currentEngine.setAudioAttributes(usage, contentType)

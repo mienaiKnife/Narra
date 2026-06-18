@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.mienaiknife.narra.ui.viewmodels
 
 import androidx.lifecycle.ViewModel
@@ -41,7 +40,7 @@ import javax.inject.Inject
 class FeedsViewModel @Inject constructor(
     feedDao: FeedDao,
     private val feedRepository: FeedRepository,
-    private val importExportRepository: ImportExportRepository
+    private val importExportRepository: ImportExportRepository,
 ) : ViewModel() {
 
     private val _isRefreshing = MutableStateFlow(false)
@@ -52,7 +51,7 @@ class FeedsViewModel @Inject constructor(
     val uiState: StateFlow<FeedsUiState> = combine(
         feedDao.getAllFeeds(),
         _isRefreshing,
-        _sortOption
+        _sortOption,
     ) { feeds, isRefreshing, sort ->
         val sortedFeeds = when (sort) {
             SortOption.MANUAL -> feeds
@@ -66,12 +65,12 @@ class FeedsViewModel @Inject constructor(
         FeedsUiState(
             feeds = sortedFeeds,
             isRefreshing = isRefreshing,
-            sortOption = sort
+            sortOption = sort,
         )
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
-        initialValue = FeedsUiState()
+        initialValue = FeedsUiState(),
     )
 
     fun setSortOption(option: SortOption) {

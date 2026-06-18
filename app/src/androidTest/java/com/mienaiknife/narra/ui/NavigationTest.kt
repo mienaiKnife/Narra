@@ -13,21 +13,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.mienaiknife.narra.ui
 
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import com.mienaiknife.narra.ui.screens.HomeScreenContent
-import androidx.compose.material3.SnackbarHostState
 import com.mienaiknife.narra.ui.viewmodels.HomeUiState
 import org.junit.Rule
 import org.junit.Test
 
 class NavigationTest {
-
     @get:Rule
     val composeTestRule = createComposeRule()
 
@@ -35,14 +33,15 @@ class NavigationTest {
     fun homeScreen_displaysEmptyState_whenNoArticles() {
         composeTestRule.setContent {
             HomeScreenContent(
-                uiState = HomeUiState.Success(
+                uiState =
+                HomeUiState.Success(
                     continueListening = emptyList(),
                     newFromFeeds = emptyList(),
-                    favoriteArticles = emptyList()
+                    favoriteArticles = emptyList(),
                 ),
                 snackbarHostState = SnackbarHostState(),
                 onArticleClick = {},
-                onAddClick = {}
+                onAddClick = {},
             )
         }
 
@@ -55,14 +54,15 @@ class NavigationTest {
         var addClicked = false
         composeTestRule.setContent {
             HomeScreenContent(
-                uiState = HomeUiState.Success(
+                uiState =
+                HomeUiState.Success(
                     continueListening = emptyList(),
                     newFromFeeds = emptyList(),
-                    favoriteArticles = emptyList()
+                    favoriteArticles = emptyList(),
                 ),
                 snackbarHostState = SnackbarHostState(),
                 onArticleClick = {},
-                onAddClick = { addClicked = true }
+                onAddClick = { addClicked = true },
             )
         }
 

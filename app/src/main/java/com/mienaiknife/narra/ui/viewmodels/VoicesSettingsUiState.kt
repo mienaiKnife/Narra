@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.mienaiknife.narra.ui.viewmodels
 
 import com.mienaiknife.narra.domain.TtsState
@@ -29,5 +28,5 @@ data class VoicesSettingsUiState(
     val sherpaNoiseScale: Float = 0.667f,
     val sherpaLengthScale: Float = 1.0f,
     val engineState: TtsState = TtsState.Idle,
-    val errorMessage: UiText? = null
+    val errorMessage: UiText? = null,
 )

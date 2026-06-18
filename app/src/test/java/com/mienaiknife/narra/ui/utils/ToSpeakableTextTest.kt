@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.mienaiknife.narra.ui.utils
 
 import android.content.Context
@@ -28,7 +27,6 @@ import org.mockito.Mockito.`when`
 import org.mockito.MockitoAnnotations
 
 class ToSpeakableTextTest {
-
     @Mock
     private lateinit var context: Context
 
@@ -49,13 +47,14 @@ class ToSpeakableTextTest {
 
     @Test
     fun `footnotes are replaced by spaces preserving length`() {
-        val annotatedString = buildAnnotatedString {
-            append("Text")
-            pushStringAnnotation("footnote", "1")
-            append("[1]")
-            pop()
-            append(" more text")
-        }
+        val annotatedString =
+            buildAnnotatedString {
+                append("Text")
+                pushStringAnnotation("footnote", "1")
+                append("[1]")
+                pop()
+                append(" more text")
+            }
         val result = annotatedString.toSpeakableText(context)
         assertEquals("Text    more text", result)
         assertEquals(annotatedString.length, result.length)
@@ -68,16 +67,17 @@ class ToSpeakableTextTest {
         // Simplified: " link to example.com " -> 21 chars
         // Result should have 22 spaces of padding
         val url = "https://example.com/very/long/path/to/page"
-        val annotatedString = buildAnnotatedString {
-            append("Check out ")
-            pushStringAnnotation("link", url)
-            append(url)
-            pop()
-            append(" for more")
-        }
-        
+        val annotatedString =
+            buildAnnotatedString {
+                append("Check out ")
+                pushStringAnnotation("link", url)
+                append(url)
+                pop()
+                append(" for more")
+            }
+
         val result = annotatedString.toSpeakableText(context)
-        
+
         assertEquals(annotatedString.length, result.length)
         val expectedPart = " link to example.com                      "
         assertEquals(expectedPart, result.substring(10, 10 + url.length))
@@ -90,15 +90,16 @@ class ToSpeakableTextTest {
         // Simplified: " link to t.co " -> 14 chars
         // Result should truncate simplified to 12 chars
         val url = "https://t.co"
-        val annotatedString = buildAnnotatedString {
-            append("See ")
-            pushStringAnnotation("link", url)
-            append(url)
-            pop()
-        }
-        
+        val annotatedString =
+            buildAnnotatedString {
+                append("See ")
+                pushStringAnnotation("link", url)
+                append(url)
+                pop()
+            }
+
         val result = annotatedString.toSpeakableText(context)
-        
+
         assertEquals(annotatedString.length, result.length)
         // " link to t.co " truncated to 12 chars is " link to t.c"
         assertEquals(" link to t.c", result.substring(4))
@@ -107,13 +108,14 @@ class ToSpeakableTextTest {
     @Test
     fun `non-URL links remain unchanged`() {
         val linkText = "Click here"
-        val annotatedString = buildAnnotatedString {
-            append("Please ")
-            pushStringAnnotation("link", "https://example.com")
-            append(linkText)
-            pop()
-        }
-        
+        val annotatedString =
+            buildAnnotatedString {
+                append("Please ")
+                pushStringAnnotation("link", "https://example.com")
+                append(linkText)
+                pop()
+            }
+
         val result = annotatedString.toSpeakableText(context)
         assertEquals(annotatedString.text, result)
         assertEquals(annotatedString.length, result.length)
@@ -122,19 +124,20 @@ class ToSpeakableTextTest {
     @Test
     fun `multiple annotations are handled correctly`() {
         val url = "https://example.com/long"
-        val annotatedString = buildAnnotatedString {
-            append("Text")
-            pushStringAnnotation("footnote", "1")
-            append("[1]")
-            pop()
-            append(" and ")
-            pushStringAnnotation("link", url)
-            append(url)
-            pop()
-        }
-        
+        val annotatedString =
+            buildAnnotatedString {
+                append("Text")
+                pushStringAnnotation("footnote", "1")
+                append("[1]")
+                pop()
+                append(" and ")
+                pushStringAnnotation("link", url)
+                append(url)
+                pop()
+            }
+
         val result = annotatedString.toSpeakableText(context)
-        
+
         assertEquals(annotatedString.length, result.length)
         assertEquals("Text   ", result.substring(0, 7))
         // " link to example.com " (21 chars) for url (24 chars) -> 3 spaces padding

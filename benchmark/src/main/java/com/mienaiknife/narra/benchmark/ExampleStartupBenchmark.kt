@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.mienaiknife.narra.benchmark
 
 import androidx.benchmark.macro.StartupMode
@@ -44,7 +43,7 @@ class ExampleStartupBenchmark {
         packageName = "com.mienaiknife.narra",
         metrics = listOf(StartupTimingMetric()),
         iterations = 5,
-        startupMode = StartupMode.COLD
+        startupMode = StartupMode.COLD,
     ) {
         pressHome()
         startActivityAndWait()

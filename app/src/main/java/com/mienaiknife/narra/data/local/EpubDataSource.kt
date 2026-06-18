@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.mienaiknife.narra.data.local
 
 import android.content.Context
@@ -24,5 +23,9 @@ interface EpubDataSource {
     /**
      * Parses an EPUB file and returns a list of Article objects (one per chapter/spine item).
      */
-    suspend fun parseEpub(context: Context, inputStream: InputStream, fallbackTitle: String): Result<List<Article>>
+    suspend fun parseEpub(
+        context: Context,
+        inputStream: InputStream,
+        fallbackTitle: String,
+    ): Result<List<Article>>
 }

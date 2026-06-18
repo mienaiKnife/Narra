@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.mienaiknife.narra.data.settings
 
 import android.content.Context
@@ -29,8 +28,10 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class SyncSettingsManager @Inject constructor(
-    @param:ApplicationContext private val context: Context
+class SyncSettingsManager
+@Inject
+constructor(
+    @param:ApplicationContext private val context: Context,
 ) {
     private val autoExportEnabledKey = booleanPreferencesKey("auto_export_enabled")
     private val autoExportUriKey = stringPreferencesKey("auto_export_uri")
@@ -39,29 +40,35 @@ class SyncSettingsManager @Inject constructor(
     private val pendingImportKey = booleanPreferencesKey("pending_import")
     private val remoteLastModifiedKey = longPreferencesKey("remote_last_modified")
 
-    val autoExportEnabled: Flow<Boolean> = context.dataStore.data.map { prefs ->
-        prefs[autoExportEnabledKey] ?: false
-    }
+    val autoExportEnabled: Flow<Boolean> =
+        context.dataStore.data.map { prefs ->
+            prefs[autoExportEnabledKey] ?: false
+        }
 
-    val autoExportUri: Flow<String?> = context.dataStore.data.map { prefs ->
-        prefs[autoExportUriKey]
-    }
+    val autoExportUri: Flow<String?> =
+        context.dataStore.data.map { prefs ->
+            prefs[autoExportUriKey]
+        }
 
-    val lastExportTimestamp: Flow<Long> = context.dataStore.data.map { prefs ->
-        prefs[lastExportTimestampKey] ?: 0L
-    }
+    val lastExportTimestamp: Flow<Long> =
+        context.dataStore.data.map { prefs ->
+            prefs[lastExportTimestampKey] ?: 0L
+        }
 
-    val autoImportEnabled: Flow<Boolean> = context.dataStore.data.map { prefs ->
-        prefs[autoImportEnabledKey] ?: false
-    }
+    val autoImportEnabled: Flow<Boolean> =
+        context.dataStore.data.map { prefs ->
+            prefs[autoImportEnabledKey] ?: false
+        }
 
-    val pendingImport: Flow<Boolean> = context.dataStore.data.map { prefs ->
-        prefs[pendingImportKey] ?: false
-    }
+    val pendingImport: Flow<Boolean> =
+        context.dataStore.data.map { prefs ->
+            prefs[pendingImportKey] ?: false
+        }
 
-    val remoteLastModified: Flow<Long> = context.dataStore.data.map { prefs ->
-        prefs[remoteLastModifiedKey] ?: 0L
-    }
+    val remoteLastModified: Flow<Long> =
+        context.dataStore.data.map { prefs ->
+            prefs[remoteLastModifiedKey] ?: 0L
+        }
 
     suspend fun setAutoExportEnabled(enabled: Boolean) {
         context.dataStore.edit { prefs ->

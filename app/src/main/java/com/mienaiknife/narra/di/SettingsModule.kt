@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.mienaiknife.narra.di
 
 import android.content.Context
@@ -28,10 +27,9 @@ import javax.inject.Singleton
 @Module
 @InstallIn(SingletonComponent::class)
 object SettingsModule {
-
     @Provides
     @Singleton
-    fun provideThemeManager(@ApplicationContext context: Context): ThemeManager {
-        return ThemeManager(context)
-    }
+    fun provideThemeManager(
+        @ApplicationContext context: Context,
+    ): ThemeManager = ThemeManager(context)
 }

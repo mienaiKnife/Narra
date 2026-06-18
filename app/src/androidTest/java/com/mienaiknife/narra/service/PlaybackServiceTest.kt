@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.mienaiknife.narra.service
 
 import android.content.ComponentName
@@ -30,18 +29,17 @@ import java.util.concurrent.TimeUnit
 
 @RunWith(AndroidJUnit4::class)
 class PlaybackServiceTest {
-
     @Test
     fun serviceStartsAndMediaSessionIsCreated() {
         val context = ApplicationProvider.getApplicationContext<Context>()
         val sessionToken = SessionToken(context, ComponentName(context, PlaybackService::class.java))
-        
+
         val controllerFuture = MediaController.Builder(context, sessionToken).buildAsync()
-        
+
         val controller = controllerFuture.get(10, TimeUnit.SECONDS)
-        
+
         assertTrue(controller.isConnected)
-        
+
         controllerFuture.addListener({
             MediaController.releaseFuture(controllerFuture)
         }, MoreExecutors.directExecutor())

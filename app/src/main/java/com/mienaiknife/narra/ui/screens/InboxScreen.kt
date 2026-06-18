@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.mienaiknife.narra.ui.screens
 
 import android.content.res.Configuration
@@ -33,7 +32,6 @@ import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.*
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -41,11 +39,12 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.rememberNavController
 import com.mienaiknife.narra.R
-import com.mienaiknife.narra.domain.models.Article
 import com.mienaiknife.narra.data.models.SampleArticles
 import com.mienaiknife.narra.data.models.SortOption
+import com.mienaiknife.narra.domain.models.Article
 import com.mienaiknife.narra.ui.components.BottomNavBar
 import com.mienaiknife.narra.ui.components.NarraScrollbar
 import com.mienaiknife.narra.ui.components.QueueItem
@@ -56,7 +55,7 @@ import com.mienaiknife.narra.ui.viewmodels.InboxViewModel
 @Composable
 fun InboxScreen(
     onNavigateToFeeds: () -> Unit,
-    viewModel: InboxViewModel = hiltViewModel()
+    viewModel: InboxViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -87,12 +86,12 @@ fun InboxScreen(
             onRefresh = { viewModel.refresh() },
             onSortOptionSelected = { viewModel.setSortOption(it) },
             onShowPlayedChange = { viewModel.setShowPlayed(it) },
-            onEditFeeds = onNavigateToFeeds
+            onEditFeeds = onNavigateToFeeds,
         )
 
         SnackbarHost(
             hostState = snackbarHostState,
-            modifier = Modifier.align(Alignment.BottomCenter)
+            modifier = Modifier.align(Alignment.BottomCenter),
         )
     }
 }
@@ -112,7 +111,7 @@ fun InboxScreenContent(
     onRefresh: () -> Unit = {},
     onSortOptionSelected: (SortOption) -> Unit = {},
     onShowPlayedChange: (Boolean) -> Unit = {},
-    onEditFeeds: () -> Unit = {}
+    onEditFeeds: () -> Unit = {},
 ) {
     var showMenu by remember { mutableStateOf(false) }
     val showSortSheet = remember { mutableStateOf(false) }
@@ -127,7 +126,7 @@ fun InboxScreenContent(
             },
             showPlayed = showPlayed,
             onShowPlayedChange = onShowPlayedChange,
-            onDismissRequest = { showSortSheet.value = false }
+            onDismissRequest = { showSortSheet.value = false },
         )
     }
 
@@ -135,7 +134,7 @@ fun InboxScreenContent(
         modifier = Modifier
             .fillMaxSize()
             .statusBarsPadding()
-            .background(MaterialTheme.colorScheme.background)
+            .background(MaterialTheme.colorScheme.background),
     ) {
         Spacer(modifier = Modifier.height(16.dp))
 
@@ -144,12 +143,12 @@ fun InboxScreenContent(
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
                 text = stringResource(R.string.nav_inbox),
                 style = MaterialTheme.typography.headlineSmall,
-                color = MaterialTheme.colorScheme.onBackground
+                color = MaterialTheme.colorScheme.onBackground,
             )
             Box {
                 IconButton(onClick = { showMenu = true }) {
@@ -157,23 +156,24 @@ fun InboxScreenContent(
                         imageVector = Icons.Default.Menu,
                         contentDescription = stringResource(R.string.action_menu),
                         modifier = Modifier.size(32.dp),
-                        tint = MaterialTheme.colorScheme.onBackground
+                        tint = MaterialTheme.colorScheme.onBackground,
                     )
                 }
 
                 DropdownMenu(
                     expanded = showMenu,
-                    onDismissRequest = { showMenu = false }
+                    onDismissRequest = { showMenu = false },
                 ) {
                     DropdownMenuItem(
                         text = { Text(stringResource(R.string.action_search)) },
                         onClick = { showMenu = false },
                         leadingIcon = {
                             Icon(
-                                Icons.Default.Search, contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onBackground
+                                Icons.Default.Search,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onBackground,
                             )
-                        }
+                        },
                     )
                     DropdownMenuItem(
                         text = { Text(stringResource(R.string.action_sort)) },
@@ -183,10 +183,11 @@ fun InboxScreenContent(
                         },
                         leadingIcon = {
                             Icon(
-                                Icons.AutoMirrored.Filled.Sort, contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onBackground
+                                Icons.AutoMirrored.Filled.Sort,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onBackground,
                             )
-                        }
+                        },
                     )
                     DropdownMenuItem(
                         text = { Text(stringResource(R.string.action_refresh)) },
@@ -196,10 +197,11 @@ fun InboxScreenContent(
                         },
                         leadingIcon = {
                             Icon(
-                                Icons.Default.Refresh, contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onBackground
+                                Icons.Default.Refresh,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onBackground,
                             )
-                        }
+                        },
                     )
                     DropdownMenuItem(
                         text = { Text(stringResource(R.string.action_clear)) },
@@ -209,10 +211,11 @@ fun InboxScreenContent(
                         },
                         leadingIcon = {
                             Icon(
-                                Icons.Default.Delete, contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onBackground
+                                Icons.Default.Delete,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onBackground,
                             )
-                        }
+                        },
                     )
                     DropdownMenuItem(
                         text = { Text(stringResource(R.string.inbox_menu_edit_feeds)) },
@@ -222,10 +225,11 @@ fun InboxScreenContent(
                         },
                         leadingIcon = {
                             Icon(
-                                Icons.Default.RssFeed, contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onBackground
+                                Icons.Default.RssFeed,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onBackground,
                             )
-                        }
+                        },
                     )
                 }
             }
@@ -244,9 +248,9 @@ fun InboxScreenContent(
                     isRefreshing = isRefreshing,
                     containerColor = MaterialTheme.colorScheme.surface,
                     color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.align(Alignment.TopCenter)
+                    modifier = Modifier.align(Alignment.TopCenter),
                 )
-            }
+            },
         ) {
             if (articles.isEmpty()) {
                 Box(
@@ -254,12 +258,12 @@ fun InboxScreenContent(
                         .fillMaxSize()
                         .verticalScroll(rememberScrollState())
                         .padding(horizontal = 16.dp),
-                    contentAlignment = Alignment.Center
+                    contentAlignment = Alignment.Center,
                 ) {
                     Text(
                         text = stringResource(R.string.inbox_empty_message),
                         style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
             } else {
@@ -269,7 +273,7 @@ fun InboxScreenContent(
                         state = scrollState,
                         modifier = Modifier.fillMaxWidth(),
                         verticalArrangement = Arrangement.spacedBy(24.dp),
-                        contentPadding = PaddingValues(bottom = 16.dp)
+                        contentPadding = PaddingValues(bottom = 16.dp),
                     ) {
                         items(articles, key = { it.id }) { article ->
                             QueueItem(
@@ -280,14 +284,14 @@ fun InboxScreenContent(
                                 modifier = Modifier.animateItem(),
                                 onPlayPauseClick = { onAddToQueue(article) },
                                 onAddToQueueClick = { onAddToQueue(article) },
-                                onMarkAsPlayedClick = { onMarkAsPlayedClick(article) }
+                                onMarkAsPlayedClick = { onMarkAsPlayedClick(article) },
                             )
                         }
                     }
 
                     NarraScrollbar(
                         lazyListState = scrollState,
-                        modifier = Modifier.align(Alignment.CenterEnd)
+                        modifier = Modifier.align(Alignment.CenterEnd),
                     )
                 }
             }
@@ -301,12 +305,12 @@ fun InboxScreenPreview() {
     val navController = rememberNavController()
     NarraTheme(darkTheme = true, dynamicColor = false) {
         Scaffold(
-            bottomBar = { BottomNavBar(navController) }
+            bottomBar = { BottomNavBar(navController) },
         ) { innerPadding ->
             Box(modifier = Modifier.padding(innerPadding)) {
                 InboxScreenContent(
                     articles = SampleArticles.all.filter { it.isFromFeed },
-                    onAddToQueue = {}
+                    onAddToQueue = {},
                 )
             }
         }

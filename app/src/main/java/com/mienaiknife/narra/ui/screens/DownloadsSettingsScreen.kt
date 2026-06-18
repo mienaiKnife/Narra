@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.mienaiknife.narra.ui.screens
 
 import android.content.Intent
@@ -33,6 +32,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -46,11 +47,6 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.foundation.relocation.BringIntoViewRequester
-import androidx.compose.foundation.relocation.bringIntoViewRequester
-import androidx.compose.ui.res.stringResource
-import com.mienaiknife.narra.R
-import com.mienaiknife.narra.ui.components.flashHighlight
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -59,13 +55,16 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.rememberNavController
+import com.mienaiknife.narra.R
 import com.mienaiknife.narra.ui.components.BottomNavBar
 import com.mienaiknife.narra.ui.components.SettingDropDownItem
+import com.mienaiknife.narra.ui.components.flashHighlight
 import com.mienaiknife.narra.ui.theme.LocalNarraSpacing
 import com.mienaiknife.narra.ui.theme.NarraTheme
 import com.mienaiknife.narra.ui.viewmodels.DownloadsSettingsUiState
@@ -76,7 +75,7 @@ import com.mienaiknife.narra.utils.DateUtils
 fun DownloadsSettingsScreen(
     onBack: () -> Unit,
     highlightSetting: String? = null,
-    viewModel: DownloadsSettingsViewModel = hiltViewModel()
+    viewModel: DownloadsSettingsViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
@@ -89,7 +88,7 @@ fun DownloadsSettingsScreen(
     }
 
     val importLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.OpenDocument()
+        contract = ActivityResultContracts.OpenDocument(),
     ) { uri ->
         uri?.let {
             val inputStream = context.contentResolver.openInputStream(it)
@@ -98,7 +97,7 @@ fun DownloadsSettingsScreen(
     }
 
     val exportLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.CreateDocument("application/xml")
+        contract = ActivityResultContracts.CreateDocument("application/xml"),
     ) { uri ->
         uri?.let {
             val outputStream = context.contentResolver.openOutputStream(it)
@@ -107,7 +106,7 @@ fun DownloadsSettingsScreen(
     }
 
     val backupLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.CreateDocument("application/octet-stream")
+        contract = ActivityResultContracts.CreateDocument("application/octet-stream"),
     ) { uri ->
         uri?.let {
             val outputStream = context.contentResolver.openOutputStream(it)
@@ -116,7 +115,7 @@ fun DownloadsSettingsScreen(
     }
 
     val restoreLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.OpenDocument()
+        contract = ActivityResultContracts.OpenDocument(),
     ) { uri ->
         uri?.let {
             val inputStream = context.contentResolver.openInputStream(it)
@@ -125,13 +124,13 @@ fun DownloadsSettingsScreen(
     }
 
     val autoExportLocationLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.CreateDocument("application/octet-stream")
+        contract = ActivityResultContracts.CreateDocument("application/octet-stream"),
     ) { uri ->
         uri?.let {
             try {
                 context.contentResolver.takePersistableUriPermission(
                     it,
-                    Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION,
                 )
             } catch (e: Exception) {
                 android.util.Log.e("DownloadsSettingsScreen", "Failed to take persistable permission", e)
@@ -153,7 +152,7 @@ fun DownloadsSettingsScreen(
                     onClick = {
                         viewModel.deleteDatabase()
                         showDeleteConfirm.value = false
-                    }
+                    },
                 ) {
                     Text(stringResource(R.string.action_delete), color = MaterialTheme.colorScheme.error)
                 }
@@ -162,7 +161,7 @@ fun DownloadsSettingsScreen(
                 TextButton(onClick = { showDeleteConfirm.value = false }) {
                     Text(stringResource(R.string.action_cancel))
                 }
-            }
+            },
         )
     }
 
@@ -186,7 +185,7 @@ fun DownloadsSettingsScreen(
         onAutoImportEnabledChange = { viewModel.setAutoImportEnabled(it) },
         onSetAutoExportLocation = { autoExportLocationLauncher.launch("narra_db.sqlite") },
         onDeleteDatabase = { showDeleteConfirm.value = true },
-        onBack = onBack
+        onBack = onBack,
     )
 }
 
@@ -205,7 +204,7 @@ fun DownloadsSettingsContent(
     onAutoImportEnabledChange: (Boolean) -> Unit,
     onSetAutoExportLocation: () -> Unit,
     onDeleteDatabase: () -> Unit,
-    onBack: () -> Unit
+    onBack: () -> Unit,
 ) {
     val downloadOverWifiOnlyRequester = remember { BringIntoViewRequester() }
     val refreshIntervalRequester = remember { BringIntoViewRequester() }
@@ -238,7 +237,7 @@ fun DownloadsSettingsContent(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .statusBarsPadding()
+            .statusBarsPadding(),
     ) {
         Spacer(modifier = Modifier.height(16.dp))
 
@@ -246,20 +245,20 @@ fun DownloadsSettingsContent(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp),
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             IconButton(onClick = onBack) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                     contentDescription = stringResource(R.string.action_back),
                     modifier = Modifier.size(32.dp),
-                    tint = MaterialTheme.colorScheme.onBackground
+                    tint = MaterialTheme.colorScheme.onBackground,
                 )
             }
             Text(
                 text = stringResource(R.string.settings_downloads_title),
                 style = MaterialTheme.typography.headlineSmall,
-                color = MaterialTheme.colorScheme.onBackground
+                color = MaterialTheme.colorScheme.onBackground,
             )
         }
 
@@ -269,13 +268,13 @@ fun DownloadsSettingsContent(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp)
+                .padding(horizontal = 16.dp),
         ) {
             Text(
                 text = stringResource(R.string.settings_downloads_network_section),
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.padding(vertical = 8.dp)
+                modifier = Modifier.padding(vertical = 8.dp),
             )
 
             Row(
@@ -283,22 +282,22 @@ fun DownloadsSettingsContent(
                     .fillMaxWidth()
                     .bringIntoViewRequester(downloadOverWifiOnlyRequester)
                     .flashHighlight(highlightSetting == "downloadOverWifiOnly"),
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 Column(
                     modifier = Modifier
                         .weight(1f)
                         .padding(end = 8.dp),
-                    verticalArrangement = Arrangement.spacedBy(LocalNarraSpacing.current.itemVertical)
+                    verticalArrangement = Arrangement.spacedBy(LocalNarraSpacing.current.itemVertical),
                 ) {
                     Text(
                         text = stringResource(R.string.settings_downloads_wifi_only),
-                        style = MaterialTheme.typography.bodyLarge
+                        style = MaterialTheme.typography.bodyLarge,
                     )
                     Text(
                         text = stringResource(R.string.settings_downloads_wifi_only_desc),
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
                 Switch(
@@ -308,8 +307,8 @@ fun DownloadsSettingsContent(
                         checkedThumbColor = MaterialTheme.colorScheme.primary,
                         checkedTrackColor = MaterialTheme.colorScheme.primaryContainer,
                         uncheckedThumbColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                        uncheckedTrackColor = MaterialTheme.colorScheme.surfaceContainer
-                    )
+                        uncheckedTrackColor = MaterialTheme.colorScheme.surfaceContainer,
+                    ),
                 )
             }
 
@@ -317,7 +316,7 @@ fun DownloadsSettingsContent(
                 text = stringResource(R.string.settings_downloads_automation_section),
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.padding(top = 24.dp, bottom = 8.dp)
+                modifier = Modifier.padding(top = 24.dp, bottom = 8.dp),
             )
 
             SettingDropDownItem(
@@ -328,7 +327,7 @@ fun DownloadsSettingsContent(
                 onValueChange = onRefreshIntervalChange,
                 modifier = Modifier
                     .bringIntoViewRequester(refreshIntervalRequester)
-                    .flashHighlight(highlightSetting == "refreshInterval")
+                    .flashHighlight(highlightSetting == "refreshInterval"),
             )
 
             SettingDropDownItem(
@@ -339,14 +338,14 @@ fun DownloadsSettingsContent(
                 onValueChange = onInboxInitialLimitChange,
                 modifier = Modifier
                     .bringIntoViewRequester(inboxInitialLimitRequester)
-                    .flashHighlight(highlightSetting == "inboxInitialLimit")
+                    .flashHighlight(highlightSetting == "inboxInitialLimit"),
             )
 
             Text(
                 text = stringResource(R.string.settings_downloads_opml_section),
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.padding(top = 24.dp, bottom = 8.dp)
+                modifier = Modifier.padding(top = 24.dp, bottom = 8.dp),
             )
 
             Column(
@@ -356,16 +355,16 @@ fun DownloadsSettingsContent(
                     .flashHighlight(highlightSetting == "importFeeds")
                     .clickable { onImportOpml() }
                     .padding(vertical = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(LocalNarraSpacing.current.itemVertical)
+                verticalArrangement = Arrangement.spacedBy(LocalNarraSpacing.current.itemVertical),
             ) {
                 Text(
                     text = stringResource(R.string.settings_downloads_import_feeds),
-                    style = MaterialTheme.typography.bodyLarge
+                    style = MaterialTheme.typography.bodyLarge,
                 )
                 Text(
                     text = stringResource(R.string.settings_downloads_import_feeds_desc),
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
 
@@ -376,16 +375,16 @@ fun DownloadsSettingsContent(
                     .flashHighlight(highlightSetting == "exportFeeds")
                     .clickable { onExportOpml() }
                     .padding(vertical = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(LocalNarraSpacing.current.itemVertical)
+                verticalArrangement = Arrangement.spacedBy(LocalNarraSpacing.current.itemVertical),
             ) {
                 Text(
                     text = stringResource(R.string.settings_downloads_export_feeds),
-                    style = MaterialTheme.typography.bodyLarge
+                    style = MaterialTheme.typography.bodyLarge,
                 )
                 Text(
                     text = stringResource(R.string.settings_downloads_export_feeds_desc),
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
 
@@ -393,7 +392,7 @@ fun DownloadsSettingsContent(
                 text = stringResource(R.string.settings_downloads_database_section),
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.padding(top = 24.dp, bottom = 8.dp)
+                modifier = Modifier.padding(top = 24.dp, bottom = 8.dp),
             )
 
             Column(
@@ -403,23 +402,23 @@ fun DownloadsSettingsContent(
                     .flashHighlight(highlightSetting == "exportDatabase")
                     .clickable { onBackupDatabase() }
                     .padding(vertical = 12.dp),
-                verticalArrangement = Arrangement.spacedBy(LocalNarraSpacing.current.itemVertical)
+                verticalArrangement = Arrangement.spacedBy(LocalNarraSpacing.current.itemVertical),
             ) {
                 Text(
                     text = stringResource(R.string.settings_downloads_export_db),
-                    style = MaterialTheme.typography.bodyLarge
+                    style = MaterialTheme.typography.bodyLarge,
                 )
                 Text(
                     text = stringResource(R.string.settings_downloads_export_db_desc),
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 if (uiState.lastExportTimestamp > 0) {
                     Text(
                         text = stringResource(R.string.settings_downloads_last_export, DateUtils.formatDateTime(uiState.lastExportTimestamp)),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.padding(top = 4.dp)
+                        modifier = Modifier.padding(top = 4.dp),
                     )
                 }
             }
@@ -431,16 +430,16 @@ fun DownloadsSettingsContent(
                     .flashHighlight(highlightSetting == "importDatabase")
                     .clickable { onRestoreDatabase() }
                     .padding(vertical = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(LocalNarraSpacing.current.itemVertical)
+                verticalArrangement = Arrangement.spacedBy(LocalNarraSpacing.current.itemVertical),
             ) {
                 Text(
                     text = stringResource(R.string.settings_downloads_import_db),
-                    style = MaterialTheme.typography.bodyLarge
+                    style = MaterialTheme.typography.bodyLarge,
                 )
                 Text(
                     text = stringResource(R.string.settings_downloads_import_db_desc),
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
 
@@ -450,22 +449,22 @@ fun DownloadsSettingsContent(
                     .bringIntoViewRequester(autoExportEnabledRequester)
                     .flashHighlight(highlightSetting == "autoExportDatabase")
                     .padding(vertical = 12.dp),
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 Column(
                     modifier = Modifier
                         .weight(1f)
                         .padding(end = 8.dp),
-                    verticalArrangement = Arrangement.spacedBy(LocalNarraSpacing.current.itemVertical)
+                    verticalArrangement = Arrangement.spacedBy(LocalNarraSpacing.current.itemVertical),
                 ) {
                     Text(
                         text = stringResource(R.string.settings_downloads_auto_export),
-                        style = MaterialTheme.typography.bodyLarge
+                        style = MaterialTheme.typography.bodyLarge,
                     )
                     Text(
                         text = stringResource(R.string.settings_downloads_auto_export_desc),
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
                 Switch(
@@ -476,8 +475,8 @@ fun DownloadsSettingsContent(
                         checkedThumbColor = MaterialTheme.colorScheme.primary,
                         checkedTrackColor = MaterialTheme.colorScheme.primaryContainer,
                         uncheckedThumbColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                        uncheckedTrackColor = MaterialTheme.colorScheme.surfaceContainer
-                    )
+                        uncheckedTrackColor = MaterialTheme.colorScheme.surfaceContainer,
+                    ),
                 )
             }
 
@@ -488,21 +487,21 @@ fun DownloadsSettingsContent(
                         .bringIntoViewRequester(autoImportEnabledRequester)
                         .flashHighlight(highlightSetting == "autoImportDatabase")
                         .padding(vertical = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Column(
                         modifier = Modifier
                             .weight(1f)
-                            .padding(end = 8.dp)
+                            .padding(end = 8.dp),
                     ) {
                         Text(
                             text = stringResource(R.string.settings_downloads_auto_import),
-                            style = MaterialTheme.typography.bodyLarge
+                            style = MaterialTheme.typography.bodyLarge,
                         )
                         Text(
                             text = stringResource(R.string.settings_downloads_auto_import_desc),
                             style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
                     Switch(
@@ -513,8 +512,8 @@ fun DownloadsSettingsContent(
                             checkedThumbColor = MaterialTheme.colorScheme.primary,
                             checkedTrackColor = MaterialTheme.colorScheme.primaryContainer,
                             uncheckedThumbColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                            uncheckedTrackColor = MaterialTheme.colorScheme.surfaceContainer
-                        )
+                            uncheckedTrackColor = MaterialTheme.colorScheme.surfaceContainer,
+                        ),
                     )
                 }
 
@@ -524,11 +523,11 @@ fun DownloadsSettingsContent(
                         .bringIntoViewRequester(autoExportLocationRequester)
                         .flashHighlight(highlightSetting == "autoExportLocation")
                         .clickable { onSetAutoExportLocation() }
-                        .padding(vertical = 8.dp)
+                        .padding(vertical = 8.dp),
                 ) {
                     Text(
                         text = stringResource(R.string.settings_downloads_auto_export_location),
-                        style = MaterialTheme.typography.bodyLarge
+                        style = MaterialTheme.typography.bodyLarge,
                     )
                     Text(
                         text = if (uiState.autoExportUri != null) {
@@ -537,7 +536,7 @@ fun DownloadsSettingsContent(
                             stringResource(R.string.settings_downloads_auto_export_location_not_set)
                         },
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
 
@@ -546,7 +545,7 @@ fun DownloadsSettingsContent(
                         text = stringResource(R.string.settings_downloads_last_export, DateUtils.formatDateTime(uiState.lastExportTimestamp)),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.padding(bottom = 8.dp)
+                        modifier = Modifier.padding(bottom = 8.dp),
                     )
                 }
 
@@ -555,7 +554,7 @@ fun DownloadsSettingsContent(
                         text = stringResource(R.string.settings_downloads_staged_message),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.padding(bottom = 8.dp)
+                        modifier = Modifier.padding(bottom = 8.dp),
                     )
                 }
             }
@@ -567,17 +566,17 @@ fun DownloadsSettingsContent(
                     .flashHighlight(highlightSetting == "deleteDatabase")
                     .clickable { onDeleteDatabase() }
                     .padding(vertical = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(LocalNarraSpacing.current.itemVertical)
+                verticalArrangement = Arrangement.spacedBy(LocalNarraSpacing.current.itemVertical),
             ) {
                 Text(
                     text = stringResource(R.string.settings_downloads_delete_db),
                     style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.error
+                    color = MaterialTheme.colorScheme.error,
                 )
                 Text(
                     text = stringResource(R.string.settings_downloads_delete_db_desc),
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         }
@@ -590,7 +589,7 @@ fun DownloadsSettingsScreenPreview() {
     val navController = rememberNavController()
     NarraTheme(darkTheme = true, dynamicColor = false) {
         Scaffold(
-            bottomBar = { BottomNavBar(navController) }
+            bottomBar = { BottomNavBar(navController) },
         ) { innerPadding ->
             Box(modifier = Modifier.padding(innerPadding)) {
                 DownloadsSettingsContent(
@@ -598,7 +597,7 @@ fun DownloadsSettingsScreenPreview() {
                         autoExportEnabled = true,
                         autoImportEnabled = true,
                         autoExportUri = "content://com.android.externalstorage.documents/document/primary%3ANarra%2Fnarra_db.sqlite",
-                        lastExportTimestamp = System.currentTimeMillis()
+                        lastExportTimestamp = System.currentTimeMillis(),
                     ),
                     highlightSetting = null,
                     onDownloadOverWifiOnlyChange = {},
@@ -612,7 +611,7 @@ fun DownloadsSettingsScreenPreview() {
                     onAutoImportEnabledChange = {},
                     onSetAutoExportLocation = {},
                     onDeleteDatabase = {},
-                    onBack = {}
+                    onBack = {},
                 )
             }
         }

@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.mienaiknife.narra.utils
 
 import android.content.Context
@@ -27,8 +26,10 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class SecurityManager @Inject constructor(
-    @ApplicationContext private val context: Context
+class SecurityManager
+@Inject
+constructor(
+    @ApplicationContext private val context: Context,
 ) {
     companion object {
         private const val SECURE_PREFS_NAME = "secure_settings"
@@ -38,7 +39,8 @@ class SecurityManager @Inject constructor(
     private val secureRandom = SecureRandom()
 
     private val masterKey by lazy {
-        MasterKey.Builder(context)
+        MasterKey
+            .Builder(context)
             .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
             .build()
     }
@@ -50,7 +52,7 @@ class SecurityManager @Inject constructor(
                 SECURE_PREFS_NAME,
                 masterKey,
                 EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-                EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+                EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
             )
         } catch (e: Exception) {
             // If the key is corrupted or inaccessible, EncryptedSharedPreferences might fail
@@ -80,16 +82,17 @@ class SecurityManager @Inject constructor(
     /**
      * Utility to store a sensitive string (like an API key) securely.
      */
-    fun storeSecret(key: String, value: String) {
+    fun storeSecret(
+        key: String,
+        value: String,
+    ) {
         securePrefs.edit { putString(key, value) }
     }
 
     /**
      * Utility to retrieve a sensitive string securely.
      */
-    fun getSecret(key: String): String? {
-        return securePrefs.getString(key, null)
-    }
+    fun getSecret(key: String): String? = securePrefs.getString(key, null)
 
     private fun bytesToHex(bytes: ByteArray): String {
         val hexChars = CharArray(bytes.size * 2)

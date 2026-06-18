@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.mienaiknife.narra.ui.components
 
 import androidx.compose.foundation.clickable
@@ -44,7 +43,7 @@ fun SettingDropDownItem(
     selectedValue: String,
     options: List<String>,
     onValueChange: (String) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     var expanded by remember { mutableStateOf(false) }
 
@@ -52,38 +51,38 @@ fun SettingDropDownItem(
         modifier = modifier
             .fillMaxWidth()
             .clickable { expanded = true }
-            .padding(vertical = 8.dp)
+            .padding(vertical = 8.dp),
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             Column(
                 modifier = Modifier
                     .weight(1f)
                     .padding(end = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(LocalNarraSpacing.current.itemVertical)
+                verticalArrangement = Arrangement.spacedBy(LocalNarraSpacing.current.itemVertical),
             ) {
                 Text(
                     text = title,
-                    style = MaterialTheme.typography.bodyLarge
+                    style = MaterialTheme.typography.bodyLarge,
                 )
                 Text(
                     text = subtitle,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
             Text(
                 text = selectedValue,
                 style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.primary
+                color = MaterialTheme.colorScheme.primary,
             )
         }
 
         DropdownMenu(
             expanded = expanded,
-            onDismissRequest = { expanded = false }
+            onDismissRequest = { expanded = false },
         ) {
             options.forEach { option ->
                 DropdownMenuItem(
@@ -91,19 +90,19 @@ fun SettingDropDownItem(
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             RadioButton(
                                 selected = (option == selectedValue),
-                                onClick = null
+                                onClick = null,
                             )
                             Text(
                                 text = option,
                                 style = MaterialTheme.typography.bodyLarge,
-                                modifier = Modifier.padding(start = 16.dp)
+                                modifier = Modifier.padding(start = 16.dp),
                             )
                         }
                     },
                     onClick = {
                         onValueChange(option)
                         expanded = false
-                    }
+                    },
                 )
             }
         }

@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.mienaiknife.narra.domain.models
 
 data class TtsModel(
@@ -30,7 +29,7 @@ data class TtsModel(
     val isDownloaded: Boolean = false,
     val progress: Float = 0f,
     val speakerId: Int? = null,
-    val lastError: String? = null
+    val lastError: String? = null,
 )
 
 enum class TtsModelType {
@@ -40,5 +39,5 @@ enum class TtsModelType {
     ZIPVOICE,
     KITTEN,
     POCKET,
-    SUPERTONIC
+    SUPERTONIC,
 }

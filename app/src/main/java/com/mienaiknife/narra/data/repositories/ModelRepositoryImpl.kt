@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.mienaiknife.narra.data.repositories
 
 import android.content.Context
@@ -54,7 +53,7 @@ class ModelRepositoryImpl @Inject constructor(
     @ApplicationContext private val context: Context,
     private val ttsModelDao: TtsModelDao,
     private val okHttpClient: OkHttpClient,
-    private val workManager: WorkManager
+    private val workManager: WorkManager,
 ) : ModelRepository {
 
     private val modelsDir = File(context.filesDir, "tts_models")
@@ -65,10 +64,8 @@ class ModelRepositoryImpl @Inject constructor(
         }
     }
 
-    override fun getAvailableModels(): Flow<List<TtsModel>> {
-        return ttsModelDao.getAllModels().map { entities ->
-            entities.map { it.toDomain() }
-        }
+    override fun getAvailableModels(): Flow<List<TtsModel>> = ttsModelDao.getAllModels().map { entities ->
+        entities.map { it.toDomain() }
     }
 
     override suspend fun ensureDefaultModelsInitialized() = withContext(Dispatchers.IO) {
@@ -86,7 +83,7 @@ class ModelRepositoryImpl @Inject constructor(
                 description = "Low quality, fast American English female voice",
                 type = TtsModelType.VITS,
                 modelUrl = "https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/vits-piper-en_US-amy-low.tar.bz2",
-                sizeBytes = 28000000 
+                sizeBytes = 28000000,
             ),
             TtsModel(
                 id = "vits-piper-en_US-ryan-medium",
@@ -95,7 +92,7 @@ class ModelRepositoryImpl @Inject constructor(
                 description = "Medium quality American English male voice",
                 type = TtsModelType.VITS,
                 modelUrl = "https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/vits-piper-en_US-ryan-medium.tar.bz2",
-                sizeBytes = 60000000 
+                sizeBytes = 60000000,
             ),
             TtsModel(
                 id = "kokoro-en-v0_19",
@@ -104,7 +101,7 @@ class ModelRepositoryImpl @Inject constructor(
                 description = "High quality multi-voice Kokoro TTS",
                 type = TtsModelType.KOKORO,
                 modelUrl = "https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/kokoro-en-v0_19.tar.bz2",
-                sizeBytes = 80000000
+                sizeBytes = 80000000,
             ),
             TtsModel(
                 id = "matcha-icefall-en_US-ljspeech",
@@ -113,8 +110,8 @@ class ModelRepositoryImpl @Inject constructor(
                 description = "High quality American English female TTS model",
                 type = TtsModelType.MATCHA,
                 modelUrl = "https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/matcha-icefall-en_US-ljspeech.tar.bz2",
-                sizeBytes = 150000000
-            )
+                sizeBytes = 150000000,
+            ),
         )
         defaultModels.forEach { model ->
             val existing = ttsModelDao.getModelById(model.id)
@@ -124,7 +121,7 @@ class ModelRepositoryImpl @Inject constructor(
                     isDownloaded = existing.isDownloaded,
                     progress = existing.progress,
                     dataDir = existing.dataDir,
-                    lastError = existing.lastError
+                    lastError = existing.lastError,
                 )
                 ttsModelDao.insertModel(updated)
             } else {
@@ -145,14 +142,14 @@ class ModelRepositoryImpl @Inject constructor(
             .setBackoffCriteria(
                 BackoffPolicy.EXPONENTIAL,
                 1,
-                java.util.concurrent.TimeUnit.MINUTES
+                java.util.concurrent.TimeUnit.MINUTES,
             )
             .build()
 
         workManager.enqueueUniqueWork(
             "download_$modelId",
             ExistingWorkPolicy.REPLACE, // Ensure fresh start for debugging
-            downloadRequest
+            downloadRequest,
         )
     }
 
@@ -200,7 +197,7 @@ class ModelRepositoryImpl @Inject constructor(
                     ttsModelDao.updateProgress(modelId, overallProgress)
                 }
                 archiveFile.delete()
-                
+
                 android.util.Log.i("ModelRepository", "Moving model files...")
                 findAndMoveModelFiles(targetDir)
                 // Cleanup/move accounts for 85% -> 95%
@@ -256,7 +253,7 @@ class ModelRepositoryImpl @Inject constructor(
 
     private suspend fun downloadFile(url: String, targetFile: File, onProgress: suspend (Float) -> Unit = {}) {
         var downloadedBytes = if (targetFile.exists()) targetFile.length() else 0L
-        
+
         val request = Request.Builder()
             .url(url)
             .header("User-Agent", "Narra/1.0")
@@ -266,7 +263,7 @@ class ModelRepositoryImpl @Inject constructor(
                 }
             }
             .build()
-        
+
         try {
             okHttpClient.newCall(request).execute().use { response ->
                 if (response.code == 416) {
@@ -274,46 +271,46 @@ class ModelRepositoryImpl @Inject constructor(
                     onProgress(1.0f)
                     return
                 }
-                
+
                 if (!response.isSuccessful) {
                     throw NarraError.Network.ServerError(response.code, response.message)
                 }
-                
+
                 val body = response.body ?: throw NarraError.Model.DownloadFailed("Response body is null")
                 val contentLength = body.contentLength()
-                
+
                 val isPartial = response.code == 206
                 if (!isPartial) {
                     // Server doesn't support range or something went wrong, start from scratch
                     downloadedBytes = 0L
                 }
-                
+
                 val totalLength = if (isPartial) downloadedBytes + contentLength else contentLength
-                
+
                 Log.d("ModelRepository", "Downloading $url, isPartial: $isPartial, totalLength: $totalLength")
-                
+
                 val bodyStream = body.byteStream()
-                
+
                 FileOutputStream(targetFile, isPartial).use { outputStream ->
                     val buffer = ByteArray(8192)
                     var bytesRead: Int
                     var lastUpdateTime = 0L
-                    
+
                     while (true) {
                         yield()
                         bytesRead = bodyStream.read(buffer)
                         if (bytesRead == -1) break
-                        
+
                         outputStream.write(buffer, 0, bytesRead)
                         downloadedBytes += bytesRead
-                        
+
                         val currentTime = System.currentTimeMillis()
                         if (currentTime - lastUpdateTime > 500) {
                             if (totalLength > 0) {
                                 val p = downloadedBytes.toFloat() / totalLength
                                 onProgress(p)
                             } else {
-                                onProgress(0.01f) 
+                                onProgress(0.01f)
                             }
                             lastUpdateTime = currentTime
                         }
@@ -331,7 +328,7 @@ class ModelRepositoryImpl @Inject constructor(
     internal suspend fun extractTarBz2(
         archiveFile: File,
         targetDir: File,
-        onProgress: suspend (Float) -> Unit = {}
+        onProgress: suspend (Float) -> Unit = {},
     ) {
         Log.i("ModelRepository", "Extracting ${archiveFile.name} to ${targetDir.absolutePath}")
         val targetCanonicalPath = targetDir.canonicalPath
@@ -341,7 +338,9 @@ class ModelRepositoryImpl @Inject constructor(
                 BZip2CompressorInputStream(fis).use { bzis ->
                     TarArchiveInputStream(bzis).use { tais ->
                         var count = 1
-                        while (tais.nextEntry != null) { count++ }
+                        while (tais.nextEntry != null) {
+                            count++
+                        }
                         count
                     }
                 }
@@ -356,7 +355,7 @@ class ModelRepositoryImpl @Inject constructor(
                             yield()
                             Log.i("ModelRepository", "Archive entry: ${entry.name}, isDirectory: ${entry.isDirectory}")
                             val curFile = File(targetDir, entry.name)
-                            
+
                             // Path traversal validation (Tar Slip protection)
                             if (!curFile.canonicalPath.startsWith(targetCanonicalPath + File.separator)) {
                                 throw SecurityException("Malicious zip entry: ${entry.name}")
@@ -388,7 +387,7 @@ class ModelRepositoryImpl @Inject constructor(
 
     private fun findAndMoveModelFiles(targetDir: File) {
         val rootSubDirs = targetDir.listFiles { file -> file.isDirectory } ?: return
-        
+
         // Find the top-level directory in the archive (e.g. vits-piper-en_US-amy-low/)
         // Move EVERYTHING inside it up to targetDir
         for (subDir in rootSubDirs) {
@@ -401,7 +400,7 @@ class ModelRepositoryImpl @Inject constructor(
                 subDir.deleteRecursively()
             }
         }
-        
+
         // Ensure main model file is named model.onnx
         val allFiles = targetDir.listFiles() ?: return
         val onnxFile = allFiles.find { it.name.endsWith(".onnx") && it.name != "model.onnx" }

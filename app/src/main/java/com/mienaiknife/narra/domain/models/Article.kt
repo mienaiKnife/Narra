@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.mienaiknife.narra.domain.models
 
 data class Article(
@@ -37,5 +36,5 @@ data class Article(
     val queueOrder: Int = 0,
     val publishedTimestamp: Long? = null,
     val duration: Long? = null,
-    val lastPlayedAt: Long? = null
+    val lastPlayedAt: Long? = null,
 )

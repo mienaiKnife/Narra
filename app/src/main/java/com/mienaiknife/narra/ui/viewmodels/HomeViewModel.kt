@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.mienaiknife.narra.ui.viewmodels
 
 import androidx.lifecycle.ViewModel
@@ -41,7 +40,7 @@ class HomeViewModel @Inject constructor(
     private val articleRepository: ArticleRepository,
     private val feedRepository: FeedRepository,
     private val importExportRepository: ImportExportRepository,
-    private val modelRepository: ModelRepository
+    private val modelRepository: ModelRepository,
 ) : ViewModel() {
 
     init {
@@ -66,7 +65,7 @@ class HomeViewModel @Inject constructor(
         articleRepository.getQueueArticles(),
         articleRepository.getInboxArticles(),
         articleRepository.getFavoriteArticles(),
-        _isRefreshing
+        _isRefreshing,
     ) { queue, inbox, favorites, isRefreshing ->
         HomeUiState.Success(
             continueListening = queue
@@ -78,12 +77,12 @@ class HomeViewModel @Inject constructor(
                 .sortedByDescending { it.publishedTimestamp ?: 0L }
                 .take(5),
             favoriteArticles = favorites.take(10),
-            isRefreshing = isRefreshing
+            isRefreshing = isRefreshing,
         )
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
-        initialValue = HomeUiState.Loading
+        initialValue = HomeUiState.Loading,
     )
 
     fun refresh() {

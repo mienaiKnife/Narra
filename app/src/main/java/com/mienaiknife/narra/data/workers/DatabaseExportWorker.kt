@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.mienaiknife.narra.data.workers
 
 import android.content.Context
@@ -30,13 +29,14 @@ import kotlinx.coroutines.withContext
 import java.io.FileInputStream
 
 @HiltWorker
-class DatabaseExportWorker @AssistedInject constructor(
+class DatabaseExportWorker
+@AssistedInject
+constructor(
     @Assisted private val context: Context,
     @Assisted params: WorkerParameters,
     private val appDatabase: AppDatabase,
-    private val syncSettingsManager: SyncSettingsManager
+    private val syncSettingsManager: SyncSettingsManager,
 ) : CoroutineWorker(context, params) {
-
     override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
         val uriString = inputData.getString("uri") ?: return@withContext Result.failure()
         val uri = uriString.toUri()

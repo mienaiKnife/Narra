@@ -13,17 +13,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.mienaiknife.narra.domain.repository
 
 import java.io.InputStream
 import java.io.OutputStream
 
 interface ImportExportRepository {
-    suspend fun importEpub(inputStream: InputStream, title: String): Result<Unit>
+    suspend fun importEpub(
+        inputStream: InputStream,
+        title: String,
+    ): Result<Unit>
+
     suspend fun importOpml(inputStream: InputStream): Result<Int>
+
     suspend fun exportOpml(outputStream: OutputStream): Result<Unit>
+
     suspend fun backupDatabase(outputStream: OutputStream): Result<Unit>
+
     suspend fun restoreDatabase(inputStream: InputStream): Result<Unit>
+
     suspend fun deleteAllMetadata()
 }

@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.mienaiknife.narra.data.remote
 
 import com.mienaiknife.narra.data.local.entities.FeedEntity
@@ -33,6 +32,6 @@ interface RemoteFeedDataSource {
 
     data class FetchArticlesResult(
         val articles: List<Article>,
-        val feedTitle: String?
+        val feedTitle: String?,
     )
 }

@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.mienaiknife.narra.utils
 
 import android.Manifest
@@ -35,10 +34,11 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class NotificationHelper @Inject constructor(
-    @ApplicationContext private val context: Context
+class NotificationHelper
+@Inject
+constructor(
+    @ApplicationContext private val context: Context,
 ) {
-
     companion object {
         private const val CHANNEL_ID = "feed_notifications"
         private const val CHANNEL_NAME = "Feed Notifications"
@@ -51,42 +51,50 @@ class NotificationHelper @Inject constructor(
     private fun createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val importance = NotificationManager.IMPORTANCE_DEFAULT
-            val channel = NotificationChannel(CHANNEL_ID, CHANNEL_NAME, importance).apply {
-                description = "Notifications for new articles from subscribed feeds"
-            }
+            val channel =
+                NotificationChannel(CHANNEL_ID, CHANNEL_NAME, importance).apply {
+                    description = "Notifications for new articles from subscribed feeds"
+                }
             val notificationManager =
                 context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             notificationManager.createNotificationChannel(channel)
         }
     }
 
-    fun showNewArticleNotification(feed: FeedEntity, article: ArticleEntity) {
+    fun showNewArticleNotification(
+        feed: FeedEntity,
+        article: ArticleEntity,
+    ) {
         if (ActivityCompat.checkSelfPermission(
                 context,
-                Manifest.permission.POST_NOTIFICATIONS
+                Manifest.permission.POST_NOTIFICATIONS,
             ) != PackageManager.PERMISSION_GRANTED
         ) {
             return
         }
 
-        val intent = Intent(context, MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-            putExtra("article_id", article.id)
-        }
-        val pendingIntent = PendingIntent.getActivity(
-            context,
-            article.id.hashCode(),
-            intent,
-            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
-        )
+        val intent =
+            Intent(context, MainActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                putExtra("article_id", article.id)
+            }
+        val pendingIntent =
+            PendingIntent.getActivity(
+                context,
+                article.id.hashCode(),
+                intent,
+                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+            )
 
-        val builder = NotificationCompat.Builder(context, CHANNEL_ID)
-            .setSmallIcon(com.mienaiknife.narra.R.mipmap.ic_launcher)
-            .setContentTitle("New article from ${feed.title}")
-            .setContentText(article.title)
-            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
-            .setContentIntent(pendingIntent)
-            .setAutoCancel(true)
+        val builder =
+            NotificationCompat
+                .Builder(context, CHANNEL_ID)
+                .setSmallIcon(com.mienaiknife.narra.R.mipmap.ic_launcher)
+                .setContentTitle("New article from ${feed.title}")
+                .setContentText(article.title)
+                .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+                .setContentIntent(pendingIntent)
+                .setAutoCancel(true)
 
         with(NotificationManagerCompat.from(context)) {
             notify(article.id.hashCode(), builder.build())

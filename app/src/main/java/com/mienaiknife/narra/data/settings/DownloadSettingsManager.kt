@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.mienaiknife.narra.data.settings
 
 import android.content.Context
@@ -28,24 +27,29 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class DownloadSettingsManager @Inject constructor(
-    @param:ApplicationContext private val context: Context
+class DownloadSettingsManager
+@Inject
+constructor(
+    @param:ApplicationContext private val context: Context,
 ) {
     private val downloadOverWifiOnlyKey = booleanPreferencesKey("download_over_wifi_only")
     private val refreshIntervalKey = stringPreferencesKey("refresh_interval")
     private val inboxInitialLimitKey = stringPreferencesKey("inbox_initial_limit")
 
-    val downloadOverWifiOnly: Flow<Boolean> = context.dataStore.data.map { prefs ->
-        prefs[downloadOverWifiOnlyKey] ?: true
-    }
+    val downloadOverWifiOnly: Flow<Boolean> =
+        context.dataStore.data.map { prefs ->
+            prefs[downloadOverWifiOnlyKey] ?: true
+        }
 
-    val refreshInterval: Flow<String> = context.dataStore.data.map { prefs ->
-        prefs[refreshIntervalKey] ?: "12 hours"
-    }
+    val refreshInterval: Flow<String> =
+        context.dataStore.data.map { prefs ->
+            prefs[refreshIntervalKey] ?: "12 hours"
+        }
 
-    val inboxInitialLimit: Flow<String> = context.dataStore.data.map { prefs ->
-        prefs[inboxInitialLimitKey] ?: "5"
-    }
+    val inboxInitialLimit: Flow<String> =
+        context.dataStore.data.map { prefs ->
+            prefs[inboxInitialLimitKey] ?: "5"
+        }
 
     suspend fun setDownloadOverWifiOnly(enabled: Boolean) {
         context.dataStore.edit { prefs ->

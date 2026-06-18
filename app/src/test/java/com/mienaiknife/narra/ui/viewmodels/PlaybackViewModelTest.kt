@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.mienaiknife.narra.ui.viewmodels
 
 import app.cash.turbine.test
@@ -36,7 +35,6 @@ import org.mockito.kotlin.whenever
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class PlaybackViewModelTest {
-
     private val playbackManager: PlaybackManager = mock()
     private val testDispatcher = StandardTestDispatcher()
 
@@ -45,7 +43,7 @@ class PlaybackViewModelTest {
     @Before
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
-        
+
         whenever(playbackManager.currentArticle).thenReturn(MutableStateFlow(null))
         whenever(playbackManager.isPlaying).thenReturn(MutableStateFlow(false))
         whenever(playbackManager.currentPosition).thenReturn(MutableStateFlow(0L))

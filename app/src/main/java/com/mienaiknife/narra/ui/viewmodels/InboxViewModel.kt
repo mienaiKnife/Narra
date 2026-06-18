@@ -13,19 +13,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.mienaiknife.narra.ui.viewmodels
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.mienaiknife.narra.R
-import com.mienaiknife.narra.domain.models.Article
 import com.mienaiknife.narra.data.models.SortOption
+import com.mienaiknife.narra.domain.models.Article
 import com.mienaiknife.narra.domain.repository.ArticleRepository
 import com.mienaiknife.narra.domain.repository.FeedRepository
 import com.mienaiknife.narra.playback.PlaybackManager
 import com.mienaiknife.narra.ui.UiText
-import com.mienaiknife.narra.ui.utils.HtmlParser
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -42,7 +39,7 @@ import javax.inject.Inject
 class InboxViewModel @Inject constructor(
     private val repository: ArticleRepository,
     private val feedRepository: FeedRepository,
-    private val playbackManager: PlaybackManager
+    private val playbackManager: PlaybackManager,
 ) : ViewModel() {
 
     private val _uiEvent = MutableSharedFlow<UiEvent>()
@@ -66,7 +63,7 @@ class InboxViewModel @Inject constructor(
         _downloadingArticleIds,
         playbackManager.currentArticle,
         playbackManager.isPlaying,
-        playbackManager.playbackSpeed
+        playbackManager.playbackSpeed,
     ) { args: Array<Any?> ->
         val articles = args[0] as List<Article>
         val isRefreshing = args[1] as Boolean
@@ -95,18 +92,17 @@ class InboxViewModel @Inject constructor(
             currentArticle = currentArticle,
             isPlaying = isPlaying,
             playbackSpeed = playbackSpeed,
-            downloadingArticleIds = downloadingIds
+            downloadingArticleIds = downloadingIds,
         )
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
-        initialValue = InboxUiState()
+        initialValue = InboxUiState(),
     )
 
     fun setShowPlayed(show: Boolean) {
         _showPlayed.value = show
     }
-
 
     fun setSortOption(option: SortOption) {
         if (_sortOption.value == option) {

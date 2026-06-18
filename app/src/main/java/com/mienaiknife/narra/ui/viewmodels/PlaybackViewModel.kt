@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.mienaiknife.narra.ui.viewmodels
 
 import androidx.lifecycle.ViewModel
@@ -27,26 +26,29 @@ import kotlinx.coroutines.flow.stateIn
 import javax.inject.Inject
 
 @HiltViewModel
-class PlaybackViewModel @Inject constructor(
-    private val playbackManager: PlaybackManager
+class PlaybackViewModel
+@Inject
+constructor(
+    private val playbackManager: PlaybackManager,
 ) : ViewModel() {
-    val uiState: StateFlow<PlaybackUiState> = combine(
-        playbackManager.currentArticle,
-        playbackManager.isPlaying,
-        playbackManager.currentPosition,
-        playbackManager.duration
-    ) { currentArticle, isPlaying, currentPosition, duration ->
-        PlaybackUiState(
-            currentArticle = currentArticle,
-            isPlaying = isPlaying,
-            currentPosition = currentPosition,
-            duration = duration
+    val uiState: StateFlow<PlaybackUiState> =
+        combine(
+            playbackManager.currentArticle,
+            playbackManager.isPlaying,
+            playbackManager.currentPosition,
+            playbackManager.duration,
+        ) { currentArticle, isPlaying, currentPosition, duration ->
+            PlaybackUiState(
+                currentArticle = currentArticle,
+                isPlaying = isPlaying,
+                currentPosition = currentPosition,
+                duration = duration,
+            )
+        }.stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = PlaybackUiState(),
         )
-    }.stateIn(
-        scope = viewModelScope,
-        started = SharingStarted.WhileSubscribed(5000),
-        initialValue = PlaybackUiState()
-    )
 
     fun togglePlayPause() = playbackManager.togglePlayPause()
 }

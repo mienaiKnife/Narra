@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.mienaiknife.narra.ui.components
 
 import androidx.compose.animation.core.animateFloatAsState
@@ -25,7 +24,6 @@ import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyListState
@@ -55,7 +53,7 @@ fun BoxScope.NarraScrollbar(
     lazyListState: LazyListState,
     modifier: Modifier = Modifier,
     verticalPadding: Dp = 0.dp,
-    onInteraction: () -> Unit = {}
+    onInteraction: () -> Unit = {},
 ) {
     val coroutineScope = rememberCoroutineScope()
     var isDragging by remember { mutableStateOf(false) }
@@ -74,15 +72,16 @@ fun BoxScope.NarraScrollbar(
     val alpha by animateFloatAsState(
         targetValue = if (visibleRecently) 1f else 0f,
         animationSpec = tween(durationMillis = 300),
-        label = "scrollbarAlpha"
+        label = "scrollbarAlpha",
     )
 
     val thumbHeightFraction by remember {
         derivedStateOf {
             val layoutInfo = lazyListState.layoutInfo
             val totalItems = layoutInfo.totalItemsCount
-            if (totalItems == 0) 0.1f
-            else {
+            if (totalItems == 0) {
+                0.1f
+            } else {
                 val visibleItemsCount = layoutInfo.visibleItemsInfo.size
                 (visibleItemsCount.toFloat() / totalItems).coerceIn(0.1f, 1f)
             }
@@ -93,14 +92,17 @@ fun BoxScope.NarraScrollbar(
         derivedStateOf {
             val layoutInfo = lazyListState.layoutInfo
             val totalItems = layoutInfo.totalItemsCount
-            if (totalItems == 0) 0f
-            else {
+            if (totalItems == 0) {
+                0f
+            } else {
                 val firstVisibleItem = layoutInfo.visibleItemsInfo.firstOrNull()
                 if (firstVisibleItem != null) {
                     val firstItemHeight = firstVisibleItem.size.toFloat()
                     val offsetCorrection = if (firstItemHeight > 0) -firstVisibleItem.offset.toFloat() / firstItemHeight else 0f
                     (firstVisibleItem.index.toFloat() + offsetCorrection) / totalItems
-                } else 0f
+                } else {
+                    0f
+                }
             }
         }
     }
@@ -117,7 +119,7 @@ fun BoxScope.NarraScrollbar(
             .padding(vertical = verticalPadding)
             .pointerInput(totalItems) {
                 detectVerticalDragGestures(
-                    onDragStart = { 
+                    onDragStart = {
                         isDragging = true
                         onInteraction()
                     },
@@ -134,7 +136,7 @@ fun BoxScope.NarraScrollbar(
                             }
                             onInteraction()
                         }
-                    }
+                    },
                 )
             }
             .pointerInput(totalItems) {
@@ -150,7 +152,7 @@ fun BoxScope.NarraScrollbar(
                         onInteraction()
                     }
                 }
-            }
+            },
     )
 }
 
@@ -158,7 +160,7 @@ fun BoxScope.NarraScrollbar(
 fun BoxScope.NarraScrollbar(
     scrollState: ScrollState,
     modifier: Modifier = Modifier,
-    verticalPadding: Dp = 0.dp
+    verticalPadding: Dp = 0.dp,
 ) {
     val coroutineScope = rememberCoroutineScope()
     var isDragging by remember { mutableStateOf(false) }
@@ -177,16 +179,17 @@ fun BoxScope.NarraScrollbar(
     val alpha by animateFloatAsState(
         targetValue = if (visibleRecently) 1f else 0f,
         animationSpec = tween(durationMillis = 300),
-        label = "scrollbarAlpha"
+        label = "scrollbarAlpha",
     )
 
     val thumbHeightFraction by remember {
         derivedStateOf {
             val maxValue = scrollState.maxValue
-            if (maxValue == 0) 1f
-            else {
+            if (maxValue == 0) {
+                1f
+            } else {
                 // Rough estimate for verticalScroll
-                0.2f 
+                0.2f
             }
         }
     }
@@ -194,8 +197,11 @@ fun BoxScope.NarraScrollbar(
     val thumbOffsetFraction by remember {
         derivedStateOf {
             val maxValue = scrollState.maxValue
-            if (maxValue == 0) 0f
-            else scrollState.value.toFloat() / maxValue
+            if (maxValue == 0) {
+                0f
+            } else {
+                scrollState.value.toFloat() / maxValue
+            }
         }
     }
 
@@ -219,7 +225,7 @@ fun BoxScope.NarraScrollbar(
                                 scrollState.scrollTo((fraction * scrollState.maxValue).toInt())
                             }
                         }
-                    }
+                    },
                 )
             }
             .pointerInput(Unit) {
@@ -233,7 +239,7 @@ fun BoxScope.NarraScrollbar(
                         }
                     }
                 }
-            }
+            },
     )
 }
 
@@ -242,7 +248,7 @@ private fun BoxScope.ScrollbarContainer(
     alpha: Float,
     thumbHeightFraction: Float,
     thumbOffsetFraction: Float,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     Box(
         modifier = modifier
@@ -252,7 +258,7 @@ private fun BoxScope.ScrollbarContainer(
             .width(16.dp)
             .semantics {
                 contentDescription = "Scrollbar"
-            }
+            },
     ) {
         Box(
             modifier = Modifier
@@ -267,8 +273,8 @@ private fun BoxScope.ScrollbarContainer(
                 }
                 .background(
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
-                    shape = CircleShape
-                )
+                    shape = CircleShape,
+                ),
         )
     }
 }

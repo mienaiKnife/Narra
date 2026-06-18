@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.mienaiknife.narra.ui.screens
 
 import android.app.Activity
@@ -117,6 +116,8 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.ProgressBarRangeInfo
 import androidx.compose.ui.semantics.contentDescription
@@ -133,24 +134,22 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
-import androidx.compose.ui.res.pluralStringResource
-import androidx.compose.ui.res.stringResource
 import com.mienaiknife.narra.R
-import com.mienaiknife.narra.domain.models.Article
 import com.mienaiknife.narra.data.models.SampleArticles
+import com.mienaiknife.narra.domain.models.Article
+import com.mienaiknife.narra.ui.UiText
 import com.mienaiknife.narra.ui.components.NarraScrollbar
 import com.mienaiknife.narra.ui.models.ContentBlock
 import com.mienaiknife.narra.ui.theme.NarraTheme
 import com.mienaiknife.narra.ui.theme.ThemeViewModel
 import com.mienaiknife.narra.ui.theme.getFontFamily
 import com.mienaiknife.narra.ui.utils.HtmlParser
-import com.mienaiknife.narra.ui.UiText
 import com.mienaiknife.narra.ui.viewmodels.ReaderUiState
 import com.mienaiknife.narra.ui.viewmodels.ReaderViewModel
 import com.mienaiknife.narra.utils.DateUtils
@@ -191,7 +190,7 @@ fun ReaderScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
+            .background(MaterialTheme.colorScheme.background),
     ) {
         if (uiState.isLoading) {
             Box(modifier = Modifier.fillMaxSize()) {
@@ -201,7 +200,7 @@ fun ReaderScreen(
             ErrorView(
                 error = uiState.error!!,
                 onRetry = viewModel::retry,
-                onBack = onBack
+                onBack = onBack,
             )
         } else {
             uiState.article?.let {
@@ -221,7 +220,7 @@ fun ReaderScreen(
                     onCycleSpeed = viewModel::cycleSpeed,
                     onToggleFavorite = viewModel::toggleFavorite,
                     onSetSleepTimer = viewModel::setSleepTimer,
-                    onSetSearchQuery = viewModel::setSearchQuery
+                    onSetSearchQuery = viewModel::setSearchQuery,
                 )
             }
         }
@@ -230,7 +229,7 @@ fun ReaderScreen(
             hostState = snackbarHostState,
             modifier = Modifier
                 .align(Alignment.BottomCenter)
-                .navigationBarsPadding()
+                .navigationBarsPadding(),
         )
     }
 }
@@ -253,7 +252,7 @@ fun ReaderContent(
     onCycleSpeed: () -> Unit,
     onToggleFavorite: () -> Unit,
     onSetSleepTimer: (Int?) -> Unit,
-    onSetSearchQuery: (String) -> Unit
+    onSetSearchQuery: (String) -> Unit,
 ) {
     val article = uiState.article ?: return
     val blocks = uiState.blocks
@@ -283,7 +282,7 @@ fun ReaderContent(
 
     val scrollState = rememberLazyListState(
         initialFirstVisibleItemIndex = currentParagraphIndex,
-        initialFirstVisibleItemScrollOffset = initialScrollOffset
+        initialFirstVisibleItemScrollOffset = initialScrollOffset,
     )
 
     val isAtTop by remember {
@@ -291,7 +290,7 @@ fun ReaderContent(
             scrollState.firstVisibleItemIndex == 0 && scrollState.firstVisibleItemScrollOffset == 0
         }
     }
-    
+
     // Keep screen on while in the reader
     if (!isPreview) {
         DisposableEffect(Unit) {
@@ -307,7 +306,7 @@ fun ReaderContent(
     LaunchedEffect(isControlsVisible) {
         val window = (context as? Activity)?.window ?: return@LaunchedEffect
         val controller = WindowCompat.getInsetsController(window, view)
-        
+
         if (isControlsVisible) {
             controller.show(WindowInsetsCompat.Type.systemBars())
         } else {
@@ -345,7 +344,7 @@ fun ReaderContent(
                         }
                     }
                 }
-            }
+            },
     ) {
         var isFollowing by remember(article.id) { mutableStateOf(true) }
 
@@ -363,19 +362,19 @@ fun ReaderContent(
             onFollowingChange = { isFollowing = it },
             onControlsVisibleChange = { isControlsVisible = it },
             onInteractionTrigger = { lastInteractionTrigger++ },
-            onSeekToWord = onSeekToWord
+            onSeekToWord = onSeekToWord,
         )
 
         val fabBottomPadding by animateDpAsState(
             targetValue = if (isControlsVisible) 150.dp else 40.dp,
-            label = "fabBottomPadding"
+            label = "fabBottomPadding",
         )
 
         ReaderFab(
             modifier = Modifier.align(Alignment.BottomEnd),
             isVisible = !isFollowing && isControlsVisible,
             onClick = { isFollowing = true },
-            bottomPadding = fabBottomPadding
+            bottomPadding = fabBottomPadding,
         )
 
         ReaderTopBar(
@@ -388,7 +387,7 @@ fun ReaderContent(
             onSearchClick = { isSearchSheetVisible = true },
             onToggleFavorite = onToggleFavorite,
             onSleepTimerClick = { isSleepTimerSheetVisible = true },
-            sleepTimerMillis = uiState.sleepTimerMillisLeft
+            sleepTimerMillis = uiState.sleepTimerMillisLeft,
         )
 
         ReaderPlaybackControls(
@@ -399,7 +398,7 @@ fun ReaderContent(
             onSkipForward = onSkipForward,
             onSkipBackward = onSkipBackward,
             onSkipNext = onSkipNext,
-            onCycleSpeed = onCycleSpeed
+            onCycleSpeed = onCycleSpeed,
         )
 
         NarraScrollbar(
@@ -409,13 +408,13 @@ fun ReaderContent(
                 isFollowing = false
                 isControlsVisible = true
                 lastInteractionTrigger++
-            }
+            },
         )
 
         if (isSleepTimerSheetVisible) {
             ReaderSleepTimerSheet(
                 onDismiss = { isSleepTimerSheetVisible = false },
-                onSetTimer = onSetSleepTimer
+                onSetTimer = onSetSleepTimer,
             )
         }
 
@@ -430,7 +429,7 @@ fun ReaderContent(
                 onResultClick = { result ->
                     onSeekToWord(result.paragraphIndex, result.wordRange)
                     isFollowing = true
-                }
+                },
             )
         }
     }
@@ -447,7 +446,7 @@ fun ReaderTopBar(
     onSearchClick: () -> Unit,
     onToggleFavorite: () -> Unit,
     onSleepTimerClick: () -> Unit,
-    sleepTimerMillis: Long?
+    sleepTimerMillis: Long?,
 ) {
     val uriHandler = LocalUriHandler.current
 
@@ -455,31 +454,31 @@ fun ReaderTopBar(
         visible = isControlsVisible,
         enter = fadeIn(),
         exit = fadeOut(),
-        modifier = modifier
+        modifier = modifier,
     ) {
         Surface(
             color = MaterialTheme.colorScheme.background.copy(alpha = 0.95f),
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
         ) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .statusBarsPadding()
                     .padding(top = 6.dp, bottom = 6.dp, start = 8.dp, end = 8.dp),
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 IconButton(onClick = onBack) {
                     Icon(
                         imageVector = Icons.Default.KeyboardArrowDown,
                         contentDescription = stringResource(R.string.action_back),
                         modifier = Modifier.size(32.dp),
-                        tint = MaterialTheme.colorScheme.onBackground
+                        tint = MaterialTheme.colorScheme.onBackground,
                     )
                 }
 
                 Column(
                     modifier = Modifier.weight(1f),
-                    horizontalAlignment = Alignment.CenterHorizontally
+                    horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
                     Text(
                         text = article.title,
@@ -487,7 +486,7 @@ fun ReaderTopBar(
                         color = MaterialTheme.colorScheme.onBackground,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
-                        textAlign = TextAlign.Start
+                        textAlign = TextAlign.Start,
                     )
                     val dateAndSource = buildString {
                         val formattedDate = DateUtils.formatPublishedDate(article.publishedAt)
@@ -503,7 +502,7 @@ fun ReaderTopBar(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
-                        textAlign = TextAlign.Start
+                        textAlign = TextAlign.Start,
                     )
                 }
 
@@ -513,13 +512,13 @@ fun ReaderTopBar(
                             imageVector = Icons.Default.Menu,
                             contentDescription = stringResource(R.string.action_menu),
                             modifier = Modifier.size(32.dp),
-                            tint = MaterialTheme.colorScheme.onBackground
+                            tint = MaterialTheme.colorScheme.onBackground,
                         )
                     }
 
                     DropdownMenu(
                         expanded = isMenuExpanded,
-                        onDismissRequest = { onMenuExpandChange(false) }
+                        onDismissRequest = { onMenuExpandChange(false) },
                     ) {
                         DropdownMenuItem(
                             text = { Text(stringResource(R.string.action_search)) },
@@ -531,9 +530,9 @@ fun ReaderTopBar(
                                 Icon(
                                     Icons.Default.Search,
                                     contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.onBackground
+                                    tint = MaterialTheme.colorScheme.onBackground,
                                 )
-                            }
+                            },
                         )
                         DropdownMenuItem(
                             text = { Text(if (article.isFavorite) stringResource(R.string.reader_menu_unfavorite) else stringResource(R.string.reader_menu_favorite)) },
@@ -545,9 +544,9 @@ fun ReaderTopBar(
                                 Icon(
                                     if (article.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                                     contentDescription = null,
-                                    tint = if (article.isFavorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onBackground
+                                    tint = if (article.isFavorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onBackground,
                                 )
-                            }
+                            },
                         )
                         val sleepTimerText = if (sleepTimerMillis != null && sleepTimerMillis > 0) {
                             stringResource(R.string.reader_menu_sleep_timer_active, DateUtils.formatElapsedTime(sleepTimerMillis))
@@ -564,9 +563,9 @@ fun ReaderTopBar(
                                 Icon(
                                     Icons.Default.Timer,
                                     contentDescription = null,
-                                    tint = if (sleepTimerMillis != null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onBackground
+                                    tint = if (sleepTimerMillis != null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onBackground,
                                 )
-                            }
+                            },
                         )
                         DropdownMenuItem(
                             text = { Text(stringResource(R.string.reader_menu_visit_site)) },
@@ -579,9 +578,9 @@ fun ReaderTopBar(
                                 Icon(
                                     Icons.AutoMirrored.Filled.OpenInNew,
                                     contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.onBackground
+                                    tint = MaterialTheme.colorScheme.onBackground,
                                 )
-                            }
+                            },
                         )
                     }
                 }
@@ -605,12 +604,12 @@ fun ReaderContentList(
     onFollowingChange: (Boolean) -> Unit,
     onControlsVisibleChange: (Boolean) -> Unit,
     onInteractionTrigger: () -> Unit,
-    onSeekToWord: (Int, IntRange) -> Unit
+    onSeekToWord: (Int, IntRange) -> Unit,
 ) {
     var isInitialScroll by remember(article.id) { mutableStateOf(true) }
     var currentWordYInItem by remember(article.id) { mutableFloatStateOf(0f) }
     var currentWordYIndex by remember(article.id) { mutableIntStateOf(-1) }
-    
+
     val density = LocalDensity.current
     val verticalPaddingPx = with(density) { 4.dp.toPx() }
 
@@ -630,10 +629,10 @@ fun ReaderContentList(
             if (viewportHeight > 0) {
                 val targetViewportY = viewportHeight * 0.5f
                 val visibleItem = layoutInfo.visibleItemsInfo.find { it.index == uiState.currentParagraphIndex }
-                
+
                 // Only use the measurement if it's for the current paragraph
                 val wordY = if (currentWordYIndex == uiState.currentParagraphIndex) currentWordYInItem else 0f
-                
+
                 // Calculate the scroll offset to center the word.
                 // For item 0, the "natural" top is at topPadding from viewport top. For others, it's at 0.
                 val itemTopInViewport = if (uiState.currentParagraphIndex == 0) with(density) { topPadding.toPx() } else 0f
@@ -643,7 +642,7 @@ fun ReaderContentList(
                 if (visibleItem != null && currentWordYIndex == uiState.currentParagraphIndex) {
                     val currentWordViewportY = visibleItem.offset - layoutInfo.viewportStartOffset + wordY
                     val delta = currentWordViewportY - targetViewportY
-                    
+
                     if (kotlin.math.abs(delta) > with(density) { 2.dp.toPx() }) {
                         if (isInitialScroll) {
                             scrollState.scrollToItem(uiState.currentParagraphIndex, targetScrollOffset)
@@ -653,8 +652,8 @@ fun ReaderContentList(
                                 value = delta,
                                 animationSpec = spring(
                                     dampingRatio = Spring.DampingRatioLowBouncy,
-                                    stiffness = Spring.StiffnessLow
-                                )
+                                    stiffness = Spring.StiffnessLow,
+                                ),
                             )
                         }
                     } else if (isInitialScroll && wordY > 0) {
@@ -687,13 +686,13 @@ fun ReaderContentList(
             top = topPadding,
             bottom = bottomPadding,
             start = 24.dp,
-            end = 24.dp
-        )
+            end = 24.dp,
+        ),
     ) {
         itemsIndexed(blocks) { index, block ->
             val isHeading = block is ContentBlock.Heading
             val isCurrentParagraph = index == uiState.currentParagraphIndex
-            
+
             if (isHeading && index > 0) {
                 Spacer(modifier = Modifier.height(((32 + 16 * (lineSpacing - 1)) * lineSpacing).dp))
             }
@@ -749,13 +748,13 @@ fun ReaderContentList(
                     fontSize = readerFontSize.sp,
                     fontStyle = androidx.compose.ui.text.font.FontStyle.Italic,
                     color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.8f),
-                    fontFamily = readerFontFamily
+                    fontFamily = readerFontFamily,
                 )
                 else -> MaterialTheme.typography.bodyLarge.copy(
                     lineHeight = (baseLineHeight * lineSpacing).sp,
                     fontSize = readerFontSize.sp,
                     color = MaterialTheme.colorScheme.onBackground,
-                    fontFamily = readerFontFamily
+                    fontFamily = readerFontFamily,
                 )
             }
 
@@ -777,13 +776,13 @@ fun ReaderContentList(
                                     currentWordYInItem = coords.size.height / 2f
                                     currentWordYIndex = index
                                 }
-                            }
+                            },
                     ) {
                         AsyncImage(
                             model = block.url,
                             contentDescription = block.altText ?: stringResource(R.string.reader_article_image_desc),
                             modifier = Modifier.fillMaxWidth().clip(MaterialTheme.shapes.medium),
-                            contentScale = ContentScale.Fit
+                            contentScale = ContentScale.Fit,
                         )
                     }
                 }
@@ -794,7 +793,7 @@ fun ReaderContentList(
                         isCurrentParagraph = isCurrentParagraph,
                         currentWordRange = uiState.currentWordRange,
                         modifier = paragraphSemantics,
-                        onSeekToWord = { pIdx, range -> 
+                        onSeekToWord = { pIdx, range ->
                             onSeekToWord(pIdx, range)
                             onFollowingChange(true)
                         },
@@ -802,7 +801,7 @@ fun ReaderContentList(
                             currentWordYInItem = y
                             currentWordYIndex = index
                         },
-                        verticalPaddingPx = verticalPaddingPx
+                        verticalPaddingPx = verticalPaddingPx,
                     )
                 }
                 else -> {
@@ -813,7 +812,7 @@ fun ReaderContentList(
                         isCurrentParagraph = isCurrentParagraph,
                         currentWordRange = uiState.currentWordRange,
                         modifier = paragraphSemantics,
-                        onSeekToWord = { pIdx, range -> 
+                        onSeekToWord = { pIdx, range ->
                             onSeekToWord(pIdx, range)
                             onFollowingChange(true)
                         },
@@ -824,7 +823,7 @@ fun ReaderContentList(
                             val internalOffset = (if (isHeadingWithSpacer) headingSpacerPx else 0f) + verticalPaddingPx
                             currentWordYInItem = y + internalOffset
                             currentWordYIndex = index
-                        }
+                        },
                     )
                 }
             }
@@ -843,7 +842,7 @@ fun BlockQuoteItem(
     modifier: Modifier = Modifier,
     onSeekToWord: (Int, IntRange) -> Unit,
     onMeasureWordY: (Float) -> Unit,
-    verticalPaddingPx: Float
+    verticalPaddingPx: Float,
 ) {
     val haptic = LocalHapticFeedback.current
     val uriHandler = LocalUriHandler.current
@@ -855,7 +854,7 @@ fun BlockQuoteItem(
             .clip(MaterialTheme.shapes.small)
             .then(modifier)
             .then(if (isCurrentParagraph) Modifier.background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)) else Modifier)
-            .padding(vertical = 4.dp)
+            .padding(vertical = 4.dp),
     ) {
         Box(modifier = Modifier.width(4.dp).fillMaxHeight().background(MaterialTheme.colorScheme.primary))
         Spacer(modifier = Modifier.width(16.dp))
@@ -883,7 +882,7 @@ fun BlockQuoteItem(
                         currentWordRange = currentWordRange,
                         layoutResult = layoutResult,
                         highlightColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.4f),
-                        fontSizePx = with(LocalDensity.current) { baseStyle.fontSize.toPx() }
+                        fontSizePx = with(LocalDensity.current) { baseStyle.fontSize.toPx() },
                     )
                     .pointerInput(annotatedString) {
                         detectTapGestures(
@@ -903,16 +902,19 @@ fun BlockQuoteItem(
                                         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                     }
                                 }
-                            }
+                            },
                         )
-                    }
+                    },
             )
 
             DropdownMenu(expanded = contextMenuLink != null, onDismissRequest = { contextMenuLink = null }, offset = contextMenuOffset) {
                 DropdownMenuItem(
                     text = { Text(stringResource(R.string.reader_open_link)) },
-                    onClick = { contextMenuLink?.let { uriHandler.openUri(it) }; contextMenuLink = null },
-                    leadingIcon = { Icon(Icons.AutoMirrored.Filled.OpenInNew, contentDescription = null) }
+                    onClick = {
+                        contextMenuLink?.let { uriHandler.openUri(it) }
+                        contextMenuLink = null
+                    },
+                    leadingIcon = { Icon(Icons.AutoMirrored.Filled.OpenInNew, contentDescription = null) },
                 )
             }
         }
@@ -927,7 +929,7 @@ fun ParagraphItem(
     currentWordRange: IntRange?,
     modifier: Modifier = Modifier,
     onSeekToWord: (Int, IntRange) -> Unit,
-    onMeasureWordY: (Float) -> Unit
+    onMeasureWordY: (Float) -> Unit,
 ) {
     val haptic = LocalHapticFeedback.current
     val uriHandler = LocalUriHandler.current
@@ -942,7 +944,7 @@ fun ParagraphItem(
             .clip(MaterialTheme.shapes.small)
             .then(modifier)
             .then(if (isCurrentParagraph) Modifier.background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)) else Modifier)
-            .padding(horizontal = 8.dp, vertical = 4.dp)
+            .padding(horizontal = 8.dp, vertical = 4.dp),
     ) {
         Text(
             text = annotatedString,
@@ -961,7 +963,7 @@ fun ParagraphItem(
                     currentWordRange = currentWordRange,
                     layoutResult = layoutResult,
                     highlightColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.4f),
-                    fontSizePx = with(LocalDensity.current) { baseStyle.fontSize.toPx() }
+                    fontSizePx = with(LocalDensity.current) { baseStyle.fontSize.toPx() },
                 )
                 .pointerInput(annotatedString) {
                     detectTapGestures(
@@ -981,16 +983,19 @@ fun ParagraphItem(
                                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                 }
                             }
-                        }
+                        },
                     )
-                }
+                },
         )
 
         DropdownMenu(expanded = contextMenuLink != null, onDismissRequest = { contextMenuLink = null }, offset = contextMenuOffset) {
             DropdownMenuItem(
                 text = { Text(stringResource(R.string.reader_open_link)) },
-                onClick = { contextMenuLink?.let { uriHandler.openUri(it) }; contextMenuLink = null },
-                leadingIcon = { Icon(Icons.AutoMirrored.Filled.OpenInNew, contentDescription = null) }
+                onClick = {
+                    contextMenuLink?.let { uriHandler.openUri(it) }
+                    contextMenuLink = null
+                },
+                leadingIcon = { Icon(Icons.AutoMirrored.Filled.OpenInNew, contentDescription = null) },
             )
         }
     }
@@ -1001,7 +1006,7 @@ fun ReaderFab(
     modifier: Modifier = Modifier,
     isVisible: Boolean,
     onClick: () -> Unit,
-    bottomPadding: androidx.compose.ui.unit.Dp
+    bottomPadding: androidx.compose.ui.unit.Dp,
 ) {
     AnimatedVisibility(
         visible = isVisible,
@@ -1009,19 +1014,19 @@ fun ReaderFab(
         exit = fadeOut(),
         modifier = modifier
             .navigationBarsPadding()
-            .padding(bottom = bottomPadding, end = 24.dp)
+            .padding(bottom = bottomPadding, end = 24.dp),
     ) {
         IconButton(
             onClick = onClick,
             modifier = Modifier
                 .size(56.dp)
-                .background(MaterialTheme.colorScheme.primary, CircleShape)
+                .background(MaterialTheme.colorScheme.primary, CircleShape),
         ) {
             Icon(
                 imageVector = Icons.Default.CenterFocusStrong,
                 contentDescription = stringResource(R.string.reader_scroll_to_current_position),
                 tint = MaterialTheme.colorScheme.onPrimary,
-                modifier = Modifier.size(32.dp)
+                modifier = Modifier.size(32.dp),
             )
         }
     }
@@ -1036,7 +1041,7 @@ fun ReaderPlaybackControls(
     onSkipForward: () -> Unit,
     onSkipBackward: () -> Unit,
     onSkipNext: () -> Unit,
-    onCycleSpeed: () -> Unit
+    onCycleSpeed: () -> Unit,
 ) {
     val haptic = LocalHapticFeedback.current
 
@@ -1044,17 +1049,17 @@ fun ReaderPlaybackControls(
         visible = isControlsVisible,
         enter = fadeIn(),
         exit = fadeOut(),
-        modifier = modifier
+        modifier = modifier,
     ) {
         Surface(
             color = MaterialTheme.colorScheme.background.copy(alpha = 0.95f),
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .navigationBarsPadding()
-                    .padding(top = 0.dp, bottom = 16.dp)
+                    .padding(top = 0.dp, bottom = 16.dp),
             ) {
                 // Progress Bar
                 val progress = if (uiState.duration > 0) uiState.currentPosition.toFloat() / uiState.duration else 0f
@@ -1069,14 +1074,14 @@ fun ReaderPlaybackControls(
                             progressBarRangeInfo = ProgressBarRangeInfo(
                                 current = uiState.currentPosition.toFloat(),
                                 range = 0f..uiState.duration.toFloat(),
-                                steps = 100
+                                steps = 100,
                             )
                             contentDescription = playbackProgressDesc
                         },
                     color = MaterialTheme.colorScheme.primary,
                     trackColor = MaterialTheme.colorScheme.primaryContainer,
                     gapSize = 5.dp,
-                    drawStopIndicator = {}
+                    drawStopIndicator = {},
                 )
 
                 // Time Labels
@@ -1084,7 +1089,7 @@ fun ReaderPlaybackControls(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(start = 16.dp, top = 8.dp, end = 16.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween
+                    horizontalArrangement = Arrangement.SpaceBetween,
                 ) {
                     val nominalDuration = uiState.article?.duration ?: remember(uiState.article?.content) { DateUtils.estimateReadingTimeMs(uiState.article?.content ?: "") }
                     val scaledTotalDuration = (nominalDuration / uiState.playbackSpeed).toLong()
@@ -1096,12 +1101,12 @@ fun ReaderPlaybackControls(
                         Text(
                             text = DateUtils.formatElapsedTime(scaledCurrentPosition, scaledTotalDuration),
                             style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                         Text(
                             text = "-${DateUtils.formatElapsedTime(scaledRemainingTime, scaledTotalDuration)}",
                             style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     } else {
                         if (progress >= 1f && scaledTotalDuration > 0) {
@@ -1110,7 +1115,7 @@ fun ReaderPlaybackControls(
                         Text(
                             text = DateUtils.formatElapsedTime(scaledTotalDuration, scaledTotalDuration),
                             style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
                 }
@@ -1121,7 +1126,7 @@ fun ReaderPlaybackControls(
                         .fillMaxWidth()
                         .padding(horizontal = 8.dp),
                     horizontalArrangement = Arrangement.SpaceAround,
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
                     // Speed Button
                     val playbackSpeedDesc = stringResource(R.string.reader_playback_speed_desc, uiState.playbackSpeed)
@@ -1136,20 +1141,20 @@ fun ReaderPlaybackControls(
                                 .semantics {
                                     liveRegion = LiveRegionMode.Polite
                                     contentDescription = playbackSpeedDesc
-                                }
+                                },
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Speed,
                                 contentDescription = null,
                                 modifier = Modifier.size(32.dp),
-                                tint = MaterialTheme.colorScheme.onBackground
+                                tint = MaterialTheme.colorScheme.onBackground,
                             )
                         }
                         Text(
                             text = String.format(Locale.US, "%.1f", uiState.playbackSpeed),
                             style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
                             color = MaterialTheme.colorScheme.onBackground,
-                            modifier = Modifier.height(20.dp)
+                            modifier = Modifier.height(20.dp),
                         )
                     }
 
@@ -1160,20 +1165,20 @@ fun ReaderPlaybackControls(
                                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                 onSkipBackward()
                             },
-                            modifier = Modifier.height(64.dp)
+                            modifier = Modifier.height(64.dp),
                         ) {
                             Icon(
                                 imageVector = Icons.Default.FastRewind,
                                 contentDescription = stringResource(R.string.reader_rewind_desc, uiState.rewindSkipTime),
                                 modifier = Modifier.size(36.dp),
-                                tint = MaterialTheme.colorScheme.onBackground
+                                tint = MaterialTheme.colorScheme.onBackground,
                             )
                         }
                         Text(
                             text = uiState.rewindSkipTime,
                             style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
                             color = MaterialTheme.colorScheme.onBackground,
-                            modifier = Modifier.height(20.dp)
+                            modifier = Modifier.height(20.dp),
                         )
                     }
 
@@ -1184,13 +1189,13 @@ fun ReaderPlaybackControls(
                                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                 onTogglePlayPause()
                             },
-                            modifier = Modifier.size(64.dp)
+                            modifier = Modifier.size(64.dp),
                         ) {
                             Icon(
                                 imageVector = if (uiState.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
                                 contentDescription = if (uiState.isPlaying) stringResource(R.string.action_pause) else stringResource(R.string.action_play),
                                 modifier = Modifier.size(48.dp),
-                                tint = MaterialTheme.colorScheme.onBackground
+                                tint = MaterialTheme.colorScheme.onBackground,
                             )
                         }
                         Spacer(modifier = Modifier.height(20.dp))
@@ -1203,20 +1208,20 @@ fun ReaderPlaybackControls(
                                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                 onSkipForward()
                             },
-                            modifier = Modifier.height(64.dp)
+                            modifier = Modifier.height(64.dp),
                         ) {
                             Icon(
                                 imageVector = Icons.Default.FastForward,
                                 contentDescription = stringResource(R.string.reader_fast_forward_desc, uiState.fastForwardSkipTime),
                                 modifier = Modifier.size(36.dp),
-                                tint = MaterialTheme.colorScheme.onBackground
+                                tint = MaterialTheme.colorScheme.onBackground,
                             )
                         }
                         Text(
                             text = uiState.fastForwardSkipTime,
                             style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
                             color = MaterialTheme.colorScheme.onBackground,
-                            modifier = Modifier.height(20.dp)
+                            modifier = Modifier.height(20.dp),
                         )
                     }
 
@@ -1224,13 +1229,13 @@ fun ReaderPlaybackControls(
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         IconButton(
                             onClick = onSkipNext,
-                            modifier = Modifier.height(64.dp)
+                            modifier = Modifier.height(64.dp),
                         ) {
                             Icon(
                                 imageVector = Icons.Default.SkipNext,
                                 contentDescription = stringResource(R.string.reader_next_article_desc),
                                 modifier = Modifier.size(36.dp),
-                                tint = MaterialTheme.colorScheme.onBackground
+                                tint = MaterialTheme.colorScheme.onBackground,
                             )
                         }
                         Spacer(modifier = Modifier.height(20.dp))
@@ -1245,40 +1250,40 @@ fun ReaderPlaybackControls(
 @Composable
 fun ReaderSleepTimerSheet(
     onDismiss: () -> Unit,
-    onSetTimer: (Int?) -> Unit
+    onSetTimer: (Int?) -> Unit,
 ) {
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        sheetState = rememberModalBottomSheetState()
+        sheetState = rememberModalBottomSheetState(),
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .navigationBarsPadding()
-                .padding(bottom = 32.dp)
+                .padding(bottom = 32.dp),
         ) {
             Text(
                 text = stringResource(R.string.reader_sleep_timer),
                 style = MaterialTheme.typography.titleLarge,
-                modifier = Modifier.padding(16.dp)
+                modifier = Modifier.padding(16.dp),
             )
-            
+
             val options = listOf(
                 stringResource(R.string.action_off) to null,
                 stringResource(R.string.unit_5_minutes) to 5,
                 stringResource(R.string.unit_15_minutes) to 15,
                 stringResource(R.string.unit_30_minutes) to 30,
                 stringResource(R.string.unit_45_minutes) to 45,
-                stringResource(R.string.unit_1_hour) to 60
+                stringResource(R.string.unit_1_hour) to 60,
             )
-            
+
             options.forEach { (label, minutes) ->
                 ListItem(
                     headlineContent = { Text(label) },
                     modifier = Modifier.clickable {
                         onSetTimer(minutes)
                         onDismiss()
-                    }
+                    },
                 )
             }
         }
@@ -1291,17 +1296,17 @@ fun ReaderSearchSheet(
     uiState: ReaderUiState,
     onDismiss: () -> Unit,
     onSearchQueryChange: (String) -> Unit,
-    onResultClick: (com.mienaiknife.narra.ui.viewmodels.SearchResult) -> Unit
+    onResultClick: (com.mienaiknife.narra.ui.viewmodels.SearchResult) -> Unit,
 ) {
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = rememberModalBottomSheetState(),
-        modifier = Modifier.fillMaxHeight(0.8f)
+        modifier = Modifier.fillMaxHeight(0.8f),
     ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .navigationBarsPadding()
+                .navigationBarsPadding(),
         ) {
             OutlinedTextField(
                 value = uiState.searchQuery,
@@ -1318,11 +1323,11 @@ fun ReaderSearchSheet(
                         }
                     }
                 },
-                singleLine = true
+                singleLine = true,
             )
-            
+
             HorizontalDivider()
-            
+
             LazyColumn(modifier = Modifier.weight(1f)) {
                 itemsIndexed(uiState.searchResults) { _, result ->
                     ListItem(
@@ -1330,7 +1335,7 @@ fun ReaderSearchSheet(
                             Text(
                                 text = result.previewText,
                                 maxLines = 2,
-                                overflow = TextOverflow.Ellipsis
+                                overflow = TextOverflow.Ellipsis,
                             )
                         },
                         overlineContent = {
@@ -1339,10 +1344,10 @@ fun ReaderSearchSheet(
                         modifier = Modifier.clickable {
                             onResultClick(result)
                             onDismiss()
-                        }
+                        },
                     )
                 }
-                
+
                 if (uiState.searchQuery.length >= 2 && uiState.searchResults.isEmpty()) {
                     item {
                         Text(
@@ -1351,7 +1356,7 @@ fun ReaderSearchSheet(
                                 .fillMaxWidth()
                                 .padding(32.dp),
                             textAlign = TextAlign.Center,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
                 }
@@ -1364,7 +1369,7 @@ fun ReaderSearchSheet(
 fun ErrorView(
     error: UiText,
     onRetry: () -> Unit,
-    onBack: () -> Unit
+    onBack: () -> Unit,
 ) {
     val context = LocalContext.current
     Box(
@@ -1372,43 +1377,43 @@ fun ErrorView(
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
             .padding(32.dp),
-        contentAlignment = Alignment.Center
+        contentAlignment = Alignment.Center,
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
+            verticalArrangement = Arrangement.Center,
         ) {
             Icon(
                 imageVector = Icons.Default.Refresh, // Using Refresh as a placeholder for error
                 contentDescription = null,
                 modifier = Modifier.size(64.dp),
-                tint = MaterialTheme.colorScheme.error
+                tint = MaterialTheme.colorScheme.error,
             )
             Spacer(modifier = Modifier.height(16.dp))
             Text(
                 text = stringResource(R.string.reader_error_title),
                 style = MaterialTheme.typography.titleLarge,
-                color = MaterialTheme.colorScheme.onBackground
+                color = MaterialTheme.colorScheme.onBackground,
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
                 text = error.asString(context),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center
+                textAlign = TextAlign.Center,
             )
             Spacer(modifier = Modifier.height(32.dp))
             Row {
                 Button(
                     onClick = onBack,
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f),
                 ) {
                     Text(stringResource(R.string.reader_go_back))
                 }
                 Spacer(modifier = Modifier.width(16.dp))
                 Button(
                     onClick = onRetry,
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f),
                 ) {
                     Text(stringResource(R.string.reader_retry))
                 }
@@ -1423,7 +1428,7 @@ private fun Modifier.wordHighlight(
     currentWordRange: IntRange?,
     layoutResult: TextLayoutResult?,
     highlightColor: Color,
-    fontSizePx: Float
+    fontSizePx: Float,
 ): Modifier {
     if (!isCurrentParagraph || currentWordRange == null || layoutResult == null) return this
 
@@ -1446,27 +1451,27 @@ private fun Modifier.wordHighlight(
 
         val startRect = layoutResult.getBoundingBox(start)
         val endRect = layoutResult.getBoundingBox(trimmedEnd - 1)
-        
+
         // If the word wraps across lines, we only highlight the first part
         val line = layoutResult.getLineForOffset(start)
         val isSameLine = line == layoutResult.getLineForOffset(trimmedEnd - 1)
-        
+
         // Use the baseline as the stable reference point for vertical alignment
         val baseline = layoutResult.getLineBaseline(line)
-        
+
         val rectHeight = (fontSizePx * 1.2f) + (paddingPx * 2)
         // Center the highlight vertically relative to the baseline.
         // A visual center for a line of text is typically about 0.3em above the baseline.
         val highlightCenterY = baseline - (fontSizePx * 0.3f)
         val highlightTop = highlightCenterY - (rectHeight / 2)
-        
+
         val offset = Offset(startRect.left - paddingPx, highlightTop)
         val size = if (isSameLine) {
             Size((endRect.right - startRect.left) + (paddingPx * 2), rectHeight)
         } else {
             Size(startRect.width + (paddingPx * 2), rectHeight)
         }
-        
+
         Pair(offset, size)
     } ?: return this
 
@@ -1475,20 +1480,18 @@ private fun Modifier.wordHighlight(
             color = highlightColor,
             topLeft = wordInfo.first,
             size = wordInfo.second,
-            cornerRadius = CornerRadius(4.dp.toPx(), 4.dp.toPx())
+            cornerRadius = CornerRadius(4.dp.toPx(), 4.dp.toPx()),
         )
     }
 }
 
-private fun Char.isPunctuationOrWhitespace(): Boolean {
-    return isWhitespace() || !isLetterOrDigit()
-}
+private fun Char.isPunctuationOrWhitespace(): Boolean = isWhitespace() || !isLetterOrDigit()
 
 @Preview(
     uiMode = Configuration.UI_MODE_NIGHT_YES,
     showBackground = true,
     backgroundColor = 0xFF191919,
-    showSystemUi = true
+    showSystemUi = true,
 )
 @Composable
 fun ReaderScreenPreview() {
@@ -1505,7 +1508,7 @@ fun ReaderScreenPreview() {
                 currentPosition = 46000L,
                 duration = 180000L,
                 currentParagraphIndex = 1,
-                currentWordRange = 330..334
+                currentWordRange = 330..334,
             ),
             readerFontFamily = androidx.compose.ui.text.font.FontFamily.Default,
             readerFontSize = 20f,
@@ -1521,7 +1524,7 @@ fun ReaderScreenPreview() {
             onCycleSpeed = {},
             onToggleFavorite = {},
             onSetSleepTimer = {},
-            onSetSearchQuery = {}
+            onSetSearchQuery = {},
         )
     }
 }

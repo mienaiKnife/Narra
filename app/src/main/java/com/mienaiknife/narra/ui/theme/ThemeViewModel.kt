@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.mienaiknife.narra.ui.theme
 
 import android.content.Context
@@ -40,8 +39,10 @@ data class ThemeUiState(
 )
 
 @HiltViewModel
-open class ThemeViewModel @Inject constructor(
-    private val themeManager: ThemeManager
+open class ThemeViewModel
+@Inject
+constructor(
+    private val themeManager: ThemeManager,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(ThemeUiState())
     val uiState: StateFlow<ThemeUiState> = _uiState.asStateFlow()

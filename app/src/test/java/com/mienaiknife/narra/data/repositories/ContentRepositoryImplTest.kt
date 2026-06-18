@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.mienaiknife.narra.data.repositories
 
 import android.content.Context
@@ -38,7 +37,6 @@ import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
 
 class ContentRepositoryImplTest {
-
     private val context: Context = mock()
     private val appDatabase: AppDatabase = mock()
     private val articleDao: ArticleDao = mock()
@@ -59,28 +57,29 @@ class ContentRepositoryImplTest {
         whenever(downloadSettingsManager.downloadOverWifiOnly).thenReturn(flowOf(false))
         whenever(networkMonitor.isOnline()).thenReturn(true)
 
-        contentRepository = ContentRepositoryImpl(
-            context,
-            appDatabase,
-            articleDao,
-            feedDao,
-            webDataSource,
-            remoteFeedDataSource,
-            epubDataSource,
-            imageDataSource,
-            opmlDataSource,
-            networkMonitor,
-            downloadSettingsManager,
-            notificationHelper
-        )
+        contentRepository =
+            ContentRepositoryImpl(
+                context,
+                appDatabase,
+                articleDao,
+                feedDao,
+                webDataSource,
+                remoteFeedDataSource,
+                epubDataSource,
+                imageDataSource,
+                opmlDataSource,
+                networkMonitor,
+                downloadSettingsManager,
+                notificationHelper,
+            )
     }
 
     @Test
     fun `downloadWebPage returns failure when offline`() = runBlocking {
         whenever(networkMonitor.isOnline()).thenReturn(false)
-        
+
         val result = contentRepository.downloadWebPage("https://example.com")
-        
+
         assertTrue(result.isFailure)
         assertTrue(result.exceptionOrNull() is com.mienaiknife.narra.domain.NarraError.Network.NoConnection)
     }
@@ -88,9 +87,9 @@ class ContentRepositoryImplTest {
     @Test
     fun `importOpml returns success with count`() = runBlocking {
         whenever(opmlDataSource.parseOpml(any())).thenReturn(Result.success(emptyList()))
-        
+
         val result = contentRepository.importOpml("".byteInputStream())
-        
+
         assertTrue(result.isSuccess)
         assertTrue(result.getOrNull() == 0)
     }

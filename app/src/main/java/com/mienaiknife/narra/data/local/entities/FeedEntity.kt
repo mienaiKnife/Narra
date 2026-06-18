@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.mienaiknife.narra.data.local.entities
 
 import androidx.room.Entity
@@ -26,5 +25,5 @@ data class FeedEntity(
     val description: String? = null,
     val imageUrl: String? = null,
     val createdAt: Long = System.currentTimeMillis(),
-    val notificationsEnabled: Boolean = false
+    val notificationsEnabled: Boolean = false,
 )

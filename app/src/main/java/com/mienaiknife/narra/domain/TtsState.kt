@@ -13,18 +13,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.mienaiknife.narra.domain
 
 sealed class TtsState {
     object Idle : TtsState()
+
     object Initializing : TtsState()
+
     object Ready : TtsState()
+
     data class Speaking(
         val utteranceId: String,
         val start: Int = 0,
         val end: Int = 0,
-        val frame: Int = 0
+        val frame: Int = 0,
     ) : TtsState()
-    data class Error(val message: String) : TtsState()
+
+    data class Error(
+        val message: String,
+    ) : TtsState()
 }

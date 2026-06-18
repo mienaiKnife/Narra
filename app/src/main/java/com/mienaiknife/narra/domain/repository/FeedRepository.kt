@@ -13,15 +13,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.mienaiknife.narra.domain.repository
 
 import com.mienaiknife.narra.data.local.entities.FeedEntity
 
 interface FeedRepository {
     suspend fun subscribeToFeed(url: String): Result<String>
+
     suspend fun refreshFeeds(): Result<Unit>
+
     suspend fun updateFeed(feed: FeedEntity)
+
     suspend fun deleteFeed(url: String)
+
     suspend fun deleteAllFeeds()
 }

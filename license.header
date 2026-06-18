@@ -1,5 +1,5 @@
 /*
- * Copyright 2025 Narra Authors
+ * Copyright $YEAR Narra Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,21 +13,3 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.mienaiknife.narra.ui.viewmodels
-
-import com.mienaiknife.narra.domain.models.Article
-
-sealed interface HomeUiState {
-    data object Loading : HomeUiState
-
-    data class Success(
-        val continueListening: List<Article>,
-        val newFromFeeds: List<Article>,
-        val favoriteArticles: List<Article>,
-        val isRefreshing: Boolean = false,
-    ) : HomeUiState
-
-    data class Error(
-        val message: String,
-    ) : HomeUiState
-}

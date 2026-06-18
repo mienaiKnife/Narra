@@ -13,16 +13,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.mienaiknife.narra.data.local.entities
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import com.mienaiknife.narra.domain.models.TtsModel
 import com.mienaiknife.narra.domain.models.TtsModelType
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.encodeToString
 import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 
 @Entity(tableName = "tts_models")
 data class TtsModelEntity(
@@ -39,7 +38,7 @@ data class TtsModelEntity(
     val isDownloaded: Boolean,
     val progress: Float,
     val speakerId: Int? = null,
-    val lastError: String? = null
+    val lastError: String? = null,
 ) {
     fun toDomain() = TtsModel(
         id = id,
@@ -55,7 +54,7 @@ data class TtsModelEntity(
         isDownloaded = isDownloaded,
         progress = progress,
         speakerId = speakerId,
-        lastError = lastError
+        lastError = lastError,
     )
 
     private fun parseExtraUrls(json: String): Map<String, String> {
@@ -82,7 +81,7 @@ data class TtsModelEntity(
             isDownloaded = model.isDownloaded,
             progress = model.progress,
             speakerId = model.speakerId,
-            lastError = model.lastError
+            lastError = model.lastError,
         )
 
         private fun formatExtraUrls(urls: Map<String, String>): String {

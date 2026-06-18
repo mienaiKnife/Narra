@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.mienaiknife.narra.ui.viewmodels
 
 import com.mienaiknife.narra.data.models.SortOption
@@ -31,8 +30,10 @@ sealed interface QueueUiState {
         val isPlaying: Boolean = false,
         val playbackSpeed: Float = 1.0f,
         val downloadingArticleIds: Set<String> = emptySet(),
-        val totalRemainingTimeMs: Long = 0L
+        val totalRemainingTimeMs: Long = 0L,
     ) : QueueUiState
 
-    data class Error(val message: String) : QueueUiState
+    data class Error(
+        val message: String,
+    ) : QueueUiState
 }

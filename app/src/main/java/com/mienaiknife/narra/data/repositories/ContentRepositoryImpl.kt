@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.mienaiknife.narra.data.repositories
 
 import android.content.Context
@@ -25,11 +24,11 @@ import com.mienaiknife.narra.data.local.dao.ArticleDao
 import com.mienaiknife.narra.data.local.dao.FeedDao
 import com.mienaiknife.narra.data.local.entities.ArticleEntity
 import com.mienaiknife.narra.data.local.entities.toDomainModel
-import com.mienaiknife.narra.domain.models.Article
 import com.mienaiknife.narra.data.remote.RemoteFeedDataSource
 import com.mienaiknife.narra.data.remote.WebDataSource
 import com.mienaiknife.narra.data.settings.DownloadSettingsManager
 import com.mienaiknife.narra.domain.NarraError
+import com.mienaiknife.narra.domain.models.Article
 import com.mienaiknife.narra.domain.repository.ContentRepository
 import com.mienaiknife.narra.ui.utils.NetworkMonitor
 import com.mienaiknife.narra.ui.utils.UrlUtils
@@ -42,10 +41,11 @@ import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
-
 import javax.inject.Inject
 
-class ContentRepositoryImpl @Inject constructor(
+class ContentRepositoryImpl
+@Inject
+constructor(
     @dagger.hilt.android.qualifiers.ApplicationContext private val context: android.content.Context,
     private val appDatabase: AppDatabase,
     private val articleDao: ArticleDao,
@@ -57,60 +57,41 @@ class ContentRepositoryImpl @Inject constructor(
     private val opmlDataSource: com.mienaiknife.narra.data.local.OpmlDataSource,
     private val networkMonitor: com.mienaiknife.narra.ui.utils.NetworkMonitor,
     private val downloadSettingsManager: com.mienaiknife.narra.data.settings.DownloadSettingsManager,
-    private val notificationHelper: com.mienaiknife.narra.utils.NotificationHelper
+    private val notificationHelper: com.mienaiknife.narra.utils.NotificationHelper,
 ) : ContentRepository {
-
-    override fun getAllArticles(): Flow<List<Article>> {
-        return articleDao.getAllArticles().map { entities ->
-            entities.map { it.toDomainModel() }
-        }
+    override fun getAllArticles(): Flow<List<Article>> = articleDao.getAllArticles().map { entities ->
+        entities.map { it.toDomainModel() }
     }
 
-    override fun getArticlesBySource(source: String): Flow<List<Article>> {
-        return articleDao.getArticlesBySource(source).map { entities ->
-            entities.map { it.toDomainModel() }
-        }
+    override fun getArticlesBySource(source: String): Flow<List<Article>> = articleDao.getArticlesBySource(source).map { entities ->
+        entities.map { it.toDomainModel() }
     }
 
-    override fun getArticlesByFeedUrl(feedUrl: String): Flow<List<Article>> {
-        return articleDao.getArticlesByFeedUrl(feedUrl).map { entities ->
-            entities.map { it.toDomainModel() }
-        }
+    override fun getArticlesByFeedUrl(feedUrl: String): Flow<List<Article>> = articleDao.getArticlesByFeedUrl(feedUrl).map { entities ->
+        entities.map { it.toDomainModel() }
     }
 
-    override fun searchArticles(query: String): Flow<List<Article>> {
-        return articleDao.searchArticles(query).map { entities ->
-            entities.map { it.toDomainModel() }
-        }
+    override fun searchArticles(query: String): Flow<List<Article>> = articleDao.searchArticles(query).map { entities ->
+        entities.map { it.toDomainModel() }
     }
 
-    override fun getQueueArticles(): Flow<List<Article>> {
-        return articleDao.getQueueArticles().map { entities ->
-            entities.map { it.toDomainModel() }
-        }
+    override fun getQueueArticles(): Flow<List<Article>> = articleDao.getQueueArticles().map { entities ->
+        entities.map { it.toDomainModel() }
     }
 
-    override fun getHistoryArticles(): Flow<List<Article>> {
-        return articleDao.getHistoryArticles().map { entities ->
-            entities.map { it.toDomainModel() }
-        }
+    override fun getHistoryArticles(): Flow<List<Article>> = articleDao.getHistoryArticles().map { entities ->
+        entities.map { it.toDomainModel() }
     }
 
-    override fun getInboxArticles(): Flow<List<Article>> {
-        return articleDao.getInboxArticles().map { entities ->
-            entities.map { it.toDomainModel() }
-        }
+    override fun getInboxArticles(): Flow<List<Article>> = articleDao.getInboxArticles().map { entities ->
+        entities.map { it.toDomainModel() }
     }
 
-    override fun getFavoriteArticles(): Flow<List<Article>> {
-        return articleDao.getFavoriteArticles().map { entities ->
-            entities.map { it.toDomainModel() }
-        }
+    override fun getFavoriteArticles(): Flow<List<Article>> = articleDao.getFavoriteArticles().map { entities ->
+        entities.map { it.toDomainModel() }
     }
 
-    override suspend fun getArticleById(id: String): Article? {
-        return articleDao.getArticleWithFeedById(id)?.toDomainModel()
-    }
+    override suspend fun getArticleById(id: String): Article? = articleDao.getArticleWithFeedById(id)?.toDomainModel()
 
     override suspend fun toggleFavorite(id: String) {
         articleDao.toggleFavorite(id)
@@ -156,34 +137,38 @@ class ContentRepositoryImpl @Inject constructor(
 
         webDataSource.downloadArticle(url).mapCatching { remoteArticle ->
             val nextOrder = articleDao.getNextQueueOrder()
-            
-            val localImageUrl = (remoteArticle.imageUrl ?: existingArticle?.imageUrl)?.let { imageUrl ->
-                val fileName = "web_${remoteArticle.id.hashCode()}_${System.currentTimeMillis()}.png"
-                imageDataSource.downloadAndSaveImage(imageUrl, fileName)
-            }
 
-            val articleEntity = ArticleEntity(
-                id = existingArticle?.id ?: remoteArticle.id,
-                title = remoteArticle.title.takeIf { it != "Untitled" } ?: existingArticle?.title ?: "Untitled",
-                source = existingArticle?.source?.takeIf { existingArticle.isFromFeed || !UrlUtils.isUrlOrDomainLike(it) } ?: remoteArticle.source,
-                content = remoteArticle.content,
-                excerpt = remoteArticle.publishedAt ?: existingArticle?.publishedAt,
-                imageUrl = remoteArticle.imageUrl ?: existingArticle?.imageUrl,
-                localImageUrl = localImageUrl ?: existingArticle?.localImageUrl,
-                url = url,
-                feedUrl = remoteArticle.feedUrl ?: existingArticle?.feedUrl,
-                progress = existingArticle?.progress ?: 0f,
-                currentParagraphIndex = existingArticle?.currentParagraphIndex ?: 0,
-                currentWordOffset = existingArticle?.currentWordOffset ?: 0,
-                publishedAt = remoteArticle.publishedAt ?: existingArticle?.publishedAt,
-                publishedTimestamp = remoteArticle.publishedTimestamp ?: existingArticle?.publishedTimestamp,
-                duration = DateUtils.estimateReadingTimeMs(remoteArticle.content),
-                isInQueue = true,
-                queueOrder = nextOrder,
-                createdAt = existingArticle?.createdAt ?: System.currentTimeMillis(),
-                isFavorite = existingArticle?.isFavorite ?: false,
-                isFromFeed = existingArticle?.isFromFeed ?: false
-            )
+            val localImageUrl =
+                (remoteArticle.imageUrl ?: existingArticle?.imageUrl)?.let { imageUrl ->
+                    val fileName = "web_${remoteArticle.id.hashCode()}_${System.currentTimeMillis()}.png"
+                    imageDataSource.downloadAndSaveImage(imageUrl, fileName)
+                }
+
+            val articleEntity =
+                ArticleEntity(
+                    id = existingArticle?.id ?: remoteArticle.id,
+                    title = remoteArticle.title.takeIf { it != "Untitled" } ?: existingArticle?.title ?: "Untitled",
+                    source =
+                    existingArticle?.source?.takeIf { existingArticle.isFromFeed || !UrlUtils.isUrlOrDomainLike(it) }
+                        ?: remoteArticle.source,
+                    content = remoteArticle.content,
+                    excerpt = remoteArticle.publishedAt ?: existingArticle?.publishedAt,
+                    imageUrl = remoteArticle.imageUrl ?: existingArticle?.imageUrl,
+                    localImageUrl = localImageUrl ?: existingArticle?.localImageUrl,
+                    url = url,
+                    feedUrl = remoteArticle.feedUrl ?: existingArticle?.feedUrl,
+                    progress = existingArticle?.progress ?: 0f,
+                    currentParagraphIndex = existingArticle?.currentParagraphIndex ?: 0,
+                    currentWordOffset = existingArticle?.currentWordOffset ?: 0,
+                    publishedAt = remoteArticle.publishedAt ?: existingArticle?.publishedAt,
+                    publishedTimestamp = remoteArticle.publishedTimestamp ?: existingArticle?.publishedTimestamp,
+                    duration = DateUtils.estimateReadingTimeMs(remoteArticle.content),
+                    isInQueue = true,
+                    queueOrder = nextOrder,
+                    createdAt = existingArticle?.createdAt ?: System.currentTimeMillis(),
+                    isFavorite = existingArticle?.isFavorite ?: false,
+                    isFromFeed = existingArticle?.isFromFeed ?: false,
+                )
 
             articleDao.insertArticle(articleEntity)
             articleEntity.toDomainModel()
@@ -208,7 +193,7 @@ class ContentRepositoryImpl @Inject constructor(
 
     override suspend fun addToQueue(id: String): Result<Unit> {
         val article = articleDao.getArticleById(id) ?: return Result.failure(NarraError.Content.NotFound())
-        
+
         // If content is empty, trigger full download (which also handles image persistence)
         if (article.content.isNullOrEmpty()) {
             val url = article.url ?: return Result.failure(NarraError.Content.EmptyContent())
@@ -260,50 +245,67 @@ class ContentRepositoryImpl @Inject constructor(
         articleDao.markAllAsUnplayedInFeed(feedUrl)
     }
 
-    override suspend fun updateArticleProgress(id: String, progress: Float, paragraphIndex: Int, wordOffset: Int, duration: Long?) {
+    override suspend fun updateArticleProgress(
+        id: String,
+        progress: Float,
+        paragraphIndex: Int,
+        wordOffset: Int,
+        duration: Long?,
+    ) {
         if (progress >= 1f) {
             articleDao.markAsFinished(id)
         } else {
             articleDao.getArticleById(id)?.let { article ->
-                articleDao.insertArticle(article.copy(
-                    progress = progress,
-                    currentParagraphIndex = paragraphIndex,
-                    currentWordOffset = wordOffset,
-                    duration = duration ?: article.duration,
-                    lastPlayedAt = System.currentTimeMillis()
-                ))
+                articleDao.insertArticle(
+                    article.copy(
+                        progress = progress,
+                        currentParagraphIndex = paragraphIndex,
+                        currentWordOffset = wordOffset,
+                        duration = duration ?: article.duration,
+                        lastPlayedAt = System.currentTimeMillis(),
+                    ),
+                )
             }
         }
     }
 
-    override suspend fun reorderQueue(fromIndex: Int, toIndex: Int) = withContext(Dispatchers.IO) {
-        val currentQueue = articleDao.getQueueArticles().map { entities ->
-            entities.map { it.article }.sortedBy { it.queueOrder }
-        }.first().toMutableList()
+    override suspend fun reorderQueue(
+        fromIndex: Int,
+        toIndex: Int,
+    ) = withContext(Dispatchers.IO) {
+        val currentQueue =
+            articleDao
+                .getQueueArticles()
+                .map { entities ->
+                    entities.map { it.article }.sortedBy { it.queueOrder }
+                }.first()
+                .toMutableList()
 
         if (fromIndex !in currentQueue.indices || toIndex !in currentQueue.indices) return@withContext
 
         val item = currentQueue.removeAt(fromIndex)
         currentQueue.add(toIndex, item)
 
-        val updatedQueue = currentQueue.mapIndexed { index, article ->
-            article.copy(queueOrder = index)
-        }
+        val updatedQueue =
+            currentQueue.mapIndexed { index, article ->
+                article.copy(queueOrder = index)
+            }
 
         articleDao.updateArticles(updatedQueue)
     }
 
     override suspend fun updateQueueOrder(articleIds: List<String>) = withContext(Dispatchers.IO) {
         val currentQueue = articleDao.getQueueArticles().first()
-        val updatedQueue = currentQueue.map { wrap ->
-            val article = wrap.article
-            val newOrder = articleIds.indexOf(article.id)
-            if (newOrder != -1) {
-                article.copy(queueOrder = newOrder)
-            } else {
-                article
+        val updatedQueue =
+            currentQueue.map { wrap ->
+                val article = wrap.article
+                val newOrder = articleIds.indexOf(article.id)
+                if (newOrder != -1) {
+                    article.copy(queueOrder = newOrder)
+                } else {
+                    article
+                }
             }
-        }
         articleDao.updateArticles(updatedQueue)
     }
 
@@ -312,7 +314,7 @@ class ContentRepositoryImpl @Inject constructor(
         if (connectionCheck.isFailure) {
             return@withContext Result.failure(connectionCheck.exceptionOrNull()!!)
         }
-        
+
         remoteFeedDataSource.fetchFeedMetadata(url).mapCatching { feedEntity ->
             feedDao.insertFeed(feedEntity)
             refreshFeeds()
@@ -331,28 +333,30 @@ class ContentRepositoryImpl @Inject constructor(
                 remoteFeedDataSource.fetchArticles(feed).onSuccess { result ->
                     val articles = result.articles
                     val updatedTitle = result.feedTitle
-                    
+
                     if (updatedTitle != null && updatedTitle != feed.title && !UrlUtils.isUrlOrDomainLike(updatedTitle)) {
                         feedDao.insertFeed(feed.copy(title = updatedTitle))
                     }
 
                     val isFirstImport = articleDao.getArticleCountByFeedUrl(feed.url) == 0
                     val inboxLimitStr = downloadSettingsManager.inboxInitialLimit.first()
-                    val inboxLimit = when (inboxLimitStr) {
-                        "All" -> Int.MAX_VALUE
-                        else -> inboxLimitStr.toIntOrNull() ?: 5
-                    }
+                    val inboxLimit =
+                        when (inboxLimitStr) {
+                            "All" -> Int.MAX_VALUE
+                            else -> inboxLimitStr.toIntOrNull() ?: 5
+                        }
                     val sortedArticles = articles.sortedByDescending { it.publishedTimestamp ?: 0L }
 
                     for ((index, article) in sortedArticles.withIndex()) {
                         val existingArticle = articleDao.getArticleByUrl(article.url ?: "")
-                        
+
                         // If article exists but is missing local image, try to download it now
                         if (existingArticle != null && existingArticle.localImageUrl == null && article.imageUrl != null) {
-                            val localImageUrl = article.imageUrl.let { imageUrl ->
-                                val fileName = "feed_${article.id.hashCode()}_${System.currentTimeMillis()}.png"
-                                imageDataSource.downloadAndSaveImage(imageUrl, fileName)
-                            }
+                            val localImageUrl =
+                                article.imageUrl.let { imageUrl ->
+                                    val fileName = "feed_${article.id.hashCode()}_${System.currentTimeMillis()}.png"
+                                    imageDataSource.downloadAndSaveImage(imageUrl, fileName)
+                                }
                             if (localImageUrl != null) {
                                 articleDao.insertArticle(existingArticle.copy(localImageUrl = localImageUrl))
                             }
@@ -361,31 +365,33 @@ class ContentRepositoryImpl @Inject constructor(
                         if (existingArticle == null) {
                             val isOldOnFirstImport = isFirstImport && index >= inboxLimit
 
-                            val localImageUrl = article.imageUrl?.let { imageUrl ->
-                                val fileName = "feed_${article.id.hashCode()}_${System.currentTimeMillis()}.png"
-                                imageDataSource.downloadAndSaveImage(imageUrl, fileName)
-                            }
+                            val localImageUrl =
+                                article.imageUrl?.let { imageUrl ->
+                                    val fileName = "feed_${article.id.hashCode()}_${System.currentTimeMillis()}.png"
+                                    imageDataSource.downloadAndSaveImage(imageUrl, fileName)
+                                }
 
-                            val articleEntity = ArticleEntity(
-                                id = article.id,
-                                title = article.title,
-                                source = updatedTitle ?: article.source,
-                                content = null,
-                                excerpt = article.publishedAt,
-                                imageUrl = article.imageUrl,
-                                localImageUrl = localImageUrl,
-                                url = article.url,
-                                feedUrl = feed.url,
-                                publishedAt = article.publishedAt,
-                                publishedTimestamp = article.publishedTimestamp,
-                                isFromFeed = true,
-                                isInInbox = !isOldOnFirstImport,
-                                isInQueue = false,
-                                progress = 0.0f,
-                                finishedAt = null,
-                                lastPlayedAt = null,
-                                createdAt = System.currentTimeMillis()
-                            )
+                            val articleEntity =
+                                ArticleEntity(
+                                    id = article.id,
+                                    title = article.title,
+                                    source = updatedTitle ?: article.source,
+                                    content = null,
+                                    excerpt = article.publishedAt,
+                                    imageUrl = article.imageUrl,
+                                    localImageUrl = localImageUrl,
+                                    url = article.url,
+                                    feedUrl = feed.url,
+                                    publishedAt = article.publishedAt,
+                                    publishedTimestamp = article.publishedTimestamp,
+                                    isFromFeed = true,
+                                    isInInbox = !isOldOnFirstImport,
+                                    isInQueue = false,
+                                    progress = 0.0f,
+                                    finishedAt = null,
+                                    lastPlayedAt = null,
+                                    createdAt = System.currentTimeMillis(),
+                                )
                             articleDao.insertArticle(articleEntity)
 
                             if (feed.notificationsEnabled && articleEntity.progress < 1.0f) {
@@ -393,11 +399,13 @@ class ContentRepositoryImpl @Inject constructor(
                             }
                         } else if (!existingArticle.isFromFeed) {
                             // Article exists but was imported from web; update it to link to feed
-                            articleDao.insertArticle(existingArticle.copy(
-                                isFromFeed = true,
-                                feedUrl = feed.url,
-                                source = updatedTitle ?: existingArticle.source
-                            ))
+                            articleDao.insertArticle(
+                                existingArticle.copy(
+                                    isFromFeed = true,
+                                    feedUrl = feed.url,
+                                    source = updatedTitle ?: existingArticle.source,
+                                ),
+                            )
                         }
                     }
                 }
@@ -412,24 +420,28 @@ class ContentRepositoryImpl @Inject constructor(
         feedDao.updateFeed(feed)
     }
 
-    override suspend fun importEpub(inputStream: java.io.InputStream, title: String): Result<Unit> = withContext(Dispatchers.IO) {
+    override suspend fun importEpub(
+        inputStream: java.io.InputStream,
+        title: String,
+    ): Result<Unit> = withContext(Dispatchers.IO) {
         epubDataSource.parseEpub(context, inputStream, title).map { articles ->
             val nextOrderBase = articleDao.getNextQueueOrder()
             articles.forEachIndexed { index, article ->
-                val articleEntity = ArticleEntity(
-                    id = article.id,
-                    title = article.title,
-                    source = article.source,
-                    content = article.content,
-                    excerpt = article.publishedAt,
-                    imageUrl = article.imageUrl,
-                    url = article.url,
-                    feedUrl = null,
-                    duration = DateUtils.estimateReadingTimeMs(article.content),
-                    isInQueue = true,
-                    queueOrder = nextOrderBase + index,
-                    createdAt = System.currentTimeMillis()
-                )
+                val articleEntity =
+                    ArticleEntity(
+                        id = article.id,
+                        title = article.title,
+                        source = article.source,
+                        content = article.content,
+                        excerpt = article.publishedAt,
+                        imageUrl = article.imageUrl,
+                        url = article.url,
+                        feedUrl = null,
+                        duration = DateUtils.estimateReadingTimeMs(article.content),
+                        isInQueue = true,
+                        queueOrder = nextOrderBase + index,
+                        createdAt = System.currentTimeMillis(),
+                    )
                 articleDao.insertArticle(articleEntity)
             }
         }
@@ -481,7 +493,7 @@ class ContentRepositoryImpl @Inject constructor(
         try {
             appDatabase.close()
             val dbFile = context.getDatabasePath(AppDatabase.DATABASE_NAME)
-            
+
             // Delete sidecar files if they exist to prevent corruption with the new database file
             val walFile = File(dbFile.path + "-wal")
             val shmFile = File(dbFile.path + "-shm")

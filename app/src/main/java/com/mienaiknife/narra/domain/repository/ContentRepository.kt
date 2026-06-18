@@ -13,10 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.mienaiknife.narra.domain.repository
 
-import kotlinx.coroutines.flow.Flow
-
-interface ContentRepository : ArticleRepository, FeedRepository, ImportExportRepository
-
+interface ContentRepository :
+    ArticleRepository,
+    FeedRepository,
+    ImportExportRepository

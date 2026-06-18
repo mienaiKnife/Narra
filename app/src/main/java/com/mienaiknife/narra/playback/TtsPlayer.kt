@@ -13,21 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.mienaiknife.narra.playback
 
-import android.content.BroadcastReceiver
 import android.content.Context
-import android.content.Intent
-import android.content.IntentFilter
 import android.graphics.Bitmap
-import android.media.AudioAttributes as AndroidAudioAttributes
-import android.media.AudioFocusRequest
 import android.media.AudioManager
-import android.net.wifi.WifiManager
-import android.os.Build
 import android.os.Looper
-import android.os.PowerManager
+import androidx.core.net.toUri
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
@@ -38,12 +30,15 @@ import androidx.media3.common.Player
 import androidx.media3.common.SimpleBasePlayer
 import androidx.media3.common.TrackSelectionParameters
 import androidx.media3.common.util.UnstableApi
-import androidx.core.net.toUri
+import coil3.imageLoader
+import coil3.request.ImageRequest
+import coil3.request.SuccessResult
+import coil3.toBitmap
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
-import com.mienaiknife.narra.domain.models.Article
 import com.mienaiknife.narra.domain.TtsEngine
 import com.mienaiknife.narra.domain.TtsState
+import com.mienaiknife.narra.domain.models.Article
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -54,13 +49,9 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
+import java.io.ByteArrayOutputStream
 import javax.inject.Inject
 import javax.inject.Singleton
-import coil3.imageLoader
-import coil3.request.ImageRequest
-import coil3.request.SuccessResult
-import coil3.toBitmap
-import java.io.ByteArrayOutputStream
 
 /**
  * A custom Media3 Player implementation that wraps a TtsEngine using SimpleBasePlayer.
@@ -92,13 +83,17 @@ class TtsPlayer @Inject constructor(
     val currentParagraphIndexFlow = _currentParagraphIndexFlow.asStateFlow()
     var currentParagraphIndex: Int
         get() = _currentParagraphIndexFlow.value
-        set(value) { _currentParagraphIndexFlow.value = value }
+        set(value) {
+            _currentParagraphIndexFlow.value = value
+        }
 
     private val _currentWordRangeFlow = MutableStateFlow<IntRange?>(null)
     val currentWordRangeFlow = _currentWordRangeFlow.asStateFlow()
     var currentWordRange: IntRange?
         get() = _currentWordRangeFlow.value
-        set(value) { _currentWordRangeFlow.value = value }
+        set(value) {
+            _currentWordRangeFlow.value = value
+        }
 
     private var resumeWordOffset = 0
     private var baseWordOffset = 0
@@ -145,10 +140,10 @@ class TtsPlayer @Inject constructor(
                             baseWordOffset = 0
                             currentParagraphIndex = index
                         }
-                        
+
                         val absoluteStart = baseWordOffset + state.start
                         val absoluteEnd = baseWordOffset + state.end
-                        
+
                         currentWordRange = absoluteStart until absoluteEnd
                         resumeWordOffset = absoluteStart
                         invalidateState()
@@ -187,9 +182,7 @@ class TtsPlayer @Inject constructor(
         settingsManager.pauseForInterruptions.onEach { _pauseForInterruptions = it }.launchIn(scope)
     }
 
-    private fun parseSkipTime(time: String): Long {
-        return time.filter { it.isDigit() }.toLongOrNull()?.let { it * 1000L } ?: 15000L
-    }
+    private fun parseSkipTime(time: String): Long = time.filter { it.isDigit() }.toLongOrNull()?.let { it * 1000L } ?: 15000L
 
     private var _audioAttributes = AudioAttributes.Builder()
         .setUsage(C.USAGE_MEDIA)
@@ -199,19 +192,21 @@ class TtsPlayer @Inject constructor(
     override fun getState(): State {
         val playlist = if (_currentMediaItem != null || mediaItems.isNotEmpty() || isPreparing) {
             val itemsToUse = if (mediaItems.isNotEmpty()) mediaItems else listOfNotNull(_currentMediaItem)
-            
+
             if (itemsToUse.isEmpty() && isPreparing) {
                 // Return a dummy item while preparing to ensure notification can be shown
                 val dummyItem = MediaItem.Builder()
                     .setMediaId("preparing")
-                    .setMediaMetadata(MediaMetadata.Builder()
-                        .setTitle("Loading...")
-                        .build())
+                    .setMediaMetadata(
+                        MediaMetadata.Builder()
+                            .setTitle("Loading...")
+                            .build(),
+                    )
                     .build()
                 listOf(
                     MediaItemData.Builder(dummyItem)
                         .setUid(dummyItem.mediaId)
-                        .build()
+                        .build(),
                 )
             } else {
                 (0 until itemsToUse.size).map { i ->
@@ -221,7 +216,7 @@ class TtsPlayer @Inject constructor(
                     } else {
                         C.TIME_UNSET
                     }
-                    
+
                     MediaItemData.Builder(item)
                         .setUid(item.mediaId)
                         .setDurationUs(durationUs)
@@ -238,7 +233,9 @@ class TtsPlayer @Inject constructor(
             val progress = currentWordRange?.let { it.last.toFloat() / paragraphs[currentParagraphIndex].length.toFloat() }
                 ?: (resumeWordOffset.toFloat() / paragraphs[currentParagraphIndex].length.toFloat()).coerceIn(0f, 1f)
             (currentParagraphIndex * 1000L + (progress * 1000L).toLong())
-        } else 0L
+        } else {
+            0L
+        }
 
         val currentPlaybackState = if (playlist.isEmpty()) {
             if (isPreparing) STATE_BUFFERING else STATE_IDLE
@@ -308,7 +305,7 @@ class TtsPlayer @Inject constructor(
         if (_playWhenReady == playWhenReady) {
             return Futures.immediateVoidFuture()
         }
-        
+
         _playWhenReady = playWhenReady
         if (playWhenReady) {
             val focusResult = audioFocusManager.requestAudioFocus()
@@ -333,7 +330,7 @@ class TtsPlayer @Inject constructor(
         if (_playbackState == STATE_IDLE) {
             _playbackState = STATE_BUFFERING
             invalidateState()
-            
+
             // In a real TTS player, prepare might fetch content.
             // Here we assume speak() handles it.
             _playbackState = STATE_READY
@@ -371,10 +368,10 @@ class TtsPlayer @Inject constructor(
         mediaItems.clear()
         mediaItems.addAll(items)
         currentItemIndex = startIndex.coerceIn(0, items.size - 1).takeIf { items.isNotEmpty() } ?: 0
-        
-        // This is a stub for the full playlist support. 
+
+        // This is a stub for the full playlist support.
         // Real implementation would trigger speak() for the selected item.
-        
+
         invalidateState()
         return Futures.immediateVoidFuture()
     }
@@ -391,23 +388,23 @@ class TtsPlayer @Inject constructor(
         }
 
         seekToPosition(positionMs)
-        
+
         invalidateState()
         return Futures.immediateVoidFuture()
     }
 
     private fun seekToPosition(positionMs: Long) {
         if (paragraphs.isEmpty()) return
-        
+
         val totalMs = paragraphs.size * 1000L
         val clampedPos = positionMs.coerceIn(0, totalMs - 1)
         val pIndex = (clampedPos / 1000).toInt().coerceIn(0, paragraphs.size - 1)
         val progress = (clampedPos % 1000) / 1000f
         val wordOffset = (progress * paragraphs[pIndex].length).toInt()
-        
+
         currentParagraphIndex = pIndex
         resumeWordOffset = wordOffset
-        
+
         // Find a word boundary for the highlight
         val text = paragraphs[pIndex]
         if (text.isNotEmpty()) {
@@ -420,7 +417,7 @@ class TtsPlayer @Inject constructor(
         } else {
             currentWordRange = null
         }
-        
+
         if (_playWhenReady) {
             resumeInternal()
         }
@@ -428,7 +425,7 @@ class TtsPlayer @Inject constructor(
 
     fun requestAudioFocus(): Int {
         val result = audioFocusManager.requestAudioFocus()
-        
+
         if (result == AudioManager.AUDIOFOCUS_REQUEST_GRANTED) {
             _playbackSuppressionReason = PLAYBACK_SUPPRESSION_REASON_NONE
         } else if (result == AudioManager.AUDIOFOCUS_REQUEST_DELAYED) {
@@ -476,7 +473,7 @@ class TtsPlayer @Inject constructor(
         android.util.Log.d("TtsPlayer", "speak() called: title=${article.title}, paragraphs=${parsedParagraphs.size}, playWhenReady=$playWhenReady")
         isPreparing = true
         invalidateState()
-        
+
         ttsEngine.stop()
         isEngineSpeaking = false
         lastEnqueuedUtteranceId = null
@@ -487,28 +484,30 @@ class TtsPlayer @Inject constructor(
             invalidateState()
             return
         }
-        
+
         val artworkUrl = article.imageUrl ?: article.feedImageUrl
         val artworkUri = artworkUrl?.takeIf { it.startsWith("http") }?.toUri()
         val mediaItem = MediaItem.Builder()
             .setMediaId(article.id)
             .setUri("tts://${article.id}")
-            .setMediaMetadata(MediaMetadata.Builder()
-                .setTitle(article.title)
-                .setSubtitle(article.source)
-                .setArtist(article.source)
-                .setAlbumTitle(article.source)
-                .setAlbumArtist(article.source)
-                .setDisplayTitle(article.title) // Essential for Samsung "Now Bar"
-                .setMediaType(MediaMetadata.MEDIA_TYPE_PODCAST_EPISODE)
-                .setArtworkUri(artworkUri)
-                .setIsBrowsable(false)
-                .setIsPlayable(true)
-                .build())
+            .setMediaMetadata(
+                MediaMetadata.Builder()
+                    .setTitle(article.title)
+                    .setSubtitle(article.source)
+                    .setArtist(article.source)
+                    .setAlbumTitle(article.source)
+                    .setAlbumArtist(article.source)
+                    .setDisplayTitle(article.title) // Essential for Samsung "Now Bar"
+                    .setMediaType(MediaMetadata.MEDIA_TYPE_PODCAST_EPISODE)
+                    .setArtworkUri(artworkUri)
+                    .setIsBrowsable(false)
+                    .setIsPlayable(true)
+                    .build(),
+            )
             .build()
-        
+
         _currentMediaItem = mediaItem
-        
+
         currentItemIndex = if (!mediaItems.any { it.mediaId == article.id }) {
             mediaItems.clear()
             mediaItems.add(mediaItem)
@@ -518,10 +517,10 @@ class TtsPlayer @Inject constructor(
         }
 
         _playbackState = STATE_READY
-        
+
         currentParagraphIndex = article.currentParagraphIndex.coerceIn(0, paragraphs.size - 1).takeIf { paragraphs.isNotEmpty() } ?: 0
         resumeWordOffset = article.currentWordOffset.coerceAtLeast(0)
-        
+
         // Initialize highlight from saved offset
         if (currentParagraphIndex in paragraphs.indices) {
             val text = paragraphs[currentParagraphIndex]
@@ -538,7 +537,7 @@ class TtsPlayer @Inject constructor(
         } else {
             currentWordRange = null
         }
-        
+
         _playWhenReady = playWhenReady
         isPreparing = false
 
@@ -550,7 +549,7 @@ class TtsPlayer @Inject constructor(
             requestAudioFocus()
             resumeInternal()
         }
-        
+
         invalidateState()
     }
 
@@ -573,9 +572,11 @@ class TtsPlayer @Inject constructor(
                     val currentItem = _currentMediaItem
                     if (currentItem != null && currentItem.mediaId == mediaId) {
                         _currentMediaItem = currentItem.buildUpon()
-                            .setMediaMetadata(currentItem.mediaMetadata.buildUpon()
-                                .setArtworkData(bytes, MediaMetadata.PICTURE_TYPE_FRONT_COVER)
-                                .build())
+                            .setMediaMetadata(
+                                currentItem.mediaMetadata.buildUpon()
+                                    .setArtworkData(bytes, MediaMetadata.PICTURE_TYPE_FRONT_COVER)
+                                    .build(),
+                            )
                             .build()
 
                         // Also update the item in the playlist if present
@@ -656,16 +657,16 @@ class TtsPlayer @Inject constructor(
 
     fun getParagraphIndex(): Int = currentParagraphIndex
     fun getWordRange(): IntRange? = currentWordRange
-    
+
     fun triggerStateInvalidation() {
         invalidateState()
     }
-    
+
     // Stub implementations for required methods
     override fun handleSetRepeatMode(repeatMode: Int): ListenableFuture<*> = Futures.immediateVoidFuture()
     override fun handleSetShuffleModeEnabled(shuffleModeEnabled: Boolean): ListenableFuture<*> = Futures.immediateVoidFuture()
     override fun handleSetTrackSelectionParameters(trackSelectionParameters: TrackSelectionParameters): ListenableFuture<*> = Futures.immediateVoidFuture()
-    
+
     @Deprecated("Deprecated in Player", ReplaceWith("handleSetVolume(volume)"))
     override fun handleSetVolume(volume: Float): ListenableFuture<*> {
         ttsEngine.setVolume(volume)

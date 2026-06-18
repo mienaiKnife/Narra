@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.mienaiknife.narra.ui.viewmodels
 
 import androidx.lifecycle.SavedStateHandle
@@ -21,13 +20,13 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.toRoute
 import com.mienaiknife.narra.NavDestination
-import com.mienaiknife.narra.domain.models.Article
 import com.mienaiknife.narra.domain.NarraError
+import com.mienaiknife.narra.domain.models.Article
 import com.mienaiknife.narra.domain.repository.ArticleRepository
+import com.mienaiknife.narra.playback.PlaybackManager
 import com.mienaiknife.narra.ui.UiText
 import com.mienaiknife.narra.ui.models.ContentBlock
 import com.mienaiknife.narra.ui.utils.HtmlParser
-import com.mienaiknife.narra.playback.PlaybackManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -36,14 +35,13 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
-
-import kotlinx.coroutines.flow.combine
 
 @HiltViewModel
 class ReaderViewModel @Inject constructor(
@@ -80,19 +78,21 @@ class ReaderViewModel @Inject constructor(
                             SearchResult(
                                 paragraphIndex = index,
                                 wordRange = found until (found + query.length),
-                                previewText = text // Could be truncated
-                            )
+                                previewText = text, // Could be truncated
+                            ),
                         )
                         startIndex = found + query.length
                     }
                     results
                 }
             }
-        } else emptyList()
+        } else {
+            emptyList()
+        }
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
-        initialValue = emptyList()
+        initialValue = emptyList(),
     )
 
     @Suppress("UNCHECKED_CAST")
@@ -111,12 +111,12 @@ class ReaderViewModel @Inject constructor(
         playbackManager.settingsManager.rewindSkipTime,
         playbackManager.sleepTimerMillisLeft,
         _searchQuery,
-        _searchResults
+        _searchResults,
     ) { flows ->
         val article = flows[0] as Article?
         val blocks = flows[1] as List<ContentBlock>
         val isLoadingFlag = flows[2] as Boolean
-        
+
         ReaderUiState(
             article = article,
             blocks = blocks,
@@ -134,12 +134,12 @@ class ReaderViewModel @Inject constructor(
             rewindSkipTime = flows[11] as String,
             sleepTimerMillisLeft = flows[12] as Long?,
             searchQuery = flows[13] as String,
-            searchResults = flows[14] as List<SearchResult>
+            searchResults = flows[14] as List<SearchResult>,
         )
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
-        initialValue = ReaderUiState(isLoading = true)
+        initialValue = ReaderUiState(isLoading = true),
     )
 
     init {
@@ -214,7 +214,9 @@ class ReaderViewModel @Inject constructor(
     fun skipNext() = playbackManager.skipNext()
     fun cycleSpeed() = playbackManager.cycleSpeed()
     fun setSleepTimer(minutes: Int?) = playbackManager.setSleepTimer(minutes)
-    fun setSearchQuery(query: String) { _searchQuery.value = query }
+    fun setSearchQuery(query: String) {
+        _searchQuery.value = query
+    }
 
     fun toggleFavorite() {
         uiState.value.article?.let { art ->

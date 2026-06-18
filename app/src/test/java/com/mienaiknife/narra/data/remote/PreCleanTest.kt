@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.mienaiknife.narra.data.remote
 
 import org.jsoup.Jsoup
@@ -22,15 +21,40 @@ import org.junit.Assert.assertNull
 import org.junit.Test
 
 class PreCleanTest {
-
     private fun preCleanDocument(doc: org.jsoup.nodes.Document) {
-        val junkSelectors = listOf(
-            "nav", "footer", "aside", "script", "style", "noscript", "iframe", "form",
-            ".social", ".share", ".ad-", ".banner", ".related", ".recommend", ".comment",
-            "#social", "#share", "#ad-", "#banner", "#related", "#recommend", "#comment",
-            "[class*=social]", "[class*=share]", "[class*=related]", "[class*=recommend]",
-            "[id*=social]", "[id*=share]", "[id*=related]", "[id*=recommend]"
-        )
+        val junkSelectors =
+            listOf(
+                "nav",
+                "footer",
+                "aside",
+                "script",
+                "style",
+                "noscript",
+                "iframe",
+                "form",
+                ".social",
+                ".share",
+                ".ad-",
+                ".banner",
+                ".related",
+                ".recommend",
+                ".comment",
+                "#social",
+                "#share",
+                "#ad-",
+                "#banner",
+                "#related",
+                "#recommend",
+                "#comment",
+                "[class*=social]",
+                "[class*=share]",
+                "[class*=related]",
+                "[class*=recommend]",
+                "[id*=social]",
+                "[id*=share]",
+                "[id*=related]",
+                "[id*=recommend]",
+            )
         junkSelectors.forEach { selector ->
             doc.select(selector).forEach { element ->
                 // Don't remove high-level structural tags even if they match a junk selector
@@ -43,18 +67,19 @@ class PreCleanTest {
 
     @Test
     fun `preCleanDocument does NOT remove body even if it has a share class`() {
-        val html = """
+        val html =
+            """
             <html>
                 <body class="long-read-share-links">
                     <div id="content">Main content</div>
                     <div class="share-links">Should be removed</div>
                 </body>
             </html>
-        """.trimIndent()
+            """.trimIndent()
         val doc = Jsoup.parse(html)
-        
+
         preCleanDocument(doc)
-        
+
         assertNotNull("Body should NOT have been removed", doc.selectFirst("body"))
         assertNotNull("Main content should still exist", doc.selectFirst("#content"))
         assertNull("Share links div should have been removed", doc.selectFirst(".share-links"))

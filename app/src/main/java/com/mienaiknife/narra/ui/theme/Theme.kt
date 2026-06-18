@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.mienaiknife.narra.ui.theme
 
 import android.app.Activity
@@ -30,15 +29,15 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.toArgb
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowCompat
 
 data class NarraSpacing(
-    val itemVertical: Dp = 4.dp
+    val itemVertical: Dp = 4.dp,
 )
 
 val LocalNarraSpacing = staticCompositionLocalOf { NarraSpacing() }
@@ -48,7 +47,7 @@ fun NarraTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     dynamicColor: Boolean = false,
     fontFamily: FontFamily = FontFamily.Default,
-    content: @Composable () -> Unit
+    content: @Composable () -> Unit,
 ) {
     val context = LocalContext.current
     val colorScheme = when {
@@ -74,7 +73,7 @@ fun NarraTheme(
                     navigationBarStyle = SystemBarStyle.auto(
                         colorScheme.surfaceContainer.toArgb(),
                         colorScheme.surfaceContainer.toArgb(),
-                    ) { darkTheme }
+                    ) { darkTheme },
                 )
             }
 
@@ -95,11 +94,11 @@ fun NarraTheme(
 
     MaterialTheme(
         colorScheme = colorScheme,
-        typography = getTypography(fontFamily)
+        typography = getTypography(fontFamily),
     ) {
         CompositionLocalProvider(
             LocalNarraSpacing provides spacing,
-            content = content
+            content = content,
         )
     }
 }

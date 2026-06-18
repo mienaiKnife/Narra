@@ -13,11 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.mienaiknife.narra.ui.utils
 
 import android.content.Context
-import androidx.core.net.toUri
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
@@ -28,6 +26,7 @@ import androidx.compose.ui.text.style.BaselineShift
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.sp
+import androidx.core.net.toUri
 import com.mienaiknife.narra.ui.models.ContentBlock
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Element
@@ -35,7 +34,6 @@ import org.jsoup.nodes.Node
 import org.jsoup.nodes.TextNode
 
 object HtmlParser {
-
     fun parse(html: String): List<ContentBlock> {
         val document = Jsoup.parseBodyFragment(html)
         val body = document.body()
@@ -46,14 +44,18 @@ object HtmlParser {
         return blocks
     }
 
-    private fun parseNodes(nodes: List<Node>, blocks: MutableList<ContentBlock>) {
+    private fun parseNodes(
+        nodes: List<Node>,
+        blocks: MutableList<ContentBlock>,
+    ) {
         val currentInlineNodes = mutableListOf<Node>()
 
         fun flushInline() {
             if (currentInlineNodes.isNotEmpty()) {
-                val annotatedString = buildAnnotatedString {
-                    currentInlineNodes.forEach { traverse(it, this) }
-                }
+                val annotatedString =
+                    buildAnnotatedString {
+                        currentInlineNodes.forEach { traverse(it, this) }
+                    }
                 addBlocksFromAnnotatedString(annotatedString, blocks)
                 currentInlineNodes.clear()
             }
@@ -101,7 +103,10 @@ object HtmlParser {
         flushInline()
     }
 
-    private fun addBlocksFromAnnotatedString(annotatedString: AnnotatedString, blocks: MutableList<ContentBlock>) {
+    private fun addBlocksFromAnnotatedString(
+        annotatedString: AnnotatedString,
+        blocks: MutableList<ContentBlock>,
+    ) {
         val parts = splitAnnotatedString(annotatedString, Regex("\\n\\s*\\n+"))
         parts.forEach { part ->
             val trimmed = part.trim()
@@ -111,7 +116,10 @@ object HtmlParser {
         }
     }
 
-    private fun splitAnnotatedString(annotatedString: AnnotatedString, regex: Regex): List<AnnotatedString> {
+    private fun splitAnnotatedString(
+        annotatedString: AnnotatedString,
+        regex: Regex,
+    ): List<AnnotatedString> {
         val text = annotatedString.text
         val result = mutableListOf<AnnotatedString>()
         var lastStart = 0
@@ -124,9 +132,10 @@ object HtmlParser {
     }
 
     private fun parseElement(element: Element): AnnotatedString {
-        val annotatedString = buildAnnotatedString {
-            traverse(element, this)
-        }
+        val annotatedString =
+            buildAnnotatedString {
+                traverse(element, this)
+            }
         return annotatedString.trim()
     }
 
@@ -138,7 +147,10 @@ object HtmlParser {
         return this.subSequence(start, end + 1)
     }
 
-    private fun traverse(node: Node, builder: AnnotatedString.Builder) {
+    private fun traverse(
+        node: Node,
+        builder: AnnotatedString.Builder,
+    ) {
         when (node) {
             is TextNode -> {
                 val text = node.wholeText
@@ -146,15 +158,20 @@ object HtmlParser {
             }
             is Element -> {
                 val tagName = node.tagName()
-                
+
                 // Skip non-content elements
-                if (tagName == "style" || tagName == "script" || tagName == "head" || 
-                    tagName == "link" || tagName == "meta" || tagName == "svg") {
+                if (tagName == "style" ||
+                    tagName == "script" ||
+                    tagName == "head" ||
+                    tagName == "link" ||
+                    tagName == "meta" ||
+                    tagName == "svg"
+                ) {
                     return
                 }
 
                 val style = getStyleForTag(tagName)
-                
+
                 if (tagName == "sup") {
                     builder.pushStringAnnotation("footnote", "true")
                 }
@@ -173,48 +190,56 @@ object HtmlParser {
                 if (tagName == "sup" || tagName == "a") {
                     builder.pop()
                 }
-                
+
                 // Add newlines for block-level tags to ensure separation if they are
                 // encountered in a context where they aren't already triggering a flush.
-                if (tagName == "br" || tagName == "p" || tagName == "div" || tagName == "li" || 
-                    tagName == "blockquote" || (tagName.startsWith("h") && tagName.length == 2)) {
+                if (tagName == "br" ||
+                    tagName == "p" ||
+                    tagName == "div" ||
+                    tagName == "li" ||
+                    tagName == "blockquote" ||
+                    (tagName.startsWith("h") && tagName.length == 2)
+                ) {
                     builder.append("\n")
                 }
             }
         }
     }
 
-    private fun normalizeWhitespace(text: String): String {
-        return text.replace('\u00A0', ' ')
-            .replace(Regex("\\s+"), " ")
-    }
+    private fun normalizeWhitespace(text: String): String = text
+        .replace('\u00A0', ' ')
+        .replace(Regex("\\s+"), " ")
 
-    private fun getStyleForTag(tagName: String): SpanStyle? {
-        return when (tagName) {
-            "b", "strong" -> SpanStyle(fontWeight = FontWeight.Bold)
-            "i", "em" -> SpanStyle(fontStyle = FontStyle.Italic)
-            "u" -> SpanStyle(textDecoration = TextDecoration.Underline)
-            "h1", "h2", "h3", "h4", "h5", "h6" -> SpanStyle(fontWeight = FontWeight.Bold)
-            "code" -> SpanStyle(background = Color.LightGray.copy(alpha = 0.3f))
-            "sup" -> SpanStyle(
+    private fun getStyleForTag(tagName: String): SpanStyle? = when (tagName) {
+        "b", "strong" -> SpanStyle(fontWeight = FontWeight.Bold)
+        "i", "em" -> SpanStyle(fontStyle = FontStyle.Italic)
+        "u" -> SpanStyle(textDecoration = TextDecoration.Underline)
+        "h1", "h2", "h3", "h4", "h5", "h6" -> SpanStyle(fontWeight = FontWeight.Bold)
+        "code" -> SpanStyle(background = Color.LightGray.copy(alpha = 0.3f))
+        "sup" ->
+            SpanStyle(
                 baselineShift = BaselineShift.Superscript,
-                fontSize = 12.sp
+                fontSize = 12.sp,
             )
-            "sub" -> SpanStyle(
+        "sub" ->
+            SpanStyle(
                 baselineShift = BaselineShift.Subscript,
-                fontSize = 12.sp
+                fontSize = 12.sp,
             )
-            "a" -> SpanStyle(
-                textDecoration = TextDecoration.Underline
+        "a" ->
+            SpanStyle(
+                textDecoration = TextDecoration.Underline,
             )
-            else -> null
-        }
+        else -> null
     }
 }
 
-fun AnnotatedString.toSpeakableText(context: Context, shortenLinks: Boolean = true): String {
+fun AnnotatedString.toSpeakableText(
+    context: Context,
+    shortenLinks: Boolean = true,
+): String {
     val result = StringBuilder(text)
-    
+
     // 1. Handle footnotes: replace with spaces to preserve length
     val footnotes = getStringAnnotations("footnote", 0, length)
     for (annotation in footnotes) {
@@ -237,12 +262,13 @@ fun AnnotatedString.toSpeakableText(context: Context, shortenLinks: Boolean = tr
 
         val linkText = text.substring(start, end).trim()
         if (isUrlLike(linkText)) {
-            val simplified = try {
-                linkToPrefix.format(simplifyUrl(annotation.item))
-            } catch (_: Exception) {
-                linkText
-            }
-            
+            val simplified =
+                try {
+                    linkToPrefix.format(simplifyUrl(annotation.item))
+                } catch (_: Exception) {
+                    linkText
+                }
+
             if (simplified.length <= originalLength) {
                 val padded = simplified.padEnd(originalLength, ' ')
                 for (i in 0 until originalLength) {
@@ -256,16 +282,14 @@ fun AnnotatedString.toSpeakableText(context: Context, shortenLinks: Boolean = tr
             }
         }
     }
-    
+
     return result.toString()
 }
 
-private fun isUrlLike(text: String): Boolean {
-    return text.startsWith("http://") || 
-           text.startsWith("https://") || 
-           text.contains(Regex("\\.[a-z]{2,3}/")) ||
-           text.split("/").size > 2
-}
+private fun isUrlLike(text: String): Boolean = text.startsWith("http://") ||
+    text.startsWith("https://") ||
+    text.contains(Regex("\\.[a-z]{2,3}/")) ||
+    text.split("/").size > 2
 
 private fun simplifyUrl(url: String): String {
     return try {

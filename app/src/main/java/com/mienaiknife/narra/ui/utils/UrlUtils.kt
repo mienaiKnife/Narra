@@ -13,41 +13,41 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.mienaiknife.narra.ui.utils
 
 import androidx.core.net.toUri
 import java.net.URL
 
 object UrlUtils {
-    private val TRACKING_PARAMS = listOf(
-        "utm_source",
-        "utm_medium",
-        "utm_campaign",
-        "utm_term",
-        "utm_content",
-        "utm_id",
-        "utm_source_platform",
-        "utm_creative_format",
-        "utm_marketing_tactic",
-        "gclid",
-        "fbclid",
-        "mc_cid",
-        "mc_eid",
-        "_hsenc",
-        "_hsmi",
-        "hsCtaTracking",
-        "mkt_tok",
-        "igshid",
-        "ref",
-        "ref_src",
-        "ref_url",
-        "clickid",
-        "irclickid",
-        "msclkid",
-        "tt_content",
-        "tt_medium"
-    )
+    private val TRACKING_PARAMS =
+        listOf(
+            "utm_source",
+            "utm_medium",
+            "utm_campaign",
+            "utm_term",
+            "utm_content",
+            "utm_id",
+            "utm_source_platform",
+            "utm_creative_format",
+            "utm_marketing_tactic",
+            "gclid",
+            "fbclid",
+            "mc_cid",
+            "mc_eid",
+            "_hsenc",
+            "_hsmi",
+            "hsCtaTracking",
+            "mkt_tok",
+            "igshid",
+            "ref",
+            "ref_src",
+            "ref_url",
+            "clickid",
+            "irclickid",
+            "msclkid",
+            "tt_content",
+            "tt_medium",
+        )
 
     fun cleanUrl(url: String): String {
         return try {
@@ -55,7 +55,7 @@ object UrlUtils {
             if (uri.isOpaque) return url
 
             val builder = uri.buildUpon().clearQuery()
-            
+
             uri.queryParameterNames.forEach { name ->
                 if (!TRACKING_PARAMS.contains(name.lowercase())) {
                     uri.getQueryParameters(name).forEach { value ->
@@ -63,35 +63,31 @@ object UrlUtils {
                     }
                 }
             }
-            
+
             builder.build().toString()
         } catch (_: Exception) {
             url
         }
     }
 
-    fun getDomainName(url: String): String {
-        return try {
-            val uri = URL(url)
-            val host = uri.host
-            if (host.startsWith("www.")) {
-                host.substring(4)
-            } else {
-                host
-            }
-        } catch (_: Exception) {
-            url
+    fun getDomainName(url: String): String = try {
+        val uri = URL(url)
+        val host = uri.host
+        if (host.startsWith("www.")) {
+            host.substring(4)
+        } else {
+            host
         }
+    } catch (_: Exception) {
+        url
     }
 
-    fun isUrlOrDomainLike(text: String): Boolean {
-        return text.contains("://") || 
-               text.contains("www.") || 
-               text.matches(Regex(".*\\.[a-z]{2,6}$", RegexOption.IGNORE_CASE)) ||
-               text == "RSS" || 
-               text == "Atom" || 
-               text == "Untitled Feed"
-    }
+    fun isUrlOrDomainLike(text: String): Boolean = text.contains("://") ||
+        text.contains("www.") ||
+        text.matches(Regex(".*\\.[a-z]{2,6}$", RegexOption.IGNORE_CASE)) ||
+        text == "RSS" ||
+        text == "Atom" ||
+        text == "Untitled Feed"
 
     /**
      * Checks if the given URL is a public URL and not a local/private network address.
@@ -104,12 +100,18 @@ object UrlUtils {
             if (protocol != "http" && protocol != "https") {
                 return false
             }
-            
+
             val host = url.host.lowercase()
             if (host.isEmpty()) return false
 
             // 1. Basic check for localhost and local names
-            if (host == "localhost" || host == "127.0.0.1" || host == "::1" || host.endsWith(".local") || host.contains(":") || host == "0.0.0.0") {
+            if (host == "localhost" ||
+                host == "127.0.0.1" ||
+                host == "::1" ||
+                host.endsWith(".local") ||
+                host.contains(":") ||
+                host == "0.0.0.0"
+            ) {
                 return false
             }
 

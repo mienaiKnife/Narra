@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.mienaiknife.narra.ui.screens
 
 import android.content.res.Configuration
@@ -23,6 +22,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -46,7 +46,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -58,12 +57,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.platform.LocalFocusManager
-import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.compose.rememberNavController
@@ -88,7 +86,7 @@ fun AddScreen(
     val epubFallbackTitle = stringResource(R.string.add_epub_fallback_title)
 
     val launcher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent()
+        contract = ActivityResultContracts.GetContent(),
     ) { uri: Uri? ->
         uri?.let {
             val inputStream = context.contentResolver.openInputStream(it)
@@ -130,7 +128,7 @@ fun AddScreen(
             onUrlChange = { url = it },
             onDownloadClick = { viewModel.downloadArticle(UrlUtils.cleanUrl(url)) },
             onSubscribeClick = { viewModel.subscribeToFeed(UrlUtils.cleanUrl(url)) },
-            onUploadClick = { launcher.launch("application/epub+zip") }
+            onUploadClick = { launcher.launch("application/epub+zip") },
         )
     }
 }
@@ -142,7 +140,7 @@ fun AddScreenContent(
     onDownloadClick: () -> Unit,
     onSubscribeClick: () -> Unit,
     onUploadClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     val focusManager = LocalFocusManager.current
 
@@ -150,7 +148,7 @@ fun AddScreenContent(
         modifier = modifier
             .fillMaxSize()
             .statusBarsPadding(),
-        horizontalAlignment = Alignment.Start
+        horizontalAlignment = Alignment.Start,
     ) {
         Spacer(modifier = Modifier.height(16.dp))
 
@@ -159,11 +157,11 @@ fun AddScreenContent(
                 .fillMaxWidth()
                 .heightIn(min = 48.dp)
                 .padding(horizontal = 16.dp),
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
                 text = stringResource(R.string.nav_add),
-                style = MaterialTheme.typography.headlineSmall
+                style = MaterialTheme.typography.headlineSmall,
             )
         }
 
@@ -172,7 +170,7 @@ fun AddScreenContent(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp)
+                .padding(horizontal = 16.dp),
         ) {
             OutlinedTextField(
                 value = url,
@@ -186,21 +184,21 @@ fun AddScreenContent(
                         IconButton(onClick = { onUrlChange("") }) {
                             Icon(
                                 imageVector = Icons.Default.Clear,
-                                contentDescription = stringResource(R.string.action_clear)
+                                contentDescription = stringResource(R.string.action_clear),
                             )
                         }
                     }
                 },
                 colors = OutlinedTextFieldDefaults.colors(
                     unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
-                    focusedBorderColor = MaterialTheme.colorScheme.primary
-                )
+                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                ),
             )
 
             Spacer(modifier = Modifier.height(24.dp))
 
             Row(
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
             ) {
                 Button(
                     onClick = {
@@ -216,22 +214,22 @@ fun AddScreenContent(
                     shape = RoundedCornerShape(16.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = MaterialTheme.colorScheme.surfaceContainer,
-                        contentColor = MaterialTheme.colorScheme.onSurface
-                    )
+                        contentColor = MaterialTheme.colorScheme.onSurface,
+                    ),
                 ) {
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
-                        modifier = Modifier.padding(vertical = 4.dp)
+                        modifier = Modifier.padding(vertical = 4.dp),
                     ) {
                         Icon(
                             imageVector = Icons.Default.Language,
-                            contentDescription = null
+                            contentDescription = null,
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         AdaptiveText(
                             text = stringResource(R.string.add_import_webpage),
                             style = MaterialTheme.typography.bodyMedium,
-                            textAlign = TextAlign.Center
+                            textAlign = TextAlign.Center,
                         )
                     }
                 }
@@ -252,22 +250,22 @@ fun AddScreenContent(
                     shape = RoundedCornerShape(16.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = MaterialTheme.colorScheme.surfaceContainer,
-                        contentColor = MaterialTheme.colorScheme.onSurface
-                    )
+                        contentColor = MaterialTheme.colorScheme.onSurface,
+                    ),
                 ) {
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
-                        modifier = Modifier.padding(vertical = 4.dp)
+                        modifier = Modifier.padding(vertical = 4.dp),
                     ) {
                         Icon(
                             imageVector = Icons.Default.RssFeed,
-                            contentDescription = null
+                            contentDescription = null,
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         AdaptiveText(
                             text = stringResource(R.string.add_add_feed),
                             style = MaterialTheme.typography.bodyMedium,
-                            textAlign = TextAlign.Center
+                            textAlign = TextAlign.Center,
                         )
                     }
                 }
@@ -285,22 +283,22 @@ fun AddScreenContent(
                 shape = RoundedCornerShape(16.dp),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = MaterialTheme.colorScheme.surfaceContainer,
-                    contentColor = MaterialTheme.colorScheme.onSurface
-                )
+                    contentColor = MaterialTheme.colorScheme.onSurface,
+                ),
             ) {
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier.padding(vertical = 8.dp)
+                    modifier = Modifier.padding(vertical = 8.dp),
                 ) {
                     Icon(
                         imageVector = Icons.Default.Description,
-                        contentDescription = null
+                        contentDescription = null,
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     AdaptiveText(
                         text = stringResource(R.string.add_upload_file),
                         style = MaterialTheme.typography.bodyMedium,
-                        textAlign = TextAlign.Center
+                        textAlign = TextAlign.Center,
                     )
                 }
             }
@@ -315,7 +313,7 @@ fun AddScreenPreview() {
     val navController = rememberNavController()
     NarraTheme(darkTheme = true, dynamicColor = false) {
         Scaffold(
-            bottomBar = { BottomNavBar(navController) }
+            bottomBar = { BottomNavBar(navController) },
         ) { innerPadding ->
             Box(modifier = Modifier.padding(innerPadding)) {
                 AddScreenContent(
@@ -323,7 +321,7 @@ fun AddScreenPreview() {
                     onUrlChange = {},
                     onDownloadClick = {},
                     onSubscribeClick = {},
-                    onUploadClick = {}
+                    onUploadClick = {},
                 )
             }
         }

@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.mienaiknife.narra.ui.screens
 
 import android.content.res.Configuration
@@ -49,7 +48,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
@@ -61,25 +59,25 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.rememberNavController
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.pluralStringResource
-import androidx.compose.ui.res.stringResource
-import com.mienaiknife.narra.R
 import coil3.compose.AsyncImage
-import com.mienaiknife.narra.domain.models.Article
+import com.mienaiknife.narra.R
 import com.mienaiknife.narra.data.models.SampleArticles
+import com.mienaiknife.narra.domain.models.Article
 import com.mienaiknife.narra.ui.components.AdaptiveText
 import com.mienaiknife.narra.ui.components.BottomNavBar
 import com.mienaiknife.narra.ui.theme.LocalNarraSpacing
@@ -91,7 +89,7 @@ fun HomeScreen(
     snackbarHostState: SnackbarHostState,
     onArticleClick: (String) -> Unit,
     onAddClick: () -> Unit,
-    viewModel: HomeViewModel = hiltViewModel()
+    viewModel: HomeViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
@@ -112,7 +110,7 @@ fun HomeScreen(
         snackbarHostState = snackbarHostState,
         onArticleClick = onArticleClick,
         onAddClick = onAddClick,
-        onRefresh = { viewModel.refresh() }
+        onRefresh = { viewModel.refresh() },
     )
 }
 
@@ -124,7 +122,7 @@ fun HomeScreenContent(
     onArticleClick: (String) -> Unit,
     onAddClick: () -> Unit,
     modifier: Modifier = Modifier,
-    onRefresh: () -> Unit = {}
+    onRefresh: () -> Unit = {},
 ) {
     val scrollState = rememberScrollState()
     val pullToRefreshState = rememberPullToRefreshState()
@@ -133,7 +131,7 @@ fun HomeScreenContent(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .statusBarsPadding()
+            .statusBarsPadding(),
     ) {
         Spacer(modifier = Modifier.height(16.dp))
 
@@ -142,12 +140,12 @@ fun HomeScreenContent(
                 .fillMaxWidth()
                 .heightIn(min = 48.dp)
                 .padding(horizontal = 16.dp),
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
                 text = stringResource(R.string.nav_home),
                 style = MaterialTheme.typography.headlineSmall,
-                color = MaterialTheme.colorScheme.onBackground
+                color = MaterialTheme.colorScheme.onBackground,
             )
         }
 
@@ -164,9 +162,9 @@ fun HomeScreenContent(
                     isRefreshing = isRefreshing,
                     containerColor = MaterialTheme.colorScheme.surface,
                     color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.align(Alignment.TopCenter)
+                    modifier = Modifier.align(Alignment.TopCenter),
                 )
-            }
+            },
         ) {
             when (uiState) {
                 is com.mienaiknife.narra.ui.viewmodels.HomeUiState.Loading -> {
@@ -174,7 +172,7 @@ fun HomeScreenContent(
                         modifier = Modifier
                             .fillMaxSize()
                             .verticalScroll(scrollState),
-                        contentAlignment = Alignment.Center
+                        contentAlignment = Alignment.Center,
                     ) {
                         androidx.compose.material3.CircularProgressIndicator()
                     }
@@ -184,13 +182,13 @@ fun HomeScreenContent(
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .verticalScroll(scrollState)
+                                .verticalScroll(scrollState),
                         ) {
                             if (uiState.continueListening.isNotEmpty()) {
                                 ArticleCarousel(
                                     title = stringResource(R.string.home_continue_listening),
                                     articles = uiState.continueListening,
-                                    onArticleClick = onArticleClick
+                                    onArticleClick = onArticleClick,
                                 )
                                 Spacer(modifier = Modifier.height(24.dp))
                             }
@@ -199,7 +197,7 @@ fun HomeScreenContent(
                                 ArticleCarousel(
                                     title = stringResource(R.string.home_new_from_feeds),
                                     articles = uiState.newFromFeeds,
-                                    onArticleClick = onArticleClick
+                                    onArticleClick = onArticleClick,
                                 )
                                 Spacer(modifier = Modifier.height(24.dp))
                             }
@@ -208,7 +206,7 @@ fun HomeScreenContent(
                                 ArticleCarousel(
                                     title = stringResource(R.string.home_favorites),
                                     articles = uiState.favoriteArticles,
-                                    onArticleClick = onArticleClick
+                                    onArticleClick = onArticleClick,
                                 )
                                 Spacer(modifier = Modifier.height(24.dp))
                             }
@@ -224,7 +222,7 @@ fun HomeScreenContent(
                         modifier = Modifier
                             .fillMaxSize()
                             .verticalScroll(scrollState),
-                        contentAlignment = Alignment.Center
+                        contentAlignment = Alignment.Center,
                     ) {
                         Text(uiState.message)
                     }
@@ -240,35 +238,35 @@ private fun EmptyHomeContent(onAddClick: () -> Unit, scrollState: androidx.compo
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(scrollState),
-        contentAlignment = Alignment.Center
+        contentAlignment = Alignment.Center,
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.padding(32.dp)
+            modifier = Modifier.padding(32.dp),
         ) {
             Icon(
                 imageVector = Icons.Default.AutoStories,
                 contentDescription = null,
                 modifier = Modifier.size(64.dp),
-                tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
+                tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
             )
             Spacer(modifier = Modifier.height(16.dp))
             Text(
                 text = stringResource(R.string.home_empty_title),
                 style = MaterialTheme.typography.headlineSmall,
-                color = MaterialTheme.colorScheme.onSurface
+                color = MaterialTheme.colorScheme.onSurface,
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
                 text = stringResource(R.string.home_empty_message),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center
+                textAlign = TextAlign.Center,
             )
             Spacer(modifier = Modifier.height(24.dp))
             Button(
                 onClick = onAddClick,
-                shape = RoundedCornerShape(8.dp)
+                shape = RoundedCornerShape(8.dp),
             ) {
                 Icon(Icons.Default.Add, contentDescription = null)
                 Spacer(modifier = Modifier.width(8.dp))
@@ -278,29 +276,28 @@ private fun EmptyHomeContent(onAddClick: () -> Unit, scrollState: androidx.compo
     }
 }
 
-
 @Composable
 fun ArticleCarousel(
     title: String,
     articles: List<Article>,
     onArticleClick: (String) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier) {
         Text(
             text = title,
             style = MaterialTheme.typography.titleMedium,
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-            color = MaterialTheme.colorScheme.onBackground
+            color = MaterialTheme.colorScheme.onBackground,
         )
         LazyRow(
             contentPadding = PaddingValues(horizontal = 16.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             items(articles) { article ->
                 ArticleCard(
                     article = article,
-                    onClick = { onArticleClick(article.id) }
+                    onClick = { onArticleClick(article.id) },
                 )
             }
         }
@@ -311,7 +308,7 @@ fun ArticleCarousel(
 fun ArticleCard(
     article: Article,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     val progressPercent = ((article.progress ?: 0f) * 100).toInt()
     val contentDescriptionText = pluralStringResource(R.plurals.home_article_semantics_desc, progressPercent, article.title, article.source, progressPercent)
@@ -326,7 +323,7 @@ fun ArticleCard(
         shape = RoundedCornerShape(5.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainer,
-        )
+        ),
     ) {
         Column {
             // Image Placeholder
@@ -335,7 +332,7 @@ fun ArticleCard(
                     .fillMaxWidth()
                     .height(140.dp)
                     .background(MaterialTheme.colorScheme.surfaceContainer),
-                contentAlignment = Alignment.Center
+                contentAlignment = Alignment.Center,
             ) {
                 val imageUrl = article.imageUrl ?: article.feedImageUrl ?: article.url?.let { "https://www.google.com/s2/favicons?domain=$it&sz=128" }
                 var isImageLoaded by remember(imageUrl) { mutableStateOf(false) }
@@ -350,7 +347,7 @@ fun ArticleCard(
                         imageVector = placeholderIcon,
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(48.dp)
+                        modifier = Modifier.size(48.dp),
                     )
                 }
 
@@ -360,7 +357,7 @@ fun ArticleCard(
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Crop,
                     alpha = if (article.progress == 1f) 0.6f else 1f,
-                    onSuccess = { isImageLoaded = true }
+                    onSuccess = { isImageLoaded = true },
                 )
             }
 
@@ -375,7 +372,7 @@ fun ArticleCard(
                         color = MaterialTheme.colorScheme.primary,
                         trackColor = MaterialTheme.colorScheme.primaryContainer,
                         gapSize = 5.dp,
-                        drawStopIndicator = {}
+                        drawStopIndicator = {},
                     )
                 }
             }
@@ -384,24 +381,24 @@ fun ArticleCard(
                 modifier = Modifier
                     .padding(12.dp)
                     .fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(LocalNarraSpacing.current.itemVertical)
+                verticalArrangement = Arrangement.spacedBy(LocalNarraSpacing.current.itemVertical),
             ) {
                 val baseColor = if (article.progress == 1f) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f) else MaterialTheme.colorScheme.onSurface
                 val variantColor = if (article.progress == 1f) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f) else MaterialTheme.colorScheme.onSurfaceVariant
-                
+
                 AdaptiveText(
                     text = article.title,
                     style = MaterialTheme.typography.bodyMedium.copy(color = baseColor),
                     modifier = Modifier.fillMaxWidth(),
                     maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
+                    overflow = TextOverflow.Ellipsis,
                 )
                 AdaptiveText(
                     text = article.source,
                     style = MaterialTheme.typography.bodySmall.copy(color = variantColor),
                     modifier = Modifier.fillMaxWidth(),
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                    overflow = TextOverflow.Ellipsis,
                 )
             }
         }
@@ -416,21 +413,20 @@ fun HomeScreenPreview() {
     val snackbarHostState = remember { SnackbarHostState() }
     NarraTheme(darkTheme = true, dynamicColor = false) {
         Scaffold(
-            bottomBar = { BottomNavBar(navController) }
+            bottomBar = { BottomNavBar(navController) },
         ) { innerPadding ->
             Box(modifier = Modifier.padding(innerPadding)) {
                 HomeScreenContent(
                     uiState = com.mienaiknife.narra.ui.viewmodels.HomeUiState.Success(
                         continueListening = mockArticles.take(5),
                         newFromFeeds = mockArticles.filter { it.isFromFeed }.take(5),
-                        favoriteArticles = mockArticles.filter { it.isFavorite }.take(5)
+                        favoriteArticles = mockArticles.filter { it.isFavorite }.take(5),
                     ),
                     snackbarHostState = snackbarHostState,
                     onArticleClick = {},
-                    onAddClick = {}
+                    onAddClick = {},
                 )
             }
         }
     }
 }
-

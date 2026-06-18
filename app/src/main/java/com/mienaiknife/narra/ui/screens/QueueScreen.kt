@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.mienaiknife.narra.ui.screens
 
 import android.content.res.Configuration
@@ -68,7 +67,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
@@ -81,11 +79,12 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.rememberNavController
 import com.mienaiknife.narra.R
-import com.mienaiknife.narra.domain.models.Article
 import com.mienaiknife.narra.data.models.SampleArticles
 import com.mienaiknife.narra.data.models.SortOption
+import com.mienaiknife.narra.domain.models.Article
 import com.mienaiknife.narra.ui.components.BottomNavBar
 import com.mienaiknife.narra.ui.components.NarraScrollbar
 import com.mienaiknife.narra.ui.components.QueueItem
@@ -98,7 +97,7 @@ import java.util.concurrent.TimeUnit
 @Composable
 fun QueueScreen(
     onNavigateToHistory: () -> Unit,
-    viewModel: QueueViewModel = hiltViewModel()
+    viewModel: QueueViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -144,7 +143,7 @@ fun QueueScreen(
                             val result = snackbarHostState.showSnackbar(
                                 message = removedMessage,
                                 actionLabel = undoAction,
-                                duration = SnackbarDuration.Short
+                                duration = SnackbarDuration.Short,
                             )
                             if (result == SnackbarResult.ActionPerformed) {
                                 viewModel.addToQueue(article.id)
@@ -156,7 +155,7 @@ fun QueueScreen(
                     onRefresh = { viewModel.refresh() },
                     onSortOptionSelected = { viewModel.setSortOption(it) },
                     onKeepSortedChange = { viewModel.setKeepSorted(it) },
-                    onReorder = { from, to -> viewModel.reorderQueue(from, to) }
+                    onReorder = { from, to -> viewModel.reorderQueue(from, to) },
                 )
             }
             is com.mienaiknife.narra.ui.viewmodels.QueueUiState.Error -> {
@@ -168,7 +167,7 @@ fun QueueScreen(
 
         SnackbarHost(
             hostState = snackbarHostState,
-            modifier = Modifier.align(Alignment.BottomCenter)
+            modifier = Modifier.align(Alignment.BottomCenter),
         )
     }
 }
@@ -193,7 +192,7 @@ fun QueueScreenContent(
     onRefresh: () -> Unit = {},
     onSortOptionSelected: (SortOption) -> Unit = {},
     onKeepSortedChange: (Boolean) -> Unit = {},
-    onReorder: (Int, Int) -> Unit = { _, _ -> }
+    onReorder: (Int, Int) -> Unit = { _, _ -> },
 ) {
     var showMenu by remember { mutableStateOf(false) }
     val showSortSheet = remember { mutableStateOf(false) }
@@ -230,7 +229,7 @@ fun QueueScreenContent(
             onDismissRequest = { showSortSheet.value = false },
             isQueue = true,
             keepSorted = keepSorted,
-            onKeepSortedChange = onKeepSortedChange
+            onKeepSortedChange = onKeepSortedChange,
         )
     }
 
@@ -238,7 +237,7 @@ fun QueueScreenContent(
         modifier = Modifier
             .fillMaxSize()
             .statusBarsPadding()
-            .background(MaterialTheme.colorScheme.background)
+            .background(MaterialTheme.colorScheme.background),
     ) {
         Spacer(modifier = Modifier.height(16.dp))
         Row(
@@ -246,12 +245,12 @@ fun QueueScreenContent(
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
                 text = stringResource(R.string.nav_queue),
                 style = MaterialTheme.typography.headlineSmall,
-                color = MaterialTheme.colorScheme.onBackground
+                color = MaterialTheme.colorScheme.onBackground,
             )
             Box {
                 IconButton(onClick = { showMenu = true }) {
@@ -259,23 +258,24 @@ fun QueueScreenContent(
                         imageVector = Icons.Default.Menu,
                         contentDescription = stringResource(R.string.action_menu),
                         modifier = Modifier.size(32.dp),
-                        tint = MaterialTheme.colorScheme.onBackground
+                        tint = MaterialTheme.colorScheme.onBackground,
                     )
                 }
 
                 DropdownMenu(
                     expanded = showMenu,
-                    onDismissRequest = { showMenu = false }
+                    onDismissRequest = { showMenu = false },
                 ) {
                     DropdownMenuItem(
                         text = { Text(stringResource(R.string.action_search)) },
                         onClick = { showMenu = false },
                         leadingIcon = {
                             Icon(
-                                Icons.Default.Search, contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onBackground
+                                Icons.Default.Search,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onBackground,
                             )
-                        }
+                        },
                     )
                     DropdownMenuItem(
                         text = { Text(stringResource(R.string.action_sort)) },
@@ -285,10 +285,11 @@ fun QueueScreenContent(
                         },
                         leadingIcon = {
                             Icon(
-                                Icons.AutoMirrored.Filled.Sort, contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onBackground
+                                Icons.AutoMirrored.Filled.Sort,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onBackground,
                             )
-                        }
+                        },
                     )
                     DropdownMenuItem(
                         text = { Text(stringResource(R.string.action_refresh)) },
@@ -298,10 +299,11 @@ fun QueueScreenContent(
                         },
                         leadingIcon = {
                             Icon(
-                                Icons.Default.Refresh, contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onBackground
+                                Icons.Default.Refresh,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onBackground,
                             )
-                        }
+                        },
                     )
                     DropdownMenuItem(
                         text = { Text(stringResource(R.string.nav_history)) },
@@ -311,10 +313,11 @@ fun QueueScreenContent(
                         },
                         leadingIcon = {
                             Icon(
-                                Icons.Default.History, contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onBackground
+                                Icons.Default.History,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onBackground,
                             )
-                        }
+                        },
                     )
                     DropdownMenuItem(
                         text = { Text(stringResource(R.string.action_clear)) },
@@ -324,10 +327,11 @@ fun QueueScreenContent(
                         },
                         leadingIcon = {
                             Icon(
-                                Icons.Default.Delete, contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onBackground
+                                Icons.Default.Delete,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onBackground,
                             )
-                        }
+                        },
                     )
                 }
             }
@@ -343,7 +347,7 @@ fun QueueScreenContent(
                 },
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(horizontal = 16.dp)
+                modifier = Modifier.padding(horizontal = 16.dp),
             )
         }
 
@@ -360,9 +364,9 @@ fun QueueScreenContent(
                     isRefreshing = isRefreshing,
                     containerColor = MaterialTheme.colorScheme.surface,
                     color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.align(Alignment.TopCenter)
+                    modifier = Modifier.align(Alignment.TopCenter),
                 )
-            }
+            },
         ) {
             if (articles.isEmpty()) {
                 Box(
@@ -370,13 +374,13 @@ fun QueueScreenContent(
                         .fillMaxSize()
                         .verticalScroll(rememberScrollState())
                         .padding(horizontal = 16.dp),
-                    contentAlignment = Alignment.Center
+                    contentAlignment = Alignment.Center,
                 ) {
                     Text(
                         text = stringResource(R.string.queue_empty_message),
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        textAlign = TextAlign.Center
+                        textAlign = TextAlign.Center,
                     )
                 }
             } else {
@@ -386,11 +390,11 @@ fun QueueScreenContent(
                         modifier = Modifier
                             .fillMaxSize(),
                         verticalArrangement = Arrangement.spacedBy(24.dp),
-                        contentPadding = PaddingValues(bottom = 32.dp)
+                        contentPadding = PaddingValues(bottom = 32.dp),
                     ) {
                         itemsIndexed(
                             items = articles,
-                            key = { _, article -> article.id }
+                            key = { _, article -> article.id },
                         ) { index, article ->
                             val isDragged = index == draggedItemIndex
                             val offset =
@@ -447,16 +451,16 @@ fun QueueScreenContent(
                                         onDragCancel = {
                                             draggedItemIndex = -1
                                             draggingOffset = 0f
-                                        }
+                                        },
                                     )
-                                }
+                                },
                             )
                         }
                     }
 
                     NarraScrollbar(
                         lazyListState = lazyListState,
-                        modifier = Modifier.align(Alignment.CenterEnd)
+                        modifier = Modifier.align(Alignment.CenterEnd),
                     )
                 }
             }
@@ -470,12 +474,12 @@ fun QueueScreenPreview() {
     val navController = rememberNavController()
     NarraTheme(darkTheme = true, dynamicColor = false) {
         Scaffold(
-            bottomBar = { BottomNavBar(navController) }
+            bottomBar = { BottomNavBar(navController) },
         ) { innerPadding ->
             Box(modifier = Modifier.padding(innerPadding)) {
                 QueueScreenContent(
                     articles = SampleArticles.all.filter { it.isInQueue },
-                    onHistoryClick = {}
+                    onHistoryClick = {},
                 )
             }
         }

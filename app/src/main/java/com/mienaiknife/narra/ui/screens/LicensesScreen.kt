@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.mienaiknife.narra.ui.screens
 
 import android.content.res.Configuration
@@ -42,10 +41,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.navigation.compose.rememberNavController
-import androidx.compose.ui.res.stringResource
 import com.mienaiknife.narra.R
 import com.mienaiknife.narra.ui.components.BottomNavBar
 import com.mienaiknife.narra.ui.theme.NarraTheme
@@ -65,13 +64,13 @@ fun LicensesScreen(onBack: () -> Unit) {
         Library("Coil", "Instacart", "Apache 2.0"),
         Library("Kotlin Coroutines", "JetBrains", "Apache 2.0"),
         Library("DataStore", "Google", "Apache 2.0"),
-        Library("400 Sounds Pack", "Chequered Ink", "N/A")
+        Library("400 Sounds Pack", "Chequered Ink", "N/A"),
     ).sortedBy { it.name }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .statusBarsPadding()
+            .statusBarsPadding(),
     ) {
         Spacer(modifier = Modifier.height(16.dp))
 
@@ -79,33 +78,33 @@ fun LicensesScreen(onBack: () -> Unit) {
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp),
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             IconButton(onClick = onBack) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                     contentDescription = stringResource(R.string.action_back),
                     modifier = Modifier.size(32.dp),
-                    tint = MaterialTheme.colorScheme.onBackground
+                    tint = MaterialTheme.colorScheme.onBackground,
                 )
             }
             Text(
                 text = stringResource(R.string.reader_menu_licenses),
                 style = MaterialTheme.typography.headlineSmall,
-                color = MaterialTheme.colorScheme.onBackground
+                color = MaterialTheme.colorScheme.onBackground,
             )
         }
 
         Spacer(modifier = Modifier.height(16.dp))
 
         LazyColumn(
-            modifier = Modifier.fillMaxSize()
+            modifier = Modifier.fillMaxSize(),
         ) {
             items(libraries) { library ->
                 ListItem(
                     headlineContent = { Text(library.name) },
                     supportingContent = { Text("${library.author} • ${library.license}") },
-                    colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+                    colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                 )
             }
         }
@@ -120,7 +119,7 @@ fun LicensesScreenPreview() {
     val navController = rememberNavController()
     NarraTheme(darkTheme = true, dynamicColor = false) {
         Scaffold(
-            bottomBar = { BottomNavBar(navController) }
+            bottomBar = { BottomNavBar(navController) },
         ) { innerPadding ->
             Box(modifier = Modifier.padding(innerPadding)) {
                 LicensesScreen(onBack = {})

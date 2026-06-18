@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.mienaiknife.narra.ui.viewmodels
 
 import com.mienaiknife.narra.domain.models.Article
@@ -22,5 +21,5 @@ data class PlaybackUiState(
     val currentArticle: Article? = null,
     val isPlaying: Boolean = false,
     val currentPosition: Long = 0,
-    val duration: Long = 0
+    val duration: Long = 0,
 )

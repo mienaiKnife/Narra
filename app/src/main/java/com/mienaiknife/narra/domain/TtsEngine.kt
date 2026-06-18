@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.mienaiknife.narra.domain
 
 import kotlinx.coroutines.flow.StateFlow
@@ -32,14 +31,20 @@ interface TtsEngine {
      * @param text The text to speak.
      * @param utteranceId A unique identifier for this request.
      */
-    fun speak(text: String, utteranceId: String)
+    fun speak(
+        text: String,
+        utteranceId: String,
+    )
 
     /**
      * Synthesizes and adds the given text to the playback queue.
      * @param text The text to speak.
      * @param utteranceId A unique identifier for this request.
      */
-    fun enqueue(text: String, utteranceId: String)
+    fun enqueue(
+        text: String,
+        utteranceId: String,
+    )
 
     /**
      * Stops the current playback and clears the queue.
@@ -55,7 +60,10 @@ interface TtsEngine {
     /**
      * Sets the audio attributes for playback.
      */
-    fun setAudioAttributes(usage: Int, contentType: Int)
+    fun setAudioAttributes(
+        usage: Int,
+        contentType: Int,
+    )
 
     /**
      * Sets the volume for playback.

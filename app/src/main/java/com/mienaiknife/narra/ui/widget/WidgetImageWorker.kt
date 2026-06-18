@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.mienaiknife.narra.ui.widget
 
 import android.content.Context
@@ -33,20 +32,23 @@ import java.io.File
 import java.io.FileOutputStream
 
 @HiltWorker
-class WidgetImageWorker @AssistedInject constructor(
+class WidgetImageWorker
+@AssistedInject
+constructor(
     @Assisted private val context: Context,
     @Assisted workerParams: WorkerParameters,
 ) : CoroutineWorker(context, workerParams) {
-
     override suspend fun doWork(): Result {
         val imageUrl = inputData.getString("image_url") ?: return Result.failure()
-        
+
         return try {
             val imageLoader = context.imageLoader
-            val request = ImageRequest.Builder(context)
-                .data(imageUrl)
-                .size(400) // Thumbnails are enough for widgets
-                .build()
+            val request =
+                ImageRequest
+                    .Builder(context)
+                    .data(imageUrl)
+                    .size(400) // Thumbnails are enough for widgets
+                    .build()
 
             val result = imageLoader.execute(request)
             if (result is SuccessResult) {
@@ -55,7 +57,7 @@ class WidgetImageWorker @AssistedInject constructor(
                 FileOutputStream(file).use { out ->
                     bitmap.compress(Bitmap.CompressFormat.JPEG, 80, out)
                 }
-                
+
                 updateWidgetState(file.absolutePath)
                 Result.success()
             } else {

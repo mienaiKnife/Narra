@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.mienaiknife.narra.ui.screens
 
 import android.content.Intent
@@ -34,6 +33,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -61,12 +62,7 @@ import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.foundation.relocation.BringIntoViewRequester
-import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.ui.res.stringResource
-import com.mienaiknife.narra.R
-import com.mienaiknife.narra.ui.components.flashHighlight
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -77,24 +73,27 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
-import com.mienaiknife.narra.domain.models.TtsModelType
-import com.mienaiknife.narra.ui.viewmodels.VoicesSettingsUiState
 import androidx.navigation.compose.rememberNavController
+import com.mienaiknife.narra.R
 import com.mienaiknife.narra.domain.TtsState
 import com.mienaiknife.narra.domain.models.TtsModel
+import com.mienaiknife.narra.domain.models.TtsModelType
 import com.mienaiknife.narra.ui.components.BottomNavBar
+import com.mienaiknife.narra.ui.components.flashHighlight
 import com.mienaiknife.narra.ui.theme.LocalNarraSpacing
 import com.mienaiknife.narra.ui.theme.NarraTheme
+import com.mienaiknife.narra.ui.viewmodels.VoicesSettingsUiState
 import com.mienaiknife.narra.ui.viewmodels.VoicesSettingsViewModel
 
 @Composable
 fun VoicesSettingsScreen(
     onBack: () -> Unit,
     highlightSetting: String? = null,
-    viewModel: VoicesSettingsViewModel = hiltViewModel()
+    viewModel: VoicesSettingsViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
@@ -115,7 +114,7 @@ fun VoicesSettingsScreen(
         onDeleteModel = viewModel::deleteModel,
         onSetSherpaNoiseScale = viewModel::setSherpaNoiseScale,
         onSetSherpaLengthScale = viewModel::setSherpaLengthScale,
-        onBack = onBack
+        onBack = onBack,
     )
 }
 
@@ -133,7 +132,7 @@ fun VoicesSettingsContent(
     onDeleteModel: (String) -> Unit,
     onSetSherpaNoiseScale: (Float) -> Unit,
     onSetSherpaLengthScale: (Float) -> Unit,
-    onBack: () -> Unit
+    onBack: () -> Unit,
 ) {
     val context = LocalContext.current
 
@@ -157,7 +156,7 @@ fun VoicesSettingsContent(
 
     val engines = listOf(
         stringResource(R.string.settings_voices_android_engine_name),
-        stringResource(R.string.settings_voices_ondevice_engine_name)
+        stringResource(R.string.settings_voices_ondevice_engine_name),
     )
     val engineValues = listOf("android", "ondevice")
     var expanded by remember { mutableStateOf(false) }
@@ -173,7 +172,7 @@ fun VoicesSettingsContent(
         "Lewis" + stringResource(R.string.reader_male_suffix) to 8,
         "Alice" + stringResource(R.string.reader_female_suffix) to 9,
         "Lily" + stringResource(R.string.reader_female_suffix) to 10,
-        "Julia" + stringResource(R.string.reader_female_suffix) to 0
+        "Julia" + stringResource(R.string.reader_female_suffix) to 0,
     ).sortedBy { it.first }
     var kokoroExpanded by remember { mutableStateOf(false) }
 
@@ -189,13 +188,13 @@ fun VoicesSettingsContent(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .statusBarsPadding()
+            .statusBarsPadding(),
     ) {
         if (isInitializing) {
             LinearProgressIndicator(
                 modifier = Modifier.fillMaxWidth(),
                 color = MaterialTheme.colorScheme.primary,
-                trackColor = MaterialTheme.colorScheme.primaryContainer
+                trackColor = MaterialTheme.colorScheme.primaryContainer,
             )
         }
         Spacer(modifier = Modifier.height(16.dp))
@@ -204,20 +203,20 @@ fun VoicesSettingsContent(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp),
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             IconButton(onClick = onBack) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                     contentDescription = stringResource(R.string.action_back),
                     modifier = Modifier.size(32.dp),
-                    tint = MaterialTheme.colorScheme.onBackground
+                    tint = MaterialTheme.colorScheme.onBackground,
                 )
             }
             Text(
                 text = stringResource(R.string.settings_voices_title),
                 style = MaterialTheme.typography.headlineSmall,
-                color = MaterialTheme.colorScheme.onBackground
+                color = MaterialTheme.colorScheme.onBackground,
             )
         }
 
@@ -227,13 +226,13 @@ fun VoicesSettingsContent(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp)
-                .verticalScroll(scrollState)
+                .verticalScroll(scrollState),
         ) {
             Text(
                 text = stringResource(R.string.settings_voices_engine_selection),
                 style = MaterialTheme.typography.titleSmall,
                 color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.padding(vertical = 8.dp)
+                modifier = Modifier.padding(vertical = 8.dp),
             )
 
             ExposedDropdownMenuBox(
@@ -242,7 +241,7 @@ fun VoicesSettingsContent(
                 modifier = Modifier
                     .fillMaxWidth()
                     .bringIntoViewRequester(engineSelectionRequester)
-                    .flashHighlight(highlightSetting == "engineSelection")
+                    .flashHighlight(highlightSetting == "engineSelection"),
             ) {
                 OutlinedTextField(
                     value = selectedEngineName,
@@ -253,11 +252,11 @@ fun VoicesSettingsContent(
                     modifier = Modifier
                         .menuAnchor(type = ExposedDropdownMenuAnchorType.PrimaryNotEditable, enabled = !isInitializing)
                         .fillMaxWidth(),
-                    colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors()
+                    colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
                 )
                 ExposedDropdownMenu(
                     expanded = expanded,
-                    onDismissRequest = { expanded = false }
+                    onDismissRequest = { expanded = false },
                 ) {
                     engines.forEachIndexed { index, engine ->
                         DropdownMenuItem(
@@ -266,7 +265,7 @@ fun VoicesSettingsContent(
                                 onSetEngine(engineValues[index])
                                 expanded = false
                             },
-                            contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
+                            contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding,
                         )
                     }
                 }
@@ -290,7 +289,7 @@ fun VoicesSettingsContent(
                                 } catch (_: Exception) {
                                     // Fallback or handle error
                                 }
-                            }
+                            },
                     )
                 }
 
@@ -304,17 +303,19 @@ fun VoicesSettingsContent(
                         text = stringResource(R.string.settings_voices_voice_settings),
                         style = MaterialTheme.typography.titleSmall,
                         color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.padding(vertical = 8.dp)
+                        modifier = Modifier.padding(vertical = 8.dp),
                     )
 
-                    Column(modifier = Modifier
-                        .bringIntoViewRequester(noiseScaleRequester)
-                        .flashHighlight(highlightSetting == "noiseScale")
-                        .padding(horizontal = 8.dp)) {
+                    Column(
+                        modifier = Modifier
+                            .bringIntoViewRequester(noiseScaleRequester)
+                            .flashHighlight(highlightSetting == "noiseScale")
+                            .padding(horizontal = 8.dp),
+                    ) {
                         Text(
                             text = stringResource(R.string.settings_voices_noise_scale, uiState.sherpaNoiseScale),
                             style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onBackground
+                            color = MaterialTheme.colorScheme.onBackground,
                         )
                         Slider(
                             value = uiState.sherpaNoiseScale,
@@ -327,9 +328,9 @@ fun VoicesSettingsContent(
                                 SliderDefaults.Track(
                                     sliderState = sliderState,
                                     colors = sliderColors,
-                                    drawStopIndicator = null
+                                    drawStopIndicator = null,
                                 )
-                            }
+                            },
                         )
 
                         Spacer(modifier = Modifier.height(8.dp))
@@ -340,7 +341,7 @@ fun VoicesSettingsContent(
                             color = MaterialTheme.colorScheme.onBackground,
                             modifier = Modifier
                                 .bringIntoViewRequester(lengthScaleRequester)
-                                .flashHighlight(highlightSetting == "lengthScale")
+                                .flashHighlight(highlightSetting == "lengthScale"),
                         )
                         Slider(
                             value = uiState.sherpaLengthScale,
@@ -353,9 +354,9 @@ fun VoicesSettingsContent(
                                 SliderDefaults.Track(
                                     sliderState = sliderState,
                                     colors = sliderColors,
-                                    drawStopIndicator = null
+                                    drawStopIndicator = null,
                                 )
-                            }
+                            },
                         )
                     }
 
@@ -367,7 +368,7 @@ fun VoicesSettingsContent(
                             text = stringResource(R.string.settings_voices_kokoro_voice),
                             style = MaterialTheme.typography.titleSmall,
                             color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.padding(vertical = 8.dp)
+                            modifier = Modifier.padding(vertical = 8.dp),
                         )
 
                         val currentVoice = kokoroVoices.find { it.second == uiState.selectedSpeakerId }?.first ?: stringResource(R.string.reader_unknown)
@@ -378,7 +379,7 @@ fun VoicesSettingsContent(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .bringIntoViewRequester(kokoroVoiceRequester)
-                                .flashHighlight(highlightSetting == "kokoroVoice")
+                                .flashHighlight(highlightSetting == "kokoroVoice"),
                         ) {
                             OutlinedTextField(
                                 value = currentVoice,
@@ -389,11 +390,11 @@ fun VoicesSettingsContent(
                                 modifier = Modifier
                                     .menuAnchor(type = ExposedDropdownMenuAnchorType.PrimaryNotEditable, enabled = !isInitializing)
                                     .fillMaxWidth(),
-                                colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors()
+                                colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
                             )
                             ExposedDropdownMenu(
                                 expanded = kokoroExpanded,
-                                onDismissRequest = { kokoroExpanded = false }
+                                onDismissRequest = { kokoroExpanded = false },
                             ) {
                                 kokoroVoices.forEach { (name, id) ->
                                     DropdownMenuItem(
@@ -402,7 +403,7 @@ fun VoicesSettingsContent(
                                             onSetSpeakerId(id)
                                             kokoroExpanded = false
                                         },
-                                        contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
+                                        contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding,
                                     )
                                 }
                             }
@@ -415,7 +416,7 @@ fun VoicesSettingsContent(
                         text = stringResource(R.string.settings_voices_voice_data),
                         style = MaterialTheme.typography.titleSmall,
                         color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.padding(top = 8.dp, bottom = 8.dp)
+                        modifier = Modifier.padding(top = 8.dp, bottom = 8.dp),
                     )
 
                     Surface(
@@ -424,7 +425,7 @@ fun VoicesSettingsContent(
                         modifier = Modifier
                             .fillMaxWidth()
                             .bringIntoViewRequester(voiceDataRequester)
-                            .flashHighlight(highlightSetting == "voiceData")
+                            .flashHighlight(highlightSetting == "voiceData"),
                     ) {
                         Column {
                             uiState.availableModels.forEachIndexed { index, model ->
@@ -436,12 +437,12 @@ fun VoicesSettingsContent(
                                     onCancelDownload = { onCancelDownload(model.id) },
                                     onDelete = { onDeleteModel(model.id) },
                                     containerColor = Color.Transparent,
-                                    enabled = !isInitializing
+                                    enabled = !isInitializing,
                                 )
                                 if (index < uiState.availableModels.lastIndex) {
                                     HorizontalDivider(
                                         modifier = Modifier.padding(horizontal = 16.dp),
-                                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
                                     )
                                 }
                             }
@@ -454,7 +455,6 @@ fun VoicesSettingsContent(
     }
 }
 
-
 @Composable
 fun TtsModelItem(
     model: TtsModel,
@@ -464,7 +464,7 @@ fun TtsModelItem(
     onCancelDownload: () -> Unit,
     onDelete: () -> Unit,
     containerColor: Color = MaterialTheme.colorScheme.surfaceContainer,
-    enabled: Boolean = true
+    enabled: Boolean = true,
 ) {
     val isDownloading = model.progress > 0f && !model.isDownloaded && model.lastError == null
 
@@ -473,22 +473,25 @@ fun TtsModelItem(
             .height(IntrinsicSize.Min)
             .clickable(enabled = model.isDownloaded && enabled) { onSelect() },
         colors = ListItemDefaults.colors(
-            containerColor = containerColor
+            containerColor = containerColor,
         ),
         headlineContent = {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     text = model.name,
                     style = MaterialTheme.typography.bodyLarge,
-                    color = if (model.isDownloaded || isDownloading) MaterialTheme.colorScheme.onSurface 
-                            else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                    color = if (model.isDownloaded || isDownloading) {
+                        MaterialTheme.colorScheme.onSurface
+                    } else {
+                        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                    },
                 )
                 if (isSelected) {
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         stringResource(R.string.settings_voices_selected_label),
                         style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.primary
+                        color = MaterialTheme.colorScheme.primary,
                     )
                 }
             }
@@ -496,12 +499,12 @@ fun TtsModelItem(
         supportingContent = {
             Column(
                 modifier = Modifier.padding(top = 2.dp),
-                verticalArrangement = Arrangement.spacedBy(LocalNarraSpacing.current.itemVertical)
+                verticalArrangement = Arrangement.spacedBy(LocalNarraSpacing.current.itemVertical),
             ) {
                 Text(
                     text = "${model.language} • ${model.description}",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 if (isDownloading) {
                     Spacer(modifier = Modifier.height(8.dp))
@@ -513,7 +516,7 @@ fun TtsModelItem(
                     Text(
                         text = stageLabel,
                         style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.primary
+                        color = MaterialTheme.colorScheme.primary,
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     LinearProgressIndicator(
@@ -525,7 +528,7 @@ fun TtsModelItem(
                         color = MaterialTheme.colorScheme.primary,
                         trackColor = MaterialTheme.colorScheme.primaryContainer,
                         gapSize = 5.dp,
-                        drawStopIndicator = {}
+                        drawStopIndicator = {},
                     )
                 }
                 if (model.lastError != null && !isDownloading) {
@@ -533,7 +536,7 @@ fun TtsModelItem(
                         text = stringResource(R.string.settings_voices_error, model.lastError),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.error,
-                        modifier = Modifier.padding(top = 4.dp)
+                        modifier = Modifier.padding(top = 4.dp),
                     )
                 }
             }
@@ -541,7 +544,7 @@ fun TtsModelItem(
         trailingContent = {
             Box(
                 modifier = Modifier.fillMaxHeight(),
-                contentAlignment = Alignment.Center
+                contentAlignment = Alignment.Center,
             ) {
                 when {
                     model.isDownloaded -> {
@@ -549,7 +552,7 @@ fun TtsModelItem(
                             Icon(
                                 imageVector = Icons.Default.Delete,
                                 contentDescription = stringResource(R.string.settings_voices_delete_model_desc),
-                                tint = MaterialTheme.colorScheme.onSurface
+                                tint = MaterialTheme.colorScheme.onSurface,
                             )
                         }
                     }
@@ -559,7 +562,7 @@ fun TtsModelItem(
                             Icon(
                                 imageVector = Icons.Default.Close,
                                 contentDescription = stringResource(R.string.settings_voices_cancel_download_desc),
-                                tint = MaterialTheme.colorScheme.onSurface
+                                tint = MaterialTheme.colorScheme.onSurface,
                             )
                         }
                     }
@@ -569,13 +572,13 @@ fun TtsModelItem(
                             Icon(
                                 imageVector = Icons.Default.Download,
                                 contentDescription = stringResource(R.string.settings_voices_download_model_desc),
-                                tint = MaterialTheme.colorScheme.onSurface
+                                tint = MaterialTheme.colorScheme.onSurface,
                             )
                         }
                     }
                 }
             }
-        }
+        },
     )
 }
 
@@ -593,7 +596,7 @@ fun VoicesSettingsScreenPreview() {
                 type = TtsModelType.VITS,
                 modelUrl = "",
                 tokensUrl = "",
-                isDownloaded = true
+                isDownloaded = true,
             ),
             TtsModel(
                 id = "vits-piper-en_US-ryan-medium",
@@ -603,7 +606,7 @@ fun VoicesSettingsScreenPreview() {
                 type = TtsModelType.VITS,
                 modelUrl = "",
                 tokensUrl = "",
-                isDownloaded = false
+                isDownloaded = false,
             ),
             TtsModel(
                 id = "matcha-en-ljspeech",
@@ -614,16 +617,16 @@ fun VoicesSettingsScreenPreview() {
                 modelUrl = "",
                 tokensUrl = "",
                 isDownloaded = false,
-                progress = 0.5f
-            )
+                progress = 0.5f,
+            ),
         ),
         selectedEngine = "ondevice",
-        selectedModelId = "vits-piper-en_US-amy-low"
+        selectedModelId = "vits-piper-en_US-amy-low",
     )
 
     NarraTheme(darkTheme = true, dynamicColor = false) {
         Scaffold(
-            bottomBar = { BottomNavBar(navController) }
+            bottomBar = { BottomNavBar(navController) },
         ) { innerPadding ->
             Box(modifier = Modifier.padding(innerPadding)) {
                 VoicesSettingsContent(
@@ -637,7 +640,7 @@ fun VoicesSettingsScreenPreview() {
                     onDeleteModel = {},
                     onSetSherpaNoiseScale = {},
                     onSetSherpaLengthScale = {},
-                    onBack = {}
+                    onBack = {},
                 )
             }
         }

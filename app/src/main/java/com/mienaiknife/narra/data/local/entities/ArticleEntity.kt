@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.mienaiknife.narra.data.local.entities
 
 import androidx.room.Entity
@@ -33,8 +32,8 @@ import com.mienaiknife.narra.domain.models.Article
         Index(value = ["url"], unique = true),
         Index(value = ["title"]),
         Index(value = ["lastPlayedAt"]),
-        Index(value = ["finishedAt"])
-    ]
+        Index(value = ["finishedAt"]),
+    ],
 )
 data class ArticleEntity(
     @PrimaryKey val id: String,
@@ -60,34 +59,32 @@ data class ArticleEntity(
     val finishedAt: Long? = null,
     val lastPlayedAt: Long? = null,
     val createdAt: Long = System.currentTimeMillis(),
-    val sortTimestamp: Long = publishedTimestamp ?: createdAt
+    val sortTimestamp: Long = publishedTimestamp ?: createdAt,
 )
 
 fun ArticleEntity.toDomainModel(
     feedImageUrl: String? = null,
-    sourceOverride: String? = null
-): Article {
-    return Article(
-        id = id,
-        title = title,
-        source = sourceOverride ?: source,
-        publishedAt = publishedAt,
-        content = content ?: "",
-        imageUrl = imageUrl,
-        localImageUrl = localImageUrl,
-        feedImageUrl = feedImageUrl,
-        url = url,
-        feedUrl = feedUrl,
-        progress = progress,
-        currentParagraphIndex = currentParagraphIndex,
-        currentWordOffset = currentWordOffset,
-        isFavorite = isFavorite,
-        isFromFeed = isFromFeed,
-        isInQueue = isInQueue,
-        isInInbox = isInInbox,
-        queueOrder = queueOrder,
-        publishedTimestamp = publishedTimestamp,
-        duration = duration,
-        lastPlayedAt = lastPlayedAt
-    )
-}
+    sourceOverride: String? = null,
+): Article = Article(
+    id = id,
+    title = title,
+    source = sourceOverride ?: source,
+    publishedAt = publishedAt,
+    content = content ?: "",
+    imageUrl = imageUrl,
+    localImageUrl = localImageUrl,
+    feedImageUrl = feedImageUrl,
+    url = url,
+    feedUrl = feedUrl,
+    progress = progress,
+    currentParagraphIndex = currentParagraphIndex,
+    currentWordOffset = currentWordOffset,
+    isFavorite = isFavorite,
+    isFromFeed = isFromFeed,
+    isInQueue = isInQueue,
+    isInInbox = isInInbox,
+    queueOrder = queueOrder,
+    publishedTimestamp = publishedTimestamp,
+    duration = duration,
+    lastPlayedAt = lastPlayedAt,
+)

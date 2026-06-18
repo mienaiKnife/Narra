@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.mienaiknife.narra.playback
 
 import android.content.BroadcastReceiver
@@ -24,23 +23,27 @@ import android.media.AudioManager
 
 class NoisyAudioReceiver(
     private val context: Context,
-    private val onNoisy: () -> Unit
+    private val onNoisy: () -> Unit,
 ) {
     private var isRegistered = false
 
-    private val receiver = object : BroadcastReceiver() {
-        override fun onReceive(context: Context?, intent: Intent?) {
-            if (intent?.action == AudioManager.ACTION_AUDIO_BECOMING_NOISY) {
-                onNoisy()
+    private val receiver =
+        object : BroadcastReceiver() {
+            override fun onReceive(
+                context: Context?,
+                intent: Intent?,
+            ) {
+                if (intent?.action == AudioManager.ACTION_AUDIO_BECOMING_NOISY) {
+                    onNoisy()
+                }
             }
         }
-    }
 
     fun register() {
         if (!isRegistered) {
             context.registerReceiver(
                 receiver,
-                IntentFilter(AudioManager.ACTION_AUDIO_BECOMING_NOISY)
+                IntentFilter(AudioManager.ACTION_AUDIO_BECOMING_NOISY),
             )
             isRegistered = true
         }
@@ -50,7 +53,8 @@ class NoisyAudioReceiver(
         if (isRegistered) {
             try {
                 context.unregisterReceiver(receiver)
-            } catch (_: Exception) {}
+            } catch (_: Exception) {
+            }
             isRegistered = false
         }
     }

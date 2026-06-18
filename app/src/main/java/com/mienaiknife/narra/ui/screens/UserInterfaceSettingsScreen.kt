@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.mienaiknife.narra.ui.screens
 
 import android.content.res.Configuration
@@ -28,13 +27,15 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
@@ -43,22 +44,20 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.foundation.relocation.BringIntoViewRequester
-import androidx.compose.foundation.relocation.bringIntoViewRequester
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.ui.res.stringResource
-import com.mienaiknife.narra.R
-import com.mienaiknife.narra.ui.components.flashHighlight
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.rememberNavController
+import com.mienaiknife.narra.R
 import com.mienaiknife.narra.ui.components.BottomNavBar
 import com.mienaiknife.narra.ui.components.SettingDropDownItem
+import com.mienaiknife.narra.ui.components.flashHighlight
 import com.mienaiknife.narra.ui.theme.LocalNarraSpacing
 import com.mienaiknife.narra.ui.theme.NarraTheme
 import com.mienaiknife.narra.ui.theme.ThemeManager
@@ -70,7 +69,7 @@ import com.mienaiknife.narra.ui.theme.getFontFamily
 fun UserInterfaceSettingsScreen(
     themeViewModel: ThemeViewModel,
     highlightSetting: String? = null,
-    onBack: () -> Unit
+    onBack: () -> Unit,
 ) {
     val uiState by themeViewModel.uiState.collectAsStateWithLifecycle()
     val isDarkMode = uiState.isDarkMode
@@ -102,7 +101,7 @@ fun UserInterfaceSettingsScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .statusBarsPadding()
+            .statusBarsPadding(),
     ) {
         Spacer(modifier = Modifier.height(16.dp))
 
@@ -110,20 +109,20 @@ fun UserInterfaceSettingsScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp),
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             IconButton(onClick = onBack) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                     contentDescription = stringResource(R.string.action_back),
                     modifier = Modifier.size(32.dp),
-                    tint = MaterialTheme.colorScheme.onBackground
+                    tint = MaterialTheme.colorScheme.onBackground,
                 )
             }
             Text(
                 text = stringResource(R.string.settings_ui_title),
                 style = MaterialTheme.typography.headlineSmall,
-                color = MaterialTheme.colorScheme.onBackground
+                color = MaterialTheme.colorScheme.onBackground,
             )
         }
 
@@ -133,13 +132,13 @@ fun UserInterfaceSettingsScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp)
+                .padding(horizontal = 16.dp),
         ) {
             Text(
                 text = stringResource(R.string.settings_ui_theme_section),
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.padding(bottom = 8.dp)
+                modifier = Modifier.padding(bottom = 8.dp),
             )
 
             Row(
@@ -148,22 +147,22 @@ fun UserInterfaceSettingsScreen(
                     .bringIntoViewRequester(useSystemThemeRequester)
                     .flashHighlight(highlightSetting == "useSystemTheme")
                     .padding(vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 Column(
                     modifier = Modifier
                         .weight(1f)
                         .padding(end = 8.dp),
-                    verticalArrangement = Arrangement.spacedBy(LocalNarraSpacing.current.itemVertical)
+                    verticalArrangement = Arrangement.spacedBy(LocalNarraSpacing.current.itemVertical),
                 ) {
                     Text(
                         text = stringResource(R.string.settings_ui_use_system_theme),
-                        style = MaterialTheme.typography.bodyLarge
+                        style = MaterialTheme.typography.bodyLarge,
                     )
                     Text(
                         text = stringResource(R.string.settings_ui_use_system_theme_desc),
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
                 Switch(
@@ -173,8 +172,8 @@ fun UserInterfaceSettingsScreen(
                         checkedThumbColor = MaterialTheme.colorScheme.primary,
                         checkedTrackColor = MaterialTheme.colorScheme.primaryContainer,
                         uncheckedThumbColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                        uncheckedTrackColor = MaterialTheme.colorScheme.surfaceContainer
-                    )
+                        uncheckedTrackColor = MaterialTheme.colorScheme.surfaceContainer,
+                    ),
                 )
             }
 
@@ -185,21 +184,21 @@ fun UserInterfaceSettingsScreen(
                         .bringIntoViewRequester(darkModeRequester)
                         .flashHighlight(highlightSetting == "darkMode")
                         .padding(vertical = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Column(
                         modifier = Modifier
                             .weight(1f)
-                            .padding(end = 8.dp)
+                            .padding(end = 8.dp),
                     ) {
                         Text(
                             text = stringResource(R.string.settings_ui_dark_mode),
-                            style = MaterialTheme.typography.bodyLarge
+                            style = MaterialTheme.typography.bodyLarge,
                         )
                         Text(
                             text = stringResource(R.string.settings_ui_dark_mode_desc),
                             style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
                     Switch(
@@ -213,8 +212,8 @@ fun UserInterfaceSettingsScreen(
                             disabledCheckedThumbColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.38f),
                             disabledCheckedTrackColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.38f),
                             disabledUncheckedThumbColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f),
-                            disabledUncheckedTrackColor = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.38f)
-                        )
+                            disabledUncheckedTrackColor = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.38f),
+                        ),
                     )
                 }
             }
@@ -225,22 +224,22 @@ fun UserInterfaceSettingsScreen(
                     .bringIntoViewRequester(dynamicColorsRequester)
                     .flashHighlight(highlightSetting == "dynamicColors")
                     .padding(vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 Column(
                     modifier = Modifier
                         .weight(1f)
                         .padding(end = 8.dp),
-                    verticalArrangement = Arrangement.spacedBy(LocalNarraSpacing.current.itemVertical)
+                    verticalArrangement = Arrangement.spacedBy(LocalNarraSpacing.current.itemVertical),
                 ) {
                     Text(
                         text = stringResource(R.string.settings_ui_dynamic_colors),
-                        style = MaterialTheme.typography.bodyLarge
+                        style = MaterialTheme.typography.bodyLarge,
                     )
                     Text(
                         text = stringResource(R.string.settings_ui_dynamic_colors_desc),
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
                 Switch(
@@ -250,8 +249,8 @@ fun UserInterfaceSettingsScreen(
                         checkedThumbColor = MaterialTheme.colorScheme.primary,
                         checkedTrackColor = MaterialTheme.colorScheme.primaryContainer,
                         uncheckedThumbColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                        uncheckedTrackColor = MaterialTheme.colorScheme.surfaceContainer
-                    )
+                        uncheckedTrackColor = MaterialTheme.colorScheme.surfaceContainer,
+                    ),
                 )
             }
 
@@ -259,7 +258,7 @@ fun UserInterfaceSettingsScreen(
                 text = stringResource(R.string.settings_ui_reader_section),
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.padding(top = 24.dp, bottom = 8.dp)
+                modifier = Modifier.padding(top = 24.dp, bottom = 8.dp),
             )
 
             SettingDropDownItem(
@@ -270,7 +269,7 @@ fun UserInterfaceSettingsScreen(
                 onValueChange = themeViewModel::setReaderFontFamily,
                 modifier = Modifier
                     .bringIntoViewRequester(readerFontFamilyRequester)
-                    .flashHighlight(highlightSetting == "readerFontFamily")
+                    .flashHighlight(highlightSetting == "readerFontFamily"),
             )
 
             SettingDropDownItem(
@@ -281,7 +280,7 @@ fun UserInterfaceSettingsScreen(
                 onValueChange = themeViewModel::setLineSpacing,
                 modifier = Modifier
                     .bringIntoViewRequester(lineSpacingRequester)
-                    .flashHighlight(highlightSetting == "lineSpacing")
+                    .flashHighlight(highlightSetting == "lineSpacing"),
             )
 
             Row(
@@ -290,22 +289,22 @@ fun UserInterfaceSettingsScreen(
                     .bringIntoViewRequester(showRemainingTimeRequester)
                     .flashHighlight(highlightSetting == "showRemainingTime")
                     .padding(vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 Column(
                     modifier = Modifier
                         .weight(1f)
                         .padding(end = 8.dp),
-                    verticalArrangement = Arrangement.spacedBy(LocalNarraSpacing.current.itemVertical)
+                    verticalArrangement = Arrangement.spacedBy(LocalNarraSpacing.current.itemVertical),
                 ) {
                     Text(
                         text = stringResource(R.string.settings_ui_auto_fullscreen),
-                        style = MaterialTheme.typography.bodyLarge
+                        style = MaterialTheme.typography.bodyLarge,
                     )
                     Text(
                         text = stringResource(R.string.settings_ui_auto_fullscreen_desc),
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
                 Switch(
@@ -315,8 +314,8 @@ fun UserInterfaceSettingsScreen(
                         checkedThumbColor = MaterialTheme.colorScheme.primary,
                         checkedTrackColor = MaterialTheme.colorScheme.primaryContainer,
                         uncheckedThumbColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                        uncheckedTrackColor = MaterialTheme.colorScheme.surfaceContainer
-                    )
+                        uncheckedTrackColor = MaterialTheme.colorScheme.surfaceContainer,
+                    ),
                 )
             }
 
@@ -327,21 +326,21 @@ fun UserInterfaceSettingsScreen(
                         .bringIntoViewRequester(tapToShowControlsRequester)
                         .flashHighlight(highlightSetting == "tapToShowControls")
                         .padding(vertical = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Column(
                         modifier = Modifier
                             .weight(1f)
-                            .padding(end = 8.dp)
+                            .padding(end = 8.dp),
                     ) {
                         Text(
                             text = stringResource(R.string.settings_ui_tap_to_show),
-                            style = MaterialTheme.typography.bodyLarge
+                            style = MaterialTheme.typography.bodyLarge,
                         )
                         Text(
                             text = stringResource(R.string.settings_ui_tap_to_show_desc),
                             style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
                     Switch(
@@ -351,8 +350,8 @@ fun UserInterfaceSettingsScreen(
                             checkedThumbColor = MaterialTheme.colorScheme.primary,
                             checkedTrackColor = MaterialTheme.colorScheme.primaryContainer,
                             uncheckedThumbColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                            uncheckedTrackColor = MaterialTheme.colorScheme.surfaceContainer
-                        )
+                            uncheckedTrackColor = MaterialTheme.colorScheme.surfaceContainer,
+                        ),
                     )
                 }
             }
@@ -363,22 +362,24 @@ fun UserInterfaceSettingsScreen(
                 activeTrackColor = MaterialTheme.colorScheme.primary,
                 inactiveTrackColor = MaterialTheme.colorScheme.primaryContainer,
                 activeTickColor = MaterialTheme.colorScheme.onPrimary,
-                inactiveTickColor = MaterialTheme.colorScheme.primary
+                inactiveTickColor = MaterialTheme.colorScheme.primary,
             )
 
-            Column(modifier = Modifier
-                .bringIntoViewRequester(readerFontSizeRequester)
-                .flashHighlight(highlightSetting == "readerFontSize")
-                .padding(bottom = 16.dp)) {
+            Column(
+                modifier = Modifier
+                    .bringIntoViewRequester(readerFontSizeRequester)
+                    .flashHighlight(highlightSetting == "readerFontSize")
+                    .padding(bottom = 16.dp),
+            ) {
                 Text(
                     text = stringResource(R.string.settings_ui_font_size_label, uiState.readerFontSize.toInt()),
-                    style = MaterialTheme.typography.bodyLarge
+                    style = MaterialTheme.typography.bodyLarge,
                 )
                 Text(
                     text = stringResource(R.string.settings_ui_font_size_desc),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(bottom = 8.dp)
+                    modifier = Modifier.padding(bottom = 8.dp),
                 )
                 Slider(
                     value = uiState.readerFontSize,
@@ -390,9 +391,9 @@ fun UserInterfaceSettingsScreen(
                     track = { sliderState ->
                         SliderDefaults.Track(
                             sliderState = sliderState,
-                            colors = sliderColors
+                            colors = sliderColors,
                         )
-                    }
+                    },
                 )
             }
 
@@ -400,7 +401,7 @@ fun UserInterfaceSettingsScreen(
                 text = stringResource(R.string.settings_ui_text_info_section),
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.padding(top = 8.dp, bottom = 8.dp)
+                modifier = Modifier.padding(top = 8.dp, bottom = 8.dp),
             )
 
             Row(
@@ -409,17 +410,17 @@ fun UserInterfaceSettingsScreen(
                     .bringIntoViewRequester(showRemainingTimeRequester)
                     .flashHighlight(highlightSetting == "showRemainingTime")
                     .padding(vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 Column(
                     modifier = Modifier
                         .weight(1f)
                         .padding(end = 8.dp),
-                    verticalArrangement = Arrangement.spacedBy(LocalNarraSpacing.current.itemVertical)
+                    verticalArrangement = Arrangement.spacedBy(LocalNarraSpacing.current.itemVertical),
                 ) {
                     Text(
                         text = stringResource(R.string.settings_ui_show_remaining_time),
-                        style = MaterialTheme.typography.bodyLarge
+                        style = MaterialTheme.typography.bodyLarge,
                     )
                     Text(
                         text = stringResource(R.string.settings_ui_show_remaining_time_desc),
@@ -434,11 +435,11 @@ fun UserInterfaceSettingsScreen(
                         checkedThumbColor = MaterialTheme.colorScheme.primary,
                         checkedTrackColor = MaterialTheme.colorScheme.primaryContainer,
                         uncheckedThumbColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                        uncheckedTrackColor = MaterialTheme.colorScheme.surfaceContainer
-                    )
+                        uncheckedTrackColor = MaterialTheme.colorScheme.surfaceContainer,
+                    ),
                 )
             }
-            
+
             Spacer(modifier = Modifier.height(32.dp))
         }
     }
@@ -454,7 +455,7 @@ fun UserInterfaceSettingsScreenPreview() {
     val fontFamily = getFontFamily("Roboto")
     NarraTheme(darkTheme = true, dynamicColor = false, fontFamily = fontFamily) {
         Scaffold(
-            bottomBar = { BottomNavBar(navController) }
+            bottomBar = { BottomNavBar(navController) },
         ) { innerPadding ->
             Box(modifier = Modifier.padding(innerPadding)) {
                 UserInterfaceSettingsScreen(themeViewModel, highlightSetting = null, onBack = {})

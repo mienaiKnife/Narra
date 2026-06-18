@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.mienaiknife.narra.data.local
 
 import com.mienaiknife.narra.data.local.entities.FeedEntity
@@ -22,5 +21,9 @@ import java.io.OutputStream
 
 interface OpmlDataSource {
     suspend fun parseOpml(inputStream: InputStream): Result<List<FeedEntity>>
-    suspend fun generateOpml(outputStream: OutputStream, feeds: List<FeedEntity>): Result<Unit>
+
+    suspend fun generateOpml(
+        outputStream: OutputStream,
+        feeds: List<FeedEntity>,
+    ): Result<Unit>
 }

@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.mienaiknife.narra.ui.utils
 
 import com.mienaiknife.narra.ui.models.ContentBlock
@@ -22,7 +21,6 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class HtmlParserTest {
-
     @Test
     fun `parse empty html returns empty list`() {
         val result = HtmlParser.parse("")
@@ -56,11 +54,12 @@ class HtmlParserTest {
 
     @Test
     fun `parse ignores script and style tags`() {
-        val html = """
+        val html =
+            """
             <p>Visible text</p>
             <script>alert('hidden');</script>
             <style>body { color: red; }</style>
-        """.trimIndent()
+            """.trimIndent()
         val result = HtmlParser.parse(html)
         assertEquals(1, result.size)
         assertEquals("Visible text", result[0].text.text)
@@ -83,7 +82,7 @@ class HtmlParserTest {
         assertTrue(result[0] is ContentBlock.Heading)
         assertEquals("Heading 1", result[0].text.text)
         assertEquals(1, (result[0] as ContentBlock.Heading).level)
-        
+
         assertTrue(result[1] is ContentBlock.Heading)
         assertEquals("Heading 2", result[1].text.text)
         assertEquals(2, (result[1] as ContentBlock.Heading).level)

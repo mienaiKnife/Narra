@@ -13,15 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.mienaiknife.narra.data.local.dao
 
 import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
-import androidx.room.Update
 import androidx.room.Transaction
+import androidx.room.Update
 import com.mienaiknife.narra.data.local.entities.ArticleEntity
 import com.mienaiknife.narra.data.local.entities.ArticleWithFeed
 import kotlinx.coroutines.flow.Flow
@@ -33,7 +32,9 @@ interface ArticleDao {
     fun getQueueArticles(): Flow<List<ArticleWithFeed>>
 
     @Transaction
-    @Query("SELECT * FROM articles WHERE lastPlayedAt IS NOT NULL OR finishedAt IS NOT NULL ORDER BY COALESCE(lastPlayedAt, finishedAt) DESC")
+    @Query(
+        "SELECT * FROM articles WHERE lastPlayedAt IS NOT NULL OR finishedAt IS NOT NULL ORDER BY COALESCE(lastPlayedAt, finishedAt) DESC",
+    )
     fun getHistoryArticles(): Flow<List<ArticleWithFeed>>
 
     @Transaction
@@ -85,22 +86,41 @@ interface ArticleDao {
     @Query("SELECT COALESCE(MAX(queueOrder), -1) + 1 FROM articles WHERE isInQueue = 1")
     suspend fun getNextQueueOrder(): Int
 
-    @Query("UPDATE articles SET isInQueue = 1, isInInbox = 0, queueOrder = (SELECT COALESCE(MAX(queueOrder), -1) + 1 FROM articles WHERE isInQueue = 1), finishedAt = NULL, progress = (CASE WHEN progress >= 1.0 THEN 0.0 ELSE progress END), currentParagraphIndex = (CASE WHEN progress >= 1.0 THEN 0 ELSE currentParagraphIndex END), currentWordOffset = (CASE WHEN progress >= 1.0 THEN 0 ELSE currentWordOffset END) WHERE id = :id")
+    @Query(
+        "UPDATE articles SET isInQueue = 1, isInInbox = 0, queueOrder = (SELECT COALESCE(MAX(queueOrder), -1) + 1 FROM articles WHERE isInQueue = 1), finishedAt = NULL, progress = (CASE WHEN progress >= 1.0 THEN 0.0 ELSE progress END), currentParagraphIndex = (CASE WHEN progress >= 1.0 THEN 0 ELSE currentParagraphIndex END), currentWordOffset = (CASE WHEN progress >= 1.0 THEN 0 ELSE currentWordOffset END) WHERE id = :id",
+    )
     suspend fun addToQueue(id: String)
 
-    @Query("UPDATE articles SET isInQueue = 0, isInInbox = 0, progress = 1.0, finishedAt = :finishedAt, lastPlayedAt = :finishedAt, content = NULL WHERE id = :id")
-    suspend fun markAsFinished(id: String, finishedAt: Long = System.currentTimeMillis())
+    @Query(
+        "UPDATE articles SET isInQueue = 0, isInInbox = 0, progress = 1.0, finishedAt = :finishedAt, lastPlayedAt = :finishedAt, content = NULL WHERE id = :id",
+    )
+    suspend fun markAsFinished(
+        id: String,
+        finishedAt: Long = System.currentTimeMillis(),
+    )
 
-    @Query("UPDATE articles SET isInQueue = 0, isInInbox = 0, progress = 1.0, finishedAt = :finishedAt, lastPlayedAt = :finishedAt, content = NULL WHERE id = :id")
-    suspend fun markAsPlayed(id: String, finishedAt: Long = System.currentTimeMillis())
+    @Query(
+        "UPDATE articles SET isInQueue = 0, isInInbox = 0, progress = 1.0, finishedAt = :finishedAt, lastPlayedAt = :finishedAt, content = NULL WHERE id = :id",
+    )
+    suspend fun markAsPlayed(
+        id: String,
+        finishedAt: Long = System.currentTimeMillis(),
+    )
 
     @Query("UPDATE articles SET progress = 0.0, finishedAt = NULL, currentParagraphIndex = 0, currentWordOffset = 0 WHERE id = :id")
     suspend fun markAsUnplayed(id: String)
 
-    @Query("UPDATE articles SET isInQueue = 0, isInInbox = 0, progress = 1.0, finishedAt = :finishedAt, lastPlayedAt = :finishedAt, content = NULL WHERE feedUrl = :feedUrl")
-    suspend fun markAllAsPlayedInFeed(feedUrl: String, finishedAt: Long = System.currentTimeMillis())
+    @Query(
+        "UPDATE articles SET isInQueue = 0, isInInbox = 0, progress = 1.0, finishedAt = :finishedAt, lastPlayedAt = :finishedAt, content = NULL WHERE feedUrl = :feedUrl",
+    )
+    suspend fun markAllAsPlayedInFeed(
+        feedUrl: String,
+        finishedAt: Long = System.currentTimeMillis(),
+    )
 
-    @Query("UPDATE articles SET progress = 0.0, finishedAt = NULL, currentParagraphIndex = 0, currentWordOffset = 0 WHERE feedUrl = :feedUrl")
+    @Query(
+        "UPDATE articles SET progress = 0.0, finishedAt = NULL, currentParagraphIndex = 0, currentWordOffset = 0 WHERE feedUrl = :feedUrl",
+    )
     suspend fun markAllAsUnplayedInFeed(feedUrl: String)
 
     @Transaction
@@ -137,8 +157,13 @@ interface ArticleDao {
     suspend fun deleteArticlesBySourceFromInbox(source: String)
 
     @Query("UPDATE articles SET duration = :duration WHERE id = :id")
-    suspend fun updateArticleDuration(id: String, duration: Long)
+    suspend fun updateArticleDuration(
+        id: String,
+        duration: Long,
+    )
 
-    @Query("UPDATE articles SET content = NULL WHERE isFromFeed = 1 AND isFavorite = 0 AND isInQueue = 0 AND lastPlayedAt IS NULL AND finishedAt IS NULL AND sortTimestamp < :minTimestamp AND content IS NOT NULL")
+    @Query(
+        "UPDATE articles SET content = NULL WHERE isFromFeed = 1 AND isFavorite = 0 AND isInQueue = 0 AND lastPlayedAt IS NULL AND finishedAt IS NULL AND sortTimestamp < :minTimestamp AND content IS NOT NULL",
+    )
     suspend fun pruneOldArticleContent(minTimestamp: Long)
 }

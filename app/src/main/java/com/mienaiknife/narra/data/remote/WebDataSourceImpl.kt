@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.mienaiknife.narra.data.remote
 
 import com.mienaiknife.narra.domain.models.Article
@@ -31,29 +30,45 @@ import org.jsoup.Jsoup
 import java.util.UUID
 import javax.inject.Inject
 
-class WebDataSourceImpl @Inject constructor(
-    private val okHttpClient: OkHttpClient
+class WebDataSourceImpl
+@Inject
+constructor(
+    private val okHttpClient: OkHttpClient,
 ) : WebDataSource {
-
     override suspend fun downloadArticle(url: String): Result<Article> {
         if (!UrlUtils.isPublicUrl(url)) {
-            return Result.failure(com.mienaiknife.narra.domain.NarraError.Network.NoConnection())
+            return Result.failure(
+                com.mienaiknife.narra.domain.NarraError.Network
+                    .NoConnection(),
+            )
         }
 
         return withContext(Dispatchers.IO) {
             try {
-                val request = Request.Builder()
-                    .url(url)
-                    .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36")
-                    .header("Referer", "https://www.google.com/")
-                    .build()
+                val request =
+                    Request
+                        .Builder()
+                        .url(url)
+                        .header(
+                            "User-Agent",
+                            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
+                        ).header("Referer", "https://www.google.com/")
+                        .build()
 
                 val response = okHttpClient.newCall(request).execute()
                 if (!response.isSuccessful) {
-                    return@withContext Result.failure(com.mienaiknife.narra.domain.NarraError.Network.ServerError(response.code, response.message))
+                    return@withContext Result.failure(
+                        com.mienaiknife.narra.domain.NarraError.Network
+                            .ServerError(response.code, response.message),
+                    )
                 }
 
-                val html = response.body?.string() ?: return@withContext Result.failure(com.mienaiknife.narra.domain.NarraError.Content.ParsingFailed())
+                val html =
+                    response.body?.string()
+                        ?: return@withContext Result.failure(
+                            com.mienaiknife.narra.domain.NarraError.Content
+                                .ParsingFailed(),
+                        )
                 val doc = Jsoup.parse(html, url)
 
                 preCleanDocument(doc)
@@ -62,45 +77,86 @@ class WebDataSourceImpl @Inject constructor(
                 val parsedArticle = readability4J.parse()
 
                 if (parsedArticle.content == null) {
-                    return@withContext Result.failure(com.mienaiknife.narra.domain.NarraError.Content.ParsingFailed())
+                    return@withContext Result.failure(
+                        com.mienaiknife.narra.domain.NarraError.Content
+                            .ParsingFailed(),
+                    )
                 }
 
                 val publishedAt = extractPublishedDate(doc)
                 val imageUrl = extractImageUrl(doc, parsedArticle.byline)
 
-                val article = Article(
-                    id = UUID.randomUUID().toString(),
-                    title = (parsedArticle.title ?: doc.title()).ifEmpty { "Untitled" },
-                    source = doc.location().let {
-                        try { java.net.URL(it).host } catch (_: Exception) { null }
-                    } ?: "Web",
-                    content = parsedArticle.content ?: "",
-                    publishedAt = publishedAt,
-                    publishedTimestamp = DateUtils.parseToTimestamp(publishedAt),
-                    imageUrl = imageUrl,
-                    url = url,
-                    feedUrl = null,
-                    duration = DateUtils.estimateReadingTimeMs(parsedArticle.content),
-                    isInQueue = true
-                )
+                val article =
+                    Article(
+                        id = UUID.randomUUID().toString(),
+                        title = (parsedArticle.title ?: doc.title()).ifEmpty { "Untitled" },
+                        source =
+                        doc.location().let {
+                            try {
+                                java.net.URL(it).host
+                            } catch (_: Exception) {
+                                null
+                            }
+                        } ?: "Web",
+                        content = parsedArticle.content ?: "",
+                        publishedAt = publishedAt,
+                        publishedTimestamp = DateUtils.parseToTimestamp(publishedAt),
+                        imageUrl = imageUrl,
+                        url = url,
+                        feedUrl = null,
+                        duration = DateUtils.estimateReadingTimeMs(parsedArticle.content),
+                        isInQueue = true,
+                    )
 
                 Result.success(article)
             } catch (e: java.net.SocketTimeoutException) {
-                Result.failure(com.mienaiknife.narra.domain.NarraError.Network.Timeout())
+                Result.failure(
+                    com.mienaiknife.narra.domain.NarraError.Network
+                        .Timeout(),
+                )
             } catch (e: Exception) {
-                Result.failure(com.mienaiknife.narra.domain.NarraError.Unknown(e))
+                Result.failure(
+                    com.mienaiknife.narra.domain.NarraError
+                        .Unknown(e),
+                )
             }
         }
     }
 
     private fun preCleanDocument(doc: org.jsoup.nodes.Document) {
-        val junkSelectors = listOf(
-            "nav", "footer", "aside", "script", "style", "noscript", "iframe", "form",
-            ".social", ".share", ".ad-", ".banner", ".related", ".recommend", ".comment",
-            "#social", "#share", "#ad-", "#banner", "#related", "#recommend", "#comment",
-            "[class*=social]", "[class*=share]", "[class*=related]", "[class*=recommend]",
-            "[id*=social]", "[id*=share]", "[id*=related]", "[id*=recommend]"
-        )
+        val junkSelectors =
+            listOf(
+                "nav",
+                "footer",
+                "aside",
+                "script",
+                "style",
+                "noscript",
+                "iframe",
+                "form",
+                ".social",
+                ".share",
+                ".ad-",
+                ".banner",
+                ".related",
+                ".recommend",
+                ".comment",
+                "#social",
+                "#share",
+                "#ad-",
+                "#banner",
+                "#related",
+                "#recommend",
+                "#comment",
+                "[class*=social]",
+                "[class*=share]",
+                "[class*=related]",
+                "[class*=recommend]",
+                "[id*=social]",
+                "[id*=share]",
+                "[id*=related]",
+                "[id*=recommend]",
+            )
         junkSelectors.forEach { selector ->
             doc.select(selector).forEach { element ->
                 // Don't remove high-level structural tags even if they match a junk selector
@@ -117,9 +173,10 @@ class WebDataSourceImpl @Inject constructor(
         for (tag in jsonLdTags) {
             try {
                 val json = Json.parseToJsonElement(tag.data())
-                val date = findKeyInJson(json, "datePublished") 
-                    ?: findKeyInJson(json, "dateCreated")
-                    ?: findKeyInJson(json, "uploadDate")
+                val date =
+                    findKeyInJson(json, "datePublished")
+                        ?: findKeyInJson(json, "dateCreated")
+                        ?: findKeyInJson(json, "uploadDate")
                 if (date != null) return date
             } catch (_: Exception) {
                 // Ignore malformed JSON-LD
@@ -139,17 +196,25 @@ class WebDataSourceImpl @Inject constructor(
             // Specific Substack meta tag
             ?: doc.select("meta[property=og:article:published_time]").attr("content").ifEmpty { null }
             ?: doc.select("time[itemprop=datePublished]").attr("datetime").ifEmpty { null }
-            ?: doc.select("time[datetime]").firstOrNull()?.attr("datetime")?.ifEmpty { null }
+            ?: doc
+                .select("time[datetime]")
+                .firstOrNull()
+                ?.attr("datetime")
+                ?.ifEmpty { null }
     }
 
-    private fun extractImageUrl(doc: org.jsoup.nodes.Document, byline: String?): String? {
+    private fun extractImageUrl(
+        doc: org.jsoup.nodes.Document,
+        byline: String?,
+    ): String? {
         // Try JSON-LD first
         val jsonLdTags = doc.select("script[type=application/ld+json]")
         for (tag in jsonLdTags) {
             try {
                 val json = Json.parseToJsonElement(tag.data())
-                val image = findKeyInJson(json, "image") 
-                    ?: findKeyInJson(json, "thumbnailUrl")
+                val image =
+                    findKeyInJson(json, "image")
+                        ?: findKeyInJson(json, "thumbnailUrl")
                 if (image != null) return image
             } catch (_: Exception) {
             }
@@ -163,16 +228,17 @@ class WebDataSourceImpl @Inject constructor(
             ?: byline?.ifEmpty { null }
     }
 
-    private fun findKeyInJson(element: kotlinx.serialization.json.JsonElement, key: String): String? {
-        return when (element) {
-            is JsonObject -> {
-                element[key]?.jsonPrimitive?.content
-                    ?: element.values.firstNotNullOfOrNull { findKeyInJson(it, key) }
-            }
-            is kotlinx.serialization.json.JsonArray -> {
-                element.firstNotNullOfOrNull { findKeyInJson(it, key) }
-            }
-            else -> null
+    private fun findKeyInJson(
+        element: kotlinx.serialization.json.JsonElement,
+        key: String,
+    ): String? = when (element) {
+        is JsonObject -> {
+            element[key]?.jsonPrimitive?.content
+                ?: element.values.firstNotNullOfOrNull { findKeyInJson(it, key) }
         }
+        is kotlinx.serialization.json.JsonArray -> {
+            element.firstNotNullOfOrNull { findKeyInJson(it, key) }
+        }
+        else -> null
     }
 }

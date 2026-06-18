@@ -13,17 +13,30 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.mienaiknife.narra.ui.models
 
 import androidx.compose.ui.text.AnnotatedString
 
 sealed class ContentBlock {
     abstract val text: AnnotatedString
-    data class Paragraph(override val text: AnnotatedString) : ContentBlock()
-    data class BlockQuote(override val text: AnnotatedString) : ContentBlock()
-    data class Heading(override val text: AnnotatedString, val level: Int) : ContentBlock()
-    data class Image(val url: String, val altText: String?) : ContentBlock() {
+
+    data class Paragraph(
+        override val text: AnnotatedString,
+    ) : ContentBlock()
+
+    data class BlockQuote(
+        override val text: AnnotatedString,
+    ) : ContentBlock()
+
+    data class Heading(
+        override val text: AnnotatedString,
+        val level: Int,
+    ) : ContentBlock()
+
+    data class Image(
+        val url: String,
+        val altText: String?,
+    ) : ContentBlock() {
         override val text: AnnotatedString = AnnotatedString(altText ?: "")
     }
 }

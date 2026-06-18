@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.mienaiknife.narra.ui.components
 
 import android.content.res.Configuration
@@ -48,22 +47,22 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
-import androidx.compose.ui.res.stringResource
 import com.mienaiknife.narra.R
-import com.mienaiknife.narra.domain.models.Article
 import com.mienaiknife.narra.data.models.SampleArticles
+import com.mienaiknife.narra.domain.models.Article
 import com.mienaiknife.narra.ui.theme.LocalNarraSpacing
 import com.mienaiknife.narra.ui.theme.NarraTheme
 import com.mienaiknife.narra.ui.viewmodels.PlaybackViewModel
@@ -71,7 +70,7 @@ import com.mienaiknife.narra.ui.viewmodels.PlaybackViewModel
 @Composable
 fun MiniPlayer(
     onExpand: (String) -> Unit,
-    viewModel: PlaybackViewModel = hiltViewModel()
+    viewModel: PlaybackViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
@@ -81,7 +80,7 @@ fun MiniPlayer(
         currentPosition = uiState.currentPosition,
         duration = uiState.duration,
         onExpand = onExpand,
-        onTogglePlayPause = { viewModel.togglePlayPause() }
+        onTogglePlayPause = { viewModel.togglePlayPause() },
     )
 }
 
@@ -92,7 +91,7 @@ fun MiniPlayerContent(
     currentPosition: Long,
     duration: Long,
     onExpand: (String) -> Unit,
-    onTogglePlayPause: () -> Unit
+    onTogglePlayPause: () -> Unit,
 ) {
     if (article == null) return
 
@@ -116,14 +115,14 @@ fun MiniPlayerContent(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(end = 12.dp),
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 // Thumbnail
                 Box(
                     modifier = Modifier
                         .size(64.dp)
                         .background(MaterialTheme.colorScheme.surfaceContainer),
-                    contentAlignment = Alignment.Center
+                    contentAlignment = Alignment.Center,
                 ) {
                     val imageUrl = article.imageUrl ?: article.feedImageUrl ?: article.url?.let { "https://www.google.com/s2/favicons?domain=$it&sz=128" }
                     var isImageLoaded by remember(imageUrl) { mutableStateOf(false) }
@@ -138,7 +137,7 @@ fun MiniPlayerContent(
                             imageVector = placeholderIcon,
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(32.dp)
+                            modifier = Modifier.size(32.dp),
                         )
                     }
 
@@ -147,7 +146,7 @@ fun MiniPlayerContent(
                         contentDescription = stringResource(R.string.reader_cover_desc, article.title),
                         modifier = Modifier.fillMaxSize(),
                         contentScale = ContentScale.Crop,
-                        onSuccess = { isImageLoaded = true }
+                        onSuccess = { isImageLoaded = true },
                     )
                 }
 
@@ -155,20 +154,20 @@ fun MiniPlayerContent(
 
                 Column(
                     modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(LocalNarraSpacing.current.itemVertical)
+                    verticalArrangement = Arrangement.spacedBy(LocalNarraSpacing.current.itemVertical),
                 ) {
                     Text(
                         text = article.title,
                         style = MaterialTheme.typography.bodyMedium,
                         maxLines = 2,
-                        overflow = TextOverflow.Ellipsis
+                        overflow = TextOverflow.Ellipsis,
                     )
                     Text(
                         text = article.source,
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+                        overflow = TextOverflow.Ellipsis,
                     )
                 }
 
@@ -176,7 +175,7 @@ fun MiniPlayerContent(
                     Icon(
                         imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
                         contentDescription = if (isPlaying) stringResource(R.string.action_pause) else stringResource(R.string.action_play),
-                        modifier = Modifier.size(32.dp)
+                        modifier = Modifier.size(32.dp),
                     )
                 }
             }
@@ -192,7 +191,7 @@ fun MiniPlayerContent(
                 color = MaterialTheme.colorScheme.primary,
                 trackColor = MaterialTheme.colorScheme.primaryContainer,
                 gapSize = 5.dp,
-                drawStopIndicator = {}
+                drawStopIndicator = {},
             )
         }
     }
@@ -201,7 +200,7 @@ fun MiniPlayerContent(
 @Preview(
     uiMode = Configuration.UI_MODE_NIGHT_YES,
     showBackground = true,
-    backgroundColor = 0xFF191919
+    backgroundColor = 0xFF191919,
 )
 @Composable
 fun MiniPlayerPreview() {
@@ -213,7 +212,7 @@ fun MiniPlayerPreview() {
                 currentPosition = 45000L,
                 duration = 180000L,
                 onExpand = {},
-                onTogglePlayPause = {}
+                onTogglePlayPause = {},
             )
         }
     }

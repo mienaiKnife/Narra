@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.mienaiknife.narra.ui.utils
 
 import org.junit.Assert.assertEquals
@@ -22,7 +21,6 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class UrlUtilsTest {
-
     @Test
     fun `isPublicUrl blocks localhost and internal IPs`() {
         assertFalse("Should block localhost", UrlUtils.isPublicUrl("http://localhost"))

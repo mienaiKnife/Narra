@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.mienaiknife.narra.data.workers
 
 import android.content.Context
@@ -25,24 +24,23 @@ import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 
 @HiltWorker
-class FeedRefreshWorker @AssistedInject constructor(
+class FeedRefreshWorker
+@AssistedInject
+constructor(
     @Assisted context: Context,
     @Assisted params: WorkerParameters,
-    private val contentRepository: ContentRepository
+    private val contentRepository: ContentRepository,
 ) : CoroutineWorker(context, params) {
-
-    override suspend fun doWork(): Result {
-        return try {
-            val result = contentRepository.refreshFeeds()
-            if (result.isSuccess) {
-                Result.success()
-            } else {
-                android.util.Log.e("FeedRefreshWorker", "Feed refresh failed: ${result.exceptionOrNull()?.message}")
-                Result.retry()
-            }
-        } catch (e: Exception) {
-            android.util.Log.e("FeedRefreshWorker", "Exception in FeedRefreshWorker", e)
+    override suspend fun doWork(): Result = try {
+        val result = contentRepository.refreshFeeds()
+        if (result.isSuccess) {
+            Result.success()
+        } else {
+            android.util.Log.e("FeedRefreshWorker", "Feed refresh failed: ${result.exceptionOrNull()?.message}")
             Result.retry()
         }
+    } catch (e: Exception) {
+        android.util.Log.e("FeedRefreshWorker", "Exception in FeedRefreshWorker", e)
+        Result.retry()
     }
 }

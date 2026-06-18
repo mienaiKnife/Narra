@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.mienaiknife.narra.ui.components
 
 import android.content.res.Configuration
@@ -47,10 +46,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.res.stringResource
 import com.mienaiknife.narra.R
 import com.mienaiknife.narra.data.models.SortOption
 import com.mienaiknife.narra.ui.theme.NarraTheme
@@ -66,7 +65,7 @@ fun SortBottomSheet(
     onKeepSortedChange: (Boolean) -> Unit = {},
     showPlayed: Boolean = false,
     onShowPlayedChange: ((Boolean) -> Unit)? = null,
-    sheetState: SheetState = rememberModalBottomSheetState()
+    sheetState: SheetState = rememberModalBottomSheetState(),
 ) {
     ModalBottomSheet(
         onDismissRequest = onDismissRequest,
@@ -79,7 +78,7 @@ fun SortBottomSheet(
             keepSorted = keepSorted,
             onKeepSortedChange = onKeepSortedChange,
             showPlayed = showPlayed,
-            onShowPlayedChange = onShowPlayedChange
+            onShowPlayedChange = onShowPlayedChange,
         )
     }
 }
@@ -97,13 +96,13 @@ fun SortBottomSheetContent(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(bottom = 32.dp)
+            .padding(bottom = 32.dp),
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             val dateActive = selectedOption == SortOption.DATE_DESC || selectedOption == SortOption.DATE_ASC
             val titleActive = selectedOption == SortOption.TITLE_ASC || selectedOption == SortOption.TITLE_DESC
@@ -117,8 +116,10 @@ fun SortBottomSheetContent(
                 },
                 icon = if (dateActive) {
                     if (selectedOption == SortOption.DATE_ASC) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown
-                } else null,
-                modifier = Modifier.weight(1f)
+                } else {
+                    null
+                },
+                modifier = Modifier.weight(1f),
             )
             SortButton(
                 text = stringResource(R.string.sort_title),
@@ -128,8 +129,10 @@ fun SortBottomSheetContent(
                 },
                 icon = if (titleActive) {
                     if (selectedOption == SortOption.TITLE_ASC) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown
-                } else null,
-                modifier = Modifier.weight(1f)
+                } else {
+                    null
+                },
+                modifier = Modifier.weight(1f),
             )
             SortButton(
                 text = stringResource(R.string.sort_source),
@@ -139,8 +142,10 @@ fun SortBottomSheetContent(
                 },
                 icon = if (sourceActive) {
                     if (selectedOption == SortOption.SOURCE_ASC) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown
-                } else null,
-                modifier = Modifier.weight(1f)
+                } else {
+                    null
+                },
+                modifier = Modifier.weight(1f),
             )
         }
 
@@ -153,11 +158,11 @@ fun SortBottomSheetContent(
                     .clickable { onKeepSortedChange(!keepSorted) }
                     .padding(horizontal = 16.dp, vertical = 8.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
                     text = stringResource(R.string.sort_keep_sorted),
-                    style = MaterialTheme.typography.bodyLarge
+                    style = MaterialTheme.typography.bodyLarge,
                 )
                 Switch(
                     checked = keepSorted,
@@ -166,8 +171,8 @@ fun SortBottomSheetContent(
                         checkedThumbColor = MaterialTheme.colorScheme.primary,
                         checkedTrackColor = MaterialTheme.colorScheme.primaryContainer,
                         uncheckedThumbColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                        uncheckedTrackColor = MaterialTheme.colorScheme.surfaceContainer
-                    )
+                        uncheckedTrackColor = MaterialTheme.colorScheme.surfaceContainer,
+                    ),
                 )
             }
         }
@@ -181,11 +186,11 @@ fun SortBottomSheetContent(
                     .clickable { onShowPlayedChange(!showPlayed) }
                     .padding(horizontal = 16.dp, vertical = 8.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
                     text = stringResource(R.string.sort_show_played),
-                    style = MaterialTheme.typography.bodyLarge
+                    style = MaterialTheme.typography.bodyLarge,
                 )
                 Switch(
                     checked = showPlayed,
@@ -194,8 +199,8 @@ fun SortBottomSheetContent(
                         checkedThumbColor = MaterialTheme.colorScheme.primary,
                         checkedTrackColor = MaterialTheme.colorScheme.primaryContainer,
                         uncheckedThumbColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                        uncheckedTrackColor = MaterialTheme.colorScheme.surfaceContainer
-                    )
+                        uncheckedTrackColor = MaterialTheme.colorScheme.surfaceContainer,
+                    ),
                 )
             }
         }
@@ -208,14 +213,14 @@ private fun SortButton(
     isActive: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    icon: ImageVector? = null
+    icon: ImageVector? = null,
 ) {
     val contentPadding = ButtonDefaults.TextButtonContentPadding
     if (isActive) {
         Button(
             onClick = onClick,
             modifier = modifier,
-            contentPadding = contentPadding
+            contentPadding = contentPadding,
         ) {
             SortButtonContent(text, icon)
         }
@@ -223,7 +228,7 @@ private fun SortButton(
         OutlinedButton(
             onClick = onClick,
             modifier = modifier,
-            contentPadding = contentPadding
+            contentPadding = contentPadding,
         ) {
             SortButtonContent(text, icon)
         }
@@ -233,25 +238,25 @@ private fun SortButton(
 @Composable
 private fun SortButtonContent(
     text: String,
-    icon: ImageVector? = null
+    icon: ImageVector? = null,
 ) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.Center
+        horizontalArrangement = Arrangement.Center,
     ) {
         Text(
             text = text,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             style = MaterialTheme.typography.labelLarge,
-            modifier = if (icon != null) Modifier.weight(1f, fill = false) else Modifier
+            modifier = if (icon != null) Modifier.weight(1f, fill = false) else Modifier,
         )
         if (icon != null) {
             Spacer(Modifier.width(4.dp))
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                modifier = Modifier.size(18.dp)
+                modifier = Modifier.size(18.dp),
             )
         }
     }
@@ -260,7 +265,7 @@ private fun SortButtonContent(
 @Preview(
     uiMode = Configuration.UI_MODE_NIGHT_YES,
     showBackground = true,
-    backgroundColor = 0xFF191919
+    backgroundColor = 0xFF191919,
 )
 @Composable
 private fun SortBottomSheetComparisonPreview() {

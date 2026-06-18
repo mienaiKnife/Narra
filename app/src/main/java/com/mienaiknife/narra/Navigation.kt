@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.mienaiknife.narra
 
 import androidx.compose.animation.AnimatedVisibility
@@ -23,18 +22,18 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.calculateEndPadding
 import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.Column
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavDestination.Companion.hasRoute
@@ -75,7 +74,7 @@ fun AppNavigation(themeViewModel: ThemeViewModel, initialArticleId: String? = nu
     }
 
     val navBackStackEntry by navController.currentBackStackEntryAsState()
-    
+
     val isReaderScreen = navBackStackEntry?.destination?.hasRoute<NavDestination.Reader>() == true
 
     val snackbarHostState = remember { SnackbarHostState() }
@@ -86,7 +85,7 @@ fun AppNavigation(themeViewModel: ThemeViewModel, initialArticleId: String? = nu
             AnimatedVisibility(
                 visible = !isReaderScreen,
                 enter = fadeIn(tween(400)) + slideInVertically(animationSpec = tween(400), initialOffsetY = { it }),
-                exit = fadeOut(tween(400)) + slideOutVertically(animationSpec = tween(400), targetOffsetY = { it })
+                exit = fadeOut(tween(400)) + slideOutVertically(animationSpec = tween(400), targetOffsetY = { it }),
             ) {
                 Column {
                     MiniPlayer(onExpand = { articleId ->
@@ -97,13 +96,13 @@ fun AppNavigation(themeViewModel: ThemeViewModel, initialArticleId: String? = nu
                     BottomNavBar(navController)
                 }
             }
-        }
+        },
     ) { innerPadding ->
         val layoutDirection = LocalLayoutDirection.current
         val bottomPadding by animateDpAsState(
             targetValue = if (isReaderScreen) 0.dp else innerPadding.calculateBottomPadding(),
             animationSpec = tween(400),
-            label = "bottomPadding"
+            label = "bottomPadding",
         )
         NavHost(
             navController = navController,
@@ -111,44 +110,44 @@ fun AppNavigation(themeViewModel: ThemeViewModel, initialArticleId: String? = nu
             modifier = Modifier.padding(
                 start = if (isReaderScreen) 0.dp else innerPadding.calculateStartPadding(layoutDirection),
                 end = if (isReaderScreen) 0.dp else innerPadding.calculateEndPadding(layoutDirection),
-                bottom = bottomPadding
-            )
+                bottom = bottomPadding,
+            ),
         ) {
-            composable<NavDestination.Home> { 
+            composable<NavDestination.Home> {
                 HomeScreen(
                     snackbarHostState = snackbarHostState,
                     onArticleClick = { articleId -> navController.navigate(NavDestination.Reader(articleId)) },
-                    onAddClick = { 
+                    onAddClick = {
                         navController.navigate(NavDestination.Add) {
                             popUpTo(NavDestination.Home) { saveState = true }
                             launchSingleTop = true
                             restoreState = true
                         }
-                    }
-                ) 
+                    },
+                )
             }
-            composable<NavDestination.Queue> { 
-                QueueScreen(onNavigateToHistory = { navController.navigate(NavDestination.History) }) 
+            composable<NavDestination.Queue> {
+                QueueScreen(onNavigateToHistory = { navController.navigate(NavDestination.History) })
             }
-            composable<NavDestination.History> { 
-                HistoryScreen(onBack = { navController.popBackStack() }) 
+            composable<NavDestination.History> {
+                HistoryScreen(onBack = { navController.popBackStack() })
             }
-            composable<NavDestination.Add> { 
+            composable<NavDestination.Add> {
                 AddScreen(
                     snackbarHostState = snackbarHostState,
-                    onArticleAdded = { navController.navigate(NavDestination.Home) }
-                ) 
+                    onArticleAdded = { navController.navigate(NavDestination.Home) },
+                )
             }
             composable<NavDestination.Inbox> {
                 InboxScreen(
-                    onNavigateToFeeds = { navController.navigate(NavDestination.Feeds) }
+                    onNavigateToFeeds = { navController.navigate(NavDestination.Feeds) },
                 )
             }
-            composable<NavDestination.Feeds> { 
+            composable<NavDestination.Feeds> {
                 FeedsScreen(
                     onNavigateToFeed = { feedUrl, feedTitle -> navController.navigate(NavDestination.Feed(feedUrl, feedTitle)) },
-                    onBack = { navController.popBackStack() }
-                ) 
+                    onBack = { navController.popBackStack() },
+                )
             }
             composable<NavDestination.Feed> {
                 FeedArticlesScreen(onBack = { navController.popBackStack() })
@@ -162,7 +161,7 @@ fun AppNavigation(themeViewModel: ThemeViewModel, initialArticleId: String? = nu
                     onNavigateToAbout = { navController.navigate(NavDestination.SettingsAbout) },
                     navigateToDestination = { destination ->
                         navController.navigate(destination)
-                    }
+                    },
                 )
             }
             composable<NavDestination.SettingsUi> { backStackEntry ->
@@ -170,34 +169,34 @@ fun AppNavigation(themeViewModel: ThemeViewModel, initialArticleId: String? = nu
                 UserInterfaceSettingsScreen(
                     themeViewModel = themeViewModel,
                     highlightSetting = route.highlightSetting,
-                    onBack = { navController.popBackStack() }
+                    onBack = { navController.popBackStack() },
                 )
             }
             composable<NavDestination.SettingsPlayback> { backStackEntry ->
                 val route = backStackEntry.toRoute<NavDestination.SettingsPlayback>()
                 PlaybackSettingsScreen(
                     highlightSetting = route.highlightSetting,
-                    onBack = { navController.popBackStack() }
+                    onBack = { navController.popBackStack() },
                 )
             }
             composable<NavDestination.SettingsVoices> { backStackEntry ->
                 val route = backStackEntry.toRoute<NavDestination.SettingsVoices>()
                 VoicesSettingsScreen(
                     highlightSetting = route.highlightSetting,
-                    onBack = { navController.popBackStack() }
+                    onBack = { navController.popBackStack() },
                 )
             }
             composable<NavDestination.SettingsDownloads> { backStackEntry ->
                 val route = backStackEntry.toRoute<NavDestination.SettingsDownloads>()
                 DownloadsSettingsScreen(
                     highlightSetting = route.highlightSetting,
-                    onBack = { navController.popBackStack() }
+                    onBack = { navController.popBackStack() },
                 )
             }
             composable<NavDestination.SettingsAbout> {
                 AboutScreen(
                     onBack = { navController.popBackStack() },
-                    onNavigateToLicenses = { navController.navigate(NavDestination.SettingsLicenses) }
+                    onNavigateToLicenses = { navController.navigate(NavDestination.SettingsLicenses) },
                 )
             }
             composable<NavDestination.SettingsLicenses> {
@@ -207,7 +206,7 @@ fun AppNavigation(themeViewModel: ThemeViewModel, initialArticleId: String? = nu
                 enterTransition = {
                     slideInVertically(
                         initialOffsetY = { it },
-                        animationSpec = tween(400)
+                        animationSpec = tween(400),
                     ) + fadeIn(animationSpec = tween(400))
                 },
                 exitTransition = {
@@ -219,13 +218,13 @@ fun AppNavigation(themeViewModel: ThemeViewModel, initialArticleId: String? = nu
                 popExitTransition = {
                     slideOutVertically(
                         targetOffsetY = { it },
-                        animationSpec = tween(400)
+                        animationSpec = tween(400),
                     ) + fadeOut(animationSpec = tween(400))
-                }
+                },
             ) {
                 ReaderScreen(
                     onBack = { navController.popBackStack() },
-                    themeViewModel = themeViewModel
+                    themeViewModel = themeViewModel,
                 )
             }
         }

@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.mienaiknife.narra.ui.viewmodels
 
 import androidx.lifecycle.ViewModel
@@ -22,16 +21,14 @@ import com.mienaiknife.narra.domain.TtsEngine
 import com.mienaiknife.narra.domain.TtsState
 import com.mienaiknife.narra.domain.models.TtsModel
 import com.mienaiknife.narra.domain.repository.ModelRepository
-import dagger.hilt.android.lifecycle.HiltViewModel
 import com.mienaiknife.narra.playback.PlaybackSettingsManager
 import com.mienaiknife.narra.ui.UiText
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -39,7 +36,7 @@ import javax.inject.Inject
 class VoicesSettingsViewModel @Inject constructor(
     private val modelRepository: ModelRepository,
     private val settingsManager: PlaybackSettingsManager,
-    private val ttsEngine: TtsEngine
+    private val ttsEngine: TtsEngine,
 ) : ViewModel() {
 
     private val _errorMessage = MutableStateFlow<UiText?>(null)
@@ -59,7 +56,7 @@ class VoicesSettingsViewModel @Inject constructor(
         settingsManager.sherpaNoiseScale,
         settingsManager.sherpaLengthScale,
         ttsEngine.state,
-        _errorMessage
+        _errorMessage,
     ) { args ->
         val models = args[0] as List<TtsModel>
         val engine = args[1] as String
@@ -74,7 +71,7 @@ class VoicesSettingsViewModel @Inject constructor(
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
-        initialValue = VoicesSettingsUiState()
+        initialValue = VoicesSettingsUiState(),
     )
 
     fun setEngine(engine: String) {

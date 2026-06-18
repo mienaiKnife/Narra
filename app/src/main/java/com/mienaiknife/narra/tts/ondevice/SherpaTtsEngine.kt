@@ -13,25 +13,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.mienaiknife.narra.tts.ondevice
 
 import android.media.AudioAttributes
 import android.media.AudioFormat
 import android.media.AudioTrack
 import android.util.Log
+import com.k2fsa.sherpa.onnx.*
 import com.mienaiknife.narra.domain.TtsEngine
 import com.mienaiknife.narra.domain.TtsState
 import com.mienaiknife.narra.domain.models.TtsModel
 import com.mienaiknife.narra.domain.models.TtsModelType
 import com.mienaiknife.narra.domain.repository.ModelRepository
 import com.mienaiknife.narra.playback.PlaybackSettingsManager
-import com.k2fsa.sherpa.onnx.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -39,14 +39,13 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.isActive
 import java.io.File
-import kotlin.math.abs
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.math.abs
 
 @Singleton
 class SherpaTtsEngine @Inject constructor(
@@ -58,7 +57,7 @@ class SherpaTtsEngine @Inject constructor(
     override val state: StateFlow<TtsState> = _state.asStateFlow()
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
-    
+
     private var tts: OfflineTts? = null
     private var audioTrack: AudioTrack? = null
     private var playbackSpeed = 1.0f
@@ -68,7 +67,7 @@ class SherpaTtsEngine @Inject constructor(
 
     private val utteranceQueue = Channel<UtteranceRequest>(Channel.UNLIMITED)
     private val synthesizedQueue = Channel<SynthesizedAudio>(2)
-    
+
     private var synthesisJob: Job? = null
     private var playbackJob: Job? = null
     private var currentModelId: String? = null
@@ -78,7 +77,7 @@ class SherpaTtsEngine @Inject constructor(
     private var currentSessionId: Int = 0
 
     data class UtteranceRequest(val text: String, val utteranceId: String, val sessionId: Int)
-    
+
     data class WordBoundary(
         val startChar: Int,
         val endChar: Int,
@@ -92,7 +91,7 @@ class SherpaTtsEngine @Inject constructor(
         val utteranceId: String,
         val text: String,
         val sessionId: Int,
-        val wordBoundaries: List<WordBoundary> = emptyList()
+        val wordBoundaries: List<WordBoundary> = emptyList(),
     ) {
         override fun equals(other: Any?): Boolean {
             if (this === other) return true
@@ -124,25 +123,25 @@ class SherpaTtsEngine @Inject constructor(
             combine(
                 settingsManager.ttsModelId,
                 settingsManager.sherpaNoiseScale,
-                settingsManager.sherpaLengthScale
+                settingsManager.sherpaLengthScale,
             ) { modelId, noiseScale, lengthScale ->
                 Triple(modelId, noiseScale, lengthScale)
             }
-            .distinctUntilChanged()
-            .collectLatest { (modelId, noiseScale, lengthScale) ->
-                // Delay for scales to avoid rapid re-init while sliding
-                if (modelId == currentModelId) {
-                    delay(500)
+                .distinctUntilChanged()
+                .collectLatest { (modelId, noiseScale, lengthScale) ->
+                    // Delay for scales to avoid rapid re-init while sliding
+                    if (modelId == currentModelId) {
+                        delay(500)
+                    }
+                    initializeEngine(modelId, noiseScale, lengthScale)
                 }
-                initializeEngine(modelId, noiseScale, lengthScale)
-            }
         }
 
         scope.launch {
             settingsManager.ttsSpeakerId.collect { speakerId ->
                 if (currentSpeakerId != speakerId) {
                     currentSpeakerId = speakerId
-                    // For Kokoro, we can change speaker without re-init, 
+                    // For Kokoro, we can change speaker without re-init,
                     // but we might want to restart current synthesis to apply it immediately
                     // TODO: Optional: restart current paragraph synthesis if currentModelType == TtsModelType.KOKORO && _state.value is TtsState.Speaking
                 }
@@ -208,7 +207,7 @@ class SherpaTtsEngine @Inject constructor(
                     ruleFsts = "",
                     ruleFars = "",
                     maxNumSentences = 1,
-                    silenceScale = 0.2f
+                    silenceScale = 0.2f,
                 )
 
                 tts = OfflineTts(null, config)
@@ -230,7 +229,7 @@ class SherpaTtsEngine @Inject constructor(
         model: TtsModel,
         modelPath: String,
         noiseScale: Float,
-        lengthScale: Float
+        lengthScale: Float,
     ): OfflineTtsModelConfig {
         var vits = OfflineTtsVitsModelConfig()
         var matcha = OfflineTtsMatchaModelConfig()
@@ -249,7 +248,7 @@ class SherpaTtsEngine @Inject constructor(
                     dataDir = File(modelPath, "espeak-ng-data").absolutePath,
                     noiseScale = noiseScale,
                     noiseScaleW = 0.8f,
-                    lengthScale = lengthScale
+                    lengthScale = lengthScale,
                 )
             }
 
@@ -261,7 +260,7 @@ class SherpaTtsEngine @Inject constructor(
                     tokens = File(modelPath, "tokens.txt").absolutePath,
                     dataDir = modelPath,
                     noiseScale = noiseScale,
-                    lengthScale = lengthScale
+                    lengthScale = lengthScale,
                 )
             }
 
@@ -271,7 +270,7 @@ class SherpaTtsEngine @Inject constructor(
                     voices = File(modelPath, "voices.bin").absolutePath,
                     tokens = File(modelPath, "tokens.txt").absolutePath,
                     dataDir = modelPath,
-                    lengthScale = lengthScale
+                    lengthScale = lengthScale,
                 )
             }
 
@@ -280,7 +279,7 @@ class SherpaTtsEngine @Inject constructor(
                     encoder = File(modelPath, "encoder.onnx").absolutePath,
                     decoder = File(modelPath, "decoder.onnx").absolutePath,
                     tokens = File(modelPath, "tokens.txt").absolutePath,
-                    dataDir = modelPath
+                    dataDir = modelPath,
                 )
             }
             TtsModelType.KITTEN -> {
@@ -289,7 +288,7 @@ class SherpaTtsEngine @Inject constructor(
                     voices = File(modelPath, "voices.bin").absolutePath,
                     tokens = File(modelPath, "tokens.txt").absolutePath,
                     dataDir = modelPath,
-                    lengthScale = lengthScale
+                    lengthScale = lengthScale,
                 )
             }
             TtsModelType.POCKET -> {
@@ -300,7 +299,7 @@ class SherpaTtsEngine @Inject constructor(
                     decoder = File(modelPath, "decoder.onnx").absolutePath,
                     textConditioner = File(modelPath, "text_conditioner.onnx").absolutePath,
                     vocabJson = File(modelPath, "vocab.json").absolutePath,
-                    tokenScoresJson = File(modelPath, "token_scores.json").absolutePath
+                    tokenScoresJson = File(modelPath, "token_scores.json").absolutePath,
                 )
             }
             TtsModelType.SUPERTONIC -> {
@@ -311,7 +310,7 @@ class SherpaTtsEngine @Inject constructor(
                     vocoder = File(modelPath, "vocoder.onnx").absolutePath,
                     ttsJson = File(modelPath, "tts.json").absolutePath,
                     unicodeIndexer = File(modelPath, "unicode_indexer.onnx").absolutePath,
-                    voiceStyle = File(modelPath, "voice_style.bin").absolutePath
+                    voiceStyle = File(modelPath, "voice_style.bin").absolutePath,
                 )
             }
         }
@@ -326,7 +325,7 @@ class SherpaTtsEngine @Inject constructor(
             supertonic = supertonic,
             numThreads = 1,
             debug = true,
-            provider = "cpu"
+            provider = "cpu",
         )
     }
 
@@ -341,9 +340,9 @@ class SherpaTtsEngine @Inject constructor(
                 try {
                     val audio = engine.generate(request.text, currentSpeakerId ?: 0)
                     if (request.sessionId != currentSessionId) continue
-                    
+
                     val boundaries = estimateWordBoundaries(request.text, audio.samples.size, audio.samples)
-                    
+
                     synthesizedQueue.send(
                         SynthesizedAudio(
                             audio.samples,
@@ -351,8 +350,8 @@ class SherpaTtsEngine @Inject constructor(
                             request.utteranceId,
                             request.text,
                             request.sessionId,
-                            boundaries
-                        )
+                            boundaries,
+                        ),
                     )
                 } catch (e: Exception) {
                     Log.e("SherpaTtsEngine", "Synthesis failed", e)
@@ -372,7 +371,7 @@ class SherpaTtsEngine @Inject constructor(
         try {
             // Initial state update
             _state.value = TtsState.Speaking(audio.utteranceId, 0, 0, 0)
-            
+
             val samples = audio.samples
             val sampleRate = audio.sampleRate
             val wordBoundaries = audio.wordBoundaries
@@ -380,7 +379,7 @@ class SherpaTtsEngine @Inject constructor(
             val bufferSize = AudioTrack.getMinBufferSize(
                 sampleRate,
                 AudioFormat.CHANNEL_OUT_MONO,
-                AudioFormat.ENCODING_PCM_FLOAT
+                AudioFormat.ENCODING_PCM_FLOAT,
             )
 
             if (audioTrack == null || audioTrack?.sampleRate != sampleRate) {
@@ -390,14 +389,14 @@ class SherpaTtsEngine @Inject constructor(
                         AudioAttributes.Builder()
                             .setUsage(audioUsage)
                             .setContentType(audioContentType)
-                            .build()
+                            .build(),
                     )
                     .setAudioFormat(
                         AudioFormat.Builder()
                             .setEncoding(AudioFormat.ENCODING_PCM_FLOAT)
                             .setSampleRate(sampleRate)
                             .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
-                            .build()
+                            .build(),
                     )
                     .setBufferSizeInBytes(maxOf(bufferSize, samples.size * 4))
                     .setTransferMode(AudioTrack.MODE_STREAM)
@@ -406,7 +405,7 @@ class SherpaTtsEngine @Inject constructor(
 
             audioTrack?.apply {
                 if (state == AudioTrack.STATE_UNINITIALIZED) return@apply
-                
+
                 playbackParams = playbackParams.setSpeed(playbackSpeed)
                 setVolume(volume)
                 if (playState != AudioTrack.PLAYSTATE_PLAYING) {
@@ -416,10 +415,10 @@ class SherpaTtsEngine @Inject constructor(
                 val startHeadPosition = playbackHeadPosition
                 var offset = 0
                 val totalSamples = samples.size
-                
+
                 while (offset < totalSamples && scope.isActive) {
                     if (audio.sessionId != currentSessionId) break
-                    
+
                     val toWrite = totalSamples - offset
                     val written = write(samples, offset, toWrite, AudioTrack.WRITE_NON_BLOCKING)
                     if (written < 0) {
@@ -427,13 +426,13 @@ class SherpaTtsEngine @Inject constructor(
                         break
                     }
                     offset += written
-                    
+
                     val currentHead = playbackHeadPosition
                     val playedFrames = (currentHead - startHeadPosition).coerceAtLeast(0)
-                    
+
                     // Find the current word based on played frames
-                    val currentWord = wordBoundaries.find { 
-                        playedFrames in it.startSample until it.endSample 
+                    val currentWord = wordBoundaries.find {
+                        playedFrames in it.startSample until it.endSample
                     } ?: wordBoundaries.lastOrNull { playedFrames >= it.endSample }
 
                     // Throttle state updates to avoid overwhelming the UI
@@ -442,38 +441,38 @@ class SherpaTtsEngine @Inject constructor(
                             audio.utteranceId,
                             currentWord?.startChar ?: 0,
                             currentWord?.endChar ?: 0,
-                            playedFrames
+                            playedFrames,
                         )
                     }
-                    
+
                     if (written == 0) {
                         // Buffer full, wait a bit longer to be power efficient
                         delay(100)
                     }
                 }
-                
+
                 // Wait for the remainder of the audio to finish playing
                 val expectedEndHeadPosition = startHeadPosition + totalSamples
-                while (playbackHeadPosition < expectedEndHeadPosition && 
+                while (playbackHeadPosition < expectedEndHeadPosition &&
                     playState == AudioTrack.PLAYSTATE_PLAYING &&
                     scope.isActive &&
-                    audio.sessionId == currentSessionId) {
-                    
+                    audio.sessionId == currentSessionId
+                ) {
                     val playedFrames = (playbackHeadPosition - startHeadPosition).coerceAtLeast(0)
-                    val currentWord = wordBoundaries.find { 
-                        playedFrames in it.startSample until it.endSample 
+                    val currentWord = wordBoundaries.find {
+                        playedFrames in it.startSample until it.endSample
                     } ?: wordBoundaries.lastOrNull { playedFrames >= it.endSample }
 
                     _state.value = TtsState.Speaking(
                         audio.utteranceId,
                         currentWord?.startChar ?: 0,
                         currentWord?.endChar ?: 0,
-                        playedFrames
+                        playedFrames,
                     )
                     delay(30)
                 }
             }
-            
+
             _state.value = TtsState.Ready
         } catch (e: Exception) {
             Log.e("SherpaTtsEngine", "Playback failed", e)
@@ -504,7 +503,7 @@ class SherpaTtsEngine @Inject constructor(
             while (utteranceQueue.tryReceive().isSuccess) { /* consume */ }
             while (synthesizedQueue.tryReceive().isSuccess) { /* consume */ }
         }
-        
+
         try {
             audioTrack?.let { track ->
                 if (track.state == AudioTrack.STATE_INITIALIZED) {
@@ -563,68 +562,66 @@ class SherpaTtsEngine @Inject constructor(
         // 1. Detect actual speech bounds to avoid counting silence in the heuristic
         val (speechStart, speechEnd) = detectSpeechBounds(samples)
         val speechSamples = (speechEnd - speechStart).coerceAtLeast(0)
-        
+
         if (speechSamples == 0) return boundaries
 
         // 2. Calculate weighted length of the text
         val weights = text.map { getCharWeight(it) }
         val totalWeight = weights.sum()
-        
+
         if (totalWeight == 0f) return boundaries
 
         // 3. Find all non-whitespace tokens (words)
         val regex = Regex("\\S+")
         val matches = regex.findAll(text).toList()
-        
+
         if (matches.isEmpty()) return boundaries
 
         matches.forEach { match ->
             val startChar = match.range.first
             val endChar = match.range.last + 1
-            
+
             // Weight-based heuristic: sum weights of characters before and within the word
             val weightBefore = weights.take(startChar).sum()
             val weightInWord = weights.subList(startChar, endChar).sum()
-            
+
             val startSample = speechStart + (weightBefore / totalWeight * speechSamples).toInt()
             val endSample = speechStart + ((weightBefore + weightInWord) / totalWeight * speechSamples).toInt()
-            
+
             boundaries.add(WordBoundary(startChar, endChar, startSample, endSample))
         }
-        
+
         return boundaries
     }
 
     private fun detectSpeechBounds(samples: FloatArray): Pair<Int, Int> {
-        val threshold = 0.01f 
+        val threshold = 0.01f
         var start = 0
         // Search first 20% for start
         val startLimit = (samples.size * 0.2).toInt()
         while (start < startLimit && start < samples.size && abs(samples[start]) < threshold) {
             start++
         }
-        
+
         var end = samples.size - 1
         // Search last 20% for end
         val endLimit = (samples.size * 0.8).toInt()
         while (end > endLimit && end > 0 && abs(samples[end]) < threshold) {
             end--
         }
-        
+
         // If we didn't find clear bounds, use a small buffer
         if (start >= startLimit) start = (samples.size * 0.05).toInt()
         if (end <= endLimit) end = (samples.size * 0.95).toInt()
-        
+
         return Pair(start, end)
     }
 
-    private fun getCharWeight(c: Char): Float {
-        return when (c) {
-            '.', '!', '?' -> 3.0f // Longest pause
-            ',', ';', ':', '-' -> 2.0f // Medium pause
-            ' ' -> 0.6f // Slight gap between words
-            else -> 1.0f // Standard character duration
-        }
+    private fun getCharWeight(c: Char): Float = when (c) {
+        '.', '!', '?' -> 3.0f // Longest pause
+        ',', ';', ':', '-' -> 2.0f // Medium pause
+        ' ' -> 0.6f // Slight gap between words
+        else -> 1.0f // Standard character duration
     }
 
     override fun release() {

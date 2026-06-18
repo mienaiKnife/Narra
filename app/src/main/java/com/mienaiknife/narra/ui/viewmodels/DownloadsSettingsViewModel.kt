@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.mienaiknife.narra.ui.viewmodels
 
 import androidx.lifecycle.ViewModel
@@ -38,7 +37,7 @@ import javax.inject.Inject
 class DownloadsSettingsViewModel @Inject constructor(
     private val downloadSettingsManager: DownloadSettingsManager,
     private val syncSettingsManager: SyncSettingsManager,
-    private val contentRepository: ContentRepository
+    private val contentRepository: ContentRepository,
 ) : ViewModel() {
 
     private val _message = MutableStateFlow<UiText?>(null)
@@ -52,7 +51,7 @@ class DownloadsSettingsViewModel @Inject constructor(
         syncSettingsManager.autoExportUri,
         syncSettingsManager.lastExportTimestamp,
         syncSettingsManager.pendingImport,
-        _message
+        _message,
     ) { args: Array<Any?> ->
         DownloadsSettingsUiState(
             downloadOverWifiOnly = args[0] as Boolean,
@@ -63,12 +62,12 @@ class DownloadsSettingsViewModel @Inject constructor(
             autoExportUri = args[5] as String?,
             lastExportTimestamp = args[6] as Long,
             pendingImport = args[7] as Boolean,
-            message = args[8] as UiText?
+            message = args[8] as UiText?,
         )
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
-        initialValue = DownloadsSettingsUiState()
+        initialValue = DownloadsSettingsUiState(),
     )
 
     fun setDownloadOverWifiOnly(enabled: Boolean) {

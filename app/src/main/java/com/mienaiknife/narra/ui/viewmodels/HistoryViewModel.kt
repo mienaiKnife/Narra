@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.mienaiknife.narra.ui.viewmodels
 
 import androidx.lifecycle.ViewModel
@@ -40,7 +39,7 @@ import javax.inject.Inject
 class HistoryViewModel @Inject constructor(
     private val repository: ArticleRepository,
     private val feedRepository: FeedRepository,
-    private val playbackManager: PlaybackManager
+    private val playbackManager: PlaybackManager,
 ) : ViewModel() {
 
     private val _uiEvent = MutableSharedFlow<UiEvent>()
@@ -59,7 +58,7 @@ class HistoryViewModel @Inject constructor(
         _downloadingArticleIds,
         playbackManager.currentArticle,
         playbackManager.isPlaying,
-        playbackManager.playbackSpeed
+        playbackManager.playbackSpeed,
     ) { args: Array<Any?> ->
         val articles = args[0] as List<Article>
         val isRefreshing = args[1] as Boolean
@@ -74,12 +73,12 @@ class HistoryViewModel @Inject constructor(
             currentArticle = currentArticle,
             isPlaying = isPlaying,
             playbackSpeed = playbackSpeed,
-            downloadingArticleIds = downloadingIds
+            downloadingArticleIds = downloadingIds,
         )
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
-        initialValue = HistoryUiState()
+        initialValue = HistoryUiState(),
     )
 
     fun onPlayPauseClick(article: Article) {

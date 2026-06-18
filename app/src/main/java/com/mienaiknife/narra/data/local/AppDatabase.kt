@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.mienaiknife.narra.data.local
 
 import androidx.room.Database
@@ -28,11 +27,13 @@ import com.mienaiknife.narra.data.local.entities.TtsModelEntity
 @Database(
     entities = [ArticleEntity::class, FeedEntity::class, TtsModelEntity::class],
     version = 17,
-    exportSchema = false
+    exportSchema = false,
 )
 abstract class AppDatabase : RoomDatabase() {
     abstract fun articleDao(): ArticleDao
+
     abstract fun feedDao(): FeedDao
+
     abstract fun ttsModelDao(): TtsModelDao
 
     companion object {

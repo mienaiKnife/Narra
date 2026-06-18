@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.mienaiknife.narra.ui.theme
 
 import androidx.compose.material3.Typography
@@ -26,161 +25,176 @@ import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.unit.sp
 import com.mienaiknife.narra.R
 
-val OpenDyslexic3 = FontFamily(
-    Font(R.font.opendyslexic3_regular, FontWeight.Normal),
-    Font(R.font.opendyslexic3_bold, FontWeight.Bold),
-)
+val OpenDyslexic3 =
+    FontFamily(
+        Font(R.font.opendyslexic3_regular, FontWeight.Normal),
+        Font(R.font.opendyslexic3_bold, FontWeight.Bold),
+    )
 
-fun getFontFamily(name: String): FontFamily {
-    return when (name) {
-        "OpenDyslexic3" -> OpenDyslexic3
-        else -> FontFamily.Default
-    }
+fun getFontFamily(name: String): FontFamily = when (name) {
+    "OpenDyslexic3" -> OpenDyslexic3
+    else -> FontFamily.Default
 }
 
 @Suppress("DEPRECATION")
 fun getTypography(fontFamily: FontFamily): Typography {
     val defaultPlatformStyle = PlatformTextStyle(includeFontPadding = false)
-    val defaultLineHeightStyle = LineHeightStyle(
-        alignment = LineHeightStyle.Alignment.Center,
-        trim = LineHeightStyle.Trim.Both
-    )
+    val defaultLineHeightStyle =
+        LineHeightStyle(
+            alignment = LineHeightStyle.Alignment.Center,
+            trim = LineHeightStyle.Trim.Both,
+        )
 
     return Typography(
-        displayLarge = TextStyle(
+        displayLarge =
+        TextStyle(
             fontFamily = fontFamily,
             fontWeight = FontWeight.Normal,
             fontSize = 57.sp,
             lineHeight = 64.sp,
             letterSpacing = (-0.25).sp,
             platformStyle = defaultPlatformStyle,
-            lineHeightStyle = defaultLineHeightStyle
+            lineHeightStyle = defaultLineHeightStyle,
         ),
-        displayMedium = TextStyle(
+        displayMedium =
+        TextStyle(
             fontFamily = fontFamily,
             fontWeight = FontWeight.Normal,
             fontSize = 45.sp,
             lineHeight = 52.sp,
             letterSpacing = 0.sp,
             platformStyle = defaultPlatformStyle,
-            lineHeightStyle = defaultLineHeightStyle
+            lineHeightStyle = defaultLineHeightStyle,
         ),
-        displaySmall = TextStyle(
+        displaySmall =
+        TextStyle(
             fontFamily = fontFamily,
             fontWeight = FontWeight.Normal,
             fontSize = 36.sp,
             lineHeight = 44.sp,
             letterSpacing = 0.sp,
             platformStyle = defaultPlatformStyle,
-            lineHeightStyle = defaultLineHeightStyle
+            lineHeightStyle = defaultLineHeightStyle,
         ),
-        headlineLarge = TextStyle(
+        headlineLarge =
+        TextStyle(
             fontFamily = fontFamily,
             fontWeight = FontWeight.Normal,
             fontSize = 32.sp,
             lineHeight = 40.sp,
             letterSpacing = 0.sp,
             platformStyle = defaultPlatformStyle,
-            lineHeightStyle = defaultLineHeightStyle
+            lineHeightStyle = defaultLineHeightStyle,
         ),
-        headlineMedium = TextStyle(
+        headlineMedium =
+        TextStyle(
             fontFamily = fontFamily,
             fontWeight = FontWeight.Normal,
             fontSize = 28.sp,
             lineHeight = 36.sp,
             letterSpacing = 0.sp,
             platformStyle = defaultPlatformStyle,
-            lineHeightStyle = defaultLineHeightStyle
+            lineHeightStyle = defaultLineHeightStyle,
         ),
-        headlineSmall = TextStyle(
+        headlineSmall =
+        TextStyle(
             fontFamily = fontFamily,
             fontWeight = FontWeight.Normal,
             fontSize = 24.sp,
             lineHeight = 32.sp,
             letterSpacing = 0.sp,
             platformStyle = defaultPlatformStyle,
-            lineHeightStyle = defaultLineHeightStyle
+            lineHeightStyle = defaultLineHeightStyle,
         ),
-        titleLarge = TextStyle(
+        titleLarge =
+        TextStyle(
             fontFamily = fontFamily,
             fontWeight = FontWeight.Normal,
             fontSize = 22.sp,
             lineHeight = 28.sp,
             letterSpacing = 0.sp,
             platformStyle = defaultPlatformStyle,
-            lineHeightStyle = defaultLineHeightStyle
+            lineHeightStyle = defaultLineHeightStyle,
         ),
-        titleMedium = TextStyle(
+        titleMedium =
+        TextStyle(
             fontFamily = fontFamily,
             fontWeight = FontWeight.Medium,
             fontSize = 16.sp,
             lineHeight = 24.sp,
             letterSpacing = 0.15.sp,
             platformStyle = defaultPlatformStyle,
-            lineHeightStyle = defaultLineHeightStyle
+            lineHeightStyle = defaultLineHeightStyle,
         ),
-        titleSmall = TextStyle(
+        titleSmall =
+        TextStyle(
             fontFamily = fontFamily,
             fontWeight = FontWeight.Medium,
             fontSize = 14.sp,
             lineHeight = 20.sp,
             letterSpacing = 0.1.sp,
             platformStyle = defaultPlatformStyle,
-            lineHeightStyle = defaultLineHeightStyle
+            lineHeightStyle = defaultLineHeightStyle,
         ),
-        bodyLarge = TextStyle(
+        bodyLarge =
+        TextStyle(
             fontFamily = fontFamily,
             fontWeight = FontWeight.Normal,
             fontSize = 16.sp,
             lineHeight = 24.sp,
             letterSpacing = 0.5.sp,
             platformStyle = defaultPlatformStyle,
-            lineHeightStyle = defaultLineHeightStyle
+            lineHeightStyle = defaultLineHeightStyle,
         ),
-        bodyMedium = TextStyle(
+        bodyMedium =
+        TextStyle(
             fontFamily = fontFamily,
             fontWeight = FontWeight.Normal,
             fontSize = 14.sp,
             lineHeight = 20.sp,
             letterSpacing = 0.25.sp,
             platformStyle = defaultPlatformStyle,
-            lineHeightStyle = defaultLineHeightStyle
+            lineHeightStyle = defaultLineHeightStyle,
         ),
-        bodySmall = TextStyle(
+        bodySmall =
+        TextStyle(
             fontFamily = fontFamily,
             fontWeight = FontWeight.Normal,
             fontSize = 12.sp,
             lineHeight = 16.sp,
             letterSpacing = 0.4.sp,
             platformStyle = defaultPlatformStyle,
-            lineHeightStyle = defaultLineHeightStyle
+            lineHeightStyle = defaultLineHeightStyle,
         ),
-        labelLarge = TextStyle(
+        labelLarge =
+        TextStyle(
             fontFamily = fontFamily,
             fontWeight = FontWeight.Medium,
             fontSize = 14.sp,
             lineHeight = 20.sp,
             letterSpacing = 0.1.sp,
             platformStyle = defaultPlatformStyle,
-            lineHeightStyle = defaultLineHeightStyle
+            lineHeightStyle = defaultLineHeightStyle,
         ),
-        labelMedium = TextStyle(
+        labelMedium =
+        TextStyle(
             fontFamily = fontFamily,
             fontWeight = FontWeight.Medium,
             fontSize = 12.sp,
             lineHeight = 16.sp,
             letterSpacing = 0.5.sp,
             platformStyle = defaultPlatformStyle,
-            lineHeightStyle = defaultLineHeightStyle
+            lineHeightStyle = defaultLineHeightStyle,
         ),
-        labelSmall = TextStyle(
+        labelSmall =
+        TextStyle(
             fontFamily = fontFamily,
             fontWeight = FontWeight.Medium,
             fontSize = 11.sp,
             lineHeight = 16.sp,
             letterSpacing = 0.5.sp,
             platformStyle = defaultPlatformStyle,
-            lineHeightStyle = defaultLineHeightStyle
-        )
+            lineHeightStyle = defaultLineHeightStyle,
+        ),
     )
 }

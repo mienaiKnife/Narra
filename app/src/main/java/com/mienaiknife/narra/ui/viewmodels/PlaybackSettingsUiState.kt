@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.mienaiknife.narra.ui.viewmodels
 
 data class PlaybackSettingsUiState(
@@ -27,5 +26,5 @@ data class PlaybackSettingsUiState(
     val playChimeAndTitle: Boolean = true,
     val chimeSound: String = "music_box_chime_positive",
     val readAltText: Boolean = true,
-    val shortenHyperlinks: Boolean = true
+    val shortenHyperlinks: Boolean = true,
 )

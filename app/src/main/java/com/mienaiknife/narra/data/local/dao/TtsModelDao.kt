@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.mienaiknife.narra.data.local.dao
 
 import androidx.room.Dao
@@ -38,13 +37,23 @@ interface TtsModelDao {
     suspend fun insertModel(model: TtsModelEntity)
 
     @Query("UPDATE tts_models SET isDownloaded = :isDownloaded, dataDir = :dataDir WHERE id = :id")
-    suspend fun updateDownloadStatus(id: String, isDownloaded: Boolean, dataDir: String?)
+    suspend fun updateDownloadStatus(
+        id: String,
+        isDownloaded: Boolean,
+        dataDir: String?,
+    )
 
     @Query("UPDATE tts_models SET progress = :progress WHERE id = :id")
-    suspend fun updateProgress(id: String, progress: Float)
+    suspend fun updateProgress(
+        id: String,
+        progress: Float,
+    )
 
     @Query("UPDATE tts_models SET lastError = :error WHERE id = :id")
-    suspend fun updateError(id: String, error: String?)
+    suspend fun updateError(
+        id: String,
+        error: String?,
+    )
 
     @Query("DELETE FROM tts_models WHERE id = :id")
     suspend fun deleteModel(id: String)

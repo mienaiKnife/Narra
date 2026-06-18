@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.mienaiknife.narra.ui.viewmodels
 
 import com.mienaiknife.narra.data.local.entities.FeedEntity
@@ -22,5 +21,5 @@ import com.mienaiknife.narra.data.models.SortOption
 data class FeedsUiState(
     val feeds: List<FeedEntity> = emptyList(),
     val isRefreshing: Boolean = false,
-    val sortOption: SortOption = SortOption.TITLE_ASC
+    val sortOption: SortOption = SortOption.TITLE_ASC,
 )

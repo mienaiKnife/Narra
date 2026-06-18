@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.mienaiknife.narra.utils
 
 import org.junit.Assert.assertEquals
@@ -23,7 +22,6 @@ import org.junit.Test
 import java.time.LocalDate
 
 class DateUtilsTest {
-
     @Test
     fun `formatPublishedDate handles null or blank`() {
         assertNull(DateUtils.formatPublishedDate(null))
@@ -85,7 +83,7 @@ class DateUtilsTest {
         // "This", "is", "bold", "text." -> 4 words
         // 4 * 300 = 1200ms
         assertEquals(1200L, DateUtils.estimateReadingTimeMs(htmlText))
-        
+
         // Coerces to at least 1s
         assertEquals(1000L, DateUtils.estimateReadingTimeMs("One"))
     }

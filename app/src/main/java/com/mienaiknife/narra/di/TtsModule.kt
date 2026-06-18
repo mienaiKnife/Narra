@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.mienaiknife.narra.di
 
 import com.mienaiknife.narra.domain.TtsEngine
@@ -28,10 +27,7 @@ import javax.inject.Singleton
 @InstallIn(SingletonComponent::class)
 @Suppress("unused")
 abstract class TtsModule {
-
     @Binds
     @Singleton
-    abstract fun bindTtsEngine(
-        delegatingTtsEngine: DelegatingTtsEngine
-    ): TtsEngine
+    abstract fun bindTtsEngine(delegatingTtsEngine: DelegatingTtsEngine): TtsEngine
 }
