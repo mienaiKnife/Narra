@@ -102,7 +102,12 @@ class WebDataSourceImpl @Inject constructor(
             "[id*=social]", "[id*=share]", "[id*=related]", "[id*=recommend]"
         )
         junkSelectors.forEach { selector ->
-            doc.select(selector).remove()
+            doc.select(selector).forEach { element ->
+                // Don't remove high-level structural tags even if they match a junk selector
+                if (element.tagName() !in listOf("body", "html", "article", "main")) {
+                    element.remove()
+                }
+            }
         }
     }
 
