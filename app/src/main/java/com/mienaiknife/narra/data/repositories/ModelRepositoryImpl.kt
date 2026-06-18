@@ -181,57 +181,47 @@ class ModelRepositoryImpl @Inject constructor(
 
             val isArchive = model.modelUrl.endsWith(".tar.bz2")
             val extraFiles = model.extraUrls.toList()
-            // Archives contain everything (model + tokens). Non-archives might need tokens separately.
-            // For archives, we add an extra step for extraction/cleanup.
-            val totalSteps = if (isArchive) {
-                2 + extraFiles.size
-            } else {
-                1 + (if (model.tokensUrl.isNotEmpty()) 1 else 0) + extraFiles.size
-            }
-            var currentStep = 0
 
             if (isArchive) {
                 val archiveFile = File(targetDir, "archive.tar.bz2")
                 android.util.Log.i("ModelRepository", "Downloading archive: ${model.modelUrl}")
                 downloadFile(model.modelUrl, archiveFile) { progress ->
                     yield()
-                    val overallProgress = (currentStep + progress) / totalSteps
+                    // Download accounts for 0% -> 40% of total progress
+                    val overallProgress = progress * 0.40f
                     ttsModelDao.updateProgress(modelId, overallProgress.coerceAtLeast(0.01f))
                     android.util.Log.i("ModelRepository", "Download progress: $overallProgress")
                 }
-                currentStep++
-                ttsModelDao.updateProgress(modelId, currentStep.toFloat() / totalSteps)
 
                 android.util.Log.i("ModelRepository", "Extracting archive...")
-                extractTarBz2(archiveFile, targetDir)
+                extractTarBz2(archiveFile, targetDir) { extractProgress ->
+                    // Extraction accounts for 40% -> 85% of total progress
+                    val overallProgress = 0.40f + (extractProgress * 0.45f)
+                    ttsModelDao.updateProgress(modelId, overallProgress)
+                }
                 archiveFile.delete()
                 
                 android.util.Log.i("ModelRepository", "Moving model files...")
                 findAndMoveModelFiles(targetDir)
-                
-                currentStep++
-                ttsModelDao.updateProgress(modelId, currentStep.toFloat() / totalSteps)
+                // Cleanup/move accounts for 85% -> 95%
+                ttsModelDao.updateProgress(modelId, 0.95f)
             } else {
                 val targetFile = File(targetDir, "model.onnx")
                 android.util.Log.i("ModelRepository", "Downloading model file: ${model.modelUrl}")
                 downloadFile(model.modelUrl, targetFile) { progress ->
                     yield()
-                    val overallProgress = (currentStep + progress) / totalSteps
-                    ttsModelDao.updateProgress(modelId, overallProgress)
-                    android.util.Log.i("ModelRepository", "Download progress: $overallProgress")
+                    ttsModelDao.updateProgress(modelId, progress.coerceAtLeast(1f))
+                    android.util.Log.i("ModelRepository", "Download progress: $progress")
                 }
-                currentStep++
 
                 if (model.tokensUrl.isNotEmpty()) {
                     val tokensFile = File(targetDir, "tokens.txt")
                     android.util.Log.i("ModelRepository", "Downloading tokens file: ${model.tokensUrl}")
                     downloadFile(model.tokensUrl, tokensFile) { progress ->
                         yield()
-                        val overallProgress = (currentStep + progress) / totalSteps
-                        ttsModelDao.updateProgress(modelId, overallProgress)
-                        android.util.Log.i("ModelRepository", "Download progress: $overallProgress")
+                        ttsModelDao.updateProgress(modelId, progress.coerceAtLeast(1f))
+                        android.util.Log.i("ModelRepository", "Download progress: $progress")
                     }
-                    currentStep++
                 }
             }
 
@@ -241,13 +231,12 @@ class ModelRepositoryImpl @Inject constructor(
                 android.util.Log.i("ModelRepository", "Downloading extra file: $url")
                 downloadFile(url, targetFile) { progress ->
                     yield()
-                    val overallProgress = (currentStep + progress) / totalSteps
-                    ttsModelDao.updateProgress(modelId, overallProgress)
-                    android.util.Log.i("ModelRepository", "Download progress: $overallProgress")
+                    ttsModelDao.updateProgress(modelId, progress.coerceAtLeast(1f))
+                    android.util.Log.i("ModelRepository", "Download progress: $progress")
                 }
-                currentStep++
             }
 
+            // Extra files / final cleanup = 95% -> 100%
             ttsModelDao.updateProgress(modelId, 1.0f)
             ttsModelDao.updateDownloadStatus(modelId, true, targetDir.absolutePath)
             android.util.Log.i("ModelRepository", "FINISHED downloadModel: $modelId Success")
@@ -339,10 +328,26 @@ class ModelRepositoryImpl @Inject constructor(
         }
     }
 
-    internal suspend fun extractTarBz2(archiveFile: File, targetDir: File) {
+    internal suspend fun extractTarBz2(
+        archiveFile: File,
+        targetDir: File,
+        onProgress: suspend (Float) -> Unit = {}
+    ) {
         Log.i("ModelRepository", "Extracting ${archiveFile.name} to ${targetDir.absolutePath}")
         val targetCanonicalPath = targetDir.canonicalPath
         withContext(Dispatchers.IO) {
+            // Pre-scan: count total entries for progress reporting
+            val totalEntries: Int = FileInputStream(archiveFile).use { fis ->
+                BZip2CompressorInputStream(fis).use { bzis ->
+                    TarArchiveInputStream(bzis).use { tais ->
+                        var count = 1
+                        while (tais.nextEntry != null) { count++ }
+                        count
+                    }
+                }
+            }
+
+            var entriesProcessed = 0
             FileInputStream(archiveFile).use { fis ->
                 BZip2CompressorInputStream(fis).use { bzis ->
                     TarArchiveInputStream(bzis).use { tais ->
@@ -371,6 +376,9 @@ class ModelRepositoryImpl @Inject constructor(
                                 }
                             }
                             entry = tais.nextEntry
+                            entriesProcessed++
+                            val progress = entriesProcessed.toFloat() / totalEntries
+                            onProgress(progress)
                         }
                     }
                 }

@@ -505,8 +505,13 @@ fun TtsModelItem(
                 )
                 if (isDownloading) {
                     Spacer(modifier = Modifier.height(8.dp))
+                    val stageLabel = when {
+                        model.progress < 0.40f -> stringResource(R.string.settings_voices_downloading)
+                        model.progress < 0.85f -> stringResource(R.string.settings_voices_extracting)
+                        else -> stringResource(R.string.settings_voices_finalizing)
+                    }
                     Text(
-                        text = if (model.progress < 0.99f) stringResource(R.string.settings_voices_downloading) else stringResource(R.string.settings_voices_finalizing),
+                        text = stageLabel,
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.primary
                     )

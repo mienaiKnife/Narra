@@ -139,6 +139,7 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import coil3.compose.AsyncImage
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import com.mienaiknife.narra.R
 import com.mienaiknife.narra.domain.models.Article
@@ -673,7 +674,7 @@ fun ReaderContentList(
         }
     }
 
-    val articleSemanticsDesc = stringResource(R.string.home_article_semantics_desc, article.title, article.source, 0)
+    val articleSemanticsDesc = pluralStringResource(R.plurals.home_article_semantics_desc, 0, article.title, article.source, 0)
 
     LazyColumn(
         state = scrollState,

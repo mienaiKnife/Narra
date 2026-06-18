@@ -14,7 +14,7 @@
   See the License for the specific language governing permissions and
   limitations under the License.
   -->
-<resources xmlns:tools="http://schemas.android.com/tools">
+<resources>
     <string name="app_name">Narra</string>
 
     <!-- Navigation -->
@@ -34,14 +34,17 @@
     <string name="home_empty_message">Add articles from RSS feeds, EPUB files, or web links to start listening.</string>
     <string name="home_add_content">Add Content</string>
     <string name="home_cover_image_desc">Cover image for %1$s</string>
-    <string name="home_article_semantics_desc" tools:ignore="PluralsCandidate">%1$s from %2$s, %3$d percent completed</string>
+    <plurals name="home_article_semantics_desc">
+        <item quantity="one">%1$s from %2$s, %3$d percent completed</item>
+        <item quantity="other">%1$s from %2$s, %3$d percent completed</item>
+    </plurals>
 
     <!-- Inbox Screen -->
     <string name="inbox_empty_message">No new articles from your feeds.</string>
     <string name="inbox_menu_edit_feeds">Edit feeds</string>
 
     <!-- Queue Screen -->
-    <string name="queue_empty_message">Your queue is empty. Add some texts to get started!</string>
+    <string name="queue_empty_message">Your queue is empty.</string>
     <string name="queue_removed_message">Removed from queue</string>
     <string name="queue_time_left_prefix">"Time left: "</string>
     <string name="queue_and">" and "</string>
@@ -60,7 +63,7 @@
     <string name="add_epub_fallback_title">Imported EPUB</string>
 
     <!-- Reader Screen -->
-    <string name="reader_sleep_timer">Sleep Timer</string>
+    <string name="reader_sleep_timer">Sleep timer</string>
     <string name="reader_no_results">No results found</string>
     <string name="reader_error_title">Something went wrong</string>
 
@@ -231,12 +234,13 @@
     <string name="settings_voices_voice_data_desc">Download or delete TTS models</string>
     <string name="settings_downloads_refresh_inbox">Refresh inbox</string>
     <string name="settings_downloads_refresh_inbox_desc">Automatic inbox refresh interval</string>
-    <string name="settings_downloads_inbox_limit">Initial Inbox limit</string>
+    <string name="settings_downloads_inbox_limit">Initial inbox limit</string>
     <string name="settings_downloads_inbox_limit_desc">Number of recent articles to keep in the Inbox when adding a new feed.</string>
     <string name="settings_voices_android_engine_name">Android\'s native TTS</string>
     <string name="settings_voices_ondevice_engine_name">On-device AI (Sherpa-ONNX)</string>
     <string name="settings_voices_selected_label">(Selected)</string>
     <string name="settings_voices_downloading">Downloading…</string>
+    <string name="settings_voices_extracting">Extracting archive…</string>
     <string name="settings_voices_finalizing">Finalizing…</string>
     <string name="settings_voices_download_model_desc">Download model</string>
     <string name="settings_voices_cancel_download_desc">Cancel download</string>
@@ -255,27 +259,27 @@
     <string name="reader_menu_visit_site">Visit site</string>
     <string name="reader_article_image_desc">Article image</string>
     <string name="reader_scroll_to_current_position">Scroll to current position</string>
-    <string name="reader_playback_progress_desc">Playback progress: %1$d%%</string>
-    <string name="reader_playback_speed_desc">Playback Speed: current %1$.1fx</string>
+    <string name="reader_playback_progress_desc">Playback progress: %1$d percent completed</string>
+    <string name="reader_playback_speed_desc">Playback speed: current %1$.1fx</string>
     <string name="reader_rewind_desc">Rewind %1$s</string>
     <string name="reader_fast_forward_desc">Fast forward %1$s</string>
     <string name="reader_next_article_desc">Next article</string>
     <string name="reader_search_placeholder">Search in article…</string>
     <string name="reader_paragraph_search_desc">Paragraph %1$d</string>
     <string name="reader_open_link">Open link</string>
-    <string name="reader_go_back">Go Back</string>
+    <string name="reader_go_back">Go back</string>
     <string name="reader_retry">Retry</string>
     <string name="reader_now_playing">Now playing: %1$s</string>
     <string name="reader_image_prefix">Image: %1$s</string>
     <string name="reader_playing_prefix">Playing %1$s. Tap to open player.</string>
     <string name="reader_paused_prefix">Paused %1$s. Tap to open player.</string>
     <string name="reader_cover_desc">Cover for %1$s</string>
-    <string name="reader_link_to"> link to %1$s </string>
+    <string name="reader_link_to">" link to %1$s "</string>
     <string name="reader_paragraph_semantics">Paragraph %1$d of %2$d</string>
     <string name="reader_unknown">Unknown</string>
     <string name="reader_preview">preview</string>
-    <string name="reader_female_suffix"> (Female)</string>
-    <string name="reader_male_suffix"> (Male)</string>
+    <string name="reader_female_suffix">" (Female)"</string>
+    <string name="reader_male_suffix">" (Male)"</string>
     <string name="action_play">Play</string>
     <string name="action_pause">Pause</string>
     <string name="action_off">Off</string>
@@ -311,7 +315,10 @@
     <string name="reader_menu_remove_queue">Remove from queue</string>
     <string name="action_reorder">Reorder</string>
     <string name="queue_item_semantics_desc">%1$s by %2$s</string>
-    <string name="queue_item_semantics_queue_desc" tools:ignore="PluralsCandidate">%1$s by %2$s, %3$d percent completed</string>
+    <plurals name="queue_item_semantics_queue_desc">
+        <item quantity="one">%1$s by %2$s, %3$d percent completed</item>
+        <item quantity="other">%1$s by %2$s, %3$d percent completed</item>
+    </plurals>
     <string name="action_add_to_queue_desc">Add %1$s to queue</string>
     <string name="action_pause_desc">Pause %1$s</string>
     <string name="action_play_desc">Play %1$s</string>

@@ -50,6 +50,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import com.mienaiknife.narra.R
 import com.mienaiknife.narra.domain.models.Article
@@ -204,7 +205,7 @@ private fun QueueItemRow(
 
         val progressPercent = ((article.progress ?: 0f) * 100).toInt()
         val itemContentDescription = if (article.isInQueue) {
-            stringResource(R.string.queue_item_semantics_queue_desc, article.title, article.source, progressPercent)
+            pluralStringResource(R.plurals.queue_item_semantics_queue_desc, progressPercent, article.title, article.source, progressPercent)
         } else {
             stringResource(R.string.queue_item_semantics_desc, article.title, article.source)
         }

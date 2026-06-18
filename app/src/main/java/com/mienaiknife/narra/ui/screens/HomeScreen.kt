@@ -74,6 +74,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.compose.rememberNavController
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import com.mienaiknife.narra.R
 import coil3.compose.AsyncImage
@@ -313,7 +314,7 @@ fun ArticleCard(
     modifier: Modifier = Modifier
 ) {
     val progressPercent = ((article.progress ?: 0f) * 100).toInt()
-    val contentDescriptionText = stringResource(R.string.home_article_semantics_desc, article.title, article.source, progressPercent)
+    val contentDescriptionText = pluralStringResource(R.plurals.home_article_semantics_desc, progressPercent, article.title, article.source, progressPercent)
 
     Card(
         modifier = modifier
