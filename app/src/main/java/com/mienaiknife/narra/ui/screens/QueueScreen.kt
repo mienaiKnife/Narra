@@ -338,10 +338,10 @@ fun QueueScreenContent(
         }
 
         if (articles.isNotEmpty()) {
-            val textsCountText = pluralStringResource(R.plurals.unit_texts, articles.size, articles.size)
+            val articlesCountText = pluralStringResource(R.plurals.unit_articles, articles.size, articles.size)
             Text(
                 text = buildString {
-                    append(textsCountText)
+                    append(articlesCountText)
                     append(" • ")
                     append(timeLeftText)
                 },

@@ -49,20 +49,45 @@ sealed class UiText {
             is NarraError.Network.WifiRequired -> StringResource(R.string.settings_downloads_wifi_only) // Using existing string for now
             is NarraError.Model.DownloadFailed -> StringResource(R.string.error_download_failed)
             is NarraError.Content.ParsingFailed -> StringResource(R.string.error_generic)
-            else -> error.message?.let { DynamicString(it) } ?: StringResource(R.string.error_generic)
+            is NarraError.Network.ServerError -> error.message?.takeIf { it.isNotBlank() }?.let { DynamicString(it) }
+                ?: StringResource(R.string.error_generic)
+            else -> error.message?.takeIf { it.isNotBlank() }?.let { DynamicString(it) }
+                ?: StringResource(R.string.error_generic)
         }
     }
 
     @Composable
-    fun asString(): String = when (this) {
-        is DynamicString -> value
-        is StringResource -> stringResource(resId, *args)
-        is PluralResource -> pluralStringResource(resId, count, *args)
+    fun asString(): String {
+        return when (this) {
+            is DynamicString -> value
+            is StringResource -> {
+                val resolvedArgs = args.map {
+                    if (it is UiText) it.asString() else it
+                }.toTypedArray()
+                stringResource(resId, *resolvedArgs)
+            }
+            is PluralResource -> {
+                val resolvedArgs = args.map {
+                    if (it is UiText) it.asString() else it
+                }.toTypedArray()
+                pluralStringResource(resId, count, *resolvedArgs)
+            }
+        }
     }
 
     fun asString(context: Context): String = when (this) {
         is DynamicString -> value
-        is StringResource -> context.getString(resId, *args)
-        is PluralResource -> context.resources.getQuantityString(resId, count, *args)
+        is StringResource -> {
+            val resolvedArgs = args.map {
+                if (it is UiText) it.asString(context) else it
+            }.toTypedArray()
+            context.getString(resId, *resolvedArgs)
+        }
+        is PluralResource -> {
+            val resolvedArgs = args.map {
+                if (it is UiText) it.asString(context) else it
+            }.toTypedArray()
+            context.resources.getQuantityString(resId, count, *resolvedArgs)
+        }
     }
 }

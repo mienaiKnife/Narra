@@ -31,8 +31,8 @@
     <string name="home_new_from_feeds">New from your feeds</string>
     <string name="home_favorites">Your favorites</string>
     <string name="home_empty_title">Your library is empty</string>
-    <string name="home_empty_message">Add articles from RSS feeds, EPUB files, or web links to start listening.</string>
-    <string name="home_add_content">Add Content</string>
+    <string name="home_empty_message">Add articles from URLs, RSS feeds, or ebooks to start listening.</string>
+    <string name="home_add_content">Add Articles</string>
     <string name="home_cover_image_desc">Cover image for %1$s</string>
     <plurals name="home_article_semantics_desc">
         <item quantity="one">%1$s from %2$s, %3$d percent completed</item>
@@ -95,7 +95,7 @@
     <string name="settings_ui_tap_to_show_desc">When in fullscreen mode, tapping anywhere on the screen will show controls</string>
     <string name="settings_ui_font_size_label">Font size: %1$d sp</string>
     <string name="settings_ui_font_size_desc">Adjust the size of text in the reader screen</string>
-    <string name="settings_ui_text_info_section">Text information</string>
+    <string name="settings_ui_text_info_section">Article information</string>
     <string name="settings_ui_show_remaining_time">Show remaining time</string>
     <string name="settings_ui_show_remaining_time_desc">Toggle between showing remaining time or total duration during playback</string>
 
@@ -107,10 +107,10 @@
     <string name="settings_playback_pause_for_interruptions_desc">Pause playback instead of lowering volume for notification sounds</string>
     <string name="settings_playback_controls_section">Playback controls</string>
     <string name="settings_playback_queue_section">Queue</string>
-    <string name="settings_playback_autoplay_next">Autoplay next text</string>
-    <string name="settings_playback_autoplay_next_desc">Automatically play the next text in the queue</string>
+    <string name="settings_playback_autoplay_next">Autoplay next article</string>
+    <string name="settings_playback_autoplay_next_desc">Automatically play the next article in the queue</string>
     <string name="settings_playback_play_chime">Play chime and title</string>
-    <string name="settings_playback_play_chime_desc">When autoplaying the next text in the queue, start by playing a chime and the title</string>
+    <string name="settings_playback_play_chime_desc">When autoplaying the next article in the queue, start by playing a chime and the title</string>
     <string name="settings_playback_voice_behavior_section">Voice behavior</string>
     <string name="settings_playback_read_alt_text">Read alt text</string>
     <string name="settings_playback_read_alt_text_desc">Read descriptions of images when available</string>
@@ -134,7 +134,7 @@
     <string name="settings_downloads_automation_section">Automation</string>
     <string name="settings_downloads_database_section">Database</string>
     <string name="settings_downloads_export_db">Export database</string>
-    <string name="settings_downloads_export_db_desc">Back up your texts, feeds, and playback progress</string>
+    <string name="settings_downloads_export_db_desc">Back up your articles, feeds, and playback progress</string>
     <string name="settings_downloads_import_db">Import database</string>
     <string name="settings_downloads_import_db_desc">Restore your data from a backup</string>
     <string name="settings_downloads_auto_export">Auto-export database</string>
@@ -298,9 +298,9 @@
         <item quantity="one">1 hour</item>
         <item quantity="other">%1$d hours</item>
     </plurals>
-    <plurals name="unit_texts">
-        <item quantity="one">1 text</item>
-        <item quantity="other">%1$d texts</item>
+    <plurals name="unit_articles">
+        <item quantity="one">1 article</item>
+        <item quantity="other">%1$d articles</item>
     </plurals>
 
     <string name="about_version">Version</string>

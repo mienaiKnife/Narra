@@ -38,6 +38,12 @@ val LightColorScheme =
         onSurfaceVariant = NarraDarkGrey,
         surfaceContainer = NarraLightGrey,
         primaryContainer = NarraCyanTrack,
+        inverseSurface = NarraBlack,
+        inverseOnSurface = NarraWhite,
+        error = Color(0xFFBA1A1A),
+        onError = Color.White,
+        errorContainer = Color(0xFFFFDAD6),
+        onErrorContainer = Color(0xFF410002),
     )
 
 val DarkColorScheme =
@@ -51,4 +57,10 @@ val DarkColorScheme =
         onSurfaceVariant = NarraGrey,
         surfaceContainer = NarraDarkGrey,
         primaryContainer = NarraCyanTrack,
+        inverseSurface = NarraWhite,
+        inverseOnSurface = NarraBlack,
+        error = Color(0xFFFFB4AB),
+        onError = Color(0xFF690005),
+        errorContainer = Color(0xFF93000A),
+        onErrorContainer = Color(0xFFFFDAD6),
     )

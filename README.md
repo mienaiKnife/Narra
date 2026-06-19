@@ -61,6 +61,6 @@ Run unit tests using the following command:
 - Optional sync via self-hosted compatible server (e.g. Nextcloud/gpodder-compatible API),
   authenticated by server URL and credentials the user controls — no first-party accounts
 - Automatic readability/reader-mode heuristic improvements over time
-- Importing texts by scanning photos
+- Importing articles by scanning photos
 - User-customizable color themes
 - Support for more languages
