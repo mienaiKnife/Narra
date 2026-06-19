@@ -16,6 +16,8 @@ Every TTS implementation must reside in its own package under `com.<package>.tts
 
 - **Android TTS** (`/tts/android`): Wraps `android.speech.tts.TextToSpeech`. Best for low latency and zero-download availability.
 - **On-Device AI** (`/tts/ondevice`): Uses Sherpa-ONNX for high-quality offline synthesis. Requires model management via `ModelRepository`.
+    - **Update Check**: To check if a newer version of Sherpa-ONNX is available on GitHub, run: `./gradlew :app:checkSherpaUpdate`.
+    - **Updating**: If an update is available, download the latest `.aar` and replace `app/libs/sherpa-onnx.aar`, then update the `sherpaOnnx` version in `gradle/libs.versions.toml`.
 - **Delegating Engine** (`/tts/common`): A wrapper that delegates to the currently selected engine, allowing for seamless switching at runtime.
 - **Cloud Providers** (`/tts/cloud`): (Planned) Will handle network-based synthesis (Google Cloud, OpenAI, etc.).
 

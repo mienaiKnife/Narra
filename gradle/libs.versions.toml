@@ -59,6 +59,7 @@ turbine = "1.2.1"
 coroutines-test = "1.11.0"
 glance = "1.1.1"
 spotless = "7.0.2"
+sherpaOnnx = "1.13.3"
 
 [libraries]
 material = { group = "com.google.android.material", name = "material", version.ref = "material" }

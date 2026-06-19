@@ -164,3 +164,41 @@ dependencies {
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
 }
+
+tasks.register("checkSherpaUpdate") {
+    group = "help"
+    description = "Checks if there is a newer version of Sherpa-ONNX available on GitHub."
+    doLast {
+        val currentVersion = libs.versions.sherpaOnnx.get()
+        val latestReleaseUrl = "https://api.github.com/repos/k2-fsa/sherpa-onnx/releases/latest"
+        try {
+            val url = uri(latestReleaseUrl).toURL()
+            val connection = url.openConnection() as java.net.HttpURLConnection
+            connection.requestMethod = "GET"
+            connection.setRequestProperty("Accept", "application/vnd.github.v3+json")
+
+            if (connection.responseCode == 200) {
+                val response = connection.inputStream.bufferedReader().use { it.readText() }
+                // Simple regex to extract tag_name from GitHub API response
+                val match = Regex("\"tag_name\"\\s*:\\s*\"([^\"]+)\"").find(response)
+                val latestVersion = match?.groupValues?.get(1)?.removePrefix("v") ?: "unknown"
+
+                println("\n--- Sherpa-ONNX Version Check ---")
+                println("Current version: $currentVersion")
+                println("Latest version:  $latestVersion")
+
+                if (currentVersion != latestVersion) {
+                    println("\n[!] A newer version of Sherpa-ONNX is available!")
+                    println("Check releases here: https://github.com/k2-fsa/sherpa-onnx/releases")
+                } else {
+                    println("\n[✓] Sherpa-ONNX is up to date.")
+                }
+                println("----------------------------------\n")
+            } else {
+                println("Failed to check for updates: HTTP ${connection.responseCode}")
+            }
+        } catch (e: Exception) {
+            println("Error checking for Sherpa-ONNX updates: ${e.message}")
+        }
+    }
+}
