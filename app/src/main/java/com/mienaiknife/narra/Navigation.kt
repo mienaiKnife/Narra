@@ -135,7 +135,7 @@ fun AppNavigation(themeViewModel: ThemeViewModel, initialArticleId: String? = nu
             composable<NavDestination.Add> {
                 AddScreen(
                     snackbarHostState = snackbarHostState,
-                    onArticleAdded = { navController.navigate(NavDestination.Home) },
+                    onArticleAdded = { },
                 )
             }
             composable<NavDestination.Inbox> {
