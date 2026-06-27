@@ -50,13 +50,13 @@ spotless {
 
 android {
     namespace = "com.mienaiknife.narra"
-    compileSdk = 37
+    compileSdk = 36
 
     // Forced re-sync to fix IDE indexing
     defaultConfig {
         applicationId = "com.mienaiknife.narra"
         minSdk = 24
-        targetSdk = 37
+        targetSdk = 36
         versionCode = 1
         versionName = "0.1"
 
@@ -89,8 +89,8 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
         isCoreLibraryDesugaringEnabled = true
     }
     buildFeatures {
