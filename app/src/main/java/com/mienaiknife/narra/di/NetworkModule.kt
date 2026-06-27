@@ -15,9 +15,14 @@
  */
 package com.mienaiknife.narra.di
 
+import android.content.Context
+import coil3.ImageLoader
+import coil3.network.okhttp.OkHttpNetworkFetcherFactory
+import coil3.svg.SvgDecoder
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
+import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import okhttp3.OkHttpClient
 import javax.inject.Singleton
@@ -36,4 +41,16 @@ object NetworkModule {
         .followSslRedirects(true)
         .retryOnConnectionFailure(true)
         .build()
+
+    @Provides
+    @Singleton
+    fun provideImageLoader(
+        @ApplicationContext context: Context,
+        okHttpClient: OkHttpClient,
+    ): ImageLoader = ImageLoader
+        .Builder(context)
+        .components {
+            add(OkHttpNetworkFetcherFactory(okHttpClient))
+            add(SvgDecoder.Factory())
+        }.build()
 }

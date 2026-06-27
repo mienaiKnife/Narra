@@ -97,4 +97,26 @@ class HtmlParserTest {
         assertEquals("https://example.com/image.png", (result[0] as ContentBlock.Image).url)
         assertEquals("Description", (result[0] as ContentBlock.Image).altText)
     }
+
+    @Test
+    fun `parse images nested in paragraphs or spans`() {
+        val html = "<p>Text before <span><img src=\"https://example.com/nested.png\" alt=\"Nested\"></span> Text after</p>"
+        val result = HtmlParser.parse(html)
+        
+        assertEquals(3, result.size)
+        assertEquals("Text before", result[0].text.text)
+        assertTrue(result[1] is ContentBlock.Image)
+        assertEquals("https://example.com/nested.png", (result[1] as ContentBlock.Image).url)
+        assertEquals("Text after", result[2].text.text)
+    }
+
+    @Test
+    fun `parse inline svg converts to data uri`() {
+        val html = "<svg width=\"10\" height=\"10\"><circle cx=\"5\" cy=\"5\" r=\"5\"/></svg>"
+        val result = HtmlParser.parse(html)
+        assertEquals(1, result.size)
+        assertTrue(result[0] is ContentBlock.Image)
+        val url = (result[0] as ContentBlock.Image).url
+        assertTrue(url.startsWith("data:image/svg+xml;base64,"))
+    }
 }

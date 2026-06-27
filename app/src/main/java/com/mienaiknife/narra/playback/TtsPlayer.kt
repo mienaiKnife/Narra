@@ -18,6 +18,7 @@ package com.mienaiknife.narra.playback
 import android.content.Context
 import android.graphics.Bitmap
 import android.media.AudioManager
+import android.os.Handler
 import android.os.Looper
 import androidx.core.net.toUri
 import androidx.media3.common.AudioAttributes
@@ -63,6 +64,19 @@ class TtsPlayer @Inject constructor(
     private val ttsEngine: TtsEngine,
     settingsManager: PlaybackSettingsManager,
 ) : SimpleBasePlayer(Looper.getMainLooper()) {
+
+    private val mainHandler = Handler(Looper.getMainLooper())
+    private var isInvalidationPending = false
+
+    private fun throttleInvalidateState() {
+        if (!isInvalidationPending) {
+            isInvalidationPending = true
+            mainHandler.post {
+                isInvalidationPending = false
+                invalidateState()
+            }
+        }
+    }
 
     var onSkipNext: (() -> Unit)? = null
     var onSkipPrevious: (() -> Unit)? = null
@@ -115,7 +129,16 @@ class TtsPlayer @Inject constructor(
             if (shouldDuck && !_pauseForInterruptions) {
                 // Ducking handled by engine/system
             } else {
-                _playbackSuppressionReason = PLAYBACK_SUPPRESSION_REASON_TRANSIENT_AUDIO_FOCUS_LOSS
+                // If it's a permanent loss, we should actually pause (set playWhenReady to false)
+                // Media3 recommendation for permanent loss is to stop or pause.
+                if (!_playWhenReady) {
+                    _playbackSuppressionReason = PLAYBACK_SUPPRESSION_REASON_NONE
+                } else if (!shouldDuck) {
+                    _playWhenReady = false // Permanent loss or transient without ducking
+                    _playbackSuppressionReason = PLAYBACK_SUPPRESSION_REASON_NONE
+                } else {
+                    _playbackSuppressionReason = PLAYBACK_SUPPRESSION_REASON_TRANSIENT_AUDIO_FOCUS_LOSS
+                }
                 pauseInternal()
             }
         }
@@ -146,7 +169,7 @@ class TtsPlayer @Inject constructor(
 
                         currentWordRange = absoluteStart until absoluteEnd
                         resumeWordOffset = absoluteStart
-                        invalidateState()
+                        throttleInvalidateState()
                     }
                 }
                 is TtsState.Ready -> {
@@ -162,14 +185,15 @@ class TtsPlayer @Inject constructor(
                             // starting new content, so autoplay transitions don't
                             // lose audio focus or CPU wake locks in the background.
                             unregisterNoisyReceiver()
-                            invalidateState()
+                            throttleInvalidateState()
                         }
                     }
                 }
                 is TtsState.Error -> {
                     isEngineSpeaking = false
+                    _playbackState = STATE_IDLE
                     _playerError = PlaybackException(state.message, null, PlaybackException.ERROR_CODE_IO_UNSPECIFIED)
-                    invalidateState()
+                    throttleInvalidateState()
                 }
                 else -> {
                     isEngineSpeaking = false
@@ -229,27 +253,31 @@ class TtsPlayer @Inject constructor(
             emptyList()
         }
 
-        val currentPositionMs = if (currentParagraphIndex >= 0 && paragraphs.isNotEmpty()) {
-            val progress = currentWordRange?.let { it.last.toFloat() / paragraphs[currentParagraphIndex].length.toFloat() }
-                ?: (resumeWordOffset.toFloat() / paragraphs[currentParagraphIndex].length.toFloat()).coerceIn(0f, 1f)
+        val currentPositionMs = if (currentParagraphIndex >= 0 && currentParagraphIndex < paragraphs.size) {
+            val paragraphLength = paragraphs[currentParagraphIndex].length
+            val progress = if (paragraphLength > 0) {
+                currentWordRange?.let { it.last.toFloat() / paragraphLength.toFloat() }
+                    ?: (resumeWordOffset.toFloat() / paragraphLength.toFloat()).coerceIn(0f, 1f)
+            } else {
+                0f
+            }
             (currentParagraphIndex * 1000L + (progress * 1000L).toLong())
         } else {
             0L
         }
 
-        val currentPlaybackState = if (playlist.isEmpty()) {
+        val currentPlaybackState = if (_playerError != null) {
+            STATE_IDLE
+        } else if (playlist.isEmpty()) {
             if (isPreparing) STATE_BUFFERING else STATE_IDLE
         } else if (isPreparing) {
             STATE_BUFFERING
-        } else if (_playbackState == STATE_IDLE && playlist.isNotEmpty()) {
-            // Force READY if we have a media item loaded, even if not playing.
-            // This ensures the session is seen as "active" by the system.
-            STATE_READY
         } else {
             _playbackState
         }
 
-        android.util.Log.d("TtsPlayer", "getState(): state=$_playbackState -> $currentPlaybackState, playWhenReady=$_playWhenReady, hasPlaylist=${playlist.isNotEmpty()}, isSpeaking=$isEngineSpeaking")
+        // Verbose logging removed to avoid log spam during TTS synthesis/playback.
+        // android.util.Log.d("TtsPlayer", "getState(): state=$_playbackState -> $currentPlaybackState, playWhenReady=$_playWhenReady, hasPlaylist=${playlist.isNotEmpty()}, isSpeaking=$isEngineSpeaking")
 
         return State.Builder()
             .setAvailableCommands(
@@ -302,12 +330,16 @@ class TtsPlayer @Inject constructor(
 
     override fun handleSetPlayWhenReady(playWhenReady: Boolean): ListenableFuture<*> {
         android.util.Log.d("TtsPlayer", "handleSetPlayWhenReady: current=$_playWhenReady, new=$playWhenReady")
-        if (_playWhenReady == playWhenReady) {
+        if (_playWhenReady == playWhenReady && _playerError == null) {
             return Futures.immediateVoidFuture()
         }
 
         _playWhenReady = playWhenReady
         if (playWhenReady) {
+            _playerError = null
+            if (_playbackState == STATE_IDLE && paragraphs.isNotEmpty()) {
+                _playbackState = STATE_READY
+            }
             val focusResult = audioFocusManager.requestAudioFocus()
             android.util.Log.d("TtsPlayer", "handleSetPlayWhenReady: requestAudioFocus result=$focusResult")
             if (focusResult == AudioManager.AUDIOFOCUS_REQUEST_GRANTED) {
@@ -327,6 +359,7 @@ class TtsPlayer @Inject constructor(
     }
 
     override fun handlePrepare(): ListenableFuture<*> {
+        _playerError = null
         if (_playbackState == STATE_IDLE) {
             _playbackState = STATE_BUFFERING
             invalidateState()
@@ -342,6 +375,7 @@ class TtsPlayer @Inject constructor(
     override fun handleStop(): ListenableFuture<*> {
         _playWhenReady = false
         _playbackState = STATE_IDLE
+        _playerError = null
         pauseInternal()
         ttsEngine.stop()
         paragraphs = emptyList()
@@ -472,6 +506,7 @@ class TtsPlayer @Inject constructor(
     fun speak(article: Article, parsedParagraphs: List<String>, playWhenReady: Boolean = false) {
         android.util.Log.d("TtsPlayer", "speak() called: title=${article.title}, paragraphs=${parsedParagraphs.size}, playWhenReady=$playWhenReady")
         isPreparing = true
+        _playerError = null
         invalidateState()
 
         ttsEngine.stop()

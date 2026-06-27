@@ -61,45 +61,73 @@ object HtmlParser {
             }
         }
 
-        nodes.forEach { node ->
-            when (node) {
-                is Element -> {
-                    val tagName = node.tagName()
-                    when {
-                        tagName == "p" || tagName == "li" -> {
-                            flushInline()
-                            addBlocksFromAnnotatedString(parseElement(node), blocks)
-                        }
-                        tagName == "blockquote" -> {
-                            flushInline()
-                            blocks.add(ContentBlock.BlockQuote(parseElement(node)))
-                        }
-                        tagName == "img" -> {
-                            flushInline()
-                            val src = node.attr("src")
-                            if (src.isNotEmpty()) {
-                                blocks.add(ContentBlock.Image(src, node.attr("alt").ifEmpty { null }))
+        fun walk(nodeList: List<Node>) {
+            nodeList.forEach { node ->
+                when (node) {
+                    is Element -> {
+                        val tagName = node.tagName()
+                        when {
+                            tagName == "img" || tagName == "svg" -> {
+                                flushInline()
+                                val src =
+                                    if (tagName == "img") {
+                                        node.attr("src")
+                                    } else {
+                                        val base64 = java.util.Base64.getEncoder().encodeToString(node.outerHtml().toByteArray())
+                                        "data:image/svg+xml;base64,$base64"
+                                    }
+
+                                if (src.isNotEmpty()) {
+                                    val alt =
+                                        node.attr("alt").ifEmpty {
+                                            node.parent()?.takeIf { it.tagName() == "span" }?.attr("alt")
+                                        }?.ifEmpty { null }
+                                    blocks.add(ContentBlock.Image(src, alt))
+                                }
+                            }
+                            tagName == "p" || tagName == "li" || (tagName.startsWith("h") && tagName.length == 2 && tagName[1].isDigit()) -> {
+                                if (node.select("img, svg").isNotEmpty()) {
+                                    flushInline()
+                                    walk(node.childNodes())
+                                } else {
+                                    flushInline()
+                                    if (tagName == "p" || tagName == "li") {
+                                        addBlocksFromAnnotatedString(parseElement(node), blocks)
+                                    } else {
+                                        val level = tagName.substring(1).toIntOrNull() ?: 1
+                                        blocks.add(ContentBlock.Heading(parseElement(node), level))
+                                    }
+                                }
+                            }
+                            tagName == "blockquote" -> {
+                                flushInline()
+                                if (node.select("img, svg").isNotEmpty()) {
+                                    walk(node.childNodes())
+                                } else {
+                                    blocks.add(ContentBlock.BlockQuote(parseElement(node)))
+                                }
+                            }
+                            node.isBlock -> {
+                                flushInline()
+                                walk(node.childNodes())
+                            }
+                            else -> {
+                                if (node.select("img, svg").isNotEmpty()) {
+                                    walk(node.childNodes())
+                                } else {
+                                    currentInlineNodes.add(node)
+                                }
                             }
                         }
-                        tagName.startsWith("h") && tagName.length == 2 && tagName[1].isDigit() -> {
-                            flushInline()
-                            val level = tagName.substring(1).toIntOrNull() ?: 1
-                            blocks.add(ContentBlock.Heading(parseElement(node), level))
-                        }
-                        node.isBlock -> {
-                            flushInline()
-                            parseNodes(node.childNodes(), blocks)
-                        }
-                        else -> {
-                            currentInlineNodes.add(node)
-                        }
                     }
-                }
-                is TextNode -> {
-                    currentInlineNodes.add(node)
+                    is TextNode -> {
+                        currentInlineNodes.add(node)
+                    }
                 }
             }
         }
+
+        walk(nodes)
         flushInline()
     }
 
@@ -165,7 +193,8 @@ object HtmlParser {
                     tagName == "head" ||
                     tagName == "link" ||
                     tagName == "meta" ||
-                    tagName == "svg"
+                    tagName == "svg" ||
+                    tagName == "img"
                 ) {
                     return
                 }

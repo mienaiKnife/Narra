@@ -52,6 +52,7 @@ android {
     namespace = "com.mienaiknife.narra"
     compileSdk = 37
 
+    // Forced re-sync to fix IDE indexing
     defaultConfig {
         applicationId = "com.mienaiknife.narra"
         minSdk = 24
@@ -139,6 +140,7 @@ dependencies {
     implementation(libs.okhttp)
     implementation(libs.coil.compose)
     implementation(libs.coil.network)
+    implementation(libs.coil.svg)
     implementation(libs.commons.compress)
     implementation(libs.androidx.work.runtime.ktx)
     implementation(libs.androidx.hilt.work)

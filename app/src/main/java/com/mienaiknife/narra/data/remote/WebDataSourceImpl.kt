@@ -124,6 +124,28 @@ constructor(
     }
 
     private fun preCleanDocument(doc: org.jsoup.nodes.Document) {
+        // Protect inline SVGs by converting them to img tags with data URIs
+        // Readability strips <svg> but preserves <img>
+        doc.select("svg").forEach { svg ->
+            val svgHtml = svg.outerHtml()
+            val base64 = java.util.Base64.getEncoder().encodeToString(svgHtml.toByteArray())
+            val dataUri = "data:image/svg+xml;base64,$base64"
+
+            val img = doc.createElement("img")
+            img.attr("src", dataUri)
+
+            // Try to find alt text in parent or svg itself
+            val alt = svg.attr("alt").ifEmpty {
+                svg.parent()?.takeIf { it.tagName() == "span" }?.attr("alt")
+            }?.ifEmpty { null }
+
+            if (alt != null) {
+                img.attr("alt", alt)
+            }
+
+            svg.replaceWith(img)
+        }
+
         val junkSelectors =
             listOf(
                 "nav",

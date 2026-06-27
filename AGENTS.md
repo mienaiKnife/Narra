@@ -77,6 +77,16 @@ Be aware these are coming so that current architectural decisions don't block th
   source URL so the content can be refreshed if the page changes
 - Playback state should be managed in a single `PlaybackService` (foreground service);
   ViewModels observe it, never control it directly
+- **Playback & Media Session**:
+  1. `TtsPlayer` (using `SimpleBasePlayer`) has a strict state contract: if a `PlaybackException`
+     is reported in `getState()`, the playback state MUST be `STATE_IDLE`. Violating this
+     will cause internal Media3 crashes.
+  2. Samsung devices require a valid `MediaButtonReceiver` PendingIntent on the underlying
+     `MediaSessionCompat` and an active session to prioritize hardware controls. Use
+     `MediaSessionUtils.forceActivationAndMbr()` whenever starting playback or reinforcing
+     session activation.
+  3. Aggressive session extras (e.g., `android.media.IS_EXPLICIT`, slot reservations) are
+     required for Samsung's "Now Playing" and Bluetooth routing to work reliably.
 
 ## Project Structure (target layout)
 

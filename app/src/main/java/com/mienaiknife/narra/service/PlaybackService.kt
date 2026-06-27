@@ -18,6 +18,7 @@ package com.mienaiknife.narra.service
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
+import android.content.ComponentName
 import android.content.Intent
 import android.os.Build
 import android.os.Bundle
@@ -30,8 +31,10 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
+import androidx.media3.session.CommandButton
 import androidx.media3.session.DefaultMediaNotificationProvider
 import androidx.media3.session.LibraryResult
+import androidx.media3.session.MediaButtonReceiver
 import androidx.media3.session.MediaLibraryService
 import androidx.media3.session.MediaSession
 import androidx.media3.session.SessionCommand
@@ -48,6 +51,7 @@ import com.mienaiknife.narra.playback.TtsPlayer
 import com.mienaiknife.narra.ui.theme.ThemeManager
 import com.mienaiknife.narra.ui.widget.PlaybackActionCallback
 import com.mienaiknife.narra.ui.widget.WidgetManager
+import com.mienaiknife.narra.utils.MediaSessionUtils
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -168,6 +172,15 @@ class PlaybackService : MediaLibraryService() {
                 PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
             )
 
+        // Log the presence of MediaButtonReceiver to debug Samsung pi=null issue
+        val mbrIntent = Intent(Intent.ACTION_MEDIA_BUTTON)
+        mbrIntent.setPackage(packageName)
+        val resolveInfos = packageManager.queryBroadcastReceivers(mbrIntent, 0)
+        android.util.Log.d("PlaybackService", "Found ${resolveInfos.size} MediaButtonReceivers")
+        resolveInfos.forEach { 
+            android.util.Log.d("PlaybackService", "MBR: ${it.activityInfo.name}")
+        }
+
         // Set default notification provider with custom configuration
         val notificationProvider =
             DefaultMediaNotificationProvider
@@ -183,6 +196,23 @@ class PlaybackService : MediaLibraryService() {
                 // Standard extras to help Android recognize the app's media capabilities
                 putBoolean("android.media.IS_EXPLICIT", true)
                 putBoolean("android.media.session.extra.EXTRA_SLOT_RESERVATION", true)
+                putBoolean("android.media.session.extra.EXTRA_RESERVE_PLAY_PAUSE", true)
+                putBoolean("android.media.session.extra.RESERVE_PLAY_PAUSE", true)
+                putBoolean("android.media.session.extra.RESERVE_SKIP_NEXT", true)
+                putBoolean("android.media.session.extra.RESERVE_SKIP_PREV", true)
+                putString("android.media.metadata.TITLE", getString(R.string.app_name))
+                putString("android.media.metadata.ARTIST", getString(R.string.app_name))
+
+                // Construct a PendingIntent for the MediaButtonReceiver to help Samsung prioritize this session
+                val mbrIntent = Intent(Intent.ACTION_MEDIA_BUTTON)
+                mbrIntent.setComponent(ComponentName(this@PlaybackService, MediaButtonReceiver::class.java))
+                val mbrPendingIntent = PendingIntent.getBroadcast(
+                    this@PlaybackService,
+                    0,
+                    mbrIntent,
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) PendingIntent.FLAG_MUTABLE else 0
+                )
+                putParcelable("android.media.session.extra.MEDIA_BUTTON_RECEIVER", mbrPendingIntent)
             }
 
         mediaSession =
@@ -219,6 +249,7 @@ class PlaybackService : MediaLibraryService() {
                                 .AcceptedResultBuilder(session)
                                 .setAvailableSessionCommands(sessionCommands)
                                 .setAvailablePlayerCommands(availablePlayerCommands)
+                                .setSessionExtras(sessionExtras)
                                 .build()
                         }
 
@@ -392,13 +423,33 @@ class PlaybackService : MediaLibraryService() {
                         }
                     },
                 ).setSessionActivity(pendingIntent)
+                .setMediaButtonPreferences(
+                    listOf(
+                        CommandButton.Builder(CommandButton.ICON_PLAY)
+                            .setPlayerCommand(Player.COMMAND_PLAY_PAUSE)
+                            .setDisplayName(getString(R.string.action_play))
+                            .build(),
+                    ),
+                ).setSessionExtras(sessionExtras)
                 .setExtras(sessionExtras)
                 .setId("NarraPlaybackSession")
                 .build()
 
+        android.util.Log.d("PlaybackService", "mediaSession built: $mediaSession")
+
+        // Ensure extras are set on the live session before adding it
+        mediaSession?.setSessionExtras(sessionExtras)
+        
+        // Explicitly add the session to the service to ensure it's published to the system
+        mediaSession?.let {
+            addSession(it)
+            // Attempt to force activation to claim focus on Samsung
+            MediaSessionUtils.forceActivationAndMbr(this, it)
+        }
+
         android.util.Log.d(
             "PlaybackService",
-            "MediaLibrarySession created: token=${mediaSession?.token}, " +
+            "MediaLibrarySession created and added: token=${mediaSession?.token}, " +
                 "isSystemSession=${mediaSession?.token != null}",
         )
 
@@ -445,6 +496,18 @@ class PlaybackService : MediaLibraryService() {
 
         // Ensure session is aware of the current state immediately
         ttsPlayer.triggerStateInvalidation()
+
+        // Samsung: Reinforce activation when playback starts
+        ttsPlayer.addListener(object : Player.Listener {
+            override fun onIsPlayingChanged(isPlaying: Boolean) {
+                if (isPlaying) {
+                    mediaSession?.let { session ->
+                        android.util.Log.d("PlaybackService", "Reinforcing session activation on playback start")
+                        MediaSessionUtils.forceActivationAndMbr(this@PlaybackService, session)
+                    }
+                }
+            }
+        })
     }
 
     override fun onStartCommand(
