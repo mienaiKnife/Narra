@@ -161,7 +161,8 @@ class ReaderViewModel @Inject constructor(
     }
 
     fun loadArticle(id: String) {
-        if (playbackManager.currentArticle.value?.id == id) {
+        val currentArt = playbackManager.currentArticle.value
+        if (currentArt?.id == id && currentArt.content.isNotEmpty()) {
             _isLoading.value = false
             _error.value = null
             return

@@ -138,7 +138,10 @@ constructor(
             android.os.Bundle().apply {
                 putFloat(TextToSpeech.Engine.KEY_PARAM_VOLUME, currentVolume)
             }
-        tts?.speak(text, TextToSpeech.QUEUE_FLUSH, params, utteranceId)
+        val result = tts?.speak(text, TextToSpeech.QUEUE_FLUSH, params, utteranceId)
+        if (result == TextToSpeech.ERROR) {
+            _state.value = TtsState.Error("Immediate error calling speak() for $utteranceId")
+        }
     }
 
     @Synchronized
@@ -154,7 +157,10 @@ constructor(
             android.os.Bundle().apply {
                 putFloat(TextToSpeech.Engine.KEY_PARAM_VOLUME, currentVolume)
             }
-        tts?.speak(text, TextToSpeech.QUEUE_ADD, params, utteranceId)
+        val result = tts?.speak(text, TextToSpeech.QUEUE_ADD, params, utteranceId)
+        if (result == TextToSpeech.ERROR) {
+            _state.value = TtsState.Error("Immediate error calling enqueue() for $utteranceId")
+        }
     }
 
     @Synchronized

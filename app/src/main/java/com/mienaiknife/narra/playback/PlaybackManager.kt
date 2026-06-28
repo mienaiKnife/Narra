@@ -110,7 +110,7 @@ class PlaybackManager @Inject constructor(
         scope.launch {
             settingsManager.lastArticleId.first()?.let { id ->
                 val article = repository.getArticleById(id)
-                if (article != null) {
+                if (article != null && article.isInQueue) {
                     setCurrentArticle(article, playWhenReady = false)
                 }
             }
@@ -205,7 +205,9 @@ class PlaybackManager @Inject constructor(
     private fun updateProgress() {
         val article = _currentArticle.value ?: return
         val duration = ttsPlayer.duration
-        if (duration <= 0) return
+        // Don't update if player doesn't have a valid duration yet, 
+        // UNLESS we are already finished, in which case we want to preserve that state.
+        if (duration <= 0 && ttsPlayer.playbackState != Player.STATE_ENDED) return
 
         val playbackState = ttsPlayer.playbackState
         val currentPosition = ttsPlayer.currentPosition
@@ -267,16 +269,25 @@ class PlaybackManager @Inject constructor(
         val newIds = newItems.map { it.mediaId }
 
         if (currentIds != newIds) {
-            val currentIndex = ttsPlayer.currentMediaItemIndex
-            val currentId = if (currentIndex >= 0 && currentIndex < currentIds.size) currentIds[currentIndex] else null
+            val currentArticleId = _currentArticle.value?.id
+            val newIndex = if (currentArticleId != null) newIds.indexOf(currentArticleId) else -1
 
-            ttsPlayer.setMediaItems(newItems)
-
-            // Try to restore current item index if it's still in the queue
-            val newIndex = newIds.indexOf(currentId)
             if (newIndex != -1) {
-                ttsPlayer.seekTo(newIndex, ttsPlayer.currentPosition)
+                // Use the 3-argument setMediaItems to ensure the correct index is selected atomically
+                // to prevent the notification from briefly showing metadata for the wrong item (index 0).
+                ttsPlayer.setMediaItems(newItems, newIndex, ttsPlayer.currentPosition)
+            } else {
+                ttsPlayer.setMediaItems(newItems)
             }
+
+            // Force a state report to ensure the notification metadata is refreshed immediately
+            ttsPlayer.triggerStateInvalidation()
+        }
+
+        // If current article is no longer in queue, clear it (unless currently playing)
+        val current = _currentArticle.value
+        if (current != null && !queueArticles.any { it.id == current.id } && !ttsPlayer.isPlaying) {
+            _currentArticle.value = null
         }
     }
 
@@ -310,8 +321,9 @@ class PlaybackManager @Inject constructor(
         isAutomatic: Boolean = false,
     ) {
         val isSameArticle = _currentArticle.value?.id == article.id
+        val isContentNowAvailable = _currentArticle.value?.content.isNullOrEmpty() && article.content.isNotEmpty()
 
-        if (!isSameArticle) {
+        if (!isSameArticle || isContentNowAvailable) {
             transitionJob?.cancel()
 
             _currentArticle.value = article
@@ -489,10 +501,10 @@ class PlaybackManager @Inject constructor(
     }
 
     fun togglePlayPause() {
-        if (!ttsPlayer.isPlaying) {
+        if (!ttsPlayer.isPlaying && !ttsPlayer.playWhenReady) {
             startPlaybackService()
         }
-        if (ttsPlayer.isPlaying || transitionJob?.isActive == true) {
+        if (ttsPlayer.isPlaying || ttsPlayer.playWhenReady || transitionJob?.isActive == true) {
             transitionJob?.cancel()
             ttsPlayer.pause()
         } else {

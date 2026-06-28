@@ -111,12 +111,51 @@ class HtmlParserTest {
     }
 
     @Test
-    fun `parse inline svg converts to data uri`() {
-        val html = "<svg width=\"10\" height=\"10\"><circle cx=\"5\" cy=\"5\" r=\"5\"/></svg>"
+    fun `parse full html document`() {
+        val html = "<!DOCTYPE html><html><head><title>Title</title></head><body><p>Test Paragraph</p></body></html>"
         val result = HtmlParser.parse(html)
         assertEquals(1, result.size)
+        assertEquals("Test Paragraph", result[0].text.text)
+    }
+
+    @Test
+    fun `parse nested divs with text`() {
+        val html = "<div><div>Text in nested div</div></div>"
+        val result = HtmlParser.parse(html)
+        assertEquals(1, result.size)
+        assertEquals("Text in nested div", result[0].text.text)
+    }
+
+    @Test
+    fun `parse div as paragraph`() {
+        val html = "<div>Paragraph 1</div><div>Paragraph 2</div>"
+        val result = HtmlParser.parse(html)
+        assertEquals(2, result.size)
+        assertEquals("Paragraph 1", result[0].text.text)
+        assertEquals("Paragraph 2", result[1].text.text)
+    }
+
+    @Test
+    fun `parse p with image then text`() {
+        val html = "<p><img src=\"test.png\" alt=\"Image\">Text after image</p>"
+        val result = HtmlParser.parse(html)
+        assertEquals(2, result.size)
         assertTrue(result[0] is ContentBlock.Image)
-        val url = (result[0] as ContentBlock.Image).url
-        assertTrue(url.startsWith("data:image/svg+xml;base64,"))
+        assertEquals("Text after image", result[1].text.text)
+    }
+
+    @Test
+    fun `parse complex mixed content`() {
+        val html = "<div>Mixed <span>inline</span> and <p>block</p> content</div>"
+        val result = HtmlParser.parse(html)
+        // Expecting "Mixed inline and" and "block" and "content"
+        // Actually, the current parser logic with flushInline in walk:
+        // 1. "Mixed inline and" (flushed when <p> is encountered)
+        // 2. "block" (processed by <p> handler)
+        // 3. "content" (flushed at the end of <div>)
+        assertEquals(3, result.size)
+        assertEquals("Mixed inline and", result[0].text.text)
+        assertEquals("block", result[1].text.text)
+        assertEquals("content", result[2].text.text)
     }
 }

@@ -192,7 +192,9 @@ class TtsPlayer @Inject constructor(
                 is TtsState.Error -> {
                     isEngineSpeaking = false
                     _playbackState = STATE_IDLE
+                    _playWhenReady = false
                     _playerError = PlaybackException(state.message, null, PlaybackException.ERROR_CODE_IO_UNSPECIFIED)
+                    pauseInternal() // Explicitly stop engine and release locks on error
                     throttleInvalidateState()
                 }
                 else -> {

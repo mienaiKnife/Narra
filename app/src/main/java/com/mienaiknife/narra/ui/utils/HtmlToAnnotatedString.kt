@@ -85,13 +85,14 @@ object HtmlParser {
                                     blocks.add(ContentBlock.Image(src, alt))
                                 }
                             }
-                            tagName == "p" || tagName == "li" || (tagName.startsWith("h") && tagName.length == 2 && tagName[1].isDigit()) -> {
+                            tagName == "p" || tagName == "li" || tagName == "div" || (tagName.startsWith("h") && tagName.length == 2 && tagName[1].isDigit()) -> {
                                 if (node.select("img, svg").isNotEmpty()) {
                                     flushInline()
                                     walk(node.childNodes())
+                                    flushInline()
                                 } else {
                                     flushInline()
-                                    if (tagName == "p" || tagName == "li") {
+                                    if (tagName == "p" || tagName == "li" || tagName == "div") {
                                         addBlocksFromAnnotatedString(parseElement(node), blocks)
                                     } else {
                                         val level = tagName.substring(1).toIntOrNull() ?: 1
@@ -103,6 +104,7 @@ object HtmlParser {
                                 flushInline()
                                 if (node.select("img, svg").isNotEmpty()) {
                                     walk(node.childNodes())
+                                    flushInline()
                                 } else {
                                     blocks.add(ContentBlock.BlockQuote(parseElement(node)))
                                 }
@@ -110,6 +112,7 @@ object HtmlParser {
                             node.isBlock -> {
                                 flushInline()
                                 walk(node.childNodes())
+                                flushInline()
                             }
                             else -> {
                                 if (node.select("img, svg").isNotEmpty()) {
@@ -139,6 +142,7 @@ object HtmlParser {
         parts.forEach { part ->
             val trimmed = part.trim()
             if (trimmed.isNotEmpty()) {
+                // Check if this text should actually be a blockquote if it was parented by one
                 blocks.add(ContentBlock.Paragraph(trimmed))
             }
         }
@@ -194,8 +198,13 @@ object HtmlParser {
                     tagName == "link" ||
                     tagName == "meta" ||
                     tagName == "svg" ||
-                    tagName == "img"
+                    tagName == "img" ||
+                    tagName == "html" ||
+                    tagName == "body"
                 ) {
+                    if (tagName == "html" || tagName == "body") {
+                        node.childNodes().forEach { traverse(it, builder) }
+                    }
                     return
                 }
 
