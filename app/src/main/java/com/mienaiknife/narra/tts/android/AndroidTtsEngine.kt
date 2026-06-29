@@ -60,7 +60,24 @@ constructor(
                 synchronized(this) {
                     if (status == TextToSpeech.SUCCESS) {
                         tts?.let { engine ->
-                            engine.language = Locale.getDefault()
+                            val defaultLocale = Locale.getDefault()
+                            val langResult = engine.setLanguage(defaultLocale)
+                            android.util.Log.i("AndroidTtsEngine", "Engine initialized. Default locale: $defaultLocale, setLanguage result: $langResult")
+                            
+                            if (langResult == TextToSpeech.LANG_MISSING_DATA || langResult == TextToSpeech.LANG_NOT_SUPPORTED) {
+                                android.util.Log.w("AndroidTtsEngine", "Default locale not supported, falling back to US English")
+                                engine.language = Locale.US
+                            }
+
+                            // Log available voices for debugging
+                            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
+                                val voices = engine.voices
+                                android.util.Log.i("AndroidTtsEngine", "Available voices count: ${voices?.size ?: 0}")
+                                voices?.take(3)?.forEach { 
+                                    android.util.Log.d("AndroidTtsEngine", "Voice: ${it.name}, Locale: ${it.locale}")
+                                }
+                            }
+
                             engine.setOnUtteranceProgressListener(
                                 object : UtteranceProgressListener() {
                                     override fun onStart(utteranceId: String?) {
@@ -81,6 +98,9 @@ constructor(
                                     }
 
                                     override fun onDone(utteranceId: String?) {
+                                        utteranceId?.let { id ->
+                                            _state.value = TtsState.Finished(id)
+                                        }
                                         _state.value = TtsState.Ready
                                     }
 
@@ -134,11 +154,13 @@ constructor(
             pendingRequests.add(PendingRequest.Speak(text, utteranceId))
             return
         }
+
         val params =
             android.os.Bundle().apply {
                 putFloat(TextToSpeech.Engine.KEY_PARAM_VOLUME, currentVolume)
             }
         val result = tts?.speak(text, TextToSpeech.QUEUE_FLUSH, params, utteranceId)
+        
         if (result == TextToSpeech.ERROR) {
             _state.value = TtsState.Error("Immediate error calling speak() for $utteranceId")
         }

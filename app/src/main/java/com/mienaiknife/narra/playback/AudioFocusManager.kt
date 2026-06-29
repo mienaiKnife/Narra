@@ -23,19 +23,14 @@ import android.os.Build
 
 class AudioFocusManager(
     context: Context,
-    private val onFocusChange: (Boolean, Boolean) -> Unit,
+    private val onFocusChange: (Int) -> Unit,
 ) {
     private val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
     private var focusRequest: AudioFocusRequest? = null
 
     private val audioFocusChangeListener =
         AudioManager.OnAudioFocusChangeListener { focusChange ->
-            when (focusChange) {
-                AudioManager.AUDIOFOCUS_GAIN -> onFocusChange(true, false)
-                AudioManager.AUDIOFOCUS_LOSS -> onFocusChange(false, false)
-                AudioManager.AUDIOFOCUS_LOSS_TRANSIENT -> onFocusChange(false, false)
-                AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK -> onFocusChange(false, true)
-            }
+            onFocusChange(focusChange)
         }
 
     fun requestAudioFocus(): Int = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {

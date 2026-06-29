@@ -48,6 +48,7 @@ object DatabaseModule {
 
         // 1. If DB exists, check if it's already encrypted
         if (dbFile.exists()) {
+            android.util.Log.i("DatabaseModule", "Database file exists at: ${dbFile.absolutePath}")
             val isEncrypted =
                 try {
                     net.zetetic.database.sqlcipher.SQLiteDatabase
@@ -59,6 +60,7 @@ object DatabaseModule {
                             null,
                         ).use { it.isOpen }
                 } catch (e: Exception) {
+                    android.util.Log.w("DatabaseModule", "Failed to open encrypted database: ${e.message}")
                     false
                 }
 
@@ -75,6 +77,7 @@ object DatabaseModule {
                                 null,
                             ).use { it.isOpen }
                     } catch (e: Exception) {
+                        android.util.Log.w("DatabaseModule", "Failed to open unencrypted database: ${e.message}")
                         false
                     }
 
@@ -87,12 +90,16 @@ object DatabaseModule {
                         android.util.Log.e("DatabaseModule", "Failed to encrypt database", e)
                     }
                 } else {
-                    android.util.Log.e("DatabaseModule", "Database is corrupted or encrypted with a different key.")
+                    android.util.Log.e("DatabaseModule", "Database is corrupted, encrypted with a DIFFERENT key, or inaccessible. DELETING for clean start.")
                     dbFile.delete()
                     File(dbFile.path + "-wal").delete()
                     File(dbFile.path + "-shm").delete()
                 }
+            } else {
+                android.util.Log.i("DatabaseModule", "Database opened successfully with current passphrase.")
             }
+        } else {
+            android.util.Log.i("DatabaseModule", "No database file found. Creating new one.")
         }
 
         val factory = SupportOpenHelperFactory(passphrase)

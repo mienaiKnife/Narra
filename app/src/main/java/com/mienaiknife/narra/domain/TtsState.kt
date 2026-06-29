@@ -29,6 +29,8 @@ sealed class TtsState {
         val frame: Int = 0,
     ) : TtsState()
 
+    data class Finished(val utteranceId: String) : TtsState()
+
     data class Error(
         val message: String,
     ) : TtsState()

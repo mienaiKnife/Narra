@@ -41,10 +41,12 @@ class NoisyAudioReceiver(
 
     fun register() {
         if (!isRegistered) {
-            context.registerReceiver(
-                receiver,
-                IntentFilter(AudioManager.ACTION_AUDIO_BECOMING_NOISY),
-            )
+            val filter = IntentFilter(AudioManager.ACTION_AUDIO_BECOMING_NOISY)
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                context.registerReceiver(receiver, filter, Context.RECEIVER_NOT_EXPORTED)
+            } else {
+                context.registerReceiver(receiver, filter)
+            }
             isRegistered = true
         }
     }

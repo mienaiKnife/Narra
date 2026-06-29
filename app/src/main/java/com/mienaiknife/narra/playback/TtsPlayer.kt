@@ -119,30 +119,32 @@ class TtsPlayer @Inject constructor(
     private var _seekForwardIncrement = 15000L
     private var _seekBackIncrement = 15000L
 
-    private val audioFocusManager = AudioFocusManager(context) { hasFocus, shouldDuck ->
-        if (hasFocus) {
-            _playbackSuppressionReason = PLAYBACK_SUPPRESSION_REASON_NONE
-            if (_playWhenReady) {
-                resumeInternal()
-            }
-        } else {
-            if (shouldDuck && !_pauseForInterruptions) {
-                // Ducking handled by engine/system
-            } else {
-                // If it's a permanent loss, we should actually pause (set playWhenReady to false)
-                // Media3 recommendation for permanent loss is to stop or pause.
-                if (!_playWhenReady) {
-                    _playbackSuppressionReason = PLAYBACK_SUPPRESSION_REASON_NONE
-                } else if (!shouldDuck) {
-                    _playWhenReady = false // Permanent loss or transient without ducking
-                    _playbackSuppressionReason = PLAYBACK_SUPPRESSION_REASON_NONE
-                } else {
-                    _playbackSuppressionReason = PLAYBACK_SUPPRESSION_REASON_TRANSIENT_AUDIO_FOCUS_LOSS
+    private val audioFocusManager = AudioFocusManager(context) { focusChange ->
+        android.util.Log.d("TtsPlayer", "onFocusChange: $focusChange")
+        when (focusChange) {
+            AudioManager.AUDIOFOCUS_GAIN -> {
+                val wasSuppressed = _playbackSuppressionReason != PLAYBACK_SUPPRESSION_REASON_NONE
+                _playbackSuppressionReason = PLAYBACK_SUPPRESSION_REASON_NONE
+                if (_playWhenReady && wasSuppressed) {
+                    resumeInternal()
                 }
+                invalidateState()
+            }
+            AudioManager.AUDIOFOCUS_LOSS -> {
+                _playWhenReady = false
+                _playbackSuppressionReason = PLAYBACK_SUPPRESSION_REASON_NONE
                 pauseInternal()
+                invalidateState()
+            }
+            AudioManager.AUDIOFOCUS_LOSS_TRANSIENT,
+            AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK -> {
+                if (_playWhenReady) {
+                    _playbackSuppressionReason = PLAYBACK_SUPPRESSION_REASON_TRANSIENT_AUDIO_FOCUS_LOSS
+                    pauseInternal()
+                    invalidateState()
+                }
             }
         }
-        invalidateState()
     }
 
     private val powerLockManager = PowerLockManager(context)
@@ -172,29 +174,43 @@ class TtsPlayer @Inject constructor(
                         throttleInvalidateState()
                     }
                 }
-                is TtsState.Ready -> {
+                is TtsState.Finished -> {
                     isEngineSpeaking = false
+                    val index = state.utteranceId.toIntOrNull()
                     if (_playWhenReady && _playbackState == STATE_READY && !isPreparing) {
-                        if (lastEnqueuedUtteranceId != null &&
-                            currentParagraphIndex.toString() == lastEnqueuedUtteranceId
-                        ) {
+                        if (index != null && index.toString() == lastEnqueuedUtteranceId) {
                             _playbackState = STATE_ENDED
                             _playWhenReady = false
-                            // Don't abandon audio focus or release locks here.
-                            // The caller decides when to clean up via stop() or
-                            // starting new content, so autoplay transitions don't
-                            // lose audio focus or CPU wake locks in the background.
                             unregisterNoisyReceiver()
                             throttleInvalidateState()
                         }
                     }
                 }
-                is TtsState.Error -> {
+                is TtsState.Ready -> {
                     isEngineSpeaking = false
-                    _playbackState = STATE_IDLE
-                    _playWhenReady = false
-                    _playerError = PlaybackException(state.message, null, PlaybackException.ERROR_CODE_IO_UNSPECIFIED)
-                    pauseInternal() // Explicitly stop engine and release locks on error
+                }
+                is TtsState.Error -> {
+                    android.util.Log.e("TtsPlayer", "Engine error: ${state.message}")
+                    isEngineSpeaking = false
+                    
+                    // If we were playing and encountered an error, try to advance to next paragraph
+                    if (_playWhenReady && _playbackState == STATE_READY && !isPreparing) {
+                        val nextIndex = currentParagraphIndex + 1
+                        if (nextIndex < paragraphs.size) {
+                            android.util.Log.i("TtsPlayer", "Advancing to next paragraph after error: $nextIndex")
+                            currentParagraphIndex = nextIndex
+                            resumeWordOffset = 0
+                            resumeInternal()
+                        } else {
+                            android.util.Log.i("TtsPlayer", "End of article reached after error")
+                            _playbackState = STATE_ENDED
+                            _playWhenReady = false
+                            pauseInternal()
+                        }
+                    } else if (_playbackState == STATE_IDLE) {
+                        _playerError = PlaybackException(state.message, null, PlaybackException.ERROR_CODE_IO_UNSPECIFIED)
+                        pauseInternal()
+                    }
                     throttleInvalidateState()
                 }
                 else -> {
@@ -277,9 +293,6 @@ class TtsPlayer @Inject constructor(
         } else {
             _playbackState
         }
-
-        // Verbose logging removed to avoid log spam during TTS synthesis/playback.
-        // android.util.Log.d("TtsPlayer", "getState(): state=$_playbackState -> $currentPlaybackState, playWhenReady=$_playWhenReady, hasPlaylist=${playlist.isNotEmpty()}, isSpeaking=$isEngineSpeaking")
 
         return State.Builder()
             .setAvailableCommands(
