@@ -41,8 +41,8 @@ class ToSpeakableTextTest {
         val text = "Hello World"
         val annotatedString = AnnotatedString(text)
         val result = annotatedString.toSpeakableText(context)
-        assertEquals(text, result)
-        assertEquals(text.length, result.length)
+        assertEquals(text, result.text)
+        assertEquals(text.length, result.text.length)
     }
 
     @Test
@@ -56,8 +56,8 @@ class ToSpeakableTextTest {
                 append(" more text")
             }
         val result = annotatedString.toSpeakableText(context)
-        assertEquals("Text    more text", result)
-        assertEquals(annotatedString.length, result.length)
+        assertEquals("Text    more text", result.text)
+        assertEquals(annotatedString.length, result.text.length)
     }
 
     @Test
@@ -78,9 +78,9 @@ class ToSpeakableTextTest {
 
         val result = annotatedString.toSpeakableText(context)
 
-        assertEquals(annotatedString.length, result.length)
+        assertEquals(annotatedString.length, result.text.length)
         val expectedPart = " link to example.com                      "
-        assertEquals(expectedPart, result.substring(10, 10 + url.length))
+        assertEquals(expectedPart, result.text.substring(10, 10 + url.length))
     }
 
     @Test
@@ -100,9 +100,9 @@ class ToSpeakableTextTest {
 
         val result = annotatedString.toSpeakableText(context)
 
-        assertEquals(annotatedString.length, result.length)
+        assertEquals(annotatedString.length, result.text.length)
         // " link to t.co " truncated to 12 chars is " link to t.c"
-        assertEquals(" link to t.c", result.substring(4))
+        assertEquals(" link to t.c", result.text.substring(4))
     }
 
     @Test
@@ -117,8 +117,8 @@ class ToSpeakableTextTest {
             }
 
         val result = annotatedString.toSpeakableText(context)
-        assertEquals(annotatedString.text, result)
-        assertEquals(annotatedString.length, result.length)
+        assertEquals(annotatedString.text, result.text)
+        assertEquals(annotatedString.length, result.text.length)
     }
 
     @Test
@@ -138,9 +138,9 @@ class ToSpeakableTextTest {
 
         val result = annotatedString.toSpeakableText(context)
 
-        assertEquals(annotatedString.length, result.length)
-        assertEquals("Text   ", result.substring(0, 7))
+        assertEquals(annotatedString.length, result.text.length)
+        assertEquals("Text   ", result.text.substring(0, 7))
         // " link to example.com " (21 chars) for url (24 chars) -> 3 spaces padding
-        assertEquals(" link to example.com    ", result.substring(12))
+        assertEquals(" link to example.com    ", result.text.substring(12))
     }
 }

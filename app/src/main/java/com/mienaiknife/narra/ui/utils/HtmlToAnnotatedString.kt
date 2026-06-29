@@ -27,6 +27,7 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.sp
 import androidx.core.net.toUri
+import com.mienaiknife.narra.domain.models.SpeakableText
 import com.mienaiknife.narra.ui.models.ContentBlock
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Element
@@ -86,13 +87,13 @@ object HtmlParser {
                                 }
                             }
                             tagName == "p" || tagName == "li" || tagName == "div" || (tagName.startsWith("h") && tagName.length == 2 && tagName[1].isDigit()) -> {
-                                if (node.select("img, svg").isNotEmpty()) {
+                                if (tagName == "div" || node.select("p, li, div, blockquote, img, svg").isNotEmpty()) {
                                     flushInline()
                                     walk(node.childNodes())
                                     flushInline()
                                 } else {
                                     flushInline()
-                                    if (tagName == "p" || tagName == "li" || tagName == "div") {
+                                    if (tagName == "p" || tagName == "li") {
                                         addBlocksFromAnnotatedString(parseElement(node), blocks)
                                     } else {
                                         val level = tagName.substring(1).toIntOrNull() ?: 1
@@ -142,10 +143,48 @@ object HtmlParser {
         parts.forEach { part ->
             val trimmed = part.trim()
             if (trimmed.isNotEmpty()) {
-                // Check if this text should actually be a blockquote if it was parented by one
-                blocks.add(ContentBlock.Paragraph(trimmed))
+                // Split long paragraphs to avoid TTS engine limits (typically ~4000 chars)
+                val splitParts = splitLongParagraph(trimmed, maxLength = 3000)
+                splitParts.forEach {
+                    blocks.add(ContentBlock.Paragraph(it))
+                }
             }
         }
+    }
+
+    private fun splitLongParagraph(
+        annotatedString: AnnotatedString,
+        maxLength: Int,
+    ): List<AnnotatedString> {
+        if (annotatedString.length <= maxLength) return listOf(annotatedString)
+
+        val result = mutableListOf<AnnotatedString>()
+        val text = annotatedString.text
+        var currentStart = 0
+
+        while (currentStart < text.length) {
+            var currentEnd = (currentStart + maxLength).coerceAtMost(text.length)
+
+            if (currentEnd < text.length) {
+                // Try to find a good breaking point (sentence end or space)
+                val searchRange = text.substring(currentStart, currentEnd)
+                val lastSentenceEnd = searchRange.lastIndexOfAny(listOf(".", "!", "?", "。", "！", "？"))
+                
+                if (lastSentenceEnd != -1 && lastSentenceEnd > maxLength / 2) {
+                    currentEnd = currentStart + lastSentenceEnd + 1
+                } else {
+                    val lastSpace = searchRange.lastIndexOf(' ')
+                    if (lastSpace != -1 && lastSpace > maxLength / 2) {
+                        currentEnd = currentStart + lastSpace + 1
+                    }
+                }
+            }
+
+            result.add(annotatedString.subSequence(currentStart, currentEnd))
+            currentStart = currentEnd
+        }
+
+        return result
     }
 
     private fun splitAnnotatedString(
@@ -275,53 +314,56 @@ object HtmlParser {
 fun AnnotatedString.toSpeakableText(
     context: Context,
     shortenLinks: Boolean = true,
-): String {
-    val result = StringBuilder(text)
+): SpeakableText {
+    val resultText = this.text
+    val speakableText = StringBuilder(resultText)
 
     // 1. Handle footnotes: replace with spaces to preserve length
     val footnotes = getStringAnnotations("footnote", 0, length)
     for (annotation in footnotes) {
         for (i in annotation.start until annotation.end) {
-            if (i < result.length) result.setCharAt(i, ' ')
+            if (i < speakableText.length) speakableText.setCharAt(i, ' ')
         }
     }
 
-    if (!shortenLinks) return result.toString()
+    if (shortenLinks) {
+        // 2. Handle links: shorten if they look like URLs, but preserve length via padding
+        val links = getStringAnnotations("link", 0, length)
+        val linkToPrefix = context.getString(com.mienaiknife.narra.R.string.reader_link_to)
 
-    // 2. Handle links: shorten if they look like URLs, but preserve length via padding
-    val links = getStringAnnotations("link", 0, length)
-    val linkToPrefix = context.getString(com.mienaiknife.narra.R.string.reader_link_to)
+        for (annotation in links) {
+            val start = annotation.start
+            val end = annotation.end
+            val originalLength = end - start
+            if (originalLength <= 0) continue
 
-    for (annotation in links) {
-        val start = annotation.start
-        val end = annotation.end
-        val originalLength = end - start
-        if (originalLength <= 0) continue
+            val linkText = resultText.substring(start, end).trim()
+            if (isUrlLike(linkText)) {
+                val simplified =
+                    try {
+                        linkToPrefix.format(simplifyUrl(annotation.item))
+                    } catch (_: Exception) {
+                        linkText
+                    }
 
-        val linkText = text.substring(start, end).trim()
-        if (isUrlLike(linkText)) {
-            val simplified =
-                try {
-                    linkToPrefix.format(simplifyUrl(annotation.item))
-                } catch (_: Exception) {
-                    linkText
-                }
-
-            if (simplified.length <= originalLength) {
-                val padded = simplified.padEnd(originalLength, ' ')
-                for (i in 0 until originalLength) {
-                    result.setCharAt(start + i, padded[i])
-                }
-            } else {
-                // Truncate if simplified text is somehow longer than original (rare for URLs)
-                for (i in 0 until originalLength) {
-                    result.setCharAt(start + i, simplified[i])
+                if (simplified.length <= originalLength) {
+                    val padded = simplified.padEnd(originalLength, ' ')
+                    for (i in 0 until originalLength) {
+                        speakableText.setCharAt(start + i, padded[i])
+                    }
+                } else {
+                    // Truncate if simplified text is somehow longer than original (rare for URLs)
+                    for (i in 0 until originalLength) {
+                        speakableText.setCharAt(start + i, simplified[i])
+                    }
                 }
             }
         }
     }
 
-    return result.toString()
+    val finalText = speakableText.toString()
+    val (transliterated, map) = LanguageUtils.transliterateWithMapping(finalText)
+    return SpeakableText(transliterated, map)
 }
 
 private fun isUrlLike(text: String): Boolean = text.startsWith("http://") ||

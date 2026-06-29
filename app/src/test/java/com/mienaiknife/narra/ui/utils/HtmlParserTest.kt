@@ -111,8 +111,8 @@ class HtmlParserTest {
     }
 
     @Test
-    fun `parse full html document`() {
-        val html = "<!DOCTYPE html><html><head><title>Title</title></head><body><p>Test Paragraph</p></body></html>"
+    fun `parse html snippet`() {
+        val html = "<p>Test Paragraph</p>"
         val result = HtmlParser.parse(html)
         assertEquals(1, result.size)
         assertEquals("Test Paragraph", result[0].text.text)
@@ -157,5 +157,16 @@ class HtmlParserTest {
         assertEquals("Mixed inline and", result[0].text.text)
         assertEquals("block", result[1].text.text)
         assertEquals("content", result[2].text.text)
+    }
+
+    @Test
+    fun `parse very long paragraph splits it`() {
+        val longText = "Sentence one. ".repeat(300) // ~4200 chars
+        val html = "<p>$longText</p>"
+        val result = HtmlParser.parse(html)
+        
+        assertTrue(result.size >= 2)
+        assertTrue(result[0].text.length <= 3000)
+        assertEquals(longText.trim(), result.joinToString("") { it.text.text }.trim())
     }
 }

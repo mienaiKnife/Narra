@@ -29,6 +29,7 @@ import androidx.media3.common.Timeline
 import androidx.media3.common.util.UnstableApi
 import com.mienaiknife.narra.R
 import com.mienaiknife.narra.domain.TtsState
+import com.mienaiknife.narra.domain.models.SpeakableText
 import com.mienaiknife.narra.domain.models.Article
 import com.mienaiknife.narra.domain.repository.ContentRepository
 import com.mienaiknife.narra.service.PlaybackService
@@ -350,22 +351,24 @@ class PlaybackManager @Inject constructor(
                 val readAltText = settingsManager.readAltText.first()
                 val shortenHyperlinks = settingsManager.shortenHyperlinks.first()
 
-                val ttsTexts = withContext(Dispatchers.Default) {
+                val ttsSpeakables = withContext(Dispatchers.Default) {
                     actualBlocks.map { block ->
-                        when (block) {
-                            is ContentBlock.Image -> if (readAltText) {
-                                block.altText?.let { context.getString(R.string.reader_image_prefix, it) } ?: ""
+                        if (block is ContentBlock.Image) {
+                            if (readAltText) {
+                                val alt = block.altText?.let { context.getString(R.string.reader_image_prefix, it) } ?: ""
+                                SpeakableText(alt)
                             } else {
-                                ""
+                                SpeakableText("")
                             }
-                            else -> block.text.toSpeakableText(context, shortenLinks = shortenHyperlinks)
+                        } else {
+                            block.text.toSpeakableText(context, shortenLinks = shortenHyperlinks)
                         }
                     }
                 }
 
                 if (isAutomatic && playWhenReady) {
                     // Set up player state BEFORE starting the service to ensure Media3 has metadata immediately
-                    ttsPlayer.speak(article, ttsTexts, playWhenReady = false)
+                    ttsPlayer.speak(article, ttsSpeakables, playWhenReady = false)
                     startPlaybackService()
 
                     val playChimeAndTitle = settingsManager.playChimeAndTitle.first()
@@ -411,10 +414,10 @@ class PlaybackManager @Inject constructor(
                     ttsPlayer.play()
                 } else {
                     if (playWhenReady) {
-                        ttsPlayer.speak(article, ttsTexts, playWhenReady = true)
+                        ttsPlayer.speak(article, ttsSpeakables, playWhenReady = true)
                         startPlaybackService()
                     } else {
-                        ttsPlayer.speak(article, ttsTexts, playWhenReady = false)
+                        ttsPlayer.speak(article, ttsSpeakables, playWhenReady = false)
                     }
                 }
             }
@@ -542,13 +545,14 @@ class PlaybackManager @Inject constructor(
                 val readAltText = settingsManager.readAltText.first()
                 val shortenHyperlinks = settingsManager.shortenHyperlinks.first()
 
-                val ttsTexts = withContext(Dispatchers.Default) {
+                val ttsSpeakables = withContext(Dispatchers.Default) {
                     blocks.map { block ->
                         if (block is ContentBlock.Image) {
                             if (readAltText) {
-                                block.altText?.let { context.getString(R.string.reader_image_prefix, it) } ?: ""
+                                val alt = block.altText?.let { context.getString(R.string.reader_image_prefix, it) } ?: ""
+                                SpeakableText(alt)
                             } else {
-                                ""
+                                SpeakableText("")
                             }
                         } else {
                             block.text.toSpeakableText(context, shortenLinks = shortenHyperlinks)
@@ -562,7 +566,7 @@ class PlaybackManager @Inject constructor(
                         currentWordOffset = 0,
                         progress = 0f,
                     ),
-                    ttsTexts,
+                    ttsSpeakables,
                     ttsPlayer.playWhenReady,
                 )
             }
@@ -594,13 +598,14 @@ class PlaybackManager @Inject constructor(
                 val readAltText = settingsManager.readAltText.first()
                 val shortenHyperlinks = settingsManager.shortenHyperlinks.first()
 
-                val ttsTexts = withContext(Dispatchers.Default) {
+                val ttsSpeakables = withContext(Dispatchers.Default) {
                     blocks.map { block ->
                         if (block is ContentBlock.Image) {
                             if (readAltText) {
-                                block.altText?.let { context.getString(R.string.reader_image_prefix, it) } ?: ""
+                                val alt = block.altText?.let { context.getString(R.string.reader_image_prefix, it) } ?: ""
+                                SpeakableText(alt)
                             } else {
-                                ""
+                                SpeakableText("")
                             }
                         } else {
                             block.text.toSpeakableText(context, shortenLinks = shortenHyperlinks)
@@ -614,7 +619,7 @@ class PlaybackManager @Inject constructor(
                         currentWordOffset = 0,
                         progress = 0f,
                     ),
-                    ttsTexts,
+                    ttsSpeakables,
                     ttsPlayer.playWhenReady,
                 )
             }

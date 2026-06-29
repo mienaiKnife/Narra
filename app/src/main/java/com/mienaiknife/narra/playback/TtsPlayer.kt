@@ -40,6 +40,7 @@ import com.google.common.util.concurrent.ListenableFuture
 import com.mienaiknife.narra.domain.TtsEngine
 import com.mienaiknife.narra.domain.TtsState
 import com.mienaiknife.narra.domain.models.Article
+import com.mienaiknife.narra.domain.models.SpeakableText
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -92,7 +93,7 @@ class TtsPlayer @Inject constructor(
     private var _playbackSuppressionReason = PLAYBACK_SUPPRESSION_REASON_NONE
     private var _playerError: PlaybackException? = null
 
-    private var paragraphs: List<String> = emptyList()
+    private var paragraphs: List<SpeakableText> = emptyList()
     private val _currentParagraphIndexFlow = MutableStateFlow(0)
     val currentParagraphIndexFlow = _currentParagraphIndexFlow.asStateFlow()
     var currentParagraphIndex: Int
@@ -166,11 +167,17 @@ class TtsPlayer @Inject constructor(
                             currentParagraphIndex = index
                         }
 
-                        val absoluteStart = baseWordOffset + state.start
-                        val absoluteEnd = baseWordOffset + state.end
+                        val speakable = paragraphs.getOrNull(index)
+                        
+                        val ttsStart = baseWordOffset + state.start
+                        val ttsEnd = baseWordOffset + state.end
 
-                        currentWordRange = absoluteStart until absoluteEnd
-                        resumeWordOffset = absoluteStart
+                        // Map TTS-space offsets back to Original-space for UI highlighting
+                        val originalStart = speakable?.mapTtsToOriginal(ttsStart) ?: ttsStart
+                        val originalEnd = speakable?.mapTtsToOriginal(ttsEnd) ?: ttsEnd
+
+                        currentWordRange = originalStart until originalEnd
+                        resumeWordOffset = ttsStart // resumeWordOffset stays in TTS-space
                         throttleInvalidateState()
                     }
                 }
@@ -197,7 +204,7 @@ class TtsPlayer @Inject constructor(
                     if (_playWhenReady && _playbackState == STATE_READY && !isPreparing) {
                         val nextIndex = currentParagraphIndex + 1
                         if (nextIndex < paragraphs.size) {
-                            android.util.Log.i("TtsPlayer", "Advancing to next paragraph after error: $nextIndex")
+                            android.util.Log.i("TtsPlayer", "Advancing to next paragraph after error: $nextIndex (Current text length: ${paragraphs[currentParagraphIndex].text.length})")
                             currentParagraphIndex = nextIndex
                             resumeWordOffset = 0
                             resumeInternal()
@@ -207,9 +214,10 @@ class TtsPlayer @Inject constructor(
                             _playWhenReady = false
                             pauseInternal()
                         }
-                    } else if (_playbackState == STATE_IDLE) {
+                    } else if (_playbackState == STATE_IDLE || _playbackState == STATE_BUFFERING) {
                         _playerError = PlaybackException(state.message, null, PlaybackException.ERROR_CODE_IO_UNSPECIFIED)
                         pauseInternal()
+                        _playbackState = STATE_IDLE
                     }
                     throttleInvalidateState()
                 }
@@ -272,10 +280,11 @@ class TtsPlayer @Inject constructor(
         }
 
         val currentPositionMs = if (currentParagraphIndex >= 0 && currentParagraphIndex < paragraphs.size) {
-            val paragraphLength = paragraphs[currentParagraphIndex].length
+            val paragraph = paragraphs[currentParagraphIndex]
+            val paragraphLength = paragraph.text.length
             val progress = if (paragraphLength > 0) {
-                currentWordRange?.let { it.last.toFloat() / paragraphLength.toFloat() }
-                    ?: (resumeWordOffset.toFloat() / paragraphLength.toFloat()).coerceIn(0f, 1f)
+                // progress calculation should be based on TTS-space offsets
+                (resumeWordOffset.toFloat() / paragraphLength.toFloat()).coerceIn(0f, 1f)
             } else {
                 0f
             }
@@ -449,20 +458,22 @@ class TtsPlayer @Inject constructor(
         val clampedPos = positionMs.coerceIn(0, totalMs - 1)
         val pIndex = (clampedPos / 1000).toInt().coerceIn(0, paragraphs.size - 1)
         val progress = (clampedPos % 1000) / 1000f
-        val wordOffset = (progress * paragraphs[pIndex].length).toInt()
+        
+        val speakable = paragraphs[pIndex]
+        val wordOffset = (progress * speakable.text.length).toInt()
 
         currentParagraphIndex = pIndex
         resumeWordOffset = wordOffset
 
-        // Find a word boundary for the highlight
-        val text = paragraphs[pIndex]
+        // Find a word boundary for the highlight in Original-space
+        val text = speakable.text
         if (text.isNotEmpty()) {
             val start = wordOffset.coerceIn(0, text.length - 1)
             var end = start
             while (end < text.length && !text[end].isWhitespace()) {
                 end++
             }
-            currentWordRange = start until end
+            currentWordRange = speakable.mapTtsToOriginal(start) until speakable.mapTtsToOriginal(end)
         } else {
             currentWordRange = null
         }
@@ -518,7 +529,7 @@ class TtsPlayer @Inject constructor(
     }
 
     // TtsPlayer specific
-    fun speak(article: Article, parsedParagraphs: List<String>, playWhenReady: Boolean = false) {
+    fun speak(article: Article, parsedParagraphs: List<SpeakableText>, playWhenReady: Boolean = false) {
         android.util.Log.d("TtsPlayer", "speak() called: title=${article.title}, paragraphs=${parsedParagraphs.size}, playWhenReady=$playWhenReady")
         isPreparing = true
         _playerError = null
@@ -569,18 +580,22 @@ class TtsPlayer @Inject constructor(
         _playbackState = STATE_READY
 
         currentParagraphIndex = article.currentParagraphIndex.coerceIn(0, paragraphs.size - 1).takeIf { paragraphs.isNotEmpty() } ?: 0
-        resumeWordOffset = article.currentWordOffset.coerceAtLeast(0)
+        
+        // resumeWordOffset is in TTS-space. Map saved Original-space offset to TTS-space.
+        val originalOffset = article.currentWordOffset.coerceAtLeast(0)
+        resumeWordOffset = paragraphs.getOrNull(currentParagraphIndex)?.mapOriginalToTts(originalOffset) ?: originalOffset
 
         // Initialize highlight from saved offset
         if (currentParagraphIndex in paragraphs.indices) {
-            val text = paragraphs[currentParagraphIndex]
-            val start = resumeWordOffset.coerceIn(0, text.length.let { if (it > 0) it - 1 else 0 })
+            val speakable = paragraphs[currentParagraphIndex]
+            val text = speakable.text
+            val ttsStart = resumeWordOffset.coerceIn(0, text.length.let { if (it > 0) it - 1 else 0 })
             if (text.isNotEmpty()) {
-                var end = start
-                while (end < text.length && !text[end].isWhitespace()) {
-                    end++
+                var ttsEnd = ttsStart
+                while (ttsEnd < text.length && !text[ttsEnd].isWhitespace()) {
+                    ttsEnd++
                 }
-                currentWordRange = start until end
+                currentWordRange = speakable.mapTtsToOriginal(ttsStart) until speakable.mapTtsToOriginal(ttsEnd)
             } else {
                 currentWordRange = null
             }
@@ -675,10 +690,11 @@ class TtsPlayer @Inject constructor(
         baseWordOffset = wordOffset
         currentParagraphIndex = startIndex
         for (i in startIndex until paragraphs.size) {
-            val text = if (i == startIndex && wordOffset > 0 && wordOffset < paragraphs[i].length) {
-                paragraphs[i].substring(wordOffset)
+            val speakable = paragraphs[i]
+            val text = if (i == startIndex && wordOffset > 0 && wordOffset < speakable.text.length) {
+                speakable.text.substring(wordOffset)
             } else {
-                paragraphs[i]
+                speakable.text
             }
             if (i == startIndex) {
                 ttsEngine.speak(text, i.toString())
@@ -695,7 +711,10 @@ class TtsPlayer @Inject constructor(
             ttsEngine.stop()
             currentParagraphIndex = paragraphIndex
             currentWordRange = wordRange
-            resumeWordOffset = wordRange.first
+            
+            // Map Original-space wordRange.first to TTS-space resumeWordOffset
+            resumeWordOffset = paragraphs[paragraphIndex].mapOriginalToTts(wordRange.first)
+
             _playWhenReady = playWhenReady
             if (playWhenReady) {
                 requestAudioFocus()
