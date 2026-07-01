@@ -341,9 +341,6 @@ private fun QueueItemRow(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         } else {
-                            if (progress >= 1f) {
-                                Spacer(modifier = Modifier.weight(1f))
-                            }
                             Text(
                                 text = DateUtils.formatElapsedTime(totalDuration, totalDuration),
                                 style = MaterialTheme.typography.labelSmall,
