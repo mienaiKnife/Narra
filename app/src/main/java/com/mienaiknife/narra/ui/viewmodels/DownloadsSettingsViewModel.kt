@@ -21,6 +21,7 @@ import com.mienaiknife.narra.R
 import com.mienaiknife.narra.data.settings.DownloadSettingsManager
 import com.mienaiknife.narra.data.settings.SyncSettingsManager
 import com.mienaiknife.narra.domain.repository.ContentRepository
+import com.mienaiknife.narra.playback.PlaybackManager
 import com.mienaiknife.narra.ui.UiText
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -38,6 +39,7 @@ class DownloadsSettingsViewModel @Inject constructor(
     private val downloadSettingsManager: DownloadSettingsManager,
     private val syncSettingsManager: SyncSettingsManager,
     private val contentRepository: ContentRepository,
+    private val playbackManager: PlaybackManager,
 ) : ViewModel() {
 
     private val _message = MutableStateFlow<UiText?>(null)
@@ -108,18 +110,21 @@ class DownloadsSettingsViewModel @Inject constructor(
 
     fun deleteAllMetadata() {
         viewModelScope.launch {
+            playbackManager.stop()
             contentRepository.deleteAllMetadata()
         }
     }
 
     fun deleteAllFeeds() {
         viewModelScope.launch {
+            playbackManager.stop()
             contentRepository.deleteAllFeeds()
         }
     }
 
     fun deleteDatabase() {
         viewModelScope.launch {
+            playbackManager.stop()
             contentRepository.deleteAllMetadata()
             contentRepository.deleteAllFeeds()
         }
@@ -173,6 +178,7 @@ class DownloadsSettingsViewModel @Inject constructor(
     fun restoreDatabase(inputStream: InputStream?) {
         if (inputStream == null) return
         viewModelScope.launch {
+            playbackManager.stop()
             inputStream.use {
                 contentRepository.restoreDatabase(it)
                     .onSuccess {
