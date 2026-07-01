@@ -345,7 +345,7 @@ class PlaybackManager @Inject constructor(
 
             transitionJob = scope.launch {
                 val actualBlocks = withContext(Dispatchers.Default) {
-                    blocks ?: HtmlParser.parse(article.content)
+                    blocks ?: HtmlParser.parse(article.content, article.url)
                 }
 
                 val readAltText = settingsManager.readAltText.first()
@@ -539,7 +539,7 @@ class PlaybackManager @Inject constructor(
         if (ttsPlayer.currentPosition > 3000) {
             scope.launch {
                 val blocks = withContext(Dispatchers.Default) {
-                    HtmlParser.parse(article.content)
+                    HtmlParser.parse(article.content, article.url)
                 }
 
                 val readAltText = settingsManager.readAltText.first()
@@ -592,7 +592,7 @@ class PlaybackManager @Inject constructor(
             } else {
                 // Restart current if no previous
                 val blocks = withContext(Dispatchers.Default) {
-                    HtmlParser.parse(current.content)
+                    HtmlParser.parse(current.content, current.url)
                 }
 
                 val readAltText = settingsManager.readAltText.first()

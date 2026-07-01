@@ -35,8 +35,18 @@ import org.jsoup.nodes.Node
 import org.jsoup.nodes.TextNode
 
 object HtmlParser {
-    fun parse(html: String): List<ContentBlock> {
-        val document = Jsoup.parseBodyFragment(html)
+    private data class ListContext(val type: String, var index: Int = 0)
+
+    fun parse(
+        html: String,
+        baseUrl: String? = null,
+    ): List<ContentBlock> {
+        val document =
+            if (baseUrl != null) {
+                Jsoup.parseBodyFragment(html, baseUrl)
+            } else {
+                Jsoup.parseBodyFragment(html)
+            }
         val body = document.body()
         val blocks = mutableListOf<ContentBlock>()
 
@@ -50,19 +60,28 @@ object HtmlParser {
         blocks: MutableList<ContentBlock>,
     ) {
         val currentInlineNodes = mutableListOf<Node>()
+        var pendingListPrefix: String? = null
 
         fun flushInline() {
-            if (currentInlineNodes.isNotEmpty()) {
+            if (currentInlineNodes.isNotEmpty() || pendingListPrefix != null) {
                 val annotatedString =
                     buildAnnotatedString {
+                        pendingListPrefix?.let { append(it) }
+                        pendingListPrefix = null
                         currentInlineNodes.forEach { traverse(it, this) }
                     }
-                addBlocksFromAnnotatedString(annotatedString, blocks)
+                val trimmed = annotatedString.trim()
+                if (trimmed.text.isNotBlank()) {
+                    addBlocksFromAnnotatedString(trimmed, blocks)
+                }
                 currentInlineNodes.clear()
             }
         }
 
-        fun walk(nodeList: List<Node>) {
+        fun walk(
+            nodeList: List<Node>,
+            listContext: ListContext? = null,
+        ) {
             nodeList.forEach { node ->
                 when (node) {
                     is Element -> {
@@ -72,7 +91,7 @@ object HtmlParser {
                                 flushInline()
                                 val src =
                                     if (tagName == "img") {
-                                        node.attr("src")
+                                        node.absUrl("src").ifEmpty { node.attr("src") }
                                     } else {
                                         val base64 = java.util.Base64.getEncoder().encodeToString(node.outerHtml().toByteArray())
                                         "data:image/svg+xml;base64,$base64"
@@ -86,14 +105,34 @@ object HtmlParser {
                                     blocks.add(ContentBlock.Image(src, alt))
                                 }
                             }
-                            tagName == "p" || tagName == "li" || tagName == "div" || (tagName.startsWith("h") && tagName.length == 2 && tagName[1].isDigit()) -> {
-                                if (tagName == "div" || node.select("p, li, div, blockquote, img, svg").isNotEmpty()) {
-                                    flushInline()
-                                    walk(node.childNodes())
+                            tagName == "hr" -> {
+                                flushInline()
+                                blocks.add(ContentBlock.HorizontalRule)
+                            }
+                            tagName == "table" -> {
+                                flushInline()
+                                blocks.add(parseTable(node))
+                            }
+                            tagName == "ul" || tagName == "ol" -> {
+                                flushInline()
+                                walk(node.childNodes(), ListContext(tagName))
+                                flushInline()
+                            }
+                            tagName == "li" -> {
+                                flushInline()
+                                listContext?.let { it.index++ }
+                                pendingListPrefix = if (listContext?.type == "ol") "${listContext.index}. " else "• "
+
+                                walk(node.childNodes(), listContext)
+                                flushInline()
+                            }
+                            tagName == "p" || (tagName.startsWith("h") && tagName.length == 2 && tagName[1].isDigit()) -> {
+                                flushInline()
+                                if (node.select("p, li, div, blockquote, img, svg, table, ul, ol, hr").isNotEmpty()) {
+                                    walk(node.childNodes(), listContext)
                                     flushInline()
                                 } else {
-                                    flushInline()
-                                    if (tagName == "p" || tagName == "li") {
+                                    if (tagName == "p") {
                                         addBlocksFromAnnotatedString(parseElement(node), blocks)
                                     } else {
                                         val level = tagName.substring(1).toIntOrNull() ?: 1
@@ -101,23 +140,34 @@ object HtmlParser {
                                     }
                                 }
                             }
-                            tagName == "blockquote" -> {
-                                flushInline()
-                                if (node.select("img, svg").isNotEmpty()) {
-                                    walk(node.childNodes())
+                            tagName == "div" -> {
+                                if (node.select("p, li, div, blockquote, img, svg, table, ul, ol, hr").isNotEmpty()) {
+                                    flushInline()
+                                    walk(node.childNodes(), listContext)
                                     flushInline()
                                 } else {
+                                    flushInline()
+                                    addBlocksFromAnnotatedString(parseElement(node), blocks)
+                                }
+                            }
+                            tagName == "blockquote" -> {
+                                if (node.select("p, li, div, blockquote, img, svg, table, ul, ol, hr").isNotEmpty()) {
+                                    flushInline()
+                                    walk(node.childNodes(), listContext)
+                                    flushInline()
+                                } else {
+                                    flushInline()
                                     blocks.add(ContentBlock.BlockQuote(parseElement(node)))
                                 }
                             }
                             node.isBlock -> {
                                 flushInline()
-                                walk(node.childNodes())
+                                walk(node.childNodes(), listContext)
                                 flushInline()
                             }
                             else -> {
-                                if (node.select("img, svg").isNotEmpty()) {
-                                    walk(node.childNodes())
+                                if (node.select("p, li, div, blockquote, img, svg, table, ul, ol, hr").isNotEmpty()) {
+                                    walk(node.childNodes(), listContext)
                                 } else {
                                     currentInlineNodes.add(node)
                                 }
@@ -142,7 +192,7 @@ object HtmlParser {
         val parts = splitAnnotatedString(annotatedString, Regex("\\n\\s*\\n+"))
         parts.forEach { part ->
             val trimmed = part.trim()
-            if (trimmed.isNotEmpty()) {
+            if (trimmed.text.isNotBlank()) {
                 // Split long paragraphs to avoid TTS engine limits (typically ~4000 chars)
                 val splitParts = splitLongParagraph(trimmed, maxLength = 3000)
                 splitParts.forEach {
@@ -169,7 +219,7 @@ object HtmlParser {
                 // Try to find a good breaking point (sentence end or space)
                 val searchRange = text.substring(currentStart, currentEnd)
                 val lastSentenceEnd = searchRange.lastIndexOfAny(listOf(".", "!", "?", "。", "！", "？"))
-                
+
                 if (lastSentenceEnd != -1 && lastSentenceEnd > maxLength / 2) {
                     currentEnd = currentStart + lastSentenceEnd + 1
                 } else {
@@ -268,29 +318,55 @@ object HtmlParser {
                     builder.pop()
                 }
 
-                // Add newlines for block-level tags to ensure separation if they are
+                // Add a single newline for block-level tags to ensure separation if they are
                 // encountered in a context where they aren't already triggering a flush.
-                if (tagName == "br" ||
-                    tagName == "p" ||
+                if (tagName == "p" ||
                     tagName == "div" ||
                     tagName == "li" ||
                     tagName == "blockquote" ||
                     (tagName.startsWith("h") && tagName.length == 2)
                 ) {
                     builder.append("\n")
+                } else if (tagName == "br") {
+                    builder.append("\n")
+                } else if (tagName == "hr") {
+                    builder.append("\n---\n")
                 }
             }
         }
     }
 
-    private fun normalizeWhitespace(text: String): String = text
-        .replace('\u00A0', ' ')
-        .replace(Regex("\\s+"), " ")
+    private fun parseTable(element: Element): ContentBlock.Table {
+        val rows = mutableListOf<List<ContentBlock.Table.Cell>>()
+        element.select("tr").forEach { tr ->
+            val cells = mutableListOf<ContentBlock.Table.Cell>()
+            tr.select("th, td").forEach { cell ->
+                cells.add(
+                    ContentBlock.Table.Cell(
+                        text = parseElement(cell),
+                        isHeader = cell.tagName() == "th",
+                    ),
+                )
+            }
+            if (cells.isNotEmpty()) {
+                rows.add(cells)
+            }
+        }
+        return ContentBlock.Table(rows)
+    }
+
+    private fun normalizeWhitespace(text: String): String {
+        // Standard HTML whitespace rules collapse all whitespace into a single space.
+        return text
+            .replace('\u00A0', ' ')
+            .replace(Regex("\\s+"), " ")
+    }
 
     private fun getStyleForTag(tagName: String): SpanStyle? = when (tagName) {
         "b", "strong" -> SpanStyle(fontWeight = FontWeight.Bold)
         "i", "em" -> SpanStyle(fontStyle = FontStyle.Italic)
         "u" -> SpanStyle(textDecoration = TextDecoration.Underline)
+        "del", "s", "strike" -> SpanStyle(textDecoration = TextDecoration.LineThrough)
         "h1", "h2", "h3", "h4", "h5", "h6" -> SpanStyle(fontWeight = FontWeight.Bold)
         "code" -> SpanStyle(background = Color.LightGray.copy(alpha = 0.3f))
         "sup" ->

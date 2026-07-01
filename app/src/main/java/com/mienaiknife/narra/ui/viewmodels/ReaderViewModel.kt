@@ -150,7 +150,7 @@ class ReaderViewModel @Inject constructor(
             .onEach { art ->
                 if (art != null) {
                     val parsedBlocks = withContext(Dispatchers.Default) {
-                        HtmlParser.parse(art.content)
+                        HtmlParser.parse(art.content, art.url)
                     }
                     _blocks.value = parsedBlocks
                 } else {
@@ -187,7 +187,7 @@ class ReaderViewModel @Inject constructor(
                     if (articleData != null) {
                         // This triggers the Flow in PlaybackManager, which our init block observes
                         val blocks = withContext(Dispatchers.Default) {
-                            HtmlParser.parse(articleData.content)
+                            HtmlParser.parse(articleData.content, articleData.url)
                         }
                         playbackManager.setCurrentArticle(articleData, blocks, playWhenReady = false)
                     } else {

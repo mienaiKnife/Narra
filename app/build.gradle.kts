@@ -98,6 +98,32 @@ android {
     }
 }
 
+tasks.register<Exec>("clearAppData") {
+    group = "verification"
+    description = "Clears the app data using adb."
+
+    // Use the adb executable from the SDK if possible, fallback to "adb" in PATH
+    val adb =
+        try {
+            val extension = project.extensions.getByName("android") as com.android.build.gradle.BaseExtension
+            extension.adbExecutable.absolutePath
+        } catch (_: Exception) {
+            "adb"
+        }
+
+    doFirst {
+        println("Stopping and clearing data for com.mienaiknife.narra...")
+    }
+
+    commandLine(adb, "shell", "am force-stop com.mienaiknife.narra; pm clear com.mienaiknife.narra")
+
+    // Ignore exit value in case no device is connected or app is not installed
+    isIgnoreExitValue = true
+
+    standardOutput = System.out
+    errorOutput = System.err
+}
+
 ksp {
     arg("room.generateKotlin", "true")
 }

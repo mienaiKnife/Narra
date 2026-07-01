@@ -90,7 +90,7 @@ class HistoryViewModel @Inject constructor(
                 repository.addToQueue(article.id).onSuccess {
                     val updatedArticle = repository.getArticleById(article.id)
                     if (updatedArticle != null && updatedArticle.content.isNotEmpty()) {
-                        val blocks = HtmlParser.parse(updatedArticle.content)
+                        val blocks = HtmlParser.parse(updatedArticle.content, updatedArticle.url)
                         playbackManager.setCurrentArticle(updatedArticle, blocks)
                     }
                 }.onFailure { error ->
@@ -103,7 +103,7 @@ class HistoryViewModel @Inject constructor(
             if (uiState.value.currentArticle?.id == article.id) {
                 playbackManager.togglePlayPause()
             } else {
-                val blocks = HtmlParser.parse(article.content)
+                val blocks = HtmlParser.parse(article.content, article.url)
                 playbackManager.setCurrentArticle(article, blocks)
             }
         }

@@ -28,6 +28,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.collectIsDraggedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -45,10 +46,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -786,6 +789,27 @@ fun ReaderContentList(
                         )
                     }
                 }
+                is ContentBlock.HorizontalRule -> {
+                    HorizontalDivider(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 16.dp, horizontal = 32.dp),
+                        thickness = 1.dp,
+                        color = MaterialTheme.colorScheme.outlineVariant,
+                    )
+                }
+                is ContentBlock.Table -> {
+                    TableItem(
+                        table = block,
+                        baseStyle = baseStyle,
+                        isCurrentParagraph = isCurrentParagraph,
+                        modifier = paragraphSemantics,
+                        onMeasureWordY = { y ->
+                            currentWordYInItem = y + verticalPaddingPx
+                            currentWordYIndex = index
+                        },
+                    )
+                }
                 is ContentBlock.BlockQuote -> {
                     BlockQuoteItem(
                         annotatedString = annotatedString,
@@ -830,6 +854,58 @@ fun ReaderContentList(
             Spacer(modifier = Modifier.height(((16 + 8 * (lineSpacing - 1)) * lineSpacing).dp))
         }
         item { Spacer(modifier = Modifier.height(8.dp)) }
+    }
+}
+
+@Composable
+fun TableItem(
+    table: ContentBlock.Table,
+    baseStyle: androidx.compose.ui.text.TextStyle,
+    isCurrentParagraph: Boolean,
+    modifier: Modifier = Modifier,
+    onMeasureWordY: (Float) -> Unit,
+) {
+    val scrollState = rememberScrollState()
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(MaterialTheme.shapes.small)
+            .then(modifier)
+            .then(if (isCurrentParagraph) Modifier.background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)) else Modifier)
+            .padding(vertical = 8.dp)
+            .horizontalScroll(scrollState),
+    ) {
+        Column(
+            modifier = Modifier
+                .padding(horizontal = 8.dp)
+                .onGloballyPositioned { coords ->
+                    if (isCurrentParagraph) {
+                        onMeasureWordY(coords.size.height / 2f)
+                    }
+                }
+                .width(IntrinsicSize.Max),
+        ) {
+            table.rows.forEach { row ->
+                Row(modifier = Modifier.height(IntrinsicSize.Min)) {
+                    row.forEach { cell ->
+                        Box(
+                            modifier = Modifier
+                                .padding(4.dp)
+                                .then(if (cell.isHeader) Modifier.background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)) else Modifier)
+                                .padding(8.dp)
+                                .widthIn(min = 100.dp, max = 300.dp),
+                        ) {
+                            Text(
+                                text = cell.text,
+                                style = if (cell.isHeader) baseStyle.copy(fontWeight = FontWeight.Bold) else baseStyle,
+                            )
+                        }
+                    }
+                }
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+            }
+        }
     }
 }
 
@@ -1496,7 +1572,7 @@ private fun Char.isPunctuationOrWhitespace(): Boolean = isWhitespace() || !isLet
 @Composable
 fun ReaderScreenPreview() {
     val article = SampleArticles.sampleArticle1
-    val blocks = remember(article.content) { HtmlParser.parse(article.content) }
+    val blocks = remember(article.content) { HtmlParser.parse(article.content, article.url) }
     val fontFamily = getFontFamily("Roboto")
     NarraTheme(darkTheme = true, dynamicColor = false, fontFamily = fontFamily) {
         ReaderContent(

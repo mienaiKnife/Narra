@@ -39,4 +39,27 @@ sealed class ContentBlock {
     ) : ContentBlock() {
         override val text: AnnotatedString = AnnotatedString(altText ?: "")
     }
+
+    data object HorizontalRule : ContentBlock() {
+        override val text: AnnotatedString = AnnotatedString("")
+    }
+
+    data class Table(
+        val rows: List<List<Cell>>,
+    ) : ContentBlock() {
+        override val text: AnnotatedString = androidx.compose.ui.text.buildAnnotatedString {
+            rows.forEach { row ->
+                row.forEach { cell ->
+                    append(cell.text)
+                    append(" ")
+                }
+                append("\n")
+            }
+        }
+
+        data class Cell(
+            val text: AnnotatedString,
+            val isHeader: Boolean = false,
+        )
+    }
 }

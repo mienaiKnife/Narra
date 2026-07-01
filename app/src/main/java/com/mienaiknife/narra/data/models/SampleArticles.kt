@@ -27,7 +27,17 @@ object SampleArticles {
             content =
             """
                 <blockquote>They're so thoroughly hypnotized by the short-term victory of global capitalism that they can't surf the new paradigm, look to the longer term.<br/><br/>— Charles Stross, Accelerando</blockquote>
-                <blockquote>One obvious role for a radical intellectual is to do precisely that: look at those who are creating viable alternatives, try to figure out what might be the larger implications of what they are (already) doing, and then offer those ideas back [to the world], not as prescriptions, but as contributions, possibilities—as gifts.<br/><br/>— David Graeber, Fragments of an Anarchist Anthropology</blockquote>
+                <p>Features support check:</p>
+                <ol>
+                    <li>Ordered Item 1</li>
+                    <li>Ordered Item 2</li>
+                </ol>
+                <p>Some <del>strikethrough text</del> here.</p>
+                <table>
+                    <tr><th>Feature</th><th>Status</th></tr>
+                    <tr><td>Tables</td><td>Supported</td></tr>
+                    <tr><td>Lists</td><td>Numbered</td></tr>
+                </table>
                 <p>Over 2024, we saw major tech investors and company owners overtly turn toward the right, overtly backing Donald Trump in his electoral campaign. This group of individuals, which commentators have taken to calling the “Tech Right”, are motivated by various concerns like the attempts by the Biden administration to regulate them and a general backlash against “wokeness”. Representative individuals and their respective justifications can be found in things like Marc Andreessen's essay The Techno-Optimist Manifesto or books like Balaji Srinivasan’s The Network State, and Alexander Karp and Nicholas Zamiska’s The Technological Republic.</p>
             """.trimIndent(),
             progress = 0.8f,

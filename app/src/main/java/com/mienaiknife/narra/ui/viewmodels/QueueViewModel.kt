@@ -161,7 +161,7 @@ class QueueViewModel @Inject constructor(
         if (currentState is QueueUiState.Success && currentState.currentArticle?.id == article.id) {
             playbackManager.togglePlayPause()
         } else {
-            val blocks = HtmlParser.parse(article.content)
+            val blocks = HtmlParser.parse(article.content, article.url)
             playbackManager.setCurrentArticle(article, blocks)
         }
     }
