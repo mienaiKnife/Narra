@@ -20,6 +20,7 @@ import com.mienaiknife.narra.domain.NarraError
 import com.mienaiknife.narra.domain.models.Article
 import com.mienaiknife.narra.ui.utils.UrlUtils
 import com.mienaiknife.narra.utils.DateUtils
+import com.mienaiknife.narra.utils.HtmlUtils
 import com.prof18.rssparser.RssParser
 import org.jsoup.Jsoup
 import java.util.UUID
@@ -71,7 +72,7 @@ constructor(
 
             var imageUrl = channel.image?.url
             val link = channel.link
-            var title = channel.title?.trim() ?: "Untitled Feed"
+            var title = HtmlUtils.decodeHtmlEntities(channel.title?.trim()) ?: "Untitled Feed"
 
             // If title looks like a URL or a domain name, try to get a better one
             if (UrlUtils.isUrlOrDomainLike(title)) {
@@ -83,8 +84,8 @@ constructor(
                                 .userAgent(
                                     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
                                 ).get()
-                        val siteTitle = doc.title().trim()
-                        if (siteTitle.isNotEmpty() && !UrlUtils.isUrlOrDomainLike(siteTitle)) {
+                        val siteTitle = HtmlUtils.decodeHtmlEntities(doc.title().trim())
+                        if (!siteTitle.isNullOrEmpty() && !UrlUtils.isUrlOrDomainLike(siteTitle)) {
                             title = siteTitle
                         }
                     } catch (_: Exception) {
@@ -130,7 +131,7 @@ constructor(
                 FeedEntity(
                     url = targetUrl,
                     title = title,
-                    description = channel.description,
+                    description = HtmlUtils.decodeHtmlEntities(channel.description),
                     imageUrl = imageUrl,
                 ),
             )
@@ -143,7 +144,7 @@ constructor(
         return try {
             val channel = rssParser.getRssChannel(feed.url)
             val updatedTitle =
-                channel.title?.trim()?.let {
+                HtmlUtils.decodeHtmlEntities(channel.title?.trim())?.let {
                     if (UrlUtils.isUrlOrDomainLike(it)) {
                         null // Don't use it if it looks like a URL
                     } else {
@@ -174,7 +175,7 @@ constructor(
 
                     Article(
                         id = UUID.randomUUID().toString(),
-                        title = item.title ?: "Untitled",
+                        title = HtmlUtils.decodeHtmlEntities(item.title) ?: "Untitled",
                         source = if (updatedTitle != null && !UrlUtils.isUrlOrDomainLike(updatedTitle)) updatedTitle else feed.title,
                         content = "", // Content is fetched on demand or from item.content if available
                         publishedAt = item.pubDate,

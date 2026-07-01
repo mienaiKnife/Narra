@@ -18,6 +18,7 @@ package com.mienaiknife.narra.data.remote
 import com.mienaiknife.narra.domain.models.Article
 import com.mienaiknife.narra.ui.utils.UrlUtils
 import com.mienaiknife.narra.utils.DateUtils
+import com.mienaiknife.narra.utils.HtmlUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
@@ -89,7 +90,7 @@ constructor(
                 val article =
                     Article(
                         id = UUID.randomUUID().toString(),
-                        title = (parsedArticle.title ?: doc.title()).ifEmpty { "Untitled" },
+                        title = HtmlUtils.decodeHtmlEntities((parsedArticle.title ?: doc.title()))?.ifEmpty { "Untitled" } ?: "Untitled",
                         source =
                         doc.location().let {
                             try {
