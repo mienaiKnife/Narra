@@ -15,7 +15,9 @@
  */
 package com.mienaiknife.narra.ui.components
 
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
@@ -33,10 +35,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
@@ -75,37 +79,82 @@ fun BoxScope.NarraScrollbar(
         label = "scrollbarAlpha",
     )
 
+    val itemHeightMap = remember { mutableStateMapOf<Int, Int>() }
+
+    LaunchedEffect(lazyListState) {
+        snapshotFlow { lazyListState.layoutInfo.visibleItemsInfo }
+            .collect { visibleItems ->
+                visibleItems.forEach { item ->
+                    itemHeightMap[item.index] = item.size
+                }
+            }
+    }
+
     val thumbHeightFraction by remember {
         derivedStateOf {
             val layoutInfo = lazyListState.layoutInfo
+            val visibleItems = layoutInfo.visibleItemsInfo
             val totalItems = layoutInfo.totalItemsCount
-            if (totalItems == 0) {
+            if (visibleItems.isEmpty() || totalItems == 0) {
                 0.1f
             } else {
-                val visibleItemsCount = layoutInfo.visibleItemsInfo.size
-                (visibleItemsCount.toFloat() / totalItems).coerceIn(0.1f, 1f)
+                val viewportHeight = layoutInfo.viewportSize.height.toFloat()
+                val avgHeight = if (itemHeightMap.isEmpty()) {
+                    visibleItems.first().size.toFloat()
+                } else {
+                    itemHeightMap.values.average().toFloat()
+                }
+
+                val estimatedTotalHeight = (0 until totalItems).sumOf { i ->
+                    itemHeightMap[i]?.toDouble() ?: avgHeight.toDouble()
+                }.toFloat()
+
+                if (estimatedTotalHeight <= viewportHeight) 1f else (viewportHeight / estimatedTotalHeight).coerceIn(0.1f, 1f)
             }
         }
     }
 
-    val thumbOffsetFraction by remember {
+    val thumbOffsetFractionRaw by remember {
         derivedStateOf {
             val layoutInfo = lazyListState.layoutInfo
+            val visibleItems = layoutInfo.visibleItemsInfo
             val totalItems = layoutInfo.totalItemsCount
-            if (totalItems == 0) {
+            if (visibleItems.isEmpty() || totalItems == 0) {
                 0f
             } else {
-                val firstVisibleItem = layoutInfo.visibleItemsInfo.firstOrNull()
-                if (firstVisibleItem != null) {
-                    val firstItemHeight = firstVisibleItem.size.toFloat()
-                    val offsetCorrection = if (firstItemHeight > 0) -firstVisibleItem.offset.toFloat() / firstItemHeight else 0f
-                    (firstVisibleItem.index.toFloat() + offsetCorrection) / totalItems
+                val viewportHeight = layoutInfo.viewportSize.height.toFloat()
+                val firstItem = visibleItems.first()
+
+                val avgHeight = if (itemHeightMap.isEmpty()) {
+                    firstItem.size.toFloat()
                 } else {
+                    itemHeightMap.values.average().toFloat()
+                }
+
+                val estimatedTotalHeight = (0 until totalItems).sumOf { i ->
+                    itemHeightMap[i]?.toDouble() ?: avgHeight.toDouble()
+                }.toFloat()
+
+                if (estimatedTotalHeight <= viewportHeight) {
                     0f
+                } else {
+                    val scrolledPixels = (0 until firstItem.index).sumOf { i ->
+                        itemHeightMap[i]?.toDouble() ?: avgHeight.toDouble()
+                    }.toFloat() - firstItem.offset
+                    (scrolledPixels / (estimatedTotalHeight - viewportHeight)).coerceIn(0f, 1f)
                 }
             }
         }
     }
+
+    val thumbOffsetFraction by animateFloatAsState(
+        targetValue = thumbOffsetFractionRaw,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioNoBouncy,
+            stiffness = Spring.StiffnessLow,
+        ),
+        label = "thumbOffsetAnimation",
+    )
 
     val totalItems by remember {
         derivedStateOf { lazyListState.layoutInfo.totalItemsCount }
