@@ -33,10 +33,9 @@ class UiTextTest {
         val resources = mock<Resources>()
         whenever(context.resources).thenReturn(resources)
 
-        val innerText = UiText.StringResource(R.string.error_generic)
+        val innerText = UiText.DynamicString("Something went wrong")
         val outerText = UiText.StringResource(R.string.message_import_failed, innerText)
 
-        whenever(context.getString(R.string.error_generic)).thenReturn("Something went wrong")
         whenever(context.getString(eq(R.string.message_import_failed), any())).thenAnswer { invocation ->
             "Import failed: ${invocation.arguments[1]}"
         }

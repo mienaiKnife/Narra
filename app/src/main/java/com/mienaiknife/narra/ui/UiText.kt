@@ -57,21 +57,19 @@ sealed class UiText {
     }
 
     @Composable
-    fun asString(): String {
-        return when (this) {
-            is DynamicString -> value
-            is StringResource -> {
-                val resolvedArgs = args.map {
-                    if (it is UiText) it.asString() else it
-                }.toTypedArray()
-                stringResource(resId, *resolvedArgs)
-            }
-            is PluralResource -> {
-                val resolvedArgs = args.map {
-                    if (it is UiText) it.asString() else it
-                }.toTypedArray()
-                pluralStringResource(resId, count, *resolvedArgs)
-            }
+    fun asString(): String = when (this) {
+        is DynamicString -> value
+        is StringResource -> {
+            val resolvedArgs = args.map {
+                if (it is UiText) it.asString() else it
+            }.toTypedArray()
+            stringResource(resId, *resolvedArgs)
+        }
+        is PluralResource -> {
+            val resolvedArgs = args.map {
+                if (it is UiText) it.asString() else it
+            }.toTypedArray()
+            pluralStringResource(resId, count, *resolvedArgs)
         }
     }
 

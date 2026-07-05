@@ -138,7 +138,8 @@ class TtsPlayer @Inject constructor(
                 invalidateState()
             }
             AudioManager.AUDIOFOCUS_LOSS_TRANSIENT,
-            AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK -> {
+            AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK,
+            -> {
                 if (_playWhenReady) {
                     _playbackSuppressionReason = PLAYBACK_SUPPRESSION_REASON_TRANSIENT_AUDIO_FOCUS_LOSS
                     pauseInternal()
@@ -168,7 +169,7 @@ class TtsPlayer @Inject constructor(
                         }
 
                         val speakable = paragraphs.getOrNull(index)
-                        
+
                         val ttsStart = baseWordOffset + state.start
                         val ttsEnd = baseWordOffset + state.end
 
@@ -199,7 +200,7 @@ class TtsPlayer @Inject constructor(
                 is TtsState.Error -> {
                     android.util.Log.e("TtsPlayer", "Engine error: ${state.message}")
                     isEngineSpeaking = false
-                    
+
                     // If we were playing and encountered an error, try to advance to next paragraph
                     if (_playWhenReady && _playbackState == STATE_READY && !isPreparing) {
                         val nextIndex = currentParagraphIndex + 1
@@ -458,7 +459,7 @@ class TtsPlayer @Inject constructor(
         val clampedPos = positionMs.coerceIn(0, totalMs - 1)
         val pIndex = (clampedPos / 1000).toInt().coerceIn(0, paragraphs.size - 1)
         val progress = (clampedPos % 1000) / 1000f
-        
+
         val speakable = paragraphs[pIndex]
         val wordOffset = (progress * speakable.text.length).toInt()
 
@@ -580,7 +581,7 @@ class TtsPlayer @Inject constructor(
         _playbackState = STATE_READY
 
         currentParagraphIndex = article.currentParagraphIndex.coerceIn(0, paragraphs.size - 1).takeIf { paragraphs.isNotEmpty() } ?: 0
-        
+
         // resumeWordOffset is in TTS-space. Map saved Original-space offset to TTS-space.
         val originalOffset = article.currentWordOffset.coerceAtLeast(0)
         resumeWordOffset = paragraphs.getOrNull(currentParagraphIndex)?.mapOriginalToTts(originalOffset) ?: originalOffset
@@ -711,7 +712,7 @@ class TtsPlayer @Inject constructor(
             ttsEngine.stop()
             currentParagraphIndex = paragraphIndex
             currentWordRange = wordRange
-            
+
             // Map Original-space wordRange.first to TTS-space resumeWordOffset
             resumeWordOffset = paragraphs[paragraphIndex].mapOriginalToTts(wordRange.first)
 

@@ -63,7 +63,7 @@ constructor(
                             val defaultLocale = Locale.getDefault()
                             val langResult = engine.setLanguage(defaultLocale)
                             android.util.Log.i("AndroidTtsEngine", "Engine initialized. Default locale: $defaultLocale, setLanguage result: $langResult")
-                            
+
                             if (langResult == TextToSpeech.LANG_MISSING_DATA || langResult == TextToSpeech.LANG_NOT_SUPPORTED) {
                                 android.util.Log.w("AndroidTtsEngine", "Default locale not supported, falling back to US English")
                                 engine.language = Locale.US
@@ -73,7 +73,7 @@ constructor(
                             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
                                 val voices = engine.voices
                                 android.util.Log.i("AndroidTtsEngine", "Available voices count: ${voices?.size ?: 0}")
-                                voices?.take(3)?.forEach { 
+                                voices?.take(3)?.forEach {
                                     android.util.Log.d("AndroidTtsEngine", "Voice: ${it.name}, Locale: ${it.locale}")
                                 }
                             }
@@ -160,7 +160,7 @@ constructor(
                 putFloat(TextToSpeech.Engine.KEY_PARAM_VOLUME, currentVolume)
             }
         val result = tts?.speak(text, TextToSpeech.QUEUE_FLUSH, params, utteranceId)
-        
+
         if (result == TextToSpeech.ERROR) {
             _state.value = TtsState.Error("Immediate error calling speak() for $utteranceId")
         }

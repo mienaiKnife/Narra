@@ -177,7 +177,7 @@ class PlaybackService : MediaLibraryService() {
         mbrIntent.setPackage(packageName)
         val resolveInfos = packageManager.queryBroadcastReceivers(mbrIntent, 0)
         android.util.Log.d("PlaybackService", "Found ${resolveInfos.size} MediaButtonReceivers")
-        resolveInfos.forEach { 
+        resolveInfos.forEach {
             android.util.Log.d("PlaybackService", "MBR: ${it.activityInfo.name}")
         }
 
@@ -210,7 +210,7 @@ class PlaybackService : MediaLibraryService() {
                     this@PlaybackService,
                     0,
                     mbrIntent,
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) PendingIntent.FLAG_MUTABLE else 0
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) PendingIntent.FLAG_MUTABLE else 0,
                 )
                 putParcelable("android.media.session.extra.MEDIA_BUTTON_RECEIVER", mbrPendingIntent)
             }
@@ -439,7 +439,7 @@ class PlaybackService : MediaLibraryService() {
 
         // Ensure extras are set on the live session before adding it
         mediaSession?.setSessionExtras(sessionExtras)
-        
+
         // Explicitly add the session to the service to ensure it's published to the system
         mediaSession?.let {
             addSession(it)

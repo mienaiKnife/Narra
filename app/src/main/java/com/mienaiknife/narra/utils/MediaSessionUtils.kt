@@ -55,12 +55,12 @@ object MediaSessionUtils {
                     currentClass = currentClass.superclass
                 }
             }
-            
+
             if (sessionLegacyStubField == null) {
                 android.util.Log.e(TAG, "Could not find sessionLegacyStub field")
                 return
             }
-            
+
             sessionLegacyStubField.isAccessible = true
             val sessionLegacyStub = sessionLegacyStubField.get(impl) ?: return
 
@@ -76,7 +76,7 @@ object MediaSessionUtils {
                 context,
                 0,
                 mbrIntent,
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) PendingIntent.FLAG_MUTABLE else 0
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) PendingIntent.FLAG_MUTABLE else 0,
             )
 
             // Step 5: Call setMediaButtonReceiver on MediaSessionCompat

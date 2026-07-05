@@ -84,7 +84,7 @@ object LanguageUtils {
         if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.Q) {
             return text
         }
-        
+
         if (transliterator == null) {
             try {
                 transliterator = Transliterator.getInstance(TRANSLITERATOR_ID)

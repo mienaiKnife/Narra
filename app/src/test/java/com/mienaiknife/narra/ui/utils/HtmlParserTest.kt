@@ -102,7 +102,7 @@ class HtmlParserTest {
     fun `parse images nested in paragraphs or spans`() {
         val html = "<p>Text before <span><img src=\"https://example.com/nested.png\" alt=\"Nested\"></span> Text after</p>"
         val result = HtmlParser.parse(html)
-        
+
         // Output might vary based on how flushInline triggers
         assertTrue(result.any { it is ContentBlock.Image })
         assertTrue(result.any { it.text.text.contains("Text before") })
@@ -239,7 +239,7 @@ class HtmlParserTest {
             </div>
         """.trimIndent()
         val result = HtmlParser.parse(html)
-        
+
         assertTrue(result.any { it is ContentBlock.Image })
         assertTrue(result.any { it.text.text.contains("\"Who") })
         assertTrue(result.any { it.text.text.contains("is this guy?\"") })

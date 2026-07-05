@@ -29,8 +29,8 @@ import androidx.media3.common.Timeline
 import androidx.media3.common.util.UnstableApi
 import com.mienaiknife.narra.R
 import com.mienaiknife.narra.domain.TtsState
-import com.mienaiknife.narra.domain.models.SpeakableText
 import com.mienaiknife.narra.domain.models.Article
+import com.mienaiknife.narra.domain.models.SpeakableText
 import com.mienaiknife.narra.domain.repository.ContentRepository
 import com.mienaiknife.narra.service.PlaybackService
 import com.mienaiknife.narra.ui.models.ContentBlock
@@ -206,7 +206,7 @@ class PlaybackManager @Inject constructor(
     private fun updateProgress() {
         val article = _currentArticle.value ?: return
         val duration = ttsPlayer.duration
-        // Don't update if player doesn't have a valid duration yet, 
+        // Don't update if player doesn't have a valid duration yet,
         // UNLESS we are already finished, in which case we want to preserve that state.
         if (duration <= 0 && ttsPlayer.playbackState != Player.STATE_ENDED) return
 

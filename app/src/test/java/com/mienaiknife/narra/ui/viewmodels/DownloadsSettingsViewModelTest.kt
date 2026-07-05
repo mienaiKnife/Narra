@@ -61,7 +61,7 @@ class DownloadsSettingsViewModelTest {
             downloadSettingsManager,
             syncSettingsManager,
             contentRepository,
-            playbackManager
+            playbackManager,
         )
     }
 

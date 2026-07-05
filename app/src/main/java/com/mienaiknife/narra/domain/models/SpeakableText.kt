@@ -54,7 +54,9 @@ data class SpeakableText(
         if (ttsToOriginalMap != null) {
             if (other.ttsToOriginalMap == null) return false
             if (!ttsToOriginalMap.contentEquals(other.ttsToOriginalMap)) return false
-        } else if (other.ttsToOriginalMap != null) return false
+        } else if (other.ttsToOriginalMap != null) {
+            return false
+        }
 
         return true
     }
