@@ -34,6 +34,28 @@ Follow these steps to set up the development environment and build Narra.
 - Select the `app` configuration and your target device (emulator or physical device).
 - Click the **Run** button or use the shortcut `Shift + F10`.
 
+### Building without Android Studio
+
+If you just want an APK and would rather not install Android Studio, you can build inside a disposable Docker container instead. The only requirement on your machine is [Docker](https://docs.docker.com/get-docker/) (or Podman).
+
+1. **Build a debug APK**:
+   ```bash
+   ./build-apk.sh
+   ```
+   The APK will be written to `out/debug/app-debug.apk`.
+
+2. **Build a release APK**:
+   ```bash
+   ./build-apk.sh assembleRelease
+   ```
+
+3. **Install on a device**:
+   ```bash
+   adb install out/debug/app-debug.apk
+   ```
+
+The first run downloads the Android SDK and project dependencies, so it takes a few minutes. Subsequent builds reuse cached layers and Gradle dependencies, so they are usually under a minute. See `Dockerfile` for details.
+
 ### Testing
 Run unit tests using the following command:
 ```bash
