@@ -153,7 +153,7 @@ dependencies {
         exclude(group = "net.sf.kxml", module = "kxml2")
     }
     implementation(libs.onnxruntime.android)
-    implementation(files("libs/sherpa-onnx.aar"))
+    implementation(libs.sherpa.onnx)
     implementation(libs.room.runtime)
     implementation(libs.room.ktx)
     implementation(libs.androidx.compose.foundation)

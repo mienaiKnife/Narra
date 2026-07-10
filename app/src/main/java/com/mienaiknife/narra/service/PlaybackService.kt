@@ -453,47 +453,6 @@ class PlaybackService : MediaLibraryService() {
                 "isSystemSession=${mediaSession?.token != null}",
         )
 
-        // Promote to foreground immediately in onCreate to prevent crash
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val currentArticle = playbackManager.currentArticle.value
-            val builder =
-                NotificationCompat
-                    .Builder(this, CHANNEL_ID)
-                    .setSmallIcon(androidx.media3.session.R.drawable.media3_notification_small_icon)
-                    .setContentTitle(currentArticle?.title ?: getString(R.string.app_name))
-                    .setContentText(getString(R.string.notification_preparing))
-                    .setPriority(NotificationCompat.PRIORITY_LOW)
-                    .setSilent(true)
-                    .setOngoing(true)
-                    .setCategory(NotificationCompat.CATEGORY_SERVICE)
-
-            // Try to apply MediaStyle if session is available
-            mediaSession?.let { session ->
-                builder.setStyle(
-                    androidx.media3.session.MediaStyleNotificationHelper
-                        .MediaStyle(session),
-                )
-            }
-
-            val placeholderNotification = builder.build()
-
-            try {
-                // Use ID 1000 which matches Media3's DefaultMediaNotificationProvider.ID_DEFAULT
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                    startForeground(1000, placeholderNotification, android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK)
-                } else {
-                    startForeground(1000, placeholderNotification)
-                }
-                android.util.Log.d("PlaybackService", "Manual startForeground(1000) with MediaStyle in onCreate")
-            } catch (e: Exception) {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && e is android.app.ForegroundServiceStartNotAllowedException) {
-                    android.util.Log.e("PlaybackService", "Foreground service start not allowed in onCreate", e)
-                } else {
-                    android.util.Log.e("PlaybackService", "Failed to startForeground in onCreate", e)
-                }
-            }
-        }
-
         // Ensure session is aware of the current state immediately
         ttsPlayer.triggerStateInvalidation()
 
@@ -540,6 +499,11 @@ class PlaybackService : MediaLibraryService() {
 
         // Trigger a state report to ensure Media3 updates the notification
         ttsPlayer.triggerStateInvalidation()
+
+        // Reinforce activation on every start command to stay high priority
+        mediaSession?.let { session ->
+            MediaSessionUtils.forceActivationAndMbr(this, session)
+        }
 
         return super.onStartCommand(intent, flags, startId)
     }

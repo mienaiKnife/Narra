@@ -35,13 +35,15 @@ constructor(
         combine(
             playbackManager.currentArticle,
             playbackManager.isPlaying,
+            playbackManager.isBuffering,
             playbackManager.currentPosition,
             playbackManager.duration,
-        ) { currentArticle, isPlaying, currentPosition, duration ->
+        ) { currentArticle, isPlaying, isBuffering, currentPosition, duration ->
             val articleToShow = if (currentArticle?.isInQueue == true || isPlaying) currentArticle else null
             PlaybackUiState(
                 currentArticle = articleToShow,
                 isPlaying = isPlaying,
+                isBuffering = isBuffering,
                 currentPosition = currentPosition,
                 duration = duration,
             )

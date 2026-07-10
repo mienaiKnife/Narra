@@ -28,6 +28,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -106,6 +107,10 @@ class VoicesSettingsViewModel @Inject constructor(
 
     fun deleteModel(modelId: String) {
         viewModelScope.launch {
+            val currentSelected = settingsManager.ttsModelId.first()
+            if (currentSelected == modelId) {
+                settingsManager.setTtsModelId(null)
+            }
             modelRepository.deleteModel(modelId)
         }
     }

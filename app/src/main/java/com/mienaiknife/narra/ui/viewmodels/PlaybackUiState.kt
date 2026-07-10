@@ -20,6 +20,7 @@ import com.mienaiknife.narra.domain.models.Article
 data class PlaybackUiState(
     val currentArticle: Article? = null,
     val isPlaying: Boolean = false,
+    val isBuffering: Boolean = false,
     val currentPosition: Long = 0,
     val duration: Long = 0,
 )

@@ -36,6 +36,7 @@ import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.RssFeed
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -77,6 +78,7 @@ fun MiniPlayer(
     MiniPlayerContent(
         article = uiState.currentArticle,
         isPlaying = uiState.isPlaying,
+        isBuffering = uiState.isBuffering,
         currentPosition = uiState.currentPosition,
         duration = uiState.duration,
         onExpand = onExpand,
@@ -88,6 +90,7 @@ fun MiniPlayer(
 fun MiniPlayerContent(
     article: Article?,
     isPlaying: Boolean,
+    isBuffering: Boolean,
     currentPosition: Long,
     duration: Long,
     onExpand: (String) -> Unit,
@@ -172,11 +175,19 @@ fun MiniPlayerContent(
                 }
 
                 IconButton(onClick = onTogglePlayPause) {
-                    Icon(
-                        imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                        contentDescription = if (isPlaying) stringResource(R.string.action_pause) else stringResource(R.string.action_play),
-                        modifier = Modifier.size(32.dp),
-                    )
+                    if (isBuffering) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(24.dp),
+                            strokeWidth = 2.dp,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+                    } else {
+                        Icon(
+                            imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                            contentDescription = if (isPlaying) stringResource(R.string.action_pause) else stringResource(R.string.action_play),
+                            modifier = Modifier.size(32.dp),
+                        )
+                    }
                 }
             }
 
@@ -209,6 +220,7 @@ fun MiniPlayerPreview() {
             MiniPlayerContent(
                 article = SampleArticles.sampleArticle1,
                 isPlaying = false,
+                isBuffering = false,
                 currentPosition = 45000L,
                 duration = 180000L,
                 onExpand = {},

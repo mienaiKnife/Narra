@@ -66,6 +66,10 @@ Be aware these are coming so that current architectural decisions don't block th
 - On-device TTS (Sherpa-ONNX) model files must be downloaded and stored at runtime;
   model download, storage, and selection are handled by a dedicated `ModelRepository`
   that is separate from the `TtsEngine` interface itself
+- **Sherpa-ONNX Word Highlighting**: As of v1.13.4, Sherpa-ONNX supports native word timestamps
+  in the C++ core, but these are NOT yet exposed in the Java/JNI bindings. Do not attempt
+  to refactor `SherpaTtsEngine` to use native timestamps until the Java API is confirmed
+  to expose `GeneratedAudio.getTimestamps()`.
 - Do not bundle Sherpa-ONNX model files in the APK; they are too large and must be
   fetched on demand
 - RSS articles, EPUB content, and saved web articles flow through specialized repositories

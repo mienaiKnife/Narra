@@ -1267,12 +1267,20 @@ fun ReaderPlaybackControls(
                             },
                             modifier = Modifier.size(64.dp),
                         ) {
-                            Icon(
-                                imageVector = if (uiState.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                                contentDescription = if (uiState.isPlaying) stringResource(R.string.action_pause) else stringResource(R.string.action_play),
-                                modifier = Modifier.size(48.dp),
-                                tint = MaterialTheme.colorScheme.onBackground,
-                            )
+                            if (uiState.isBuffering) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(40.dp),
+                                    strokeWidth = 3.dp,
+                                    color = MaterialTheme.colorScheme.onBackground,
+                                )
+                            } else {
+                                Icon(
+                                    imageVector = if (uiState.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                                    contentDescription = if (uiState.isPlaying) stringResource(R.string.action_pause) else stringResource(R.string.action_play),
+                                    modifier = Modifier.size(48.dp),
+                                    tint = MaterialTheme.colorScheme.onBackground,
+                                )
+                            }
                         }
                         Spacer(modifier = Modifier.height(20.dp))
                     }

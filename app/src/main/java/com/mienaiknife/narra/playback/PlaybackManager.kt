@@ -70,6 +70,9 @@ class PlaybackManager @Inject constructor(
     private val _isPlaying = MutableStateFlow(false)
     val isPlaying: StateFlow<Boolean> = _isPlaying.asStateFlow()
 
+    private val _isBuffering = MutableStateFlow(false)
+    val isBuffering: StateFlow<Boolean> = _isBuffering.asStateFlow()
+
     private val _currentPosition = MutableStateFlow(0L)
     val currentPosition: StateFlow<Long> = _currentPosition.asStateFlow()
 
@@ -173,6 +176,7 @@ class PlaybackManager @Inject constructor(
 
             override fun onPlaybackStateChanged(playbackState: Int) {
                 _duration.value = ttsPlayer.duration
+                _isBuffering.value = playbackState == Player.STATE_BUFFERING
                 updateProgress()
 
                 if (playbackState == Player.STATE_ENDED) {

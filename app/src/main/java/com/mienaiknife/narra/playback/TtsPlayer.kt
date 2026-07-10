@@ -159,19 +159,43 @@ class TtsPlayer @Inject constructor(
     init {
         ttsEngine.state.onEach { state ->
             when (state) {
+                is TtsState.Buffering -> {
+                    // Only transition to STATE_BUFFERING if we are not already playing,
+                    // to avoid replacing the Pause button with a spinner during active playback.
+                    if (_playbackState != STATE_READY) {
+                        _playbackState = STATE_BUFFERING
+                    }
+                    isEngineSpeaking = false
+                    val index = state.utteranceId.toIntOrNull()
+                    if (index != null && index != currentParagraphIndex) {
+                        currentParagraphIndex = index
+                        resumeWordOffset = 0
+                        currentWordRange = null
+                    }
+                    throttleInvalidateState()
+                }
                 is TtsState.Speaking -> {
+                    _playbackState = STATE_READY
                     isEngineSpeaking = true
                     val index = state.utteranceId.toIntOrNull()
                     if (index != null) {
+                        // If we just changed paragraphs, reset our local offsets
                         if (index != currentParagraphIndex) {
                             baseWordOffset = 0
                             currentParagraphIndex = index
+                            resumeWordOffset = 0
                         }
-
-                        val speakable = paragraphs.getOrNull(index)
 
                         val ttsStart = baseWordOffset + state.start
                         val ttsEnd = baseWordOffset + state.end
+
+                        // If the engine is reporting progress, we TRUST it even if it's early.
+                        // However, we only update if it's not a jump BACKWARDS unless it's a new paragraph.
+                        if (index == currentParagraphIndex && ttsStart < resumeWordOffset && state.frame > 5000) {
+                             return@onEach
+                        }
+
+                        val speakable = paragraphs.getOrNull(index)
 
                         // Map TTS-space offsets back to Original-space for UI highlighting
                         val originalStart = speakable?.mapTtsToOriginal(ttsStart) ?: ttsStart
@@ -184,6 +208,7 @@ class TtsPlayer @Inject constructor(
                 }
                 is TtsState.Finished -> {
                     isEngineSpeaking = false
+                    currentWordRange = null
                     val index = state.utteranceId.toIntOrNull()
                     if (_playWhenReady && _playbackState == STATE_READY && !isPreparing) {
                         if (index != null && index.toString() == lastEnqueuedUtteranceId) {
@@ -283,8 +308,16 @@ class TtsPlayer @Inject constructor(
         val currentPositionMs = if (currentParagraphIndex >= 0 && currentParagraphIndex < paragraphs.size) {
             val paragraph = paragraphs[currentParagraphIndex]
             val paragraphLength = paragraph.text.length
-            val progress = if (paragraphLength > 0) {
-                // progress calculation should be based on TTS-space offsets
+            
+            // If the engine is speaking, use the exact frame it reported
+            val engineState = ttsEngine.state.value
+            val progress = if (engineState is TtsState.Speaking && engineState.utteranceId == currentParagraphIndex.toString()) {
+                val head = engineState.frame.toFloat()
+                // We need to know the total frames for this paragraph to get a %
+                // But we don't have it yet if synthesis isn't finished.
+                // Fallback to the heuristic if we can't get a good frame-based %
+                (resumeWordOffset.toFloat() / paragraphLength.toFloat()).coerceIn(0f, 1f)
+            } else if (paragraphLength > 0) {
                 (resumeWordOffset.toFloat() / paragraphLength.toFloat()).coerceIn(0f, 1f)
             } else {
                 0f
@@ -690,6 +723,12 @@ class TtsPlayer @Inject constructor(
     private fun speakCurrentFrom(startIndex: Int, wordOffset: Int = 0) {
         baseWordOffset = wordOffset
         currentParagraphIndex = startIndex
+        resumeWordOffset = wordOffset
+        
+        // Reset local state in player before asking engine to speak,
+        // so that the very first Speaking event from the engine is accepted.
+        currentWordRange = null
+
         for (i in startIndex until paragraphs.size) {
             val speakable = paragraphs[i]
             val text = if (i == startIndex && wordOffset > 0 && wordOffset < speakable.text.length) {

@@ -22,6 +22,8 @@ sealed class TtsState {
 
     object Ready : TtsState()
 
+    data class Buffering(val utteranceId: String) : TtsState()
+
     data class Speaking(
         val utteranceId: String,
         val start: Int = 0,

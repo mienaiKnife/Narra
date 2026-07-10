@@ -17,6 +17,7 @@ package com.mienaiknife.narra.tts.common
 
 import com.mienaiknife.narra.domain.TtsEngine
 import com.mienaiknife.narra.domain.TtsState
+import com.mienaiknife.narra.domain.repository.ModelRepository
 import com.mienaiknife.narra.playback.PlaybackSettingsManager
 import com.mienaiknife.narra.tts.android.AndroidTtsEngine
 import com.mienaiknife.narra.tts.ondevice.SherpaTtsEngine
@@ -28,6 +29,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -39,6 +41,7 @@ constructor(
     private val androidTtsEngine: AndroidTtsEngine,
     private val sherpaTtsEngine: SherpaTtsEngine,
     private val settingsManager: PlaybackSettingsManager,
+    private val modelRepository: ModelRepository,
 ) : TtsEngine {
     private val _state = MutableStateFlow<TtsState>(TtsState.Idle)
     override val state: StateFlow<TtsState> = _state.asStateFlow()
@@ -58,6 +61,26 @@ constructor(
                 when (engineType) {
                     "android" -> switchEngine(androidTtsEngine)
                     "ondevice" -> switchEngine(sherpaTtsEngine)
+                }
+            }
+        }
+
+        // Auto-select Sherpa voice when only one is available
+        scope.launch {
+            combine(
+                settingsManager.ttsEngine,
+                settingsManager.ttsModelId,
+                modelRepository.getAvailableModels()
+            ) { engine, modelId, models ->
+                Triple(engine, modelId, models)
+            }.collect { (engine, modelId, models) ->
+                if (engine == "ondevice") {
+                    val downloadedModels = models.filter { it.isDownloaded }
+                    val currentModelIsDownloaded = downloadedModels.any { it.id == modelId }
+
+                    if (!currentModelIsDownloaded && downloadedModels.size == 1) {
+                        settingsManager.setTtsModelId(downloadedModels[0].id)
+                    }
                 }
             }
         }

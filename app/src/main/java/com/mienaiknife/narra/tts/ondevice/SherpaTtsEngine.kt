@@ -66,15 +66,31 @@ class SherpaTtsEngine @Inject constructor(
     private var audioContentType = AudioAttributes.CONTENT_TYPE_SPEECH
 
     private val utteranceQueue = Channel<UtteranceRequest>(Channel.UNLIMITED)
-    private val synthesizedQueue = Channel<SynthesizedAudio>(2)
+    private val synthesizedQueue = Channel<SynthesizedAudioStream>(Channel.UNLIMITED)
 
     private var synthesisJob: Job? = null
     private var playbackJob: Job? = null
+    private var monitorJob: Job? = null
     private var currentModelId: String? = null
     private var lastNoiseScale: Float = -1f
     private var lastLengthScale: Float = -1f
     private var currentModelType: TtsModelType? = null
     private var currentSessionId: Int = 0
+    private var currentSampleRate: Int = -1
+    private var samplesPerCharAverage: Float = 1800f // Default for ~12 chars/sec at 22050Hz
+
+    private val activeStreams = java.util.Collections.synchronizedList(mutableListOf<StreamPlaybackInfo>())
+
+    data class StreamPlaybackInfo(
+        val stream: SynthesizedAudioStream,
+        var startFrame: Long = -1,
+        var totalFrames: Int,
+        var isWriteFinished: Boolean = false,
+        var boundaries: List<WordBoundary> = emptyList(),
+        var fullSamplesAccumulator: MutableList<FloatArray> = mutableListOf(),
+        var isFirstChunkEstimated: Boolean = false,
+        var projectedTotalFrames: Int = 0
+    )
 
     data class UtteranceRequest(val text: String, val utteranceId: String, val sessionId: Int)
 
@@ -85,36 +101,29 @@ class SherpaTtsEngine @Inject constructor(
         val endSample: Int,
     )
 
-    data class SynthesizedAudio(
-        val samples: FloatArray,
+    sealed class AudioStreamEvent {
+        data class Chunk(val samples: FloatArray) : AudioStreamEvent() {
+            override fun equals(other: Any?): Boolean {
+                if (this === other) return true
+                if (javaClass != other?.javaClass) return false
+                other as Chunk
+                return samples.contentEquals(other.samples)
+            }
+
+            override fun hashCode(): Int {
+                return samples.contentHashCode()
+            }
+        }
+        object Finished : AudioStreamEvent()
+    }
+
+    data class SynthesizedAudioStream(
+        val eventChannel: Channel<AudioStreamEvent>,
         val sampleRate: Int,
         val utteranceId: String,
         val text: String,
         val sessionId: Int,
-        val wordBoundaries: List<WordBoundary> = emptyList(),
-    ) {
-        override fun equals(other: Any?): Boolean {
-            if (this === other) return true
-            if (javaClass != other?.javaClass) return false
-
-            other as SynthesizedAudio
-
-            if (!samples.contentEquals(other.samples)) return false
-            if (sampleRate != other.sampleRate) return false
-            if (utteranceId != other.utteranceId) return false
-            if (text != other.text) return false
-            return sessionId == other.sessionId
-        }
-
-        override fun hashCode(): Int {
-            var result = samples.contentHashCode()
-            result = (31 * result) + sampleRate
-            result = (31 * result) + utteranceId.hashCode()
-            result = (31 * result) + text.hashCode()
-            result = (31 * result) + sessionId
-            return result
-        }
-    }
+    )
 
     private var currentSpeakerId: Int? = null
 
@@ -143,7 +152,6 @@ class SherpaTtsEngine @Inject constructor(
                     currentSpeakerId = speakerId
                     // For Kokoro, we can change speaker without re-init,
                     // but we might want to restart current synthesis to apply it immediately
-                    // TODO: Optional: restart current paragraph synthesis if currentModelType == TtsModelType.KOKORO && _state.value is TtsState.Speaking
                 }
             }
         }
@@ -180,11 +188,16 @@ class SherpaTtsEngine @Inject constructor(
 
                     // Clear queues
                     while (utteranceQueue.tryReceive().isSuccess) { /* consume */ }
-                    while (synthesizedQueue.tryReceive().isSuccess) { /* consume */ }
+                    var result = synthesizedQueue.tryReceive()
+                    while (result.isSuccess) {
+                        result.getOrNull()?.eventChannel?.close()
+                        result = synthesizedQueue.tryReceive()
+                    }
                 }
 
                 tts?.release()
                 tts = null
+                currentSampleRate = -1
 
                 if (modelId == null) {
                     Log.d("SherpaTtsEngine", "Engine skipped initialization: no model selected")
@@ -323,7 +336,7 @@ class SherpaTtsEngine @Inject constructor(
             kitten = kitten,
             pocket = pocket,
             supertonic = supertonic,
-            numThreads = 1,
+            numThreads = 4,
             debug = true,
             provider = "cpu",
         )
@@ -332,27 +345,44 @@ class SherpaTtsEngine @Inject constructor(
     private fun startLoops() {
         synthesisJob?.cancel()
         playbackJob?.cancel()
+        monitorJob?.cancel()
 
         synthesisJob = scope.launch(Dispatchers.Default) {
             for (request in utteranceQueue) {
                 if (request.sessionId != currentSessionId) continue
                 val engine = tts ?: continue
                 try {
-                    val audio = engine.generate(request.text, currentSpeakerId ?: 0)
-                    if (request.sessionId != currentSessionId) continue
-
-                    val boundaries = estimateWordBoundaries(request.text, audio.samples.size, audio.samples)
+                    val eventChannel = Channel<AudioStreamEvent>(Channel.UNLIMITED)
+                    val sampleRate = engine.sampleRate()
 
                     synthesizedQueue.send(
-                        SynthesizedAudio(
-                            audio.samples,
-                            audio.sampleRate,
+                        SynthesizedAudioStream(
+                            eventChannel,
+                            sampleRate,
                             request.utteranceId,
                             request.text,
-                            request.sessionId,
-                            boundaries,
-                        ),
+                            request.sessionId
+                        )
                     )
+
+                    val genConfig = GenerationConfig(
+                        speed = 1.0f,
+                        sid = currentSpeakerId ?: 0
+                    )
+
+                    val callback = object : SherpaTtsCallback() {
+                        override fun invoke(samples: FloatArray): Int {
+                            return if (request.sessionId == currentSessionId) {
+                                eventChannel.trySend(AudioStreamEvent.Chunk(samples))
+                                1
+                            } else {
+                                0
+                            }
+                        }
+                    }
+
+                    engine.generateWithConfigAndCallback(request.text, genConfig, callback)
+                    eventChannel.trySend(AudioStreamEvent.Finished)
                 } catch (e: Exception) {
                     Log.e("SherpaTtsEngine", "Synthesis failed", e)
                 }
@@ -360,123 +390,247 @@ class SherpaTtsEngine @Inject constructor(
         }
 
         playbackJob = scope.launch(Dispatchers.Default) {
-            for (audio in synthesizedQueue) {
-                if (audio.sessionId != currentSessionId) continue
-                playAudio(audio)
+            for (stream in synthesizedQueue) {
+                if (stream.sessionId != currentSessionId) {
+                    Log.d("SherpaTtsEngine", "Skipping stale audio: ${stream.utteranceId}")
+                    stream.eventChannel.close()
+                    continue
+                }
+                playAudioStream(stream)
+            }
+        }
+
+        monitorJob = scope.launch(Dispatchers.Default) {
+            while (isActive) {
+                updatePlaybackProgress()
+                delay(20)
             }
         }
     }
 
-    private suspend fun playAudio(audio: SynthesizedAudio) {
-        try {
-            // Initial state update
-            _state.value = TtsState.Speaking(audio.utteranceId, 0, 0, 0)
-
-            val samples = audio.samples
-            val sampleRate = audio.sampleRate
-            val wordBoundaries = audio.wordBoundaries
-
-            val bufferSize = AudioTrack.getMinBufferSize(
-                sampleRate,
-                AudioFormat.CHANNEL_OUT_MONO,
-                AudioFormat.ENCODING_PCM_FLOAT,
-            )
-
-            if (audioTrack == null || audioTrack?.sampleRate != sampleRate) {
-                audioTrack?.release()
-                audioTrack = AudioTrack.Builder()
-                    .setAudioAttributes(
-                        AudioAttributes.Builder()
-                            .setUsage(audioUsage)
-                            .setContentType(audioContentType)
-                            .build(),
-                    )
-                    .setAudioFormat(
-                        AudioFormat.Builder()
-                            .setEncoding(AudioFormat.ENCODING_PCM_FLOAT)
-                            .setSampleRate(sampleRate)
-                            .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
-                            .build(),
-                    )
-                    .setBufferSizeInBytes(maxOf(bufferSize, samples.size * 4))
-                    .setTransferMode(AudioTrack.MODE_STREAM)
-                    .build()
-            }
-
-            audioTrack?.apply {
-                if (state == AudioTrack.STATE_UNINITIALIZED) return@apply
-
-                playbackParams = playbackParams.setSpeed(playbackSpeed)
-                setVolume(volume)
-                if (playState != AudioTrack.PLAYSTATE_PLAYING) {
-                    play()
+    private fun updatePlaybackProgress() {
+        val track = synchronized(this) { audioTrack } ?: return
+        
+        val head = try {
+            if (track.state != AudioTrack.STATE_INITIALIZED) return
+            track.playbackHeadPosition.toLong() and 0xFFFFFFFFL
+        } catch (e: Exception) {
+            // Track might have been released just after our null check
+            return
+        }
+        
+        synchronized(activeStreams) {
+            val iterator = activeStreams.iterator()
+            while (iterator.hasNext()) {
+                val info = iterator.next()
+                if (info.stream.sessionId != currentSessionId) {
+                    iterator.remove()
+                    continue
                 }
 
-                val startHeadPosition = playbackHeadPosition
-                var offset = 0
-                val totalSamples = samples.size
+                val relativeHead = if (info.startFrame != -1L) head - info.startFrame else -1L
+                
+                if (info.isWriteFinished && info.startFrame != -1L && relativeHead >= info.totalFrames) {
+                    // This stream is finished playing
+                    _state.value = TtsState.Finished(info.stream.utteranceId)
+                    iterator.remove()
+                    continue // IMPORTANT: Skip to next stream immediately
+                }
 
-                while (offset < totalSamples && scope.isActive) {
-                    if (audio.sessionId != currentSessionId) break
-
-                    val toWrite = totalSamples - offset
-                    val written = write(samples, offset, toWrite, AudioTrack.WRITE_NON_BLOCKING)
-                    if (written < 0) {
-                        Log.e("SherpaTtsEngine", "AudioTrack write error: $written")
+                // If audio hasn't started playing yet but it's the current stream in the queue,
+                // we report it as Speaking at position 0.
+                if (info.startFrame == -1L || (relativeHead < info.totalFrames || !info.isWriteFinished)) {
+                    // This is the currently playing (or about to play) stream
+                    
+                    // If we have no boundaries AND it's not finished, we are in early synthesis.
+                    if (info.boundaries.isEmpty() && !info.isWriteFinished) {
+                        _state.value = TtsState.Buffering(info.stream.utteranceId)
                         break
                     }
-                    offset += written
 
-                    val currentHead = playbackHeadPosition
-                    val playedFrames = (currentHead - startHeadPosition).coerceAtLeast(0)
+                    // If we have boundaries, find current word
+                    val currentWord = if (relativeHead >= 0 && info.boundaries.isNotEmpty()) {
+                        info.boundaries.find {
+                            relativeHead in it.startSample.toLong() until it.endSample.toLong()
+                        } ?: if (!info.isWriteFinished) info.boundaries.firstOrNull() else info.boundaries.lastOrNull { relativeHead >= it.endSample }
+                    } else if (info.boundaries.isNotEmpty() && info.startFrame == -1L) {
+                        info.boundaries.firstOrNull()
+                    } else {
+                        null
+                    }
 
-                    // Find the current word based on played frames
-                    val currentWord = wordBoundaries.find {
-                        playedFrames in it.startSample until it.endSample
-                    } ?: wordBoundaries.lastOrNull { playedFrames >= it.endSample }
-
-                    // Throttle state updates to avoid overwhelming the UI
-                    if (offset % 4000 == 0 || offset >= totalSamples) {
-                        _state.value = TtsState.Speaking(
-                            audio.utteranceId,
-                            currentWord?.startChar ?: 0,
-                            currentWord?.endChar ?: 0,
-                            playedFrames,
+                    if (currentWord != null) {
+                        val newState = TtsState.Speaking(
+                            info.stream.utteranceId,
+                            currentWord.startChar,
+                            currentWord.endChar,
+                            relativeHead.coerceAtLeast(0).toInt(),
                         )
+
+                        // Only update if state actually changed or significantly progressed
+                        val oldState = _state.value
+                        if (oldState !is TtsState.Speaking || 
+                            oldState.utteranceId != newState.utteranceId || 
+                            oldState.start != newState.start || 
+                            oldState.end != newState.end ||
+                            abs(oldState.frame - newState.frame) > 200) { // Even lower threshold for higher frequency
+                            _state.value = newState
+                        }
+                    } else if (info.startFrame == -1L) {
+                         _state.value = TtsState.Buffering(info.stream.utteranceId)
                     }
 
-                    if (written == 0) {
-                        // Buffer full, wait a bit longer to be power efficient
-                        delay(100)
-                    }
+                    // We only update the state for the oldest active stream that is still playing or pending
+                    break
                 }
+            }
+        }
+    }
 
-                // Wait for the remainder of the audio to finish playing
-                val expectedEndHeadPosition = startHeadPosition + totalSamples
-                while (playbackHeadPosition < expectedEndHeadPosition &&
-                    playState == AudioTrack.PLAYSTATE_PLAYING &&
-                    scope.isActive &&
-                    audio.sessionId == currentSessionId
-                ) {
-                    val playedFrames = (playbackHeadPosition - startHeadPosition).coerceAtLeast(0)
-                    val currentWord = wordBoundaries.find {
-                        playedFrames in it.startSample until it.endSample
-                    } ?: wordBoundaries.lastOrNull { playedFrames >= it.endSample }
+    private suspend fun playAudioStream(stream: SynthesizedAudioStream) {
+        try {
+            // Check session before starting
+            if (stream.sessionId != currentSessionId) return
 
-                    _state.value = TtsState.Speaking(
-                        audio.utteranceId,
-                        currentWord?.startChar ?: 0,
-                        currentWord?.endChar ?: 0,
-                        playedFrames,
+            val sampleRate = stream.sampleRate
+            
+            val track = synchronized(this) {
+                if (audioTrack == null || currentSampleRate != sampleRate) {
+                    audioTrack?.let {
+                        try {
+                            it.flush()
+                            it.stop()
+                            it.release()
+                        } catch (e: Exception) {
+                            Log.w("SherpaTtsEngine", "Error releasing AudioTrack", e)
+                        }
+                    }
+
+                    val bufferSize = AudioTrack.getMinBufferSize(
+                        sampleRate,
+                        AudioFormat.CHANNEL_OUT_MONO,
+                        AudioFormat.ENCODING_PCM_FLOAT,
                     )
-                    delay(30)
+
+                    val newTrack = AudioTrack.Builder()
+                        .setAudioAttributes(
+                            AudioAttributes.Builder()
+                                .setUsage(audioUsage)
+                                .setContentType(audioContentType)
+                                .build(),
+                        )
+                        .setAudioFormat(
+                            AudioFormat.Builder()
+                                .setEncoding(AudioFormat.ENCODING_PCM_FLOAT)
+                                .setSampleRate(sampleRate)
+                                .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
+                                .build(),
+                        )
+                        .setBufferSizeInBytes(maxOf(bufferSize, sampleRate * 4)) // ~250ms buffer
+                        .setTransferMode(AudioTrack.MODE_STREAM)
+                        .build()
+
+                    newTrack.playbackParams = newTrack.playbackParams.setSpeed(playbackSpeed)
+                    newTrack.setVolume(volume)
+                    newTrack.play()
+                    
+                    audioTrack = newTrack
+                    currentSampleRate = sampleRate
+                    newTrack
+                } else {
+                    audioTrack!!
                 }
             }
 
-            _state.value = TtsState.Ready
+            // Ensure track is playing before writing
+            if (track.playState != AudioTrack.PLAYSTATE_PLAYING) {
+                track.play()
+            }
+
+            val info = StreamPlaybackInfo(
+                stream = stream,
+                totalFrames = 0,
+                projectedTotalFrames = (stream.text.length * samplesPerCharAverage).toInt()
+            )
+
+            activeStreams.add(info)
+
+            for (event in stream.eventChannel) {
+                if (stream.sessionId != currentSessionId) break
+
+                when (event) {
+                    is AudioStreamEvent.Chunk -> {
+                        val samples = event.samples
+                        var offset = 0
+                        while (offset < samples.size && scope.isActive && stream.sessionId == currentSessionId) {
+                            val currentTrack = synchronized(this@SherpaTtsEngine) { audioTrack } ?: break
+                            if (currentTrack.playState != AudioTrack.PLAYSTATE_PLAYING) {
+                                try {
+                                    currentTrack.play()
+                                } catch (e: Exception) {
+                                    break
+                                }
+                            }
+                            val toWrite = samples.size - offset
+                            val written = try {
+                                currentTrack.write(samples, offset, toWrite, AudioTrack.WRITE_NON_BLOCKING)
+                            } catch (e: Exception) {
+                                -1
+                            }
+                            if (written < 0) {
+                                Log.e("SherpaTtsEngine", "AudioTrack write error: $written")
+                                break
+                            }
+                            if (written == 0) {
+                                delay(10) // Wait for buffer to clear
+                                continue
+                            }
+                            
+                            // Capture the actual start frame when we first successfully write audio
+                            if (info.startFrame == -1L) {
+                                // For MODE_STREAM, the head position represents the frame currently being played.
+                                // If we just wrote audio, the head hasn't reached it yet.
+                                info.startFrame = (currentTrack.playbackHeadPosition.toLong() and 0xFFFFFFFFL)
+                            }
+                            
+                            offset += written
+                        }
+                        info.totalFrames += samples.size
+                        info.fullSamplesAccumulator.add(samples)
+
+                        // If synthesis is ongoing, we estimate boundaries for the first chunk 
+                        // to get highlighting moving as soon as possible.
+                        if (info.totalFrames > 100) { // Even earlier
+                            info.boundaries = estimateWordBoundaries(stream.text, info.projectedTotalFrames, null)
+                            info.isFirstChunkEstimated = true
+                        }
+                    }
+                    is AudioStreamEvent.Finished -> {
+                        val allSamples = FloatArray(info.totalFrames)
+                        var offset = 0
+                        for (chunk in info.fullSamplesAccumulator) {
+                            System.arraycopy(chunk, 0, allSamples, offset, chunk.size)
+                            offset += chunk.size
+                        }
+                        
+                        // Update our global average for future projections
+                        if (stream.text.length > 10) {
+                            val currentAverage = info.totalFrames.toFloat() / stream.text.length
+                            samplesPerCharAverage = (samplesPerCharAverage * 0.8f) + (currentAverage * 0.2f)
+                        }
+
+                        info.boundaries = estimateWordBoundaries(stream.text, info.totalFrames, allSamples)
+                        info.fullSamplesAccumulator.clear()
+                        info.isWriteFinished = true
+                        break
+                    }
+                }
+            }
         } catch (e: Exception) {
             Log.e("SherpaTtsEngine", "Playback failed", e)
             _state.value = TtsState.Error(e.message ?: "Playback failed")
+        } finally {
+            stream.eventChannel.close()
         }
     }
 
@@ -500,19 +654,34 @@ class SherpaTtsEngine @Inject constructor(
     override fun stop() {
         synchronized(this) {
             currentSessionId++
+            // Reset sample rate to force AudioTrack recreation if needed next time
+            currentSampleRate = -1
             while (utteranceQueue.tryReceive().isSuccess) { /* consume */ }
-            while (synthesizedQueue.tryReceive().isSuccess) { /* consume */ }
-        }
-
-        try {
-            audioTrack?.let { track ->
-                if (track.state == AudioTrack.STATE_INITIALIZED) {
-                    track.stop()
-                    track.flush()
-                }
+            var result = synthesizedQueue.tryReceive()
+            while (result.isSuccess) {
+                result.getOrNull()?.eventChannel?.close()
+                result = synthesizedQueue.tryReceive()
             }
-        } catch (e: Exception) {
-            Log.e("SherpaTtsEngine", "Error stopping AudioTrack", e)
+            activeStreams.clear()
+
+            try {
+                audioTrack?.let { track ->
+                    if (track.state == AudioTrack.STATE_INITIALIZED) {
+                        try {
+                            track.pause()
+                            track.flush()
+                            track.stop()
+                        } catch (e: Exception) {
+                            // Ignore errors during stop/flush as track might already be in an invalid state
+                        }
+                        track.release()
+                    }
+                }
+                audioTrack = null
+                currentSampleRate = -1
+            } catch (e: Exception) {
+                Log.e("SherpaTtsEngine", "Error stopping AudioTrack", e)
+            }
         }
 
         if (_state.value !is TtsState.Initializing) {
@@ -555,27 +724,42 @@ class SherpaTtsEngine @Inject constructor(
         }
     }
 
-    private fun estimateWordBoundaries(text: String, totalSamples: Int, samples: FloatArray): List<WordBoundary> {
+    // NOTE: As of Sherpa-ONNX v1.13.4, native word-level timestamps are supported in the C++ core
+    // but not yet exposed in the Java/JNI bindings (GeneratedAudio only contains samples/sampleRate).
+    // Using this heuristic until the Java API is updated in a future release.
+    private fun estimateWordBoundaries(text: String, totalSamples: Int, samples: FloatArray?): List<WordBoundary> {
         val boundaries = mutableListOf<WordBoundary>()
         if (text.isEmpty() || totalSamples == 0) return boundaries
 
-        // 1. Detect actual speech bounds to avoid counting silence in the heuristic
-        val (speechStart, speechEnd) = detectSpeechBounds(samples)
-        val speechSamples = (speechEnd - speechStart).coerceAtLeast(0)
-
-        if (speechSamples == 0) return boundaries
+        // 1. Detect actual speech bounds if we have the full audio
+        var speechStart = 0
+        var speechEnd = totalSamples
+        
+        if (samples != null) {
+            val bounds = detectSpeechBounds(samples)
+            // Only trust bounds if they don't seem like the whole thing anyway
+            if (bounds.first > samples.size * 0.01 || bounds.second < samples.size * 0.99) {
+                speechStart = bounds.first
+                speechEnd = bounds.second
+            }
+        }
+        
+        val speechSamples = (speechEnd - speechStart).coerceAtLeast(1)
 
         // 2. Calculate weighted length of the text
         val weights = text.map { getCharWeight(it) }
-        val totalWeight = weights.sum()
-
-        if (totalWeight == 0f) return boundaries
+        val totalWeight = weights.sum().coerceAtLeast(1.0f)
 
         // 3. Find all non-whitespace tokens (words)
         val regex = Regex("\\S+")
         val matches = regex.findAll(text).toList()
 
-        if (matches.isEmpty()) return boundaries
+        if (matches.isEmpty()) {
+            // Fallback for single word or no whitespace
+            if (text.trim().isEmpty()) return emptyList()
+            boundaries.add(WordBoundary(0, text.length, speechStart, speechEnd))
+            return boundaries
+        }
 
         matches.forEach { match ->
             val startChar = match.range.first
@@ -585,48 +769,46 @@ class SherpaTtsEngine @Inject constructor(
             val weightBefore = weights.take(startChar).sum()
             val weightInWord = weights.subList(startChar, endChar).sum()
 
-            val startSample = speechStart + (weightBefore / totalWeight * speechSamples).toInt()
-            val endSample = speechStart + ((weightBefore + weightInWord) / totalWeight * speechSamples).toInt()
+            val wordStartSample = speechStart + (weightBefore / totalWeight * speechSamples).toInt()
+            val wordEndSample = speechStart + ((weightBefore + weightInWord) / totalWeight * speechSamples).toInt()
 
-            boundaries.add(WordBoundary(startChar, endChar, startSample, endSample))
+            boundaries.add(WordBoundary(startChar, endChar, wordStartSample, wordEndSample))
         }
 
         return boundaries
     }
 
     private fun detectSpeechBounds(samples: FloatArray): Pair<Int, Int> {
-        val threshold = 0.01f
+        val threshold = 0.005f // More sensitive threshold
         var start = 0
-        // Search first 20% for start
-        val startLimit = (samples.size * 0.2).toInt()
+        // Search first 40% for start
+        val startLimit = (samples.size * 0.4).toInt()
         while (start < startLimit && start < samples.size && abs(samples[start]) < threshold) {
             start++
         }
 
         var end = samples.size - 1
-        // Search last 20% for end
-        val endLimit = (samples.size * 0.8).toInt()
+        // Search last 40% for end
+        val endLimit = (samples.size * 0.6).toInt()
         while (end > endLimit && end > 0 && abs(samples[end]) < threshold) {
             end--
         }
-
-        // If we didn't find clear bounds, use a small buffer
-        if (start >= startLimit) start = (samples.size * 0.05).toInt()
-        if (end <= endLimit) end = (samples.size * 0.95).toInt()
 
         return Pair(start, end)
     }
 
     private fun getCharWeight(c: Char): Float = when (c) {
-        '.', '!', '?' -> 3.0f // Longest pause
+        '.', '!', '?' -> 3.0f // Significant pause
         ',', ';', ':', '-' -> 2.0f // Medium pause
-        ' ' -> 0.6f // Slight gap between words
+        ' ' -> 1.2f // Gap between words
+        '(', ')', '[', ']', '{', '}', '"', '\'' -> 0.1f // Usually quick
         else -> 1.0f // Standard character duration
     }
 
     override fun release() {
         synthesisJob?.cancel()
         playbackJob?.cancel()
+        monitorJob?.cancel()
         tts?.release()
         audioTrack?.release()
         tts = null
