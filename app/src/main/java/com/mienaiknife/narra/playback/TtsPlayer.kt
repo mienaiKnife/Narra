@@ -192,7 +192,7 @@ class TtsPlayer @Inject constructor(
                         // If the engine is reporting progress, we TRUST it even if it's early.
                         // However, we only update if it's not a jump BACKWARDS unless it's a new paragraph.
                         if (index == currentParagraphIndex && ttsStart < resumeWordOffset && state.frame > 5000) {
-                             return@onEach
+                            return@onEach
                         }
 
                         val speakable = paragraphs.getOrNull(index)
@@ -308,7 +308,7 @@ class TtsPlayer @Inject constructor(
         val currentPositionMs = if (currentParagraphIndex >= 0 && currentParagraphIndex < paragraphs.size) {
             val paragraph = paragraphs[currentParagraphIndex]
             val paragraphLength = paragraph.text.length
-            
+
             // If the engine is speaking, use the exact frame it reported
             val engineState = ttsEngine.state.value
             val progress = if (engineState is TtsState.Speaking && engineState.utteranceId == currentParagraphIndex.toString()) {
@@ -724,7 +724,7 @@ class TtsPlayer @Inject constructor(
         baseWordOffset = wordOffset
         currentParagraphIndex = startIndex
         resumeWordOffset = wordOffset
-        
+
         // Reset local state in player before asking engine to speak,
         // so that the very first Speaking event from the engine is accepted.
         currentWordRange = null

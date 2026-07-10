@@ -28,7 +28,7 @@ class SherpaTtsEngineTest {
         // weights: H(1), e(1), l(1), l(1), o(1), ' '(1.2), w(1), o(1), r(1), l(1), d(1)
         // total weight = 5*1 + 1.2 + 5*1 = 11.2
         // Hello: start 0, end 5. weight = 5. samples = (5 / 11.2) * 1000 = 446.4 -> 446
-        // world: start 6, end 11. weight = 5. offset weight before = 6.2. 
+        // world: start 6, end 11. weight = 5. offset weight before = 6.2.
         // start sample = (6.2 / 11.2) * 1000 = 553.5 -> 553
         // end sample = (11.2 / 11.2) * 1000 = 1000
 
@@ -71,15 +71,17 @@ class SherpaTtsEngineTest {
 
         assertEquals(4, boundaries.size)
         // "fox" should end near 10000, not 1000
-        assertTrue("Last word should end near projected total, but was ${boundaries.last().endSample}",
-            boundaries.last().endSample > 8000)
+        assertTrue(
+            "Last word should end near projected total, but was ${boundaries.last().endSample}",
+            boundaries.last().endSample > 8000,
+        )
     }
 
     // Helper to test the logic (copied from SherpaTtsEngine)
     private fun estimateWordBoundaries(
         text: String,
         totalSamples: Int,
-        samples: FloatArray? = null
+        samples: FloatArray? = null,
     ): List<WordBoundaryWrapper> {
         val boundaries = mutableListOf<WordBoundaryWrapper>()
         if (text.isEmpty() || totalSamples == 0) return boundaries

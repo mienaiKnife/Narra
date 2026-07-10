@@ -89,7 +89,7 @@ class SherpaTtsEngine @Inject constructor(
         var boundaries: List<WordBoundary> = emptyList(),
         var fullSamplesAccumulator: MutableList<FloatArray> = mutableListOf(),
         var isFirstChunkEstimated: Boolean = false,
-        var projectedTotalFrames: Int = 0
+        var projectedTotalFrames: Int = 0,
     )
 
     data class UtteranceRequest(val text: String, val utteranceId: String, val sessionId: Int)
@@ -110,9 +110,7 @@ class SherpaTtsEngine @Inject constructor(
                 return samples.contentEquals(other.samples)
             }
 
-            override fun hashCode(): Int {
-                return samples.contentHashCode()
-            }
+            override fun hashCode(): Int = samples.contentHashCode()
         }
         object Finished : AudioStreamEvent()
     }
@@ -361,23 +359,21 @@ class SherpaTtsEngine @Inject constructor(
                             sampleRate,
                             request.utteranceId,
                             request.text,
-                            request.sessionId
-                        )
+                            request.sessionId,
+                        ),
                     )
 
                     val genConfig = GenerationConfig(
                         speed = 1.0f,
-                        sid = currentSpeakerId ?: 0
+                        sid = currentSpeakerId ?: 0,
                     )
 
                     val callback = object : SherpaTtsCallback() {
-                        override fun invoke(samples: FloatArray): Int {
-                            return if (request.sessionId == currentSessionId) {
-                                eventChannel.trySend(AudioStreamEvent.Chunk(samples))
-                                1
-                            } else {
-                                0
-                            }
+                        override fun invoke(samples: FloatArray): Int = if (request.sessionId == currentSessionId) {
+                            eventChannel.trySend(AudioStreamEvent.Chunk(samples))
+                            1
+                        } else {
+                            0
                         }
                     }
 
@@ -410,7 +406,7 @@ class SherpaTtsEngine @Inject constructor(
 
     private fun updatePlaybackProgress() {
         val track = synchronized(this) { audioTrack } ?: return
-        
+
         val head = try {
             if (track.state != AudioTrack.STATE_INITIALIZED) return
             track.playbackHeadPosition.toLong() and 0xFFFFFFFFL
@@ -418,7 +414,7 @@ class SherpaTtsEngine @Inject constructor(
             // Track might have been released just after our null check
             return
         }
-        
+
         synchronized(activeStreams) {
             val iterator = activeStreams.iterator()
             while (iterator.hasNext()) {
@@ -429,7 +425,7 @@ class SherpaTtsEngine @Inject constructor(
                 }
 
                 val relativeHead = if (info.startFrame != -1L) head - info.startFrame else -1L
-                
+
                 if (info.isWriteFinished && info.startFrame != -1L && relativeHead >= info.totalFrames) {
                     // This stream is finished playing
                     _state.value = TtsState.Finished(info.stream.utteranceId)
@@ -441,7 +437,7 @@ class SherpaTtsEngine @Inject constructor(
                 // we report it as Speaking at position 0.
                 if (info.startFrame == -1L || (relativeHead < info.totalFrames || !info.isWriteFinished)) {
                     // This is the currently playing (or about to play) stream
-                    
+
                     // If we have no boundaries AND it's not finished, we are in early synthesis.
                     if (info.boundaries.isEmpty() && !info.isWriteFinished) {
                         _state.value = TtsState.Buffering(info.stream.utteranceId)
@@ -469,15 +465,16 @@ class SherpaTtsEngine @Inject constructor(
 
                         // Only update if state actually changed or significantly progressed
                         val oldState = _state.value
-                        if (oldState !is TtsState.Speaking || 
-                            oldState.utteranceId != newState.utteranceId || 
-                            oldState.start != newState.start || 
+                        if (oldState !is TtsState.Speaking ||
+                            oldState.utteranceId != newState.utteranceId ||
+                            oldState.start != newState.start ||
                             oldState.end != newState.end ||
-                            abs(oldState.frame - newState.frame) > 200) { // Even lower threshold for higher frequency
+                            abs(oldState.frame - newState.frame) > 200
+                        ) { // Even lower threshold for higher frequency
                             _state.value = newState
                         }
                     } else if (info.startFrame == -1L) {
-                         _state.value = TtsState.Buffering(info.stream.utteranceId)
+                        _state.value = TtsState.Buffering(info.stream.utteranceId)
                     }
 
                     // We only update the state for the oldest active stream that is still playing or pending
@@ -493,7 +490,7 @@ class SherpaTtsEngine @Inject constructor(
             if (stream.sessionId != currentSessionId) return
 
             val sampleRate = stream.sampleRate
-            
+
             val track = synchronized(this) {
                 if (audioTrack == null || currentSampleRate != sampleRate) {
                     audioTrack?.let {
@@ -533,7 +530,7 @@ class SherpaTtsEngine @Inject constructor(
                     newTrack.playbackParams = newTrack.playbackParams.setSpeed(playbackSpeed)
                     newTrack.setVolume(volume)
                     newTrack.play()
-                    
+
                     audioTrack = newTrack
                     currentSampleRate = sampleRate
                     newTrack
@@ -550,7 +547,7 @@ class SherpaTtsEngine @Inject constructor(
             val info = StreamPlaybackInfo(
                 stream = stream,
                 totalFrames = 0,
-                projectedTotalFrames = (stream.text.length * samplesPerCharAverage).toInt()
+                projectedTotalFrames = (stream.text.length * samplesPerCharAverage).toInt(),
             )
 
             activeStreams.add(info)
@@ -585,20 +582,20 @@ class SherpaTtsEngine @Inject constructor(
                                 delay(10) // Wait for buffer to clear
                                 continue
                             }
-                            
+
                             // Capture the actual start frame when we first successfully write audio
                             if (info.startFrame == -1L) {
                                 // For MODE_STREAM, the head position represents the frame currently being played.
                                 // If we just wrote audio, the head hasn't reached it yet.
                                 info.startFrame = (currentTrack.playbackHeadPosition.toLong() and 0xFFFFFFFFL)
                             }
-                            
+
                             offset += written
                         }
                         info.totalFrames += samples.size
                         info.fullSamplesAccumulator.add(samples)
 
-                        // If synthesis is ongoing, we estimate boundaries for the first chunk 
+                        // If synthesis is ongoing, we estimate boundaries for the first chunk
                         // to get highlighting moving as soon as possible.
                         if (info.totalFrames > 100) { // Even earlier
                             info.boundaries = estimateWordBoundaries(stream.text, info.projectedTotalFrames, null)
@@ -612,7 +609,7 @@ class SherpaTtsEngine @Inject constructor(
                             System.arraycopy(chunk, 0, allSamples, offset, chunk.size)
                             offset += chunk.size
                         }
-                        
+
                         // Update our global average for future projections
                         if (stream.text.length > 10) {
                             val currentAverage = info.totalFrames.toFloat() / stream.text.length
@@ -734,7 +731,7 @@ class SherpaTtsEngine @Inject constructor(
         // 1. Detect actual speech bounds if we have the full audio
         var speechStart = 0
         var speechEnd = totalSamples
-        
+
         if (samples != null) {
             val bounds = detectSpeechBounds(samples)
             // Only trust bounds if they don't seem like the whole thing anyway
@@ -743,7 +740,7 @@ class SherpaTtsEngine @Inject constructor(
                 speechEnd = bounds.second
             }
         }
-        
+
         val speechSamples = (speechEnd - speechStart).coerceAtLeast(1)
 
         // 2. Calculate weighted length of the text

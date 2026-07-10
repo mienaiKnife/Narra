@@ -18,7 +18,13 @@ package com.mienaiknife.narra.tts.ondevice
 import com.mienaiknife.narra.domain.TtsState
 import com.mienaiknife.narra.domain.repository.ModelRepository
 import com.mienaiknife.narra.playback.PlaybackSettingsManager
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.setMain
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -26,13 +32,16 @@ import org.junit.Test
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.`when`
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class SherpaTtsEngineErrorTest {
     private lateinit var modelRepository: ModelRepository
     private lateinit var settingsManager: PlaybackSettingsManager
     private lateinit var engine: SherpaTtsEngine
+    private val testDispatcher = StandardTestDispatcher()
 
     @Before
     fun setup() {
+        Dispatchers.setMain(testDispatcher)
         modelRepository = mock(ModelRepository::class.java)
         settingsManager = mock(PlaybackSettingsManager::class.java)
 
@@ -44,6 +53,11 @@ class SherpaTtsEngineErrorTest {
         `when`(settingsManager.sherpaSpeed).thenReturn(MutableStateFlow(1.0f))
 
         engine = SherpaTtsEngine(modelRepository, settingsManager)
+    }
+
+    @After
+    fun tearDown() {
+        Dispatchers.resetMain()
     }
 
     @Test

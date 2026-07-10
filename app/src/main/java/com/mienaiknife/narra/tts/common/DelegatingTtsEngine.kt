@@ -70,7 +70,7 @@ constructor(
             combine(
                 settingsManager.ttsEngine,
                 settingsManager.ttsModelId,
-                modelRepository.getAvailableModels()
+                modelRepository.getAvailableModels(),
             ) { engine, modelId, models ->
                 Triple(engine, modelId, models)
             }.collect { (engine, modelId, models) ->
