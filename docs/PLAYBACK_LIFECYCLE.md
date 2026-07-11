@@ -14,6 +14,15 @@ Narra bridges the gap between traditional media players and Text-to-Speech engin
 - **`PlaybackSettingsManager`**: Manages user preferences for playback, such as skip times, auto-play settings, and the selected TTS engine/model.
 - **`TtsEngine`**: The underlying interface for actual speech synthesis (e.g., `AndroidTtsEngine`, `SherpaTtsEngine`).
 
+## Samsung-Specific Optimizations
+
+Narra includes critical workarounds for Samsung (One UI) devices to ensure control responsiveness and hardware button priority:
+- **Reflection-based MBR**: Manually setting the `MediaButtonReceiver` on the underlying `MediaSessionCompat`.
+- **Session Extras**: Using `android.media.IS_EXPLICIT` and `EXTRA_SLOT_RESERVATION` to claim system priority.
+- **Widget Intents**: Using direct `Intent` signals to `PlaybackService` instead of `MediaController` for zero-latency widget actions.
+
+See [samsung-media-session-fixes.md](samsung-media-session-fixes.md) for full technical details.
+
 ## The Playback Flow
 
 1. **Initialization**: When the app starts, `PlaybackManager` restores the last played article from `PlaybackSettingsManager`.

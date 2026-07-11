@@ -73,6 +73,19 @@ Run unit tests using the following command:
 - [Testing Guide](docs/TESTING_GUIDE.md) - How to run and write tests for Narra
 - [Privacy Policy](docs/PRIVACY.md) - Our commitment to your privacy
 
+## Current Features
+
+- **RSS Feed Subscription**: Subscribe to blog feeds and automatically fetch new articles.
+- **Web Page Importing**: Extract clean text from webpages using a reader-mode heuristic for a distraction-free experience.
+- **EPUB Support**: Import and listen to DRM-free ebook files in EPUB format.
+- **Listening Queue**: A playlist-style UI for managing and listening to multiple articles in sequence.
+- **Multiple TTS Engines**: Support for Android's built-in TTS and natural-sounding, on-device AI voices (Sherpa-ONNX).
+- **Background Playback**: Foreground service support for uninterrupted listening with system media controls and lock screen integration.
+- **Home Screen Widget**: Glance-based widget for quick playback control and queue status.
+- **Database Backup & Sync**: File-based backup/restore and optional auto-export for manual syncing (e.g., via Syncthing).
+- **OPML Support**: Import and export your feed list for easy migration between RSS apps.
+- **Privacy First**: No accounts required; all data and TTS synthesis stay on your device.
+
 ## Planned Features
 
 - PDF file importing and parsing
