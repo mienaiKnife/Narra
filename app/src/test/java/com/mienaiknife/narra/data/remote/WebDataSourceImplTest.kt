@@ -80,4 +80,26 @@ class WebDataSourceImplTest {
         org.junit.Assert.assertNotNull("SVG should be converted to img", img)
         assertTrue("Img should have data URI", img!!.attr("src").startsWith("data:image/svg+xml;base64,"))
     }
+
+    @Test
+    fun `preCleanDocument does NOT remove body even if it has a share class`() {
+        val html =
+            """
+            <html>
+                <body class="long-read-share-links">
+                    <div id="content">Main content</div>
+                    <div class="share-links">Should be removed</div>
+                </body>
+            </html>
+            """.trimIndent()
+        val doc = org.jsoup.Jsoup.parse(html)
+
+        val method = webDataSource.javaClass.getDeclaredMethod("preCleanDocument", org.jsoup.nodes.Document::class.java)
+        method.isAccessible = true
+        method.invoke(webDataSource, doc)
+
+        org.junit.Assert.assertNotNull("Body should NOT have been removed", doc.selectFirst("body"))
+        org.junit.Assert.assertNotNull("Main content should still exist", doc.selectFirst("#content"))
+        org.junit.Assert.assertNull("Share links div should have been removed", doc.selectFirst(".share-links"))
+    }
 }

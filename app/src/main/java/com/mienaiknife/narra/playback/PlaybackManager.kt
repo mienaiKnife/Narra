@@ -356,18 +356,7 @@ class PlaybackManager @Inject constructor(
                 val shortenHyperlinks = settingsManager.shortenHyperlinks.first()
 
                 val ttsSpeakables = withContext(Dispatchers.Default) {
-                    actualBlocks.map { block ->
-                        if (block is ContentBlock.Image) {
-                            if (readAltText) {
-                                val alt = block.altText?.let { context.getString(R.string.reader_image_prefix, it) } ?: ""
-                                SpeakableText(alt)
-                            } else {
-                                SpeakableText("")
-                            }
-                        } else {
-                            block.text.toSpeakableText(context, shortenLinks = shortenHyperlinks)
-                        }
-                    }
+                    SpeakableContentConverter.convert(context, actualBlocks, readAltText, shortenHyperlinks)
                 }
 
                 if (isAutomatic && playWhenReady) {
@@ -541,41 +530,34 @@ class PlaybackManager @Inject constructor(
         val article = _currentArticle.value ?: return
         // If we are more than 3 seconds in, just restart current article
         if (ttsPlayer.currentPosition > 3000) {
-            scope.launch {
-                val blocks = withContext(Dispatchers.Default) {
-                    HtmlParser.parse(article.content, article.url)
-                }
-
-                val readAltText = settingsManager.readAltText.first()
-                val shortenHyperlinks = settingsManager.shortenHyperlinks.first()
-
-                val ttsSpeakables = withContext(Dispatchers.Default) {
-                    blocks.map { block ->
-                        if (block is ContentBlock.Image) {
-                            if (readAltText) {
-                                val alt = block.altText?.let { context.getString(R.string.reader_image_prefix, it) } ?: ""
-                                SpeakableText(alt)
-                            } else {
-                                SpeakableText("")
-                            }
-                        } else {
-                            block.text.toSpeakableText(context, shortenLinks = shortenHyperlinks)
-                        }
-                    }
-                }
-                repository.updateArticleProgress(article.id, 0f, 0, 0)
-                ttsPlayer.speak(
-                    article.copy(
-                        currentParagraphIndex = 0,
-                        currentWordOffset = 0,
-                        progress = 0f,
-                    ),
-                    ttsSpeakables,
-                    ttsPlayer.playWhenReady,
-                )
-            }
+            restartCurrentArticle(article)
         } else {
             playPreviousArticle()
+        }
+    }
+
+    private fun restartCurrentArticle(article: Article) {
+        scope.launch {
+            val blocks = withContext(Dispatchers.Default) {
+                HtmlParser.parse(article.content, article.url)
+            }
+
+            val readAltText = settingsManager.readAltText.first()
+            val shortenHyperlinks = settingsManager.shortenHyperlinks.first()
+
+            val ttsSpeakables = withContext(Dispatchers.Default) {
+                SpeakableContentConverter.convert(context, blocks, readAltText, shortenHyperlinks)
+            }
+            repository.updateArticleProgress(article.id, 0f, 0, 0)
+            ttsPlayer.speak(
+                article.copy(
+                    currentParagraphIndex = 0,
+                    currentWordOffset = 0,
+                    progress = 0f,
+                ),
+                ttsSpeakables,
+                ttsPlayer.playWhenReady,
+            )
         }
     }
 
@@ -595,37 +577,7 @@ class PlaybackManager @Inject constructor(
                 setCurrentArticle(prevArticle)
             } else {
                 // Restart current if no previous
-                val blocks = withContext(Dispatchers.Default) {
-                    HtmlParser.parse(current.content, current.url)
-                }
-
-                val readAltText = settingsManager.readAltText.first()
-                val shortenHyperlinks = settingsManager.shortenHyperlinks.first()
-
-                val ttsSpeakables = withContext(Dispatchers.Default) {
-                    blocks.map { block ->
-                        if (block is ContentBlock.Image) {
-                            if (readAltText) {
-                                val alt = block.altText?.let { context.getString(R.string.reader_image_prefix, it) } ?: ""
-                                SpeakableText(alt)
-                            } else {
-                                SpeakableText("")
-                            }
-                        } else {
-                            block.text.toSpeakableText(context, shortenLinks = shortenHyperlinks)
-                        }
-                    }
-                }
-                repository.updateArticleProgress(current.id, 0f, 0, 0)
-                ttsPlayer.speak(
-                    current.copy(
-                        currentParagraphIndex = 0,
-                        currentWordOffset = 0,
-                        progress = 0f,
-                    ),
-                    ttsSpeakables,
-                    ttsPlayer.playWhenReady,
-                )
+                restartCurrentArticle(current)
             }
         }
     }

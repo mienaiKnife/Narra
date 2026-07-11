@@ -27,7 +27,10 @@ import com.mienaiknife.narra.data.remote.RemoteFeedDataSource
 import com.mienaiknife.narra.data.remote.RemoteFeedDataSourceImpl
 import com.mienaiknife.narra.data.remote.WebDataSource
 import com.mienaiknife.narra.data.remote.WebDataSourceImpl
+import com.mienaiknife.narra.data.repositories.ArticleRepositoryImpl
 import com.mienaiknife.narra.data.repositories.ContentRepositoryImpl
+import com.mienaiknife.narra.data.repositories.FeedRepositoryImpl
+import com.mienaiknife.narra.data.repositories.ImportExportRepositoryImpl
 import com.mienaiknife.narra.data.repositories.ModelRepositoryImpl
 import com.mienaiknife.narra.data.settings.DownloadSettingsManager
 import com.mienaiknife.narra.domain.repository.ArticleRepository
@@ -55,44 +58,61 @@ object RepositoryModule {
     @Provides
     @Singleton
     fun provideContentRepository(
-        @dagger.hilt.android.qualifiers.ApplicationContext context: android.content.Context,
-        database: com.mienaiknife.narra.data.local.AppDatabase,
         articleDao: ArticleDao,
         feedDao: FeedDao,
         webDataSource: WebDataSource,
         remoteFeedDataSource: RemoteFeedDataSource,
-        epubDataSource: EpubDataSource,
-        opmlDataSource: OpmlDataSource,
+        imageDataSource: ImageDataSource,
         networkMonitor: NetworkMonitor,
         downloadSettingsManager: DownloadSettingsManager,
-        imageDataSource: ImageDataSource,
         notificationHelper: com.mienaiknife.narra.utils.NotificationHelper,
-    ): ContentRepository = ContentRepositoryImpl(
-        context,
-        database,
-        articleDao,
-        feedDao,
-        webDataSource,
-        remoteFeedDataSource,
-        epubDataSource,
-        imageDataSource,
-        opmlDataSource,
-        networkMonitor,
-        downloadSettingsManager,
-        notificationHelper,
-    )
+        @dagger.hilt.android.qualifiers.ApplicationContext context: android.content.Context,
+        database: com.mienaiknife.narra.data.local.AppDatabase,
+        epubDataSource: EpubDataSource,
+        opmlDataSource: OpmlDataSource,
+    ): ContentRepository {
+        val articleRepo = ArticleRepositoryImpl(
+            articleDao,
+            webDataSource,
+            imageDataSource,
+            networkMonitor,
+            downloadSettingsManager
+        )
+        val feedRepo = FeedRepositoryImpl(
+            feedDao,
+            articleDao,
+            remoteFeedDataSource,
+            imageDataSource,
+            networkMonitor,
+            downloadSettingsManager,
+            notificationHelper
+        )
+        val importExportRepo = ImportExportRepositoryImpl(
+            context,
+            database,
+            articleDao,
+            feedDao,
+            epubDataSource,
+            opmlDataSource
+        )
+        return ContentRepositoryImpl(
+            articleRepo,
+            feedRepo,
+            importExportRepo
+        )
+    }
 
     @Provides
     @Singleton
-    fun provideArticleRepository(contentRepository: ContentRepository): ArticleRepository = contentRepository
+    fun provideArticleRepositoryInterface(contentRepository: ContentRepository): ArticleRepository = contentRepository
 
     @Provides
     @Singleton
-    fun provideFeedRepository(contentRepository: ContentRepository): FeedRepository = contentRepository
+    fun provideFeedRepositoryInterface(contentRepository: ContentRepository): FeedRepository = contentRepository
 
     @Provides
     @Singleton
-    fun provideImportExportRepository(contentRepository: ContentRepository): ImportExportRepository = contentRepository
+    fun provideImportExportRepositoryInterface(contentRepository: ContentRepository): ImportExportRepository = contentRepository
 
     @Provides
     @Singleton

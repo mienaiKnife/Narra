@@ -16,11 +16,11 @@
 package com.mienaiknife.narra.domain
 
 sealed class TtsState {
-    object Idle : TtsState()
+    data object Idle : TtsState()
 
-    object Initializing : TtsState()
+    data object Initializing : TtsState()
 
-    object Ready : TtsState()
+    data object Ready : TtsState()
 
     data class Buffering(val utteranceId: String) : TtsState()
 
