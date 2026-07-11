@@ -27,7 +27,7 @@ import com.mienaiknife.narra.data.local.entities.TtsModelEntity
 @Database(
     entities = [ArticleEntity::class, FeedEntity::class, TtsModelEntity::class],
     version = 17,
-    exportSchema = false,
+    exportSchema = true,
 )
 abstract class AppDatabase : RoomDatabase() {
     abstract fun articleDao(): ArticleDao

@@ -27,18 +27,16 @@ object SpeakableContentConverter {
         blocks: List<ContentBlock>,
         readAltText: Boolean,
         shortenHyperlinks: Boolean,
-    ): List<SpeakableText> {
-        return blocks.map { block ->
-            if (block is ContentBlock.Image) {
-                if (readAltText) {
-                    val alt = block.altText?.let { context.getString(R.string.reader_image_prefix, it) } ?: ""
-                    SpeakableText(alt)
-                } else {
-                    SpeakableText("")
-                }
+    ): List<SpeakableText> = blocks.map { block ->
+        if (block is ContentBlock.Image) {
+            if (readAltText) {
+                val alt = block.altText?.let { context.getString(R.string.reader_image_prefix, it) } ?: ""
+                SpeakableText(alt)
             } else {
-                block.text.toSpeakableText(context, shortenLinks = shortenHyperlinks)
+                SpeakableText("")
             }
+        } else {
+            block.text.toSpeakableText(context, shortenLinks = shortenHyperlinks)
         }
     }
 }

@@ -52,8 +52,7 @@ class ContentRepositoryImpl @Inject constructor(
     override suspend fun markAllAsPlayedInFeed(feedUrl: String) = articleRepository.markAllAsPlayedInFeed(feedUrl)
     override suspend fun markAllAsUnplayedInFeed(feedUrl: String) = articleRepository.markAllAsUnplayedInFeed(feedUrl)
     override suspend fun toggleFavorite(id: String) = articleRepository.toggleFavorite(id)
-    override suspend fun updateArticleProgress(id: String, progress: Float, paragraphIndex: Int, wordOffset: Int, duration: Long?) =
-        articleRepository.updateArticleProgress(id, progress, paragraphIndex, wordOffset, duration)
+    override suspend fun updateArticleProgress(id: String, progress: Float, paragraphIndex: Int, wordOffset: Int, duration: Long?) = articleRepository.updateArticleProgress(id, progress, paragraphIndex, wordOffset, duration)
     override suspend fun reorderQueue(fromIndex: Int, toIndex: Int) = articleRepository.reorderQueue(fromIndex, toIndex)
     override suspend fun updateQueueOrder(articleIds: List<String>) = articleRepository.updateQueueOrder(articleIds)
     override suspend fun pruneOldArticleContent(maxAgeDays: Int) = articleRepository.pruneOldArticleContent(maxAgeDays)

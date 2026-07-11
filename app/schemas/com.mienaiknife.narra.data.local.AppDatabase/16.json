@@ -1,0 +1,379 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 16,
+    "identityHash": "dummy_hash_16",
+    "entities": [
+      {
+        "tableName": "articles",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `title` TEXT NOT NULL, `source` TEXT NOT NULL, `content` TEXT, `excerpt` TEXT, `imageUrl` TEXT, `localImageUrl` TEXT, `url` TEXT, `progress` REAL NOT NULL, `currentParagraphIndex` INTEGER NOT NULL, `currentWordOffset` INTEGER NOT NULL, `isFavorite` INTEGER NOT NULL, `isFromFeed` INTEGER NOT NULL, `isInQueue` INTEGER NOT NULL, `queueOrder` INTEGER NOT NULL, `publishedAt` TEXT, `publishedTimestamp` INTEGER, `feedUrl` TEXT, `duration` INTEGER, `finishedAt` INTEGER, `lastPlayedAt` INTEGER, `createdAt` INTEGER NOT NULL, `sortTimestamp` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "title",
+            "columnName": "title",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "source",
+            "columnName": "source",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "content",
+            "columnName": "content",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "excerpt",
+            "columnName": "excerpt",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "imageUrl",
+            "columnName": "imageUrl",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "localImageUrl",
+            "columnName": "localImageUrl",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "url",
+            "columnName": "url",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "progress",
+            "columnName": "progress",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "currentParagraphIndex",
+            "columnName": "currentParagraphIndex",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "currentWordOffset",
+            "columnName": "currentWordOffset",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "isFavorite",
+            "columnName": "isFavorite",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "isFromFeed",
+            "columnName": "isFromFeed",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "isInQueue",
+            "columnName": "isInQueue",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "queueOrder",
+            "columnName": "queueOrder",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "publishedAt",
+            "columnName": "publishedAt",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "publishedTimestamp",
+            "columnName": "publishedTimestamp",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "feedUrl",
+            "columnName": "feedUrl",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "duration",
+            "columnName": "duration",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "finishedAt",
+            "columnName": "finishedAt",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "lastPlayedAt",
+            "columnName": "lastPlayedAt",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "createdAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sortTimestamp",
+            "columnName": "sortTimestamp",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_articles_isInQueue_queueOrder_sortTimestamp",
+            "unique": false,
+            "columnNames": [
+              "isInQueue",
+              "queueOrder",
+              "sortTimestamp"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_articles_isInQueue_queueOrder_sortTimestamp` ON `${TABLE_NAME}` (`isInQueue`, `queueOrder`, `sortTimestamp`)"
+          },
+          {
+            "name": "index_articles_isFromFeed_sortTimestamp",
+            "unique": false,
+            "columnNames": [
+              "isFromFeed",
+              "sortTimestamp"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_articles_isFromFeed_sortTimestamp` ON `${TABLE_NAME}` (`isFromFeed`, `sortTimestamp`)"
+          },
+          {
+            "name": "index_articles_isFavorite_sortTimestamp",
+            "unique": false,
+            "columnNames": [
+              "isFavorite",
+              "sortTimestamp"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_articles_isFavorite_sortTimestamp` ON `${TABLE_NAME}` (`isFavorite`, `sortTimestamp`)"
+          },
+          {
+            "name": "index_articles_feedUrl",
+            "unique": false,
+            "columnNames": [
+              "feedUrl"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_articles_feedUrl` ON `${TABLE_NAME}` (`feedUrl`)"
+          },
+          {
+            "name": "index_articles_source_sortTimestamp",
+            "unique": false,
+            "columnNames": [
+              "source",
+              "sortTimestamp"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_articles_source_sortTimestamp` ON `${TABLE_NAME}` (`source`, `sortTimestamp`)"
+          },
+          {
+            "name": "index_articles_url",
+            "unique": true,
+            "columnNames": [
+              "url"
+            ],
+            "orders": [],
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_articles_url` ON `${TABLE_NAME}` (`url`)"
+          },
+          {
+            "name": "index_articles_title",
+            "unique": false,
+            "columnNames": [
+              "title"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_articles_title` ON `${TABLE_NAME}` (`title`)"
+          },
+          {
+            "name": "index_articles_lastPlayedAt",
+            "unique": false,
+            "columnNames": [
+              "lastPlayedAt"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_articles_lastPlayedAt` ON `${TABLE_NAME}` (`lastPlayedAt`)"
+          },
+          {
+            "name": "index_articles_finishedAt",
+            "unique": false,
+            "columnNames": [
+              "finishedAt"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_articles_finishedAt` ON `${TABLE_NAME}` (`finishedAt`)"
+          }
+        ]
+      },
+      {
+        "tableName": "feeds",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`url` TEXT NOT NULL, `title` TEXT NOT NULL, `description` TEXT, `imageUrl` TEXT, `createdAt` INTEGER NOT NULL, `notificationsEnabled` INTEGER NOT NULL, PRIMARY KEY(`url`))",
+        "fields": [
+          {
+            "fieldPath": "url",
+            "columnName": "url",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "title",
+            "columnName": "title",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "description",
+            "columnName": "description",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "imageUrl",
+            "columnName": "imageUrl",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "createdAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "notificationsEnabled",
+            "columnName": "notificationsEnabled",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "url"
+          ]
+        }
+      },
+      {
+        "tableName": "tts_models",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `name` TEXT NOT NULL, `language` TEXT NOT NULL, `description` TEXT NOT NULL, `type` TEXT NOT NULL, `modelUrl` TEXT NOT NULL, `tokensUrl` TEXT NOT NULL, `extraUrls` TEXT NOT NULL, `dataDir` TEXT, `sizeBytes` INTEGER NOT NULL, `isDownloaded` INTEGER NOT NULL, `progress` REAL NOT NULL, `speakerId` INTEGER, `lastError` TEXT, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "name",
+            "columnName": "name",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "language",
+            "columnName": "language",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "description",
+            "columnName": "description",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "type",
+            "columnName": "type",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "modelUrl",
+            "columnName": "modelUrl",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "tokensUrl",
+            "columnName": "tokensUrl",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "extraUrls",
+            "columnName": "extraUrls",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "dataDir",
+            "columnName": "dataDir",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "sizeBytes",
+            "columnName": "sizeBytes",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "isDownloaded",
+            "columnName": "isDownloaded",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "progress",
+            "columnName": "progress",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "speakerId",
+            "columnName": "speakerId",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "lastError",
+            "columnName": "lastError",
+            "affinity": "TEXT"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        }
+      }
+    ],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'dummy_hash_16')"
+    ]
+  }
+}

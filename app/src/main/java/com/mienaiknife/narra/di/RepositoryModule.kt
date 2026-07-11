@@ -76,7 +76,7 @@ object RepositoryModule {
             webDataSource,
             imageDataSource,
             networkMonitor,
-            downloadSettingsManager
+            downloadSettingsManager,
         )
         val feedRepo = FeedRepositoryImpl(
             feedDao,
@@ -85,7 +85,7 @@ object RepositoryModule {
             imageDataSource,
             networkMonitor,
             downloadSettingsManager,
-            notificationHelper
+            notificationHelper,
         )
         val importExportRepo = ImportExportRepositoryImpl(
             context,
@@ -93,12 +93,12 @@ object RepositoryModule {
             articleDao,
             feedDao,
             epubDataSource,
-            opmlDataSource
+            opmlDataSource,
         )
         return ContentRepositoryImpl(
             articleRepo,
             feedRepo,
-            importExportRepo
+            importExportRepo,
         )
     }
 

@@ -71,6 +71,12 @@ android {
         }
     }
 
+    sourceSets {
+        getByName("androidTest") {
+            assets.srcDirs(files("$projectDir/schemas"))
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
@@ -126,6 +132,7 @@ tasks.register<Exec>("clearAppData") {
 
 ksp {
     arg("room.generateKotlin", "true")
+    arg("room.schemaLocation", "$projectDir/schemas")
 }
 
 dependencies {
@@ -187,8 +194,10 @@ dependencies {
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(libs.mockito.android)
     androidTestImplementation(libs.mockito.kotlin)
+    androidTestUtil(libs.androidx.test.services)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
+    androidTestImplementation(libs.room.testing)
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
 }
