@@ -102,7 +102,7 @@ object DatabaseModule {
                         net.zetetic.database.sqlcipher.SQLiteDatabase
                             .openDatabase(
                                 dbFile.absolutePath,
-                                "".toByteArray(),
+                                "",
                                 null,
                                 net.zetetic.database.sqlcipher.SQLiteDatabase.OPEN_READONLY,
                                 null,
@@ -119,13 +119,12 @@ object DatabaseModule {
                         android.util.Log.i("DatabaseModule", "Database encrypted successfully.")
                     } catch (e: Exception) {
                         android.util.Log.e("DatabaseModule", "Failed to encrypt database", e)
+                        // This might happen if encryption fails mid-way, or file is weirdly formatted
+                        backupAndStartFresh(dbFile)
                     }
                 } else {
                     android.util.Log.e("DatabaseModule", "Database is corrupted, encrypted with a DIFFERENT key, or inaccessible. BACKING UP and starting fresh.")
-                    val bakFile = File(dbFile.path + ".bak_${System.currentTimeMillis()}")
-                    dbFile.renameTo(bakFile)
-                    File(dbFile.path + "-wal").let { if (it.exists()) it.renameTo(File(it.path + ".bak_${System.currentTimeMillis()}")) }
-                    File(dbFile.path + "-shm").let { if (it.exists()) it.renameTo(File(it.path + ".bak_${System.currentTimeMillis()}")) }
+                    backupAndStartFresh(dbFile)
                 }
             } else {
                 android.util.Log.i("DatabaseModule", "Database opened successfully with current passphrase.")
@@ -146,6 +145,14 @@ object DatabaseModule {
             .build()
     }
 
+    private fun backupAndStartFresh(dbFile: File) {
+        val timestamp = System.currentTimeMillis()
+        val bakFile = File(dbFile.path + ".bak_$timestamp")
+        dbFile.renameTo(bakFile)
+        File(dbFile.path + "-wal").let { if (it.exists()) it.renameTo(File(it.path + ".bak_$timestamp-wal")) }
+        File(dbFile.path + "-shm").let { if (it.exists()) it.renameTo(File(it.path + ".bak_$timestamp-shm")) }
+    }
+
     private fun encryptDatabase(
         context: Context,
         dbFile: File,
@@ -153,11 +160,12 @@ object DatabaseModule {
     ) {
         val tempDbFile = File(context.cacheDir, "temp_encrypt.db")
         if (tempDbFile.exists()) tempDbFile.delete()
+        tempDbFile.parentFile?.mkdirs()
 
         net.zetetic.database.sqlcipher.SQLiteDatabase
             .openDatabase(
                 dbFile.absolutePath,
-                "".toByteArray(),
+                "",
                 null,
                 net.zetetic.database.sqlcipher.SQLiteDatabase.OPEN_READWRITE,
                 null,
@@ -168,10 +176,15 @@ object DatabaseModule {
                 db.rawExecSQL("DETACH DATABASE encrypted;")
             }
 
-        dbFile.delete()
-        File(dbFile.path + "-wal").delete()
-        File(dbFile.path + "-shm").delete()
-        tempDbFile.renameTo(dbFile)
+        // Verify temp file exists and has content before replacing
+        if (tempDbFile.exists() && tempDbFile.length() > 0) {
+            dbFile.delete()
+            File(dbFile.path + "-wal").let { if (it.exists()) it.delete() }
+            File(dbFile.path + "-shm").let { if (it.exists()) it.delete() }
+            tempDbFile.renameTo(dbFile)
+        } else {
+            throw IllegalStateException("Encryption failed: temporary database is empty or missing")
+        }
     }
 
     @Provides
