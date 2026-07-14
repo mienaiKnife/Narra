@@ -26,15 +26,9 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
-<<<<<<< HEAD
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
 import java.io.File
-=======
-import java.io.File
-import org.mockito.kotlin.mock
-import org.mockito.kotlin.whenever
->>>>>>> origin/main
 
 @RunWith(AndroidJUnit4::class)
 class DatabaseProtectionTest {
@@ -47,11 +41,7 @@ class DatabaseProtectionTest {
     fun setup() {
         context = ApplicationProvider.getApplicationContext()
         dbFile = context.getDatabasePath(AppDatabase.DATABASE_NAME)
-<<<<<<< HEAD
 
-=======
-        
->>>>>>> origin/main
         // Ensure parent directory exists
         dbFile.parentFile?.mkdirs()
 
@@ -59,15 +49,9 @@ class DatabaseProtectionTest {
         dbFile.delete()
         File(dbFile.path + "-wal").delete()
         File(dbFile.path + "-shm").delete()
-<<<<<<< HEAD
 
         // Clean up any old backups
         context.databaseList().forEach {
-=======
-        
-        // Clean up any old backups
-        context.databaseList().forEach { 
->>>>>>> origin/main
             if (it.startsWith(AppDatabase.DATABASE_NAME + ".bak_")) {
                 context.deleteDatabase(it)
             }
@@ -96,13 +80,20 @@ class DatabaseProtectionTest {
 
         // 3. Trigger DatabaseModule encryption logic
         android.util.Log.i("DatabaseProtectionTest", "Triggering provideAppDatabase for encryption test")
-        DatabaseModule.provideAppDatabase(context, securityManager)
+        val roomDb = DatabaseModule.provideAppDatabase(context, securityManager)
+        // Trigger actual database opening to ensure Room creates/opens it
+        roomDb.openHelper.writableDatabase
         android.util.Log.i("DatabaseProtectionTest", "provideAppDatabase finished")
 
         // 4. Verify it is now encrypted
         val canOpenWithoutPassphrase = try {
-            SQLiteDatabase.openDatabase(dbFile.absolutePath, "", null, SQLiteDatabase.OPEN_READONLY, null).use { it.isOpen }
+            SQLiteDatabase.openDatabase(dbFile.absolutePath, "", null, SQLiteDatabase.OPEN_READONLY, null).use { db ->
+                // Must attempt a query to verify encryption, as openDatabase might succeed but queries will fail
+                db.rawQuery("SELECT COUNT(*) FROM sqlite_schema", null).use { it.moveToFirst() }
+                true
+            }
         } catch (e: Exception) {
+            android.util.Log.i("DatabaseProtectionTest", "Expected failure when opening without passphrase: ${e.message}")
             false
         }
         assertFalse("Database should NOT be openable without passphrase", canOpenWithoutPassphrase)
@@ -134,7 +125,9 @@ class DatabaseProtectionTest {
         whenever(securityManager.getDatabaseEncryptionKey()).thenReturn(newPassphrase)
 
         // 3. Trigger DatabaseModule logic
-        DatabaseModule.provideAppDatabase(context, securityManager)
+        val roomDb = DatabaseModule.provideAppDatabase(context, securityManager)
+        // Trigger actual database opening to ensure Room creates the NEW file
+        roomDb.openHelper.writableDatabase
 
         // 4. Verify that a backup was created
         val backups = context.databaseList().filter { it.startsWith(AppDatabase.DATABASE_NAME + ".bak_") }
@@ -143,11 +136,7 @@ class DatabaseProtectionTest {
         // 5. Verify the NEW database is fresh (empty or schema-only, not containing old data)
         SQLiteDatabase.openDatabase(dbFile.absolutePath, newPassphrase, null, SQLiteDatabase.OPEN_READONLY, null).use { db ->
             assertTrue("New database should be openable with new passphrase", db.isOpen)
-<<<<<<< HEAD
 
-=======
-            
->>>>>>> origin/main
             // Check if test_table exists
             val tableExists = try {
                 db.rawQuery("SELECT 1 FROM test_table", null).use { it.moveToFirst() }

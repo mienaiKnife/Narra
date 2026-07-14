@@ -115,7 +115,7 @@ object DatabaseModule {
                 if (isUnencrypted) {
                     android.util.Log.i("DatabaseModule", "Unencrypted database found. Encrypting...")
                     try {
-                        encryptDatabase(context, dbFile, passphrase)
+                        encryptDatabase(dbFile, passphrase)
                         android.util.Log.i("DatabaseModule", "Database encrypted successfully.")
                     } catch (e: Exception) {
                         android.util.Log.e("DatabaseModule", "Failed to encrypt database", e)
@@ -154,13 +154,13 @@ object DatabaseModule {
     }
 
     private fun encryptDatabase(
-        context: Context,
         dbFile: File,
         passphrase: ByteArray,
     ) {
-        val tempDbFile = File(context.cacheDir, "temp_encrypt.db")
+        val tempDbFile = File(dbFile.parentFile, "temp_encrypt.db")
         if (tempDbFile.exists()) tempDbFile.delete()
         tempDbFile.parentFile?.mkdirs()
+        tempDbFile.createNewFile()
 
         net.zetetic.database.sqlcipher.SQLiteDatabase
             .openDatabase(
@@ -177,7 +177,7 @@ object DatabaseModule {
             }
 
         // Verify temp file exists and has content before replacing
-        if (tempDbFile.exists() && tempDbFile.length() > 0) {
+        if (tempDbFile.exists() && (tempDbFile.length() > 0)) {
             dbFile.delete()
             File(dbFile.path + "-wal").let { if (it.exists()) it.delete() }
             File(dbFile.path + "-shm").let { if (it.exists()) it.delete() }
