@@ -9,7 +9,9 @@ Narra is a mobile app (currently Android exclusive) that allows users to listen 
 *At least, that's the goal.
 
 ## Disclaimer
-This project was vibecoded by someone who didn't start the project with the skills required to write this code by hand. Gemini Flash 3 has been used extensively due to its integration with Android Studio. I understand that I have a lot to learn in order to be a good head dev for this project, and I am sharing this repo with the hope of getting it looked over by more qualified devs than myself. I can't guarantee that data won't be lost when updating (this has happened to me several times while dogfooding), so please keep backups of the content you add to the app. OPML exports are handy for backing up feeds, but the database backup feature probably shouldn't be counted on for backups right now.
+This project was vibecoded by someone who didn't start the project with the skills required to write this code by hand. Gemini Flash 3 has been used extensively due to its integration with Android Studio. I understand that I have a lot to learn in order to be a good head dev for this project, and I am sharing this repo with the hope of getting it looked over by more qualified devs. 
+
+I can't guarantee that data won't be lost when updating, even though I've done what I can to implement database protection features. If you want to ensure that you keep your listening history and the content that you add to the app, please keep backups. OPML exports are handy for backing up feeds, but the database backup feature could potentially have problems that need fixing.
 
 ## Getting Started
 
