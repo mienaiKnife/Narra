@@ -26,9 +26,15 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
+<<<<<<< HEAD
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
 import java.io.File
+=======
+import java.io.File
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.whenever
+>>>>>>> origin/main
 
 @RunWith(AndroidJUnit4::class)
 class DatabaseProtectionTest {
@@ -41,7 +47,11 @@ class DatabaseProtectionTest {
     fun setup() {
         context = ApplicationProvider.getApplicationContext()
         dbFile = context.getDatabasePath(AppDatabase.DATABASE_NAME)
+<<<<<<< HEAD
 
+=======
+        
+>>>>>>> origin/main
         // Ensure parent directory exists
         dbFile.parentFile?.mkdirs()
 
@@ -49,9 +59,15 @@ class DatabaseProtectionTest {
         dbFile.delete()
         File(dbFile.path + "-wal").delete()
         File(dbFile.path + "-shm").delete()
+<<<<<<< HEAD
 
         // Clean up any old backups
         context.databaseList().forEach {
+=======
+        
+        // Clean up any old backups
+        context.databaseList().forEach { 
+>>>>>>> origin/main
             if (it.startsWith(AppDatabase.DATABASE_NAME + ".bak_")) {
                 context.deleteDatabase(it)
             }
@@ -127,7 +143,11 @@ class DatabaseProtectionTest {
         // 5. Verify the NEW database is fresh (empty or schema-only, not containing old data)
         SQLiteDatabase.openDatabase(dbFile.absolutePath, newPassphrase, null, SQLiteDatabase.OPEN_READONLY, null).use { db ->
             assertTrue("New database should be openable with new passphrase", db.isOpen)
+<<<<<<< HEAD
 
+=======
+            
+>>>>>>> origin/main
             // Check if test_table exists
             val tableExists = try {
                 db.rawQuery("SELECT 1 FROM test_table", null).use { it.moveToFirst() }
