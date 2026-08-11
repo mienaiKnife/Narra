@@ -18,7 +18,6 @@ package com.mienaiknife.narra.ui.viewmodels
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mienaiknife.narra.R
-import com.mienaiknife.narra.data.local.dao.FeedDao
 import com.mienaiknife.narra.data.local.entities.FeedEntity
 import com.mienaiknife.narra.data.models.SortOption
 import com.mienaiknife.narra.domain.repository.FeedRepository
@@ -38,7 +37,6 @@ import javax.inject.Inject
 
 @HiltViewModel
 class FeedsViewModel @Inject constructor(
-    feedDao: FeedDao,
     private val feedRepository: FeedRepository,
     private val importExportRepository: ImportExportRepository,
 ) : ViewModel() {
@@ -49,7 +47,7 @@ class FeedsViewModel @Inject constructor(
     val message = _message.asStateFlow()
 
     val uiState: StateFlow<FeedsUiState> = combine(
-        feedDao.getAllFeeds(),
+        feedRepository.getAllFeeds(),
         _isRefreshing,
         _sortOption,
     ) { feeds, isRefreshing, sort ->

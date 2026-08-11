@@ -17,7 +17,8 @@ package com.mienaiknife.narra.ui.viewmodels
 
 import com.mienaiknife.narra.data.settings.DownloadSettingsManager
 import com.mienaiknife.narra.data.settings.SyncSettingsManager
-import com.mienaiknife.narra.domain.repository.ContentRepository
+import com.mienaiknife.narra.domain.repository.FeedRepository
+import com.mienaiknife.narra.domain.repository.ImportExportRepository
 import com.mienaiknife.narra.playback.PlaybackManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -38,7 +39,8 @@ import java.io.InputStream
 class DownloadsSettingsViewModelTest {
     private val downloadSettingsManager: DownloadSettingsManager = mock()
     private val syncSettingsManager: SyncSettingsManager = mock()
-    private val contentRepository: ContentRepository = mock()
+    private val feedRepository: FeedRepository = mock()
+    private val importExportRepository: ImportExportRepository = mock()
     private val playbackManager: PlaybackManager = mock()
     private val testDispatcher = StandardTestDispatcher()
 
@@ -60,7 +62,8 @@ class DownloadsSettingsViewModelTest {
         viewModel = DownloadsSettingsViewModel(
             downloadSettingsManager,
             syncSettingsManager,
-            contentRepository,
+            feedRepository,
+            importExportRepository,
             playbackManager,
         )
     }
@@ -76,20 +79,20 @@ class DownloadsSettingsViewModelTest {
         testDispatcher.scheduler.advanceUntilIdle()
 
         verify(playbackManager).stop()
-        verify(contentRepository).deleteAllMetadata()
-        verify(contentRepository).deleteAllFeeds()
+        verify(importExportRepository).deleteAllMetadata()
+        verify(feedRepository).deleteAllFeeds()
     }
 
     @Test
     fun `restoreDatabase calls playbackManager stop`() = runTest {
         val inputStream: InputStream = mock()
-        whenever(contentRepository.restoreDatabase(inputStream)).thenReturn(Result.success(Unit))
+        whenever(importExportRepository.restoreDatabase(inputStream)).thenReturn(Result.success(Unit))
 
         viewModel.restoreDatabase(inputStream)
         testDispatcher.scheduler.advanceUntilIdle()
 
         verify(playbackManager).stop()
-        verify(contentRepository).restoreDatabase(inputStream)
+        verify(importExportRepository).restoreDatabase(inputStream)
     }
 
     @Test
@@ -98,7 +101,7 @@ class DownloadsSettingsViewModelTest {
         testDispatcher.scheduler.advanceUntilIdle()
 
         verify(playbackManager).stop()
-        verify(contentRepository).deleteAllMetadata()
+        verify(importExportRepository).deleteAllMetadata()
     }
 
     @Test
@@ -107,6 +110,6 @@ class DownloadsSettingsViewModelTest {
         testDispatcher.scheduler.advanceUntilIdle()
 
         verify(playbackManager).stop()
-        verify(contentRepository).deleteAllFeeds()
+        verify(feedRepository).deleteAllFeeds()
     }
 }

@@ -58,6 +58,7 @@ class ContentRepositoryImpl @Inject constructor(
     override suspend fun pruneOldArticleContent(maxAgeDays: Int) = articleRepository.pruneOldArticleContent(maxAgeDays)
 
     // FeedRepository delegation
+    override fun getAllFeeds(): Flow<List<FeedEntity>> = feedRepository.getAllFeeds()
     override suspend fun subscribeToFeed(url: String): Result<String> = feedRepository.subscribeToFeed(url)
     override suspend fun refreshFeeds(): Result<Unit> = feedRepository.refreshFeeds()
     override suspend fun updateFeed(feed: FeedEntity) = feedRepository.updateFeed(feed)

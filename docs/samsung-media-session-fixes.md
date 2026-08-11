@@ -26,24 +26,45 @@ This document outlines critical implementation details required to maintain resp
 - **Unique Session ID:** Always set a static, unique ID in `MediaLibrarySession.Builder.setId("NarraPlaybackSession")`.
 - **Advertising Commands:** Explicitly grant `Player.COMMAND_PLAY_PAUSE` and other standard commands in `onConnect`, even if the player already advertises them. This increases the session's "weight" in the system's priority stack.
 
-## 3. Playback Stability (SimpleBasePlayer Contract)
+## 3. Silence Player (Audio Priority Claim)
+**Problem:** Because Narra's audio is delegated to the system TTS process (`com.google.android.tts` or similar), the Android system does not recognize Narra as the primary audio producer. Consequently, Narra "loses" media button priority to other background apps that are seen as active producers (e.g., Spotify, AntennaPod).
+
+**Solution:** Run a silent `AudioTrack` loop within Narra's own process.
+- **File:** `PlaybackService.kt`
+- **Implementation:**
+    - `startSilence()`: Starts an `AudioTrack` playing Mono, 16-bit, 44.1kHz silence.
+    - `stopSilence()`: Stops the track.
+- **Trigger:** Silence must be active whenever `playWhenReady` is true. This forces the system to list Narra in the "Audio playback" stack (`dumpsys media_session`), which is a prerequisite for claiming the "Media button session" slot.
+
+## 4. Custom MediaButtonReceiver & Legacy Priority
+**Problem:** Modern Media3 `MediaButtonReceiver` is often ignored by Samsung's legacy routing logic on older firmware or when multiple sessions exist.
+
+**Solution:** Use a custom subclass and explicit `AudioManager` registration.
+- **File:** `NarraMediaButtonReceiver.kt`, `PlaybackService.kt`
+- **Mechanism:** 
+    - Subclass `BroadcastReceiver` and delegate to `MediaButtonReceiver.onReceive`. This provides a hook for logging and ensures the broadcast intent is delivered.
+    - Call `audioManager.registerMediaButtonEventReceiver(componentName)` whenever playback starts. This uses the legacy API to reinforce the app's desire to capture hardware buttons.
+- **Active Pulse:** In `MediaSessionUtils.forceActivationAndMbr()`, the session is "kicked" by pulsing its active state (`setActive(false)` then `setActive(true)`). This forces the system to re-evaluate which app should hold the hardware button priority.
+
+## 5. Playback Stability (SimpleBasePlayer Contract)
 **Problem:** Violating the `SimpleBasePlayer` state contract causes internal Media3 crashes that are difficult to debug.
 **Solution:** If a `PlaybackException` is reported in `getState()`, the playback state **MUST** be `Player.STATE_IDLE`. Never report an error while in `STATE_READY` or `STATE_BUFFERING`.
 
-## 4. Playback Resumption
+## 6. Playback Resumption
 **Problem:** Bluetooth "Play" presses after the app has been killed won't wake Narra unless correctly declared.
 
 **Solution:**
-- **Manifest:** Ensure `androidx.media3.session.MediaButtonReceiver` is declared and `PlaybackService` handles `android.intent.action.MEDIA_BUTTON`.
+- **Manifest:** Ensure `com.mienaiknife.narra.service.NarraMediaButtonReceiver` is declared and `PlaybackService` handles `android.intent.action.MEDIA_BUTTON`.
 - **Service:** Implement `onPlaybackResumption` in the session callback to provide the `MediaItem` the system should restart with.
 
-## 5. Verification Commands
+## 7. Verification Commands
 To verify if Narra has correctly claimed priority, run:
 ```bash
 adb shell dumpsys media_session
 ```
 **Check for:**
-1. `Media button session is com.mienaiknife.narra/...`
-2. `Last MediaButtonReceiver: MBR {pi=PendingIntent{...}, ...}` (Ensure `pi` is NOT `null` and points to Narra).
-3. `mediaButtonReceiver=MBR {pi=PendingIntent{...}, ...}` within the session stack (Ensure `pi` is NOT `null`).
+1. `Media button session is com.mienaiknife.narra/...` (Narra should be the session).
+2. `Audio playback (lastly played comes first)`: `com.mienaiknife.narra` should be at the top.
+3. `Last MediaButtonReceiver: MBR {pi=PendingIntent{...}, ...}` (Ensure `pi` points to `NarraMediaButtonReceiver`).
 4. `android.media.IS_EXPLICIT=true` in the session extras.
+5. Bitmask `actions=3967` in the `PlaybackState` section (shows Narra supports standard and prep actions).

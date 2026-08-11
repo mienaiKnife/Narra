@@ -19,7 +19,7 @@ import android.content.Context
 import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
-import com.mienaiknife.narra.domain.repository.ContentRepository
+import com.mienaiknife.narra.domain.repository.FeedRepository
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 
@@ -29,10 +29,10 @@ class FeedRefreshWorker
 constructor(
     @Assisted context: Context,
     @Assisted params: WorkerParameters,
-    private val contentRepository: ContentRepository,
+    private val feedRepository: FeedRepository,
 ) : CoroutineWorker(context, params) {
     override suspend fun doWork(): Result = try {
-        val result = contentRepository.refreshFeeds()
+        val result = feedRepository.refreshFeeds()
         if (result.isSuccess) {
             Result.success()
         } else {

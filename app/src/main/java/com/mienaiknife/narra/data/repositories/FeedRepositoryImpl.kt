@@ -28,6 +28,7 @@ import com.mienaiknife.narra.ui.utils.NetworkMonitor
 import com.mienaiknife.narra.ui.utils.UrlUtils
 import com.mienaiknife.narra.utils.NotificationHelper
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
@@ -41,6 +42,8 @@ class FeedRepositoryImpl @Inject constructor(
     private val downloadSettingsManager: DownloadSettingsManager,
     private val notificationHelper: NotificationHelper,
 ) : FeedRepository {
+
+    override fun getAllFeeds(): Flow<List<FeedEntity>> = feedDao.getAllFeeds()
 
     override suspend fun subscribeToFeed(url: String): Result<String> = withContext(Dispatchers.IO) {
         val connectionCheck = checkConnection()

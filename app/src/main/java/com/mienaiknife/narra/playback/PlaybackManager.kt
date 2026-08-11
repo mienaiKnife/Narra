@@ -30,7 +30,7 @@ import androidx.media3.common.util.UnstableApi
 import com.mienaiknife.narra.R
 import com.mienaiknife.narra.domain.TtsState
 import com.mienaiknife.narra.domain.models.Article
-import com.mienaiknife.narra.domain.repository.ContentRepository
+import com.mienaiknife.narra.domain.repository.ArticleRepository
 import com.mienaiknife.narra.service.PlaybackService
 import com.mienaiknife.narra.ui.models.ContentBlock
 import com.mienaiknife.narra.ui.utils.HtmlParser
@@ -58,7 +58,7 @@ import kotlin.coroutines.resume
 class PlaybackManager @Inject constructor(
     @param:ApplicationContext private val context: Context,
     private val ttsPlayer: TtsPlayer,
-    private val repository: ContentRepository,
+    private val repository: ArticleRepository,
     val settingsManager: PlaybackSettingsManager,
 ) {
     internal val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)

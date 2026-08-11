@@ -120,6 +120,9 @@ class TtsPlayer @Inject constructor(
     private var _seekForwardIncrement = 15000L
     private var _seekBackIncrement = 15000L
 
+    private val mediaItems: MutableList<MediaItem> = mutableListOf()
+    private var currentItemIndex = 0
+
     private val audioFocusManager = AudioFocusManager(context) { focusChange ->
         android.util.Log.d("TtsPlayer", "onFocusChange: $focusChange")
         when (focusChange) {
@@ -160,8 +163,6 @@ class TtsPlayer @Inject constructor(
         ttsEngine.state.onEach { state ->
             when (state) {
                 is TtsState.Buffering -> {
-                    // Only transition to STATE_BUFFERING if we are not already playing,
-                    // to avoid replacing the Pause button with a spinner during active playback.
                     if (_playbackState != STATE_READY) {
                         _playbackState = STATE_BUFFERING
                     }
@@ -179,7 +180,6 @@ class TtsPlayer @Inject constructor(
                     isEngineSpeaking = true
                     val index = state.utteranceId.toIntOrNull()
                     if (index != null) {
-                        // If we just changed paragraphs, reset our local offsets
                         if (index != currentParagraphIndex) {
                             baseWordOffset = 0
                             currentParagraphIndex = index
@@ -189,20 +189,16 @@ class TtsPlayer @Inject constructor(
                         val ttsStart = baseWordOffset + state.start
                         val ttsEnd = baseWordOffset + state.end
 
-                        // If the engine is reporting progress, we TRUST it even if it's early.
-                        // However, we only update if it's not a jump BACKWARDS unless it's a new paragraph.
                         if (index == currentParagraphIndex && ttsStart < resumeWordOffset && state.frame > 5000) {
                             return@onEach
                         }
 
                         val speakable = paragraphs.getOrNull(index)
-
-                        // Map TTS-space offsets back to Original-space for UI highlighting
                         val originalStart = speakable?.mapTtsToOriginal(ttsStart) ?: ttsStart
                         val originalEnd = speakable?.mapTtsToOriginal(ttsEnd) ?: ttsEnd
 
                         currentWordRange = originalStart until originalEnd
-                        resumeWordOffset = ttsStart // resumeWordOffset stays in TTS-space
+                        resumeWordOffset = ttsStart
                         throttleInvalidateState()
                     }
                 }
@@ -225,17 +221,13 @@ class TtsPlayer @Inject constructor(
                 is TtsState.Error -> {
                     android.util.Log.e("TtsPlayer", "Engine error: ${state.message}")
                     isEngineSpeaking = false
-
-                    // If we were playing and encountered an error, try to advance to next paragraph
                     if (_playWhenReady && _playbackState == STATE_READY && !isPreparing) {
                         val nextIndex = currentParagraphIndex + 1
                         if (nextIndex < paragraphs.size) {
-                            android.util.Log.i("TtsPlayer", "Advancing to next paragraph after error: $nextIndex (Current text length: ${paragraphs[currentParagraphIndex].text.length})")
                             currentParagraphIndex = nextIndex
                             resumeWordOffset = 0
                             resumeInternal()
                         } else {
-                            android.util.Log.i("TtsPlayer", "End of article reached after error")
                             _playbackState = STATE_ENDED
                             _playWhenReady = false
                             pauseInternal()
@@ -262,7 +254,7 @@ class TtsPlayer @Inject constructor(
 
     private var _audioAttributes = AudioAttributes.Builder()
         .setUsage(C.USAGE_MEDIA)
-        .setContentType(C.AUDIO_CONTENT_TYPE_SPEECH)
+        .setContentType(C.AUDIO_CONTENT_TYPE_MUSIC)
         .build()
 
     override fun getState(): State {
@@ -270,7 +262,6 @@ class TtsPlayer @Inject constructor(
             val itemsToUse = if (mediaItems.isNotEmpty()) mediaItems else listOfNotNull(_currentMediaItem)
 
             if (itemsToUse.isEmpty() && isPreparing) {
-                // Return a dummy item while preparing to ensure notification can be shown
                 val dummyItem = MediaItem.Builder()
                     .setMediaId("preparing")
                     .setMediaMetadata(
@@ -308,20 +299,7 @@ class TtsPlayer @Inject constructor(
         val currentPositionMs = if (currentParagraphIndex >= 0 && currentParagraphIndex < paragraphs.size) {
             val paragraph = paragraphs[currentParagraphIndex]
             val paragraphLength = paragraph.text.length
-
-            // If the engine is speaking, use the exact frame it reported
-            val engineState = ttsEngine.state.value
-            val progress = if (engineState is TtsState.Speaking && engineState.utteranceId == currentParagraphIndex.toString()) {
-                val head = engineState.frame.toFloat()
-                // We need to know the total frames for this paragraph to get a %
-                // But we don't have it yet if synthesis isn't finished.
-                // Fallback to the heuristic if we can't get a good frame-based %
-                (resumeWordOffset.toFloat() / paragraphLength.toFloat()).coerceIn(0f, 1f)
-            } else if (paragraphLength > 0) {
-                (resumeWordOffset.toFloat() / paragraphLength.toFloat()).coerceIn(0f, 1f)
-            } else {
-                0f
-            }
+            val progress = if (paragraphLength > 0) (resumeWordOffset.toFloat() / paragraphLength.toFloat()).coerceIn(0f, 1f) else 0f
             (currentParagraphIndex * 1000L + (progress * 1000L).toLong())
         } else {
             0L
@@ -399,7 +377,6 @@ class TtsPlayer @Inject constructor(
                 _playbackState = STATE_READY
             }
             val focusResult = audioFocusManager.requestAudioFocus()
-            android.util.Log.d("TtsPlayer", "handleSetPlayWhenReady: requestAudioFocus result=$focusResult")
             if (focusResult == AudioManager.AUDIOFOCUS_REQUEST_GRANTED) {
                 _playbackSuppressionReason = PLAYBACK_SUPPRESSION_REASON_NONE
                 resumeInternal()
@@ -421,9 +398,6 @@ class TtsPlayer @Inject constructor(
         if (_playbackState == STATE_IDLE) {
             _playbackState = STATE_BUFFERING
             invalidateState()
-
-            // In a real TTS player, prepare might fetch content.
-            // Here we assume speak() handles it.
             _playbackState = STATE_READY
             invalidateState()
         }
@@ -453,24 +427,16 @@ class TtsPlayer @Inject constructor(
         return Futures.immediateVoidFuture()
     }
 
-    private val mediaItems: MutableList<MediaItem> = mutableListOf()
-    private var currentItemIndex = 0
-
     override fun handleSetMediaItems(items: MutableList<MediaItem>, startIndex: Int, startPositionMs: Long): ListenableFuture<*> {
         mediaItems.clear()
         mediaItems.addAll(items)
         currentItemIndex = startIndex.coerceIn(0, items.size - 1).takeIf { items.isNotEmpty() } ?: 0
-
-        // This is a stub for the full playlist support.
-        // Real implementation would trigger speak() for the selected item.
-
         invalidateState()
         return Futures.immediateVoidFuture()
     }
 
     override fun handleSeek(mediaItemIndex: Int, positionMs: Long, seekCommand: Int): ListenableFuture<*> {
         if (mediaItemIndex != currentItemIndex) {
-            // Skip to next/previous article
             if (mediaItemIndex > currentItemIndex) {
                 onSkipNext?.invoke()
             } else {
@@ -478,28 +444,21 @@ class TtsPlayer @Inject constructor(
             }
             return Futures.immediateVoidFuture()
         }
-
         seekToPosition(positionMs)
-
         invalidateState()
         return Futures.immediateVoidFuture()
     }
 
     private fun seekToPosition(positionMs: Long) {
         if (paragraphs.isEmpty()) return
-
         val totalMs = paragraphs.size * 1000L
         val clampedPos = positionMs.coerceIn(0, totalMs - 1)
         val pIndex = (clampedPos / 1000).toInt().coerceIn(0, paragraphs.size - 1)
         val progress = (clampedPos % 1000) / 1000f
-
         val speakable = paragraphs[pIndex]
         val wordOffset = (progress * speakable.text.length).toInt()
-
         currentParagraphIndex = pIndex
         resumeWordOffset = wordOffset
-
-        // Find a word boundary for the highlight in Original-space
         val text = speakable.text
         if (text.isNotEmpty()) {
             val start = wordOffset.coerceIn(0, text.length - 1)
@@ -511,7 +470,6 @@ class TtsPlayer @Inject constructor(
         } else {
             currentWordRange = null
         }
-
         if (_playWhenReady) {
             resumeInternal()
         }
@@ -519,7 +477,6 @@ class TtsPlayer @Inject constructor(
 
     fun requestAudioFocus(): Int {
         val result = audioFocusManager.requestAudioFocus()
-
         if (result == AudioManager.AUDIOFOCUS_REQUEST_GRANTED) {
             _playbackSuppressionReason = PLAYBACK_SUPPRESSION_REASON_NONE
         } else if (result == AudioManager.AUDIOFOCUS_REQUEST_DELAYED) {
@@ -562,24 +519,20 @@ class TtsPlayer @Inject constructor(
         powerLockManager.releaseLocks()
     }
 
-    // TtsPlayer specific
     fun speak(article: Article, parsedParagraphs: List<SpeakableText>, playWhenReady: Boolean = false) {
         android.util.Log.d("TtsPlayer", "speak() called: title=${article.title}, paragraphs=${parsedParagraphs.size}, playWhenReady=$playWhenReady")
         isPreparing = true
         _playerError = null
         invalidateState()
-
         ttsEngine.stop()
         isEngineSpeaking = false
         lastEnqueuedUtteranceId = null
-
         paragraphs = parsedParagraphs
         if (paragraphs.isEmpty()) {
             _playbackState = STATE_ENDED
             invalidateState()
             return
         }
-
         val artworkUrl = article.imageUrl ?: article.feedImageUrl
         val artworkUri = artworkUrl?.takeIf { it.startsWith("http") }?.toUri()
         val mediaItem = MediaItem.Builder()
@@ -592,17 +545,15 @@ class TtsPlayer @Inject constructor(
                     .setArtist(article.source)
                     .setAlbumTitle(article.source)
                     .setAlbumArtist(article.source)
-                    .setDisplayTitle(article.title) // Essential for Samsung "Now Bar"
-                    .setMediaType(MediaMetadata.MEDIA_TYPE_PODCAST_EPISODE)
+                    .setDisplayTitle(article.title)
+                    .setMediaType(MediaMetadata.MEDIA_TYPE_MUSIC)
                     .setArtworkUri(artworkUri)
                     .setIsBrowsable(false)
                     .setIsPlayable(true)
                     .build(),
             )
             .build()
-
         _currentMediaItem = mediaItem
-
         currentItemIndex = if (!mediaItems.any { it.mediaId == article.id }) {
             mediaItems.clear()
             mediaItems.add(mediaItem)
@@ -610,16 +561,10 @@ class TtsPlayer @Inject constructor(
         } else {
             mediaItems.indexOfFirst { it.mediaId == article.id }
         }
-
         _playbackState = STATE_READY
-
         currentParagraphIndex = article.currentParagraphIndex.coerceIn(0, paragraphs.size - 1).takeIf { paragraphs.isNotEmpty() } ?: 0
-
-        // resumeWordOffset is in TTS-space. Map saved Original-space offset to TTS-space.
         val originalOffset = article.currentWordOffset.coerceAtLeast(0)
         resumeWordOffset = paragraphs.getOrNull(currentParagraphIndex)?.mapOriginalToTts(originalOffset) ?: originalOffset
-
-        // Initialize highlight from saved offset
         if (currentParagraphIndex in paragraphs.indices) {
             val speakable = paragraphs[currentParagraphIndex]
             val text = speakable.text
@@ -636,19 +581,15 @@ class TtsPlayer @Inject constructor(
         } else {
             currentWordRange = null
         }
-
         _playWhenReady = playWhenReady
         isPreparing = false
-
         if (artworkUrl != null) {
             loadArtwork(artworkUrl, article.id)
         }
-
         if (playWhenReady) {
             requestAudioFocus()
             resumeInternal()
         }
-
         invalidateState()
     }
 
@@ -658,16 +599,14 @@ class TtsPlayer @Inject constructor(
                 val imageLoader = context.imageLoader
                 val request = ImageRequest.Builder(context)
                     .data(url)
-                    .size(800) // Optimal for notification background
+                    .size(800)
                     .build()
-
                 val result = imageLoader.execute(request)
                 if (result is SuccessResult) {
                     val bitmap = result.image.toBitmap()
                     val stream = ByteArrayOutputStream()
                     bitmap.compress(Bitmap.CompressFormat.JPEG, 75, stream)
                     val bytes = stream.toByteArray()
-
                     val currentItem = _currentMediaItem
                     if (currentItem != null && currentItem.mediaId == mediaId) {
                         _currentMediaItem = currentItem.buildUpon()
@@ -677,13 +616,10 @@ class TtsPlayer @Inject constructor(
                                     .build(),
                             )
                             .build()
-
-                        // Also update the item in the playlist if present
                         val index = mediaItems.indexOfFirst { it.mediaId == mediaId }
                         if (index != -1) {
                             mediaItems[index] = _currentMediaItem!!
                         }
-
                         invalidateState()
                     }
                 }
@@ -709,10 +645,6 @@ class TtsPlayer @Inject constructor(
         powerLockManager.releaseManualWakeLock()
     }
 
-    /**
-     * Releases audio focus, locks, and noisy receiver without clearing
-     * playback state. Used when an article finishes and autoplay is off.
-     */
     fun releasePlaybackResources() {
         audioFocusManager.abandonAudioFocus()
         noisyAudioReceiver.unregister()
@@ -724,11 +656,7 @@ class TtsPlayer @Inject constructor(
         baseWordOffset = wordOffset
         currentParagraphIndex = startIndex
         resumeWordOffset = wordOffset
-
-        // Reset local state in player before asking engine to speak,
-        // so that the very first Speaking event from the engine is accepted.
         currentWordRange = null
-
         for (i in startIndex until paragraphs.size) {
             val speakable = paragraphs[i]
             val text = if (i == startIndex && wordOffset > 0 && wordOffset < speakable.text.length) {
@@ -751,10 +679,7 @@ class TtsPlayer @Inject constructor(
             ttsEngine.stop()
             currentParagraphIndex = paragraphIndex
             currentWordRange = wordRange
-
-            // Map Original-space wordRange.first to TTS-space resumeWordOffset
             resumeWordOffset = paragraphs[paragraphIndex].mapOriginalToTts(wordRange.first)
-
             _playWhenReady = playWhenReady
             if (playWhenReady) {
                 requestAudioFocus()
@@ -771,7 +696,6 @@ class TtsPlayer @Inject constructor(
         invalidateState()
     }
 
-    // Stub implementations for required methods
     override fun handleSetRepeatMode(repeatMode: Int): ListenableFuture<*> = Futures.immediateVoidFuture()
     override fun handleSetShuffleModeEnabled(shuffleModeEnabled: Boolean): ListenableFuture<*> = Futures.immediateVoidFuture()
     override fun handleSetTrackSelectionParameters(trackSelectionParameters: TrackSelectionParameters): ListenableFuture<*> = Futures.immediateVoidFuture()

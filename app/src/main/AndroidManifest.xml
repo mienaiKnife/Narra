@@ -88,9 +88,9 @@
             tools:node="replace" />
 
         <receiver
-            android:name="androidx.media3.session.MediaButtonReceiver"
+            android:name=".service.NarraMediaButtonReceiver"
             android:exported="true">
-            <intent-filter>
+            <intent-filter android:priority="1000">
                 <action android:name="android.intent.action.MEDIA_BUTTON" />
             </intent-filter>
         </receiver>

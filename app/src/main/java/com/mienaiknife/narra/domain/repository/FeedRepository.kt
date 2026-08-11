@@ -16,8 +16,11 @@
 package com.mienaiknife.narra.domain.repository
 
 import com.mienaiknife.narra.data.local.entities.FeedEntity
+import kotlinx.coroutines.flow.Flow
 
 interface FeedRepository {
+    fun getAllFeeds(): Flow<List<FeedEntity>>
+
     suspend fun subscribeToFeed(url: String): Result<String>
 
     suspend fun refreshFeeds(): Result<Unit>

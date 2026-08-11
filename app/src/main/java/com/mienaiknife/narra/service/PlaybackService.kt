@@ -19,7 +19,12 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.ComponentName
+import android.content.Context
 import android.content.Intent
+import android.content.pm.ServiceInfo
+import android.media.AudioFormat
+import android.media.AudioManager
+import android.media.AudioTrack
 import android.os.Build
 import android.os.Bundle
 import android.view.KeyEvent
@@ -31,14 +36,11 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
-import androidx.media3.session.CommandButton
 import androidx.media3.session.DefaultMediaNotificationProvider
 import androidx.media3.session.LibraryResult
-import androidx.media3.session.MediaButtonReceiver
 import androidx.media3.session.MediaLibraryService
 import androidx.media3.session.MediaSession
 import androidx.media3.session.SessionCommand
-import androidx.media3.session.SessionError
 import androidx.media3.session.SessionResult
 import com.google.common.collect.ImmutableList
 import com.google.common.util.concurrent.Futures
@@ -79,6 +81,10 @@ class PlaybackService : MediaLibraryService() {
     private var mediaSession: MediaLibrarySession? = null
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
+    private var isForegrounded = false
+    private var silenceTrack: AudioTrack? = null
+    private var isSilenceRunning = false
+
     private data class WidgetState(
         val isPlaying: Boolean,
         val article: Article?,
@@ -89,28 +95,52 @@ class PlaybackService : MediaLibraryService() {
     )
 
     companion object {
-        private const val CHANNEL_ID = "playback_urgent_v2"
+        private const val CHANNEL_ID = "playback_v13"
+        private const val NOTIFICATION_ID = 1000
 
         const val CUSTOM_COMMAND_SKIP_FORWARD = "com.mienaiknife.narra.SKIP_FORWARD"
         const val CUSTOM_COMMAND_SKIP_BACKWARD = "com.mienaiknife.narra.SKIP_BACKWARD"
 
         const val ROOT_ID = "narra_root"
-        const val CATEGORY_QUEUE = "category_queue"
-        const val CATEGORY_INBOX = "category_inbox"
-        const val CATEGORY_HISTORY = "category_history"
-        const val CATEGORY_FAVORITES = "category_favorites"
     }
 
     override fun onCreate() {
-        android.util.Log.d("PlaybackService", "onCreate called")
-        super.onCreate()
+        android.util.Log.d("PlaybackService", "onCreate started")
+
+        // Immediate startForeground to prevent crash
         createNotificationChannel()
+        startForegroundEarly()
+
+        super.onCreate()
+
+        createMediaSession()
+        mediaSession?.let { addSession(it) }
+
+        // Trigger priority claim on state changes
+        ttsPlayer.addListener(object : Player.Listener {
+            override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
+                if (playWhenReady) {
+                    startSilence()
+                    reinforceLegacyPriority()
+                } else {
+                    stopSilence()
+                }
+                mediaSession?.let { session ->
+                    MediaSessionUtils.forceActivationAndMbr(this@PlaybackService, session)
+                }
+            }
+            override fun onPlaybackStateChanged(playbackState: Int) {
+                mediaSession?.let { session ->
+                    MediaSessionUtils.forceActivationAndMbr(this@PlaybackService, session)
+                }
+            }
+        })
 
         // Samsung compatibility listener
         setListener(
             object : Listener {
                 override fun onForegroundServiceStartNotAllowedException() {
-                    android.util.Log.e("PlaybackService", "Foreground service start not allowed by system (Samsung/Battery optimization)")
+                    android.util.Log.e("PlaybackService", "Foreground service start not allowed")
                 }
             },
         )
@@ -133,13 +163,7 @@ class PlaybackService : MediaLibraryService() {
                     showRemainingTime = array[5] as Boolean,
                 )
             }.collect { state ->
-                val calculatedProgress =
-                    if (state.duration > 0) {
-                        state.currentPosition.toFloat() / state.duration.toFloat()
-                    } else {
-                        state.article?.progress ?: 0f
-                    }
-
+                val calculatedProgress = if (state.duration > 0) state.currentPosition.toFloat() / state.duration.toFloat() else state.article?.progress ?: 0f
                 widgetManager.updateState(
                     isPlaying = state.isPlaying,
                     articleId = state.article?.id,
@@ -154,414 +178,303 @@ class PlaybackService : MediaLibraryService() {
             }
         }
 
-        // Initialize TtsPlayer with speech-specific audio attributes
-        val audioAttributes =
-            AudioAttributes
-                .Builder()
-                .setUsage(C.USAGE_MEDIA)
-                .setContentType(C.AUDIO_CONTENT_TYPE_SPEECH)
-                .build()
+        val audioAttributes = AudioAttributes.Builder()
+            .setUsage(C.USAGE_MEDIA)
+            .setContentType(C.AUDIO_CONTENT_TYPE_SPEECH)
+            .build()
         ttsPlayer.setAudioAttributes(audioAttributes, true)
 
-        val intent = Intent(this, MainActivity::class.java)
-        val pendingIntent =
-            PendingIntent.getActivity(
-                this,
-                0,
-                intent,
-                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
-            )
-
-        // Log the presence of MediaButtonReceiver to debug Samsung pi=null issue
-        val mbrIntent = Intent(Intent.ACTION_MEDIA_BUTTON)
-        mbrIntent.setPackage(packageName)
-        val resolveInfos = packageManager.queryBroadcastReceivers(mbrIntent, 0)
-        android.util.Log.d("PlaybackService", "Found ${resolveInfos.size} MediaButtonReceivers")
-        resolveInfos.forEach {
-            android.util.Log.d("PlaybackService", "MBR: ${it.activityInfo.name}")
-        }
-
-        // Set default notification provider with custom configuration
-        val notificationProvider =
-            DefaultMediaNotificationProvider
-                .Builder(this)
-                .setChannelId(CHANNEL_ID)
-                .setNotificationIdProvider { 1000 }
-                .build()
-
+        val notificationProvider = DefaultMediaNotificationProvider.Builder(this)
+            .setChannelId(CHANNEL_ID)
+            .setNotificationIdProvider { NOTIFICATION_ID }
+            .build()
         setMediaNotificationProvider(notificationProvider)
 
-        val sessionExtras =
-            Bundle().apply {
-                // Standard extras to help Android recognize the app's media capabilities
-                putBoolean("android.media.IS_EXPLICIT", true)
-                putBoolean("android.media.session.extra.EXTRA_SLOT_RESERVATION", true)
-                putBoolean("android.media.session.extra.EXTRA_RESERVE_PLAY_PAUSE", true)
-                putBoolean("android.media.session.extra.RESERVE_PLAY_PAUSE", true)
-                putBoolean("android.media.session.extra.RESERVE_SKIP_NEXT", true)
-                putBoolean("android.media.session.extra.RESERVE_SKIP_PREV", true)
-                putString("android.media.metadata.TITLE", getString(R.string.app_name))
-                putString("android.media.metadata.ARTIST", getString(R.string.app_name))
-
-                // Construct a PendingIntent for the MediaButtonReceiver to help Samsung prioritize this session
-                val mbrIntent = Intent(Intent.ACTION_MEDIA_BUTTON)
-                mbrIntent.setComponent(ComponentName(this@PlaybackService, MediaButtonReceiver::class.java))
-                val mbrPendingIntent = PendingIntent.getBroadcast(
-                    this@PlaybackService,
-                    0,
-                    mbrIntent,
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) PendingIntent.FLAG_MUTABLE else 0,
-                )
-                putParcelable("android.media.session.extra.MEDIA_BUTTON_RECEIVER", mbrPendingIntent)
-            }
-
-        mediaSession =
-            MediaLibrarySession
-                .Builder(
-                    this,
-                    ttsPlayer,
-                    object : MediaLibrarySession.Callback {
-                        override fun onConnect(
-                            session: MediaSession,
-                            controller: MediaSession.ControllerInfo,
-                        ): MediaSession.ConnectionResult {
-                            val sessionCommands =
-                                MediaSession.ConnectionResult.DEFAULT_SESSION_COMMANDS
-                                    .buildUpon()
-                                    .add(SessionCommand(CUSTOM_COMMAND_SKIP_FORWARD, Bundle.EMPTY))
-                                    .add(SessionCommand(CUSTOM_COMMAND_SKIP_BACKWARD, Bundle.EMPTY))
-                                    .build()
-
-                            // Grant ALL default player commands to increase session relevance/priority
-                            val availablePlayerCommands =
-                                MediaSession.ConnectionResult.DEFAULT_PLAYER_COMMANDS
-                                    .buildUpon()
-                                    .addAll(session.player.availableCommands)
-                                    .add(Player.COMMAND_PLAY_PAUSE)
-                                    .add(Player.COMMAND_STOP)
-                                    .add(Player.COMMAND_SEEK_BACK)
-                                    .add(Player.COMMAND_SEEK_FORWARD)
-                                    .add(Player.COMMAND_SEEK_TO_NEXT)
-                                    .add(Player.COMMAND_SEEK_TO_PREVIOUS)
-                                    .build()
-
-                            return MediaSession.ConnectionResult
-                                .AcceptedResultBuilder(session)
-                                .setAvailableSessionCommands(sessionCommands)
-                                .setAvailablePlayerCommands(availablePlayerCommands)
-                                .setSessionExtras(sessionExtras)
-                                .build()
-                        }
-
-                        override fun onCustomCommand(
-                            session: MediaSession,
-                            controller: MediaSession.ControllerInfo,
-                            customCommand: SessionCommand,
-                            args: Bundle,
-                        ): ListenableFuture<SessionResult> {
-                            when (customCommand.customAction) {
-                                CUSTOM_COMMAND_SKIP_FORWARD -> {
-                                    playbackManager.skipForward()
-                                    return Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
-                                }
-                                CUSTOM_COMMAND_SKIP_BACKWARD -> {
-                                    playbackManager.skipBackward()
-                                    return Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
-                                }
-                            }
-                            return Futures.immediateFuture(SessionResult(SessionError.ERROR_NOT_SUPPORTED))
-                        }
-
-                        override fun onGetLibraryRoot(
-                            session: MediaLibrarySession,
-                            browser: MediaSession.ControllerInfo,
-                            params: LibraryParams?,
-                        ): ListenableFuture<LibraryResult<MediaItem>> {
-                            val rootItem =
-                                MediaItem
-                                    .Builder()
-                                    .setMediaId(ROOT_ID)
-                                    .setMediaMetadata(
-                                        MediaMetadata
-                                            .Builder()
-                                            .setIsBrowsable(true)
-                                            .setIsPlayable(false)
-                                            .setTitle(getString(R.string.app_name))
-                                            .build(),
-                                    ).build()
-                            return Futures.immediateFuture(LibraryResult.ofItem(rootItem, params))
-                        }
-
-                        override fun onGetChildren(
-                            session: MediaLibrarySession,
-                            browser: MediaSession.ControllerInfo,
-                            parentId: String,
-                            page: Int,
-                            pageSize: Int,
-                            params: LibraryParams?,
-                        ): ListenableFuture<LibraryResult<ImmutableList<MediaItem>>> {
-                            if (parentId == ROOT_ID) {
-                                val categories =
-                                    listOf(
-                                        createCategoryItem(CATEGORY_QUEUE, getString(R.string.nav_queue)),
-                                        createCategoryItem(CATEGORY_INBOX, getString(R.string.nav_inbox)),
-                                        createCategoryItem(CATEGORY_HISTORY, getString(R.string.nav_history)),
-                                        createCategoryItem(CATEGORY_FAVORITES, getString(R.string.home_favorites)),
-                                    )
-                                return Futures.immediateFuture(LibraryResult.ofItemList(categories, params))
-                            }
-
-                            // For actual articles, we'd need to fetch from repository asynchronously
-                            // For now, return empty to avoid blocking the main thread significantly
-                            return Futures.immediateFuture(LibraryResult.ofItemList(listOf(), params))
-                        }
-
-                        private fun createCategoryItem(
-                            id: String,
-                            title: String,
-                        ): MediaItem = MediaItem
-                            .Builder()
-                            .setMediaId(id)
-                            .setMediaMetadata(
-                                MediaMetadata
-                                    .Builder()
-                                    .setIsBrowsable(true)
-                                    .setIsPlayable(false)
-                                    .setTitle(title)
-                                    .build(),
-                            ).build()
-
-                        override fun onMediaButtonEvent(
-                            session: MediaSession,
-                            controller: MediaSession.ControllerInfo,
-                            intent: Intent,
-                        ): Boolean {
-                            val keyEvent =
-                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                                    intent.getParcelableExtra(Intent.EXTRA_KEY_EVENT, KeyEvent::class.java)
-                                } else {
-                                    @Suppress("DEPRECATION")
-                                    intent.getParcelableExtra(Intent.EXTRA_KEY_EVENT)
-                                }
-
-                            if (keyEvent == null || keyEvent.action != KeyEvent.ACTION_DOWN) {
-                                return super.onMediaButtonEvent(session, controller, intent)
-                            }
-
-                            val keyName = KeyEvent.keyCodeToString(keyEvent.keyCode)
-                            android.util.Log.d("PlaybackService", "onMediaButtonEvent: keyCode=$keyName(${keyEvent.keyCode}), action=DOWN")
-
-                            return when (keyEvent.keyCode) {
-                                KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE,
-                                KeyEvent.KEYCODE_MEDIA_PLAY,
-                                KeyEvent.KEYCODE_MEDIA_PAUSE,
-                                KeyEvent.KEYCODE_HEADSETHOOK,
-                                -> {
-                                    // Let Media3 handle standard play/pause logic for maximum compatibility
-                                    super.onMediaButtonEvent(session, controller, intent)
-                                }
-                                KeyEvent.KEYCODE_MEDIA_NEXT -> {
-                                    playbackManager.handleHardwareButton(isNext = true)
-                                    true
-                                }
-                                KeyEvent.KEYCODE_MEDIA_PREVIOUS -> {
-                                    playbackManager.handleHardwareButton(isNext = false)
-                                    true
-                                }
-                                KeyEvent.KEYCODE_MEDIA_FAST_FORWARD -> {
-                                    playbackManager.skipForward()
-                                    true
-                                }
-                                KeyEvent.KEYCODE_MEDIA_REWIND -> {
-                                    playbackManager.skipBackward()
-                                    true
-                                }
-                                else -> {
-                                    super.onMediaButtonEvent(session, controller, intent)
-                                }
-                            }
-                        }
-
-                        override fun onPlaybackResumption(
-                            mediaSession: MediaSession,
-                            controller: MediaSession.ControllerInfo,
-                            isForPlayback: Boolean,
-                        ): ListenableFuture<MediaSession.MediaItemsWithStartPosition> {
-                            android.util.Log.d("PlaybackService", "onPlaybackResumption called (isForPlayback=$isForPlayback)")
-
-                            val currentItem = ttsPlayer.currentMediaItem
-                            currentItem?.let {
-                                return Futures.immediateFuture(
-                                    MediaSession.MediaItemsWithStartPosition(
-                                        listOf(it),
-                                        0,
-                                        ttsPlayer.currentPosition,
-                                    ),
-                                )
-                            }
-
-                            // Attempt to reload the last article if nothing is loaded
-                            val future =
-                                com.google.common.util.concurrent.SettableFuture
-                                    .create<MediaSession.MediaItemsWithStartPosition>()
-                            serviceScope.launch {
-                                val reloaded = playbackManager.reloadLastArticle()
-                                val newItem = ttsPlayer.currentMediaItem
-                                if (reloaded && (newItem != null)) {
-                                    future.set(
-                                        MediaSession.MediaItemsWithStartPosition(
-                                            listOf(newItem),
-                                            0,
-                                            ttsPlayer.currentPosition,
-                                        ),
-                                    )
-                                } else {
-                                    future.setException(Exception("No article to resume"))
-                                }
-                            }
-                            return future
-                        }
-                    },
-                ).setSessionActivity(pendingIntent)
-                .setMediaButtonPreferences(
-                    listOf(
-                        CommandButton.Builder(CommandButton.ICON_PLAY)
-                            .setPlayerCommand(Player.COMMAND_PLAY_PAUSE)
-                            .setDisplayName(getString(R.string.action_play))
-                            .build(),
-                    ),
-                ).setSessionExtras(sessionExtras)
-                .setExtras(sessionExtras)
-                .setId("NarraPlaybackSession")
-                .build()
-
-        android.util.Log.d("PlaybackService", "mediaSession built: $mediaSession")
-
-        // Ensure extras are set on the live session before adding it
-        mediaSession?.setSessionExtras(sessionExtras)
-
-        // Explicitly add the session to the service to ensure it's published to the system
-        mediaSession?.let {
-            addSession(it)
-            // Attempt to force activation to claim focus on Samsung
-            MediaSessionUtils.forceActivationAndMbr(this, it)
-        }
-
-        android.util.Log.d(
-            "PlaybackService",
-            "MediaLibrarySession created and added: token=${mediaSession?.token}, " +
-                "isSystemSession=${mediaSession?.token != null}",
-        )
-
-        // Ensure session is aware of the current state immediately
         ttsPlayer.triggerStateInvalidation()
 
-        // Samsung: Reinforce activation when playback starts
-        ttsPlayer.addListener(object : Player.Listener {
-            override fun onIsPlayingChanged(isPlaying: Boolean) {
-                if (isPlaying) {
-                    mediaSession?.let { session ->
-                        android.util.Log.d("PlaybackService", "Reinforcing session activation on playback start")
-                        MediaSessionUtils.forceActivationAndMbr(this@PlaybackService, session)
-                    }
+        // Samsung Priority Loop
+        serviceScope.launch {
+            kotlinx.coroutines.delay(2000)
+            while (true) {
+                mediaSession?.let { session ->
+                    MediaSessionUtils.forceActivationAndMbr(this@PlaybackService, session)
                 }
+                kotlinx.coroutines.delay(10000)
             }
-        })
+        }
     }
 
-    override fun onStartCommand(
-        intent: Intent?,
-        flags: Int,
-        startId: Int,
-    ): Int {
-        val action = intent?.action
+    private fun startForegroundEarly() {
+        if (isForegrounded) return
 
-        // Handle direct widget actions
-        when (action) {
+        val notification = NotificationCompat.Builder(this, CHANNEL_ID)
+            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setContentTitle(getString(R.string.app_name))
+            .setContentText("Ready")
+            .setPriority(NotificationCompat.PRIORITY_LOW)
+            .setOngoing(true)
+            .setSilent(true)
+            .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
+            .build()
+
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                startForeground(
+                    NOTIFICATION_ID,
+                    notification,
+                    ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK,
+                )
+            } else {
+                startForeground(NOTIFICATION_ID, notification)
+            }
+            isForegrounded = true
+        } catch (e: Exception) {
+            android.util.Log.e("PlaybackService", "Failed startForegroundEarly", e)
+        }
+    }
+
+    private fun createMediaSession() {
+        val intent = Intent(this, MainActivity::class.java)
+        val pendingIntent = PendingIntent.getActivity(
+            this,
+            0,
+            intent,
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+        )
+
+        val mbrIntent = Intent(Intent.ACTION_MEDIA_BUTTON)
+        mbrIntent.setComponent(ComponentName(this, NarraMediaButtonReceiver::class.java))
+        val mbrFlags =
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                PendingIntent.FLAG_MUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+            } else {
+                PendingIntent.FLAG_UPDATE_CURRENT
+            }
+        val mbrPendingIntent = PendingIntent.getBroadcast(this, 0, mbrIntent, mbrFlags)
+
+        val sessionExtras = Bundle().apply {
+            putBoolean("android.media.IS_EXPLICIT", true)
+            putLong("android.media.IS_EXPLICIT", 1L)
+            putBoolean("android.media.session.extra.EXTRA_SLOT_RESERVATION", true)
+            putLong("android.media.session.extra.EXTRA_SLOT_RESERVATION", 3L)
+            putBoolean("android.media.session.extra.RESERVE_PLAY_PAUSE", true)
+            putLong("android.media.session.extra.RESERVE_PLAY_PAUSE", 1L)
+            putBoolean("android.media.session.extra.RESERVE_SKIP_NEXT", true)
+            putLong("android.media.session.extra.RESERVE_SKIP_NEXT", 1L)
+            putBoolean("android.media.session.extra.RESERVE_SKIP_PREV", true)
+            putLong("android.media.session.extra.RESERVE_SKIP_PREV", 1L)
+            putParcelable("android.media.session.extra.MEDIA_BUTTON_RECEIVER", mbrPendingIntent)
+            putString("android.media.session.extra.KEY_EVENT_RECEIVER_PACKAGE", packageName)
+            putString("android.media.session.extra.KEY_EVENT_RECEIVER_CLASS", NarraMediaButtonReceiver::class.java.name)
+        }
+
+        mediaSession = MediaLibrarySession.Builder(
+            this,
+            ttsPlayer,
+            object : MediaLibrarySession.Callback {
+                override fun onPlaybackResumption(
+                    session: MediaSession,
+                    controller: MediaSession.ControllerInfo,
+                ): ListenableFuture<MediaSession.MediaItemsWithStartPosition> {
+                    android.util.Log.d("PlaybackService", "onPlaybackResumption triggered")
+                    val currentItem = ttsPlayer.currentMediaItem
+                    return if (currentItem != null) {
+                        Futures.immediateFuture(
+                            MediaSession.MediaItemsWithStartPosition(
+                                listOf(currentItem),
+                                ttsPlayer.currentMediaItemIndex,
+                                ttsPlayer.currentPosition,
+                            ),
+                        )
+                    } else {
+                        super.onPlaybackResumption(session, controller)
+                    }
+                }
+
+                override fun onConnect(
+                    session: MediaSession,
+                    controller: MediaSession.ControllerInfo,
+                ): MediaSession.ConnectionResult {
+                    val availablePlayerCommands =
+                        MediaSession.ConnectionResult.DEFAULT_PLAYER_COMMANDS.buildUpon()
+                            .addAll(session.player.availableCommands)
+                            .add(Player.COMMAND_PLAY_PAUSE)
+                            .add(Player.COMMAND_STOP)
+                            .add(Player.COMMAND_SEEK_BACK)
+                            .add(Player.COMMAND_SEEK_FORWARD)
+                            .build()
+                    return MediaSession.ConnectionResult.AcceptedResultBuilder(session)
+                        .setAvailablePlayerCommands(availablePlayerCommands)
+                        .setSessionExtras(sessionExtras)
+                        .build()
+                }
+
+                override fun onCustomCommand(
+                    session: MediaSession,
+                    controller: MediaSession.ControllerInfo,
+                    customCommand: SessionCommand,
+                    args: Bundle,
+                ): ListenableFuture<SessionResult> {
+                    when (customCommand.customAction) {
+                        CUSTOM_COMMAND_SKIP_FORWARD -> {
+                            playbackManager.skipForward()
+                            return Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
+                        }
+                        CUSTOM_COMMAND_SKIP_BACKWARD -> {
+                            playbackManager.skipBackward()
+                            return Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
+                        }
+                    }
+                    return Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
+                }
+
+                override fun onGetLibraryRoot(
+                    session: MediaLibrarySession,
+                    browser: MediaSession.ControllerInfo,
+                    params: LibraryParams?,
+                ): ListenableFuture<LibraryResult<MediaItem>> {
+                    val rootItem = MediaItem.Builder()
+                        .setMediaId(ROOT_ID)
+                        .setMediaMetadata(
+                            MediaMetadata.Builder()
+                                .setIsBrowsable(true)
+                                .setIsPlayable(false)
+                                .setTitle(getString(R.string.app_name))
+                                .build(),
+                        )
+                        .build()
+                    return Futures.immediateFuture(LibraryResult.ofItem(rootItem, params))
+                }
+
+                override fun onGetChildren(
+                    session: MediaLibrarySession,
+                    browser: MediaSession.ControllerInfo,
+                    parentId: String,
+                    page: Int,
+                    pageSize: Int,
+                    params: LibraryParams?,
+                ): ListenableFuture<LibraryResult<ImmutableList<MediaItem>>> = Futures.immediateFuture(LibraryResult.ofItemList(listOf(), params))
+
+                override fun onMediaButtonEvent(
+                    session: MediaSession,
+                    controller: MediaSession.ControllerInfo,
+                    intent: Intent,
+                ): Boolean {
+                    val keyEvent = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        intent.getParcelableExtra(Intent.EXTRA_KEY_EVENT, KeyEvent::class.java)
+                    } else {
+                        @Suppress("DEPRECATION")
+                        intent.getParcelableExtra(Intent.EXTRA_KEY_EVENT)
+                    }
+                    android.util.Log.i("PlaybackService", "onMediaButtonEvent: $keyEvent")
+                    if (keyEvent == null || keyEvent.action != KeyEvent.ACTION_DOWN) {
+                        return super.onMediaButtonEvent(session, controller, intent)
+                    }
+                    return when (keyEvent.keyCode) {
+                        KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE,
+                        KeyEvent.KEYCODE_MEDIA_PLAY,
+                        KeyEvent.KEYCODE_MEDIA_PAUSE,
+                        KeyEvent.KEYCODE_HEADSETHOOK,
+                        -> {
+                            playbackManager.togglePlayPause()
+                            true
+                        }
+                        KeyEvent.KEYCODE_MEDIA_NEXT -> {
+                            playbackManager.handleHardwareButton(isNext = true)
+                            true
+                        }
+                        KeyEvent.KEYCODE_MEDIA_PREVIOUS -> {
+                            playbackManager.handleHardwareButton(isNext = false)
+                            true
+                        }
+                        else -> super.onMediaButtonEvent(session, controller, intent)
+                    }
+                }
+            },
+        )
+            .setSessionActivity(pendingIntent)
+            .setSessionExtras(sessionExtras)
+            .setId("NarraPlaybackSession")
+            .build()
+    }
+
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        startForegroundEarly()
+        when (intent?.action) {
             PlaybackActionCallback.ACTION_TOGGLE -> playbackManager.togglePlayPause()
             PlaybackActionCallback.ACTION_SKIP_FORWARD -> playbackManager.skipForward()
             PlaybackActionCallback.ACTION_SKIP_BACKWARD -> playbackManager.skipBackward()
             PlaybackActionCallback.ACTION_SKIP_NEXT -> playbackManager.skipNext()
         }
-
-        val keyEvent =
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                intent?.getParcelableExtra(Intent.EXTRA_KEY_EVENT, KeyEvent::class.java)
-            } else {
-                @Suppress("DEPRECATION")
-                intent?.getParcelableExtra(Intent.EXTRA_KEY_EVENT)
-            }
-        android.util.Log.d(
-            "PlaybackService",
-            "onStartCommand: action=$action, keyEvent=${keyEvent?.let { "action=${it.action} code=${it.keyCode}" } ?: "null"}, " +
-                "sessionToken=${mediaSession?.token}",
-        )
-
-        // Trigger a state report to ensure Media3 updates the notification
-        ttsPlayer.triggerStateInvalidation()
-
-        // Reinforce activation on every start command to stay high priority
-        mediaSession?.let { session ->
-            MediaSessionUtils.forceActivationAndMbr(this, session)
-        }
-
+        mediaSession?.let { MediaSessionUtils.forceActivationAndMbr(this, it) }
         return super.onStartCommand(intent, flags, startId)
     }
 
     private fun createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel =
-                NotificationChannel(
-                    CHANNEL_ID,
-                    getString(R.string.settings_playback_title),
-                    NotificationManager.IMPORTANCE_LOW,
-                ).apply {
-                    description = getString(R.string.playback_notification_channel_desc)
-                    lockscreenVisibility = NotificationCompat.VISIBILITY_PUBLIC
-                    setShowBadge(false) // Media notifications don't usually need badges
-                }
-            val manager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
-            manager.createNotificationChannel(channel)
+            val channel = NotificationChannel(CHANNEL_ID, getString(R.string.settings_playback_title), NotificationManager.IMPORTANCE_LOW).apply {
+                setShowBadge(false)
+            }
+            (getSystemService(NOTIFICATION_SERVICE) as NotificationManager).createNotificationChannel(channel)
         }
     }
 
     override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaLibrarySession? = mediaSession
 
-    override fun onUpdateNotification(
-        session: MediaSession,
-        startInForegroundRequired: Boolean,
-    ) {
-        android.util.Log.d(
-            "PlaybackService",
-            "onUpdateNotification: startInForegroundRequired=$startInForegroundRequired, isPlaying=${session.player.isPlaying}, state=${session.player.playbackState}",
-        )
-
-        if (startInForegroundRequired && session.player.playbackState == Player.STATE_IDLE) {
-            // Media3 might fail to post a notification if the player is idle.
-            // By returning from here, we let the super class handle it, but we've logged it.
-            // In TtsPlayer, we've added logic to return STATE_BUFFERING and a dummy item
-            // during preparation, which should prevent this case.
-            android.util.Log.w("PlaybackService", "Service start in foreground required but player is IDLE")
-        }
-
-        super.onUpdateNotification(session, startInForegroundRequired)
-    }
-
     override fun onTaskRemoved(rootIntent: Intent?) {
         val player = mediaSession?.player
-        if ((player == null) ||
-            (!player.playWhenReady || (player.playbackState == Player.STATE_IDLE) || (player.playbackState == Player.STATE_ENDED))
-        ) {
-            stopSelf()
-        }
+        if (player == null || (!player.playWhenReady || player.playbackState == Player.STATE_IDLE || player.playbackState == Player.STATE_ENDED)) stopSelf()
     }
 
     override fun onDestroy() {
+        android.util.Log.d("PlaybackService", "onDestroy called")
+        stopSilence()
         serviceScope.cancel()
         mediaSession?.run {
             release()
             mediaSession = null
         }
         super.onDestroy()
+    }
+
+    private fun startSilence() {
+        if (isSilenceRunning) return
+        isSilenceRunning = true
+        serviceScope.launch(Dispatchers.IO) {
+            try {
+                val bufferSize = AudioTrack.getMinBufferSize(44100, AudioFormat.CHANNEL_OUT_MONO, AudioFormat.ENCODING_PCM_16BIT)
+                silenceTrack = AudioTrack(
+                    AudioManager.STREAM_MUSIC,
+                    44100,
+                    AudioFormat.CHANNEL_OUT_MONO,
+                    AudioFormat.ENCODING_PCM_16BIT,
+                    bufferSize,
+                    AudioTrack.MODE_STREAM,
+                )
+                val silence = ShortArray(bufferSize)
+                silenceTrack?.play()
+                while (isSilenceRunning) {
+                    silenceTrack?.write(silence, 0, silence.size)
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("PlaybackService", "Silence track error", e)
+            } finally {
+                silenceTrack?.stop()
+                silenceTrack?.release()
+                silenceTrack = null
+            }
+        }
+    }
+
+    private fun stopSilence() {
+        isSilenceRunning = false
+    }
+
+    private fun reinforceLegacyPriority() {
+        val audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        val componentName = ComponentName(this, NarraMediaButtonReceiver::class.java)
+        @Suppress("DEPRECATION")
+        audioManager.registerMediaButtonEventReceiver(componentName)
+        android.util.Log.i("PlaybackService", "Reinforced legacy priority with AudioManager")
     }
 }

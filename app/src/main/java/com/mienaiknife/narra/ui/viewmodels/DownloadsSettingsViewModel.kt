@@ -20,7 +20,8 @@ import androidx.lifecycle.viewModelScope
 import com.mienaiknife.narra.R
 import com.mienaiknife.narra.data.settings.DownloadSettingsManager
 import com.mienaiknife.narra.data.settings.SyncSettingsManager
-import com.mienaiknife.narra.domain.repository.ContentRepository
+import com.mienaiknife.narra.domain.repository.FeedRepository
+import com.mienaiknife.narra.domain.repository.ImportExportRepository
 import com.mienaiknife.narra.playback.PlaybackManager
 import com.mienaiknife.narra.ui.UiText
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -38,7 +39,8 @@ import javax.inject.Inject
 class DownloadsSettingsViewModel @Inject constructor(
     private val downloadSettingsManager: DownloadSettingsManager,
     private val syncSettingsManager: SyncSettingsManager,
-    private val contentRepository: ContentRepository,
+    private val feedRepository: FeedRepository,
+    private val importExportRepository: ImportExportRepository,
     private val playbackManager: PlaybackManager,
 ) : ViewModel() {
 
@@ -111,22 +113,22 @@ class DownloadsSettingsViewModel @Inject constructor(
     fun deleteAllMetadata() {
         viewModelScope.launch {
             playbackManager.stop()
-            contentRepository.deleteAllMetadata()
+            importExportRepository.deleteAllMetadata()
         }
     }
 
     fun deleteAllFeeds() {
         viewModelScope.launch {
             playbackManager.stop()
-            contentRepository.deleteAllFeeds()
+            feedRepository.deleteAllFeeds()
         }
     }
 
     fun deleteDatabase() {
         viewModelScope.launch {
             playbackManager.stop()
-            contentRepository.deleteAllMetadata()
-            contentRepository.deleteAllFeeds()
+            importExportRepository.deleteAllMetadata()
+            feedRepository.deleteAllFeeds()
         }
     }
 
@@ -134,7 +136,7 @@ class DownloadsSettingsViewModel @Inject constructor(
         if (inputStream == null) return
         viewModelScope.launch {
             inputStream.use {
-                contentRepository.importOpml(it)
+                importExportRepository.importOpml(it)
                     .onSuccess { count ->
                         _message.value = UiText.PluralResource(R.plurals.message_imported_feeds, count, count)
                     }
@@ -149,7 +151,7 @@ class DownloadsSettingsViewModel @Inject constructor(
         if (outputStream == null) return
         viewModelScope.launch {
             outputStream.use {
-                contentRepository.exportOpml(it)
+                importExportRepository.exportOpml(it)
                     .onSuccess {
                         _message.value = UiText.StringResource(R.string.message_exported_feeds)
                     }
@@ -164,7 +166,7 @@ class DownloadsSettingsViewModel @Inject constructor(
         if (outputStream == null) return
         viewModelScope.launch {
             outputStream.use {
-                contentRepository.backupDatabase(it)
+                importExportRepository.backupDatabase(it)
                     .onSuccess {
                         _message.value = UiText.StringResource(R.string.message_backup_created)
                     }
@@ -180,7 +182,7 @@ class DownloadsSettingsViewModel @Inject constructor(
         viewModelScope.launch {
             playbackManager.stop()
             inputStream.use {
-                contentRepository.restoreDatabase(it)
+                importExportRepository.restoreDatabase(it)
                     .onSuccess {
                         _message.value = UiText.StringResource(R.string.message_db_restored)
                     }
