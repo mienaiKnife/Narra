@@ -56,20 +56,21 @@ constructor(
                         ).header("Referer", "https://www.google.com/")
                         .build()
 
-                val response = okHttpClient.newCall(request).execute()
-                if (!response.isSuccessful) {
-                    return@withContext Result.failure(
-                        com.mienaiknife.narra.domain.NarraError.Network
-                            .ServerError(response.code, response.message),
-                    )
-                }
-
                 val html =
-                    response.body?.string()
-                        ?: return@withContext Result.failure(
-                            com.mienaiknife.narra.domain.NarraError.Content
-                                .ParsingFailed(),
-                        )
+                    okHttpClient.newCall(request).execute().use { response ->
+                        if (!response.isSuccessful) {
+                            return@withContext Result.failure(
+                                com.mienaiknife.narra.domain.NarraError.Network
+                                    .ServerError(response.code, response.message),
+                            )
+                        }
+
+                        response.body?.string()
+                            ?: return@withContext Result.failure(
+                                com.mienaiknife.narra.domain.NarraError.Content
+                                    .ParsingFailed(),
+                            )
+                    }
                 val doc = Jsoup.parse(html, url)
 
                 preCleanDocument(doc)
