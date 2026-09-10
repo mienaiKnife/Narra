@@ -89,7 +89,7 @@ object DatabaseModule {
                             null,
                             net.zetetic.database.sqlcipher.SQLiteDatabase.OPEN_READONLY,
                             null,
-                        ).use { it.isOpen }
+                        ).use { it.hasReadableSchema() }
                 } catch (e: Exception) {
                     android.util.Log.w("DatabaseModule", "Failed to open encrypted database: ${e.message}")
                     false
@@ -106,7 +106,7 @@ object DatabaseModule {
                                 null,
                                 net.zetetic.database.sqlcipher.SQLiteDatabase.OPEN_READONLY,
                                 null,
-                            ).use { it.isOpen }
+                            ).use { it.hasReadableSchema() }
                     } catch (e: Exception) {
                         android.util.Log.w("DatabaseModule", "Failed to open unencrypted database: ${e.message}")
                         false
@@ -144,6 +144,12 @@ object DatabaseModule {
             .addMigrations(migration16to17)
             .build()
     }
+
+    /**
+     * SQLCipher opens the database lazily, so [SQLiteDatabase.isOpen] can be `true` even when the
+     * provided key is wrong. Reading a page forces header/key validation and throws on mismatch.
+     */
+    private fun net.zetetic.database.sqlcipher.SQLiteDatabase.hasReadableSchema(): Boolean = rawQuery("SELECT count(*) FROM sqlite_schema", null).use { it.moveToFirst() }
 
     private fun backupAndStartFresh(dbFile: File) {
         val timestamp = System.currentTimeMillis()
