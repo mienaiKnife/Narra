@@ -386,8 +386,10 @@ class PlaybackManager @Inject constructor(
                                 ttsPlayer.engineState.first {
                                     it is TtsState.Speaking && it.utteranceId == "announcement"
                                 }
-                                // Then wait for it to be Ready (meaning it finished)
-                                ttsPlayer.engineState.first { it is TtsState.Ready }
+                                // Then wait for the announcement's Finished state
+                                ttsPlayer.engineState.first {
+                                    it is TtsState.Finished && it.utteranceId == "announcement"
+                                }
                             }
 
                             delay(500) // Brief pause after announcement

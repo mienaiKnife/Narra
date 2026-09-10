@@ -99,9 +99,12 @@ constructor(
 
                                     override fun onDone(utteranceId: String?) {
                                         utteranceId?.let { id ->
+                                            // Emit Finished only. Writing Ready immediately here would
+                                            // be conflated away by the StateFlow (and the DelegatingTtsEngine
+                                            // StateFlow downstream) before TtsPlayer could observe Finished,
+                                            // so end-of-article / queue advancement would never fire.
                                             _state.value = TtsState.Finished(id)
                                         }
-                                        _state.value = TtsState.Ready
                                     }
 
                                     @Deprecated("Deprecated in Java")
