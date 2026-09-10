@@ -83,6 +83,12 @@ interface ArticleDao {
     @Query("UPDATE articles SET isInQueue = 0, content = NULL WHERE id = :id")
     suspend fun removeFromQueue(id: String)
 
+    @Query("UPDATE articles SET localImageUrl = :localImageUrl WHERE id = :id")
+    suspend fun updateLocalImageUrl(
+        id: String,
+        localImageUrl: String,
+    )
+
     @Query("SELECT COALESCE(MAX(queueOrder), -1) + 1 FROM articles WHERE isInQueue = 1")
     suspend fun getNextQueueOrder(): Int
 
@@ -153,6 +159,17 @@ interface ArticleDao {
 
     @Update
     suspend fun updateArticles(articles: List<ArticleEntity>)
+
+    @Query("UPDATE articles SET queueOrder = :order WHERE id = :id")
+    suspend fun updateQueueOrder(
+        id: String,
+        order: Int,
+    )
+
+    @Transaction
+    suspend fun updateQueueOrders(orders: List<Pair<String, Int>>) {
+        orders.forEach { (id, order) -> updateQueueOrder(id, order) }
+    }
 
     @Query("UPDATE articles SET isFavorite = NOT isFavorite WHERE id = :id")
     suspend fun toggleFavorite(id: String)

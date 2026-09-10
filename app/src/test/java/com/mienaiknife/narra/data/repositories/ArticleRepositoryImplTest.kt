@@ -17,10 +17,14 @@ package com.mienaiknife.narra.data.repositories
 
 import com.mienaiknife.narra.data.local.ImageDataSource
 import com.mienaiknife.narra.data.local.dao.ArticleDao
+import com.mienaiknife.narra.data.local.entities.ArticleEntity
+import com.mienaiknife.narra.data.local.entities.ArticleWithFeed
 import com.mienaiknife.narra.data.remote.WebDataSource
 import com.mienaiknife.narra.data.settings.DownloadSettingsManager
 import com.mienaiknife.narra.ui.utils.NetworkMonitor
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.mockito.kotlin.any
@@ -91,4 +95,60 @@ class ArticleRepositoryImplTest {
         verify(articleDao).markAsFinished(eq("a1"), any())
         verify(articleDao, never()).updateArticleProgress(any(), any(), any(), any(), anyOrNull(), any())
     }
+
+    @Test
+    fun `addToQueue stores the downloaded image with a targeted update`() = runTest {
+        val entity = article(id = "a1", imageUrl = "https://example.com/a.png")
+        whenever(articleDao.getArticleById("a1")).thenReturn(entity)
+        whenever(imageDataSource.downloadAndSaveImage(any(), any())).thenReturn("/images/a.png")
+        whenever(articleDao.updateLocalImageUrl(any(), any())).thenReturn(Unit)
+        whenever(articleDao.addToQueue("a1")).thenReturn(Unit)
+
+        val result = repository.addToQueue("a1")
+
+        assertTrue(result.isSuccess)
+        verify(articleDao).updateLocalImageUrl("a1", "/images/a.png")
+        verify(articleDao, never()).insertArticle(any())
+    }
+
+    @Test
+    fun `reorderQueue updates only rows whose order changed`() = runTest {
+        whenever(articleDao.getQueueArticles()).thenReturn(flowOf(queueEntities()))
+        whenever(articleDao.updateQueueOrders(any())).thenReturn(Unit)
+
+        repository.reorderQueue(fromIndex = 0, toIndex = 1)
+
+        verify(articleDao).updateQueueOrders(listOf("b" to 0, "a" to 1))
+        verify(articleDao, never()).updateArticles(any())
+    }
+
+    @Test
+    fun `updateQueueOrder maps ids to positions in one pass`() = runTest {
+        whenever(articleDao.getQueueArticles()).thenReturn(flowOf(queueEntities()))
+        whenever(articleDao.updateQueueOrders(any())).thenReturn(Unit)
+
+        repository.updateQueueOrder(listOf("c", "a", "b"))
+
+        verify(articleDao).updateQueueOrders(listOf("a" to 1, "b" to 2, "c" to 0))
+        verify(articleDao, never()).updateArticles(any())
+    }
+
+    private fun queueEntities(): List<ArticleWithFeed> = listOf(
+        ArticleWithFeed(article = article("a", queueOrder = 0), feed = null),
+        ArticleWithFeed(article = article("b", queueOrder = 1), feed = null),
+        ArticleWithFeed(article = article("c", queueOrder = 2), feed = null),
+    )
+
+    private fun article(
+        id: String,
+        queueOrder: Int = 0,
+        imageUrl: String? = null,
+    ): ArticleEntity = ArticleEntity(
+        id = id,
+        title = id,
+        source = "test",
+        content = "content",
+        imageUrl = imageUrl,
+        queueOrder = queueOrder,
+    )
 }

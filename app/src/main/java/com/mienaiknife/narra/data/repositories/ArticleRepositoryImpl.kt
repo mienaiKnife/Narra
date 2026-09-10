@@ -96,7 +96,7 @@ class ArticleRepositoryImpl @Inject constructor(
             val fileName = "article_${article.id.hashCode()}_${System.currentTimeMillis()}.png"
             val localPath = imageDataSource.downloadAndSaveImage(article.imageUrl, fileName)
             if (localPath != null) {
-                articleDao.insertArticle(article.copy(localImageUrl = localPath))
+                articleDao.updateLocalImageUrl(article.id, localPath)
             }
         }
 
@@ -162,34 +162,28 @@ class ArticleRepositoryImpl @Inject constructor(
     }
 
     override suspend fun reorderQueue(fromIndex: Int, toIndex: Int) = withContext(Dispatchers.IO) {
-        val currentQueue = articleDao.getQueueArticles().map { entities ->
-            entities.map { it.article }.sortedBy { it.queueOrder }
-        }.first().toMutableList()
+        val currentQueue = articleDao.getQueueArticles().first().map { it.article }.sortedBy { it.queueOrder }
 
         if (fromIndex !in currentQueue.indices || toIndex !in currentQueue.indices) return@withContext
 
-        val item = currentQueue.removeAt(fromIndex)
-        currentQueue.add(toIndex, item)
+        val reordered = currentQueue.toMutableList().apply { add(toIndex, removeAt(fromIndex)) }
+        val orders =
+            reordered.mapIndexedNotNull { index, article ->
+                (article.id to index).takeIf { article.queueOrder != index }
+            }
 
-        val updatedQueue = currentQueue.mapIndexed { index, article ->
-            article.copy(queueOrder = index)
-        }
-
-        articleDao.updateArticles(updatedQueue)
+        articleDao.updateQueueOrders(orders)
     }
 
     override suspend fun updateQueueOrder(articleIds: List<String>) = withContext(Dispatchers.IO) {
-        val currentQueue = articleDao.getQueueArticles().first()
-        val updatedQueue = currentQueue.map { wrap ->
-            val article = wrap.article
-            val newOrder = articleIds.indexOf(article.id)
-            if (newOrder != -1) {
-                article.copy(queueOrder = newOrder)
-            } else {
-                article
+        val orderById = articleIds.withIndex().associate { (index, id) -> id to index }
+        val orders =
+            articleDao.getQueueArticles().first().mapNotNull { wrap ->
+                val newOrder = orderById[wrap.article.id] ?: return@mapNotNull null
+                (wrap.article.id to newOrder).takeIf { wrap.article.queueOrder != newOrder }
             }
-        }
-        articleDao.updateArticles(updatedQueue)
+
+        articleDao.updateQueueOrders(orders)
     }
 
     private suspend fun checkConnection(): Result<Unit> {
