@@ -430,7 +430,7 @@ class TtsPlayer @Inject constructor(
     override fun handleSetMediaItems(items: MutableList<MediaItem>, startIndex: Int, startPositionMs: Long): ListenableFuture<*> {
         mediaItems.clear()
         mediaItems.addAll(items)
-        currentItemIndex = startIndex.coerceIn(0, items.size - 1).takeIf { items.isNotEmpty() } ?: 0
+        currentItemIndex = if (items.isEmpty()) 0 else startIndex.coerceIn(0, items.size - 1)
         invalidateState()
         return Futures.immediateVoidFuture()
     }
