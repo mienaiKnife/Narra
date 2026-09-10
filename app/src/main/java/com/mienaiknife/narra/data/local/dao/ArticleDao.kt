@@ -110,6 +110,16 @@ interface ArticleDao {
     @Query("UPDATE articles SET progress = 0.0, finishedAt = NULL, currentParagraphIndex = 0, currentWordOffset = 0 WHERE id = :id")
     suspend fun markAsUnplayed(id: String)
 
+    @Query("UPDATE articles SET progress = :progress, currentParagraphIndex = :paragraphIndex, currentWordOffset = :wordOffset, duration = COALESCE(:duration, duration), lastPlayedAt = :timestamp WHERE id = :id")
+    suspend fun updateArticleProgress(
+        id: String,
+        progress: Float,
+        paragraphIndex: Int,
+        wordOffset: Int,
+        duration: Long?,
+        timestamp: Long,
+    )
+
     @Query(
         "UPDATE articles SET isInQueue = 0, isInInbox = 0, progress = 1.0, finishedAt = :finishedAt, lastPlayedAt = :finishedAt, content = NULL WHERE feedUrl = :feedUrl",
     )

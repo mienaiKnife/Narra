@@ -150,17 +150,14 @@ class ArticleRepositoryImpl @Inject constructor(
         if (progress >= 1f) {
             articleDao.markAsFinished(id)
         } else {
-            articleDao.getArticleById(id)?.let { article ->
-                articleDao.insertArticle(
-                    article.copy(
-                        progress = progress,
-                        currentParagraphIndex = paragraphIndex,
-                        currentWordOffset = wordOffset,
-                        duration = duration ?: article.duration,
-                        lastPlayedAt = System.currentTimeMillis(),
-                    ),
-                )
-            }
+            articleDao.updateArticleProgress(
+                id = id,
+                progress = progress,
+                paragraphIndex = paragraphIndex,
+                wordOffset = wordOffset,
+                duration = duration,
+                timestamp = System.currentTimeMillis(),
+            )
         }
     }
 
