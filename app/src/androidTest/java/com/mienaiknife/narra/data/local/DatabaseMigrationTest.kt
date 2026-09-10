@@ -20,6 +20,8 @@ import androidx.sqlite.db.framework.FrameworkSQLiteOpenHelperFactory
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.mienaiknife.narra.di.DatabaseModule
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -59,7 +61,7 @@ class DatabaseMigrationTest {
             val cursor = query("SELECT isInInbox FROM articles WHERE id = '1'")
             cursor.moveToFirst()
             val isInInbox = cursor.getInt(0)
-            assert(isInInbox == 1) // Should be marked as in Inbox based on the migration logic
+            assertEquals("Article should be marked as in Inbox by the migration", 1, isInInbox)
             cursor.close()
 
             // Verify index exists
@@ -73,7 +75,7 @@ class DatabaseMigrationTest {
                 }
             }
             indexCursor.close()
-            assert(indexExists)
+            assertTrue("Expected index_articles_isInInbox_sortTimestamp to exist", indexExists)
         }
     }
 
