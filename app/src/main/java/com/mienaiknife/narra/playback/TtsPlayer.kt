@@ -519,11 +519,30 @@ class TtsPlayer @Inject constructor(
         powerLockManager.releaseLocks()
     }
 
-    fun speak(article: Article, parsedParagraphs: List<SpeakableText>, playWhenReady: Boolean = false) {
-        android.util.Log.d("TtsPlayer", "speak() called: title=${article.title}, paragraphs=${parsedParagraphs.size}, playWhenReady=$playWhenReady")
+    fun speak(
+        article: Article,
+        parsedParagraphs: List<SpeakableText>,
+        playWhenReady: Boolean = false,
+    ) {
         isPreparing = true
         _playerError = null
         invalidateState()
+        try {
+            speakInternal(article, parsedParagraphs, playWhenReady)
+        } finally {
+            // Always clear the preparing flag, even on the empty-article early return or
+            // if preparation throws, otherwise playback stays stuck in BUFFERING.
+            isPreparing = false
+            invalidateState()
+        }
+    }
+
+    private fun speakInternal(
+        article: Article,
+        parsedParagraphs: List<SpeakableText>,
+        playWhenReady: Boolean,
+    ) {
+        android.util.Log.d("TtsPlayer", "speak() called: title=${article.title}, paragraphs=${parsedParagraphs.size}, playWhenReady=$playWhenReady")
         ttsEngine.stop()
         isEngineSpeaking = false
         lastEnqueuedUtteranceId = null
@@ -582,7 +601,6 @@ class TtsPlayer @Inject constructor(
             currentWordRange = null
         }
         _playWhenReady = playWhenReady
-        isPreparing = false
         if (artworkUrl != null) {
             loadArtwork(artworkUrl, article.id)
         }
