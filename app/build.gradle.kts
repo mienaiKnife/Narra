@@ -179,7 +179,6 @@ dependencies {
     implementation(libs.androidx.hilt.work)
     implementation(libs.androidx.startup.runtime)
     implementation(libs.sqlcipher)
-    implementation(libs.androidx.security.crypto)
     implementation(libs.androidx.glance.appwidget)
     implementation(libs.androidx.glance.material3)
     implementation(libs.androidx.glance.preview)

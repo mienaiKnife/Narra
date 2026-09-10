@@ -17,11 +17,18 @@ package com.mienaiknife.narra.utils
 
 import android.content.Context
 import android.content.SharedPreferences
+import android.security.keystore.KeyGenParameterSpec
+import android.security.keystore.KeyProperties
+import android.util.Base64
+import android.util.Log
 import androidx.core.content.edit
-import androidx.security.crypto.EncryptedSharedPreferences
-import androidx.security.crypto.MasterKey
 import dagger.hilt.android.qualifiers.ApplicationContext
+import java.security.KeyStore
 import java.security.SecureRandom
+import javax.crypto.Cipher
+import javax.crypto.KeyGenerator
+import javax.crypto.SecretKey
+import javax.crypto.spec.GCMParameterSpec
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -32,84 +39,77 @@ constructor(
     @ApplicationContext private val context: Context,
 ) {
     companion object {
-        private const val SECURE_PREFS_NAME = "secure_settings"
+        private const val TAG = "SecurityManager"
+        private const val PREFS_NAME = "secure_settings"
         private const val DB_ENCRYPTION_KEY = "db_encryption_key"
+        private const val ANDROID_KEYSTORE = "AndroidKeyStore"
+        private const val KEY_ALIAS = "narra_secrets_key"
+        private const val TRANSFORMATION = "AES/GCM/NoPadding"
+        private const val GCM_IV_LENGTH_BYTES = 12
+        private const val GCM_TAG_LENGTH_BITS = 128
+        private const val KEY_SIZE_BITS = 256
+        private const val DATABASE_KEY_SIZE_BYTES = 64
     }
 
     private val secureRandom = SecureRandom()
 
-    private val masterKey by lazy {
-        MasterKey
-            .Builder(context)
-            .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
-            .build()
-    }
-
-    private val securePrefs: SharedPreferences by lazy {
-        try {
-            EncryptedSharedPreferences.create(
-                context,
-                SECURE_PREFS_NAME,
-                masterKey,
-                EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-                EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
-            )
-        } catch (e: Exception) {
-            // If the key is corrupted or inaccessible, EncryptedSharedPreferences might fail
-            // Fallback to regular SharedPreferences is unsafe for secrets, so we let it throw
-            // and handle at the call site or crash as it's a critical failure.
-            throw e
-        }
+    private val prefs: SharedPreferences by lazy {
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
     }
 
     /**
-     * Gets or generates a random 64-byte key for database encryption.
-     * This key is stored in EncryptedSharedPreferences (which is backed by Keystore).
+     * Gets or generates a random 64-byte key for database encryption. The key is
+     * wrapped with an Android Keystore AES key before being persisted. If the stored
+     * value cannot be unwrapped (e.g. the Keystore key was lost), a new key is
+     * generated rather than crashing; the database layer then treats the existing
+     * database as unreadable and recovers by starting fresh.
      */
     fun getDatabaseEncryptionKey(): ByteArray {
-        val keyHex = securePrefs.getString(DB_ENCRYPTION_KEY, null)
-        if (keyHex != null) {
-            return hexToBytes(keyHex)
+        val stored = prefs.getString(DB_ENCRYPTION_KEY, null)
+        if (stored != null) {
+            val key = runCatching { decrypt(stored) }.getOrNull()
+            if (key != null && key.size == DATABASE_KEY_SIZE_BYTES) {
+                return key
+            }
+            Log.w(TAG, "Stored database key is missing or corrupt; generating a new one")
         }
 
-        val key = ByteArray(64)
+        val key = ByteArray(DATABASE_KEY_SIZE_BYTES)
         secureRandom.nextBytes(key)
-        val newKeyHex = bytesToHex(key)
-        securePrefs.edit { putString(DB_ENCRYPTION_KEY, newKeyHex) }
+        storeDatabaseKey(key)
         return key
     }
 
-    /**
-     * Utility to store a sensitive string (like an API key) securely.
-     */
-    fun storeSecret(
-        key: String,
-        value: String,
-    ) {
-        securePrefs.edit { putString(key, value) }
+    private fun storeDatabaseKey(key: ByteArray) {
+        val cipher = Cipher.getInstance(TRANSFORMATION)
+        cipher.init(Cipher.ENCRYPT_MODE, getOrCreateKeystoreKey())
+        val blob = cipher.iv + cipher.doFinal(key)
+        prefs.edit { putString(DB_ENCRYPTION_KEY, Base64.encodeToString(blob, Base64.NO_WRAP)) }
     }
 
-    /**
-     * Utility to retrieve a sensitive string securely.
-     */
-    fun getSecret(key: String): String? = securePrefs.getString(key, null)
-
-    private fun bytesToHex(bytes: ByteArray): String {
-        val hexChars = CharArray(bytes.size * 2)
-        val hexArray = "0123456789abcdef".toCharArray()
-        for (i in bytes.indices) {
-            val v = bytes[i].toInt() and 0xFF
-            hexChars[i * 2] = hexArray[v ushr 4]
-            hexChars[i * 2 + 1] = hexArray[v and 0x0F]
-        }
-        return String(hexChars)
+    private fun decrypt(encoded: String): ByteArray {
+        val blob = Base64.decode(encoded, Base64.NO_WRAP)
+        require(blob.size > GCM_IV_LENGTH_BYTES) { "Encrypted blob is too short" }
+        val iv = blob.copyOfRange(0, GCM_IV_LENGTH_BYTES)
+        val ciphertext = blob.copyOfRange(GCM_IV_LENGTH_BYTES, blob.size)
+        val cipher = Cipher.getInstance(TRANSFORMATION)
+        cipher.init(Cipher.DECRYPT_MODE, getOrCreateKeystoreKey(), GCMParameterSpec(GCM_TAG_LENGTH_BITS, iv))
+        return cipher.doFinal(ciphertext)
     }
 
-    private fun hexToBytes(hex: String): ByteArray {
-        val bytes = ByteArray(hex.length / 2)
-        for (i in 0 until hex.length step 2) {
-            bytes[i / 2] = hex.substring(i, i + 2).toInt(16).toByte()
-        }
-        return bytes
+    private fun getOrCreateKeystoreKey(): SecretKey {
+        val keyStore = KeyStore.getInstance(ANDROID_KEYSTORE).apply { load(null) }
+        (keyStore.getEntry(KEY_ALIAS, null) as? KeyStore.SecretKeyEntry)?.let { return it.secretKey }
+
+        val keyGenerator = KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, ANDROID_KEYSTORE)
+        keyGenerator.init(
+            KeyGenParameterSpec
+                .Builder(KEY_ALIAS, KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT)
+                .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
+                .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
+                .setKeySize(KEY_SIZE_BITS)
+                .build(),
+        )
+        return keyGenerator.generateKey()
     }
 }
