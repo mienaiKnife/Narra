@@ -105,14 +105,6 @@ interface ArticleDao {
         finishedAt: Long = System.currentTimeMillis(),
     )
 
-    @Query(
-        "UPDATE articles SET isInQueue = 0, isInInbox = 0, progress = 1.0, finishedAt = :finishedAt, lastPlayedAt = :finishedAt, content = NULL WHERE id = :id",
-    )
-    suspend fun markAsPlayed(
-        id: String,
-        finishedAt: Long = System.currentTimeMillis(),
-    )
-
     @Query("UPDATE articles SET progress = 0.0, finishedAt = NULL, currentParagraphIndex = 0, currentWordOffset = 0 WHERE id = :id")
     suspend fun markAsUnplayed(id: String)
 

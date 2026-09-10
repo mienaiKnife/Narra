@@ -125,7 +125,7 @@ class ArticleRepositoryImpl @Inject constructor(
     }
 
     override suspend fun markAsPlayed(id: String) {
-        articleDao.markAsPlayed(id)
+        articleDao.markAsFinished(id)
     }
 
     override suspend fun markAsUnplayed(id: String) {

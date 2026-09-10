@@ -97,6 +97,15 @@ class ArticleRepositoryImplTest {
     }
 
     @Test
+    fun `markAsPlayed delegates to the single finished DAO query`() = runTest {
+        whenever(articleDao.markAsFinished(any(), any())).thenReturn(Unit)
+
+        repository.markAsPlayed("a1")
+
+        verify(articleDao).markAsFinished(eq("a1"), any())
+    }
+
+    @Test
     fun `addToQueue stores the downloaded image with a targeted update`() = runTest {
         val entity = article(id = "a1", imageUrl = "https://example.com/a.png")
         whenever(articleDao.getArticleById("a1")).thenReturn(entity)
