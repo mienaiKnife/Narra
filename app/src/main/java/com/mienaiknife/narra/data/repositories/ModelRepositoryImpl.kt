@@ -207,7 +207,7 @@ class ModelRepositoryImpl @Inject constructor(
                 android.util.Log.i("ModelRepository", "Downloading model file: ${model.modelUrl}")
                 downloadFile(model.modelUrl, targetFile) { progress ->
                     yield()
-                    ttsModelDao.updateProgress(modelId, progress.coerceAtLeast(1f))
+                    ttsModelDao.updateProgress(modelId, progress.coerceIn(0.01f, 1.0f))
                     android.util.Log.i("ModelRepository", "Download progress: $progress")
                 }
 
@@ -216,7 +216,7 @@ class ModelRepositoryImpl @Inject constructor(
                     android.util.Log.i("ModelRepository", "Downloading tokens file: ${model.tokensUrl}")
                     downloadFile(model.tokensUrl, tokensFile) { progress ->
                         yield()
-                        ttsModelDao.updateProgress(modelId, progress.coerceAtLeast(1f))
+                        ttsModelDao.updateProgress(modelId, progress.coerceIn(0.01f, 1.0f))
                         android.util.Log.i("ModelRepository", "Download progress: $progress")
                     }
                 }
@@ -228,7 +228,7 @@ class ModelRepositoryImpl @Inject constructor(
                 android.util.Log.i("ModelRepository", "Downloading extra file: $url")
                 downloadFile(url, targetFile) { progress ->
                     yield()
-                    ttsModelDao.updateProgress(modelId, progress.coerceAtLeast(1f))
+                    ttsModelDao.updateProgress(modelId, progress.coerceIn(0.01f, 1.0f))
                     android.util.Log.i("ModelRepository", "Download progress: $progress")
                 }
             }
