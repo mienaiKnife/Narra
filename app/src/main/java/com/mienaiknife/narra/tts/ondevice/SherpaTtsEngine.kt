@@ -349,8 +349,8 @@ class SherpaTtsEngine @Inject constructor(
             for (request in utteranceQueue) {
                 if (request.sessionId != currentSessionId) continue
                 val engine = tts ?: continue
+                val eventChannel = Channel<AudioStreamEvent>(Channel.UNLIMITED)
                 try {
-                    val eventChannel = Channel<AudioStreamEvent>(Channel.UNLIMITED)
                     val sampleRate = engine.sampleRate()
 
                     synthesizedQueue.send(
@@ -381,6 +381,11 @@ class SherpaTtsEngine @Inject constructor(
                     eventChannel.trySend(AudioStreamEvent.Finished)
                 } catch (e: Exception) {
                     Log.e("SherpaTtsEngine", "Synthesis failed", e)
+                    _state.value = TtsState.Error(e.message ?: "Synthesis failed")
+                } finally {
+                    // Always close the channel; otherwise playAudioStream blocks forever on the
+                    // channel loop and playback is wedged after a synthesis error.
+                    eventChannel.close()
                 }
             }
         }
