@@ -102,4 +102,45 @@ class WebDataSourceImplTest {
         org.junit.Assert.assertNotNull("Main content should still exist", doc.selectFirst("#content"))
         org.junit.Assert.assertNull("Share links div should have been removed", doc.selectFirst(".share-links"))
     }
+
+    @Test
+    fun `extractImageUrl returns null when only an author is present`() {
+        val html =
+            """
+            <html>
+                <head>
+                    <meta name="author" content="Jane Doe">
+                </head>
+                <body>Article body</body>
+            </html>
+            """.trimIndent()
+        val doc = org.jsoup.Jsoup.parse(html, "https://example.com")
+
+        val method = webDataSource.javaClass.getDeclaredMethod("extractImageUrl", org.jsoup.nodes.Document::class.java)
+        method.isAccessible = true
+        val result = method.invoke(webDataSource, doc)
+
+        org.junit.Assert.assertNull("Author name must not be used as an image URL", result)
+    }
+
+    @Test
+    fun `extractImageUrl uses og_image when present`() {
+        val html =
+            """
+            <html>
+                <head>
+                    <meta property="og:image" content="https://example.com/cover.jpg">
+                    <meta name="author" content="Jane Doe">
+                </head>
+                <body>Article body</body>
+            </html>
+            """.trimIndent()
+        val doc = org.jsoup.Jsoup.parse(html, "https://example.com")
+
+        val method = webDataSource.javaClass.getDeclaredMethod("extractImageUrl", org.jsoup.nodes.Document::class.java)
+        method.isAccessible = true
+        val result = method.invoke(webDataSource, doc)
+
+        org.junit.Assert.assertEquals("https://example.com/cover.jpg", result)
+    }
 }

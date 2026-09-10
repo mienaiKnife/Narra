@@ -86,7 +86,7 @@ constructor(
                 }
 
                 val publishedAt = extractPublishedDate(doc)
-                val imageUrl = extractImageUrl(doc, parsedArticle.byline)
+                val imageUrl = extractImageUrl(doc)
 
                 val article =
                     Article(
@@ -227,10 +227,7 @@ constructor(
                 ?.ifEmpty { null }
     }
 
-    private fun extractImageUrl(
-        doc: org.jsoup.nodes.Document,
-        byline: String?,
-    ): String? {
+    private fun extractImageUrl(doc: org.jsoup.nodes.Document): String? {
         // Try JSON-LD first
         val jsonLdTags = doc.select("script[type=application/ld+json]")
         for (tag in jsonLdTags) {
@@ -249,7 +246,6 @@ constructor(
             ?: doc.select("meta[name=twitter:image]").attr("content").ifEmpty { null }
             ?: doc.select("meta[property=og:image:url]").attr("content").ifEmpty { null }
             ?: doc.select("link[rel=image_src]").attr("href").ifEmpty { null }
-            ?: byline?.ifEmpty { null }
     }
 
     private fun findKeyInJson(
