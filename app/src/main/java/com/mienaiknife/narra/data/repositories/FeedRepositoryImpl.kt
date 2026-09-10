@@ -59,11 +59,8 @@ class FeedRepositoryImpl @Inject constructor(
     }
 
     override suspend fun deleteFeed(url: String) = withContext(Dispatchers.IO) {
-        val feed = feedDao.getFeedByUrl(url)
-        if (feed != null) {
-            articleDao.deleteArticlesBySourceFromInbox(feed.title)
-            feedDao.deleteFeedByUrl(url)
-        }
+        articleDao.deleteArticlesByFeedUrlFromInbox(url)
+        feedDao.deleteFeedByUrl(url)
     }
 
     override suspend fun refreshFeeds(): Result<Unit> = withContext(Dispatchers.IO) {

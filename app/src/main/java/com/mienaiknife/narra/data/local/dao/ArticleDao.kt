@@ -172,8 +172,8 @@ interface ArticleDao {
     @Query("DELETE FROM articles WHERE isFromFeed = 1")
     suspend fun deleteAllArticlesFromFeeds()
 
-    @Query("DELETE FROM articles WHERE source = :source AND isFromFeed = 1 AND isInQueue = 0")
-    suspend fun deleteArticlesBySourceFromInbox(source: String)
+    @Query("DELETE FROM articles WHERE feedUrl = :feedUrl AND isFromFeed = 1 AND isInQueue = 0")
+    suspend fun deleteArticlesByFeedUrlFromInbox(feedUrl: String)
 
     @Query("UPDATE articles SET duration = :duration WHERE id = :id")
     suspend fun updateArticleDuration(
