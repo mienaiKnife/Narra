@@ -18,11 +18,16 @@ package com.mienaiknife.narra.data.repositories
 import com.mienaiknife.narra.data.local.ImageDataSource
 import com.mienaiknife.narra.data.local.dao.ArticleDao
 import com.mienaiknife.narra.data.local.dao.FeedDao
+import com.mienaiknife.narra.data.local.entities.FeedEntity
 import com.mienaiknife.narra.data.remote.RemoteFeedDataSource
 import com.mienaiknife.narra.data.settings.DownloadSettingsManager
+import com.mienaiknife.narra.domain.NarraError
+import com.mienaiknife.narra.domain.models.Article
 import com.mienaiknife.narra.ui.utils.NetworkMonitor
 import com.mienaiknife.narra.utils.NotificationHelper
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.mockito.kotlin.any
@@ -54,6 +59,49 @@ class FeedRepositoryImplTest {
                 downloadSettingsManager,
                 notificationHelper,
             )
+        whenever(networkMonitor.isOnline()).thenReturn(true)
+        whenever(downloadSettingsManager.downloadOverWifiOnly).thenReturn(flowOf(false))
+    }
+
+    @Test
+    fun `refreshFeeds continues after a failing feed and reports failure`() = runTest {
+        val okFeed = FeedEntity(url = "ok", title = "OK")
+        val badFeed = FeedEntity(url = "bad", title = "Bad")
+        whenever(feedDao.getAllFeeds()).thenReturn(flowOf(listOf(okFeed, badFeed)))
+        whenever(remoteFeedDataSource.fetchArticles(okFeed)).thenReturn(
+            Result.success(
+                RemoteFeedDataSource.FetchArticlesResult(articles = listOf(article("a1", "u1")), feedTitle = "OK"),
+            ),
+        )
+        whenever(remoteFeedDataSource.fetchArticles(badFeed)).thenReturn(Result.failure(NarraError.Content.InvalidFeed()))
+        whenever(downloadSettingsManager.inboxInitialLimit).thenReturn(flowOf("5"))
+        whenever(articleDao.getArticleCountByFeedUrl("ok")).thenReturn(1)
+        whenever(articleDao.getArticlesByUrls(any())).thenReturn(emptyList())
+        whenever(articleDao.insertArticle(any())).thenReturn(Unit)
+
+        val result = repository.refreshFeeds()
+
+        assertTrue("One failing feed should surface as failure", result.isFailure)
+        verify(articleDao).insertArticle(any())
+    }
+
+    @Test
+    fun `refreshFeeds looks up existing articles in one batched query`() = runTest {
+        val feed = FeedEntity(url = "feed", title = "Feed")
+        val articles = listOf(article("a1", "u1"), article("a2", "u2"), article("a3", "u3"))
+        whenever(feedDao.getAllFeeds()).thenReturn(flowOf(listOf(feed)))
+        whenever(remoteFeedDataSource.fetchArticles(feed)).thenReturn(
+            Result.success(RemoteFeedDataSource.FetchArticlesResult(articles = articles, feedTitle = "Feed")),
+        )
+        whenever(downloadSettingsManager.inboxInitialLimit).thenReturn(flowOf("5"))
+        whenever(articleDao.getArticleCountByFeedUrl("feed")).thenReturn(0)
+        whenever(articleDao.getArticlesByUrls(any())).thenReturn(emptyList())
+        whenever(articleDao.insertArticle(any())).thenReturn(Unit)
+
+        repository.refreshFeeds()
+
+        verify(articleDao).getArticlesByUrls(listOf("u1", "u2", "u3"))
+        verify(articleDao, never()).getArticleByUrl(any())
     }
 
     @Test
@@ -67,4 +115,14 @@ class FeedRepositoryImplTest {
         verify(feedDao).deleteFeedByUrl("https://example.com/feed.xml")
         verify(feedDao, never()).getFeedByUrl(any())
     }
+
+    private fun article(
+        id: String,
+        url: String,
+    ): Article = Article(
+        id = id,
+        title = id,
+        source = "test",
+        url = url,
+    )
 }

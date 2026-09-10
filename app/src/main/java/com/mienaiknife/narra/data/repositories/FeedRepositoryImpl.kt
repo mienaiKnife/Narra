@@ -23,13 +23,20 @@ import com.mienaiknife.narra.data.local.entities.FeedEntity
 import com.mienaiknife.narra.data.remote.RemoteFeedDataSource
 import com.mienaiknife.narra.data.settings.DownloadSettingsManager
 import com.mienaiknife.narra.domain.NarraError
+import com.mienaiknife.narra.domain.models.Article
 import com.mienaiknife.narra.domain.repository.FeedRepository
 import com.mienaiknife.narra.ui.utils.NetworkMonitor
 import com.mienaiknife.narra.ui.utils.UrlUtils
 import com.mienaiknife.narra.utils.NotificationHelper
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
@@ -42,6 +49,10 @@ class FeedRepositoryImpl @Inject constructor(
     private val downloadSettingsManager: DownloadSettingsManager,
     private val notificationHelper: NotificationHelper,
 ) : FeedRepository {
+
+    private companion object {
+        const val MAX_CONCURRENT_IMAGE_DOWNLOADS = 4
+    }
 
     override fun getAllFeeds(): Flow<List<FeedEntity>> = feedDao.getAllFeeds()
 
@@ -68,86 +79,132 @@ class FeedRepositoryImpl @Inject constructor(
         if (connectionCheck.isFailure) {
             return@withContext Result.failure(connectionCheck.exceptionOrNull()!!)
         }
-        try {
-            val feeds = feedDao.getAllFeeds().first()
-            for (feed in feeds) {
-                remoteFeedDataSource.fetchArticles(feed).onSuccess { result ->
-                    val articles = result.articles
-                    val updatedTitle = result.feedTitle
 
-                    if (updatedTitle != null && updatedTitle != feed.title && !UrlUtils.isUrlOrDomainLike(updatedTitle)) {
-                        feedDao.insertFeed(feed.copy(title = updatedTitle))
+        val feeds = feedDao.getAllFeeds().first()
+        val failures = mutableListOf<Throwable>()
+
+        for (feed in feeds) {
+            remoteFeedDataSource.fetchArticles(feed).fold(
+                onSuccess = { result ->
+                    try {
+                        processFeed(feed, result)
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        failures += e
                     }
+                },
+                onFailure = { failures += it },
+            )
+        }
 
-                    val isFirstImport = articleDao.getArticleCountByFeedUrl(feed.url) == 0
-                    val inboxLimitStr = downloadSettingsManager.inboxInitialLimit.first()
-                    val inboxLimit = when (inboxLimitStr) {
-                        "All" -> Int.MAX_VALUE
-                        else -> inboxLimitStr.toIntOrNull() ?: 5
-                    }
-                    val sortedArticles = articles.sortedByDescending { it.publishedTimestamp ?: 0L }
+        if (failures.isEmpty()) {
+            Result.success(Unit)
+        } else {
+            Result.failure(NarraError.Unknown(failures.first()))
+        }
+    }
 
-                    for ((index, article) in sortedArticles.withIndex()) {
-                        val existingArticle = articleDao.getArticleByUrl(article.url ?: "")
+    private suspend fun processFeed(
+        feed: FeedEntity,
+        result: RemoteFeedDataSource.FetchArticlesResult,
+    ) {
+        val updatedTitle = result.feedTitle
+        if (updatedTitle != null && updatedTitle != feed.title && !UrlUtils.isUrlOrDomainLike(updatedTitle)) {
+            feedDao.insertFeed(feed.copy(title = updatedTitle))
+        }
 
-                        if (existingArticle != null && existingArticle.localImageUrl == null && article.imageUrl != null) {
-                            val localImageUrl = article.imageUrl.let { imageUrl ->
-                                val fileName = "feed_${article.id.hashCode()}_${System.currentTimeMillis()}.png"
-                                imageDataSource.downloadAndSaveImage(imageUrl, fileName)
-                            }
-                            if (localImageUrl != null) {
-                                articleDao.insertArticle(existingArticle.copy(localImageUrl = localImageUrl))
-                            }
-                        }
+        val isFirstImport = articleDao.getArticleCountByFeedUrl(feed.url) == 0
+        val inboxLimitStr = downloadSettingsManager.inboxInitialLimit.first()
+        val inboxLimit = when (inboxLimitStr) {
+            "All" -> Int.MAX_VALUE
+            else -> inboxLimitStr.toIntOrNull() ?: 5
+        }
+        val sortedArticles = result.articles.sortedByDescending { it.publishedTimestamp ?: 0L }
 
-                        if (existingArticle == null) {
-                            val isOldOnFirstImport = isFirstImport && index >= inboxLimit
+        val urls = sortedArticles.mapNotNull { it.url }
+        val existingByUrl =
+            if (urls.isEmpty()) {
+                emptyMap()
+            } else {
+                articleDao.getArticlesByUrls(urls).associateBy { it.url }
+            }
 
-                            val localImageUrl = article.imageUrl?.let { imageUrl ->
-                                val fileName = "feed_${article.id.hashCode()}_${System.currentTimeMillis()}.png"
-                                imageDataSource.downloadAndSaveImage(imageUrl, fileName)
-                            }
+        val localImages = downloadFeedImages(sortedArticles, existingByUrl)
 
-                            val articleEntity = ArticleEntity(
-                                id = article.id,
-                                title = article.title,
-                                source = updatedTitle ?: article.source,
-                                content = null,
-                                excerpt = article.publishedAt,
-                                imageUrl = article.imageUrl,
-                                localImageUrl = localImageUrl,
-                                url = article.url,
-                                feedUrl = feed.url,
-                                publishedAt = article.publishedAt,
-                                publishedTimestamp = article.publishedTimestamp,
-                                isFromFeed = true,
-                                isInInbox = !isOldOnFirstImport,
-                                isInQueue = false,
-                                progress = 0.0f,
-                                finishedAt = null,
-                                lastPlayedAt = null,
-                                createdAt = System.currentTimeMillis(),
-                            )
-                            articleDao.insertArticle(articleEntity)
+        for ((index, article) in sortedArticles.withIndex()) {
+            val existing = existingByUrl[article.url]
+            val downloadedImage = localImages[article.id]
+            when {
+                existing == null -> {
+                    val isOldOnFirstImport = isFirstImport && index >= inboxLimit
+                    val articleEntity =
+                        ArticleEntity(
+                            id = article.id,
+                            title = article.title,
+                            source = updatedTitle ?: article.source,
+                            content = null,
+                            excerpt = article.publishedAt,
+                            imageUrl = article.imageUrl,
+                            localImageUrl = downloadedImage,
+                            url = article.url,
+                            feedUrl = feed.url,
+                            publishedAt = article.publishedAt,
+                            publishedTimestamp = article.publishedTimestamp,
+                            isFromFeed = true,
+                            isInInbox = !isOldOnFirstImport,
+                            isInQueue = false,
+                            progress = 0.0f,
+                            finishedAt = null,
+                            lastPlayedAt = null,
+                            createdAt = System.currentTimeMillis(),
+                        )
+                    articleDao.insertArticle(articleEntity)
 
-                            if (feed.notificationsEnabled && articleEntity.progress < 1.0f) {
-                                notificationHelper.showNewArticleNotification(feed, articleEntity)
-                            }
-                        } else if (!existingArticle.isFromFeed) {
-                            articleDao.insertArticle(
-                                existingArticle.copy(
-                                    isFromFeed = true,
-                                    feedUrl = feed.url,
-                                    source = updatedTitle ?: existingArticle.source,
-                                ),
-                            )
-                        }
+                    if (feed.notificationsEnabled && articleEntity.progress < 1.0f) {
+                        notificationHelper.showNewArticleNotification(feed, articleEntity)
                     }
                 }
+                !existing.isFromFeed -> {
+                    articleDao.insertArticle(
+                        existing.copy(
+                            isFromFeed = true,
+                            feedUrl = feed.url,
+                            source = updatedTitle ?: existing.source,
+                            localImageUrl = existing.localImageUrl ?: downloadedImage,
+                        ),
+                    )
+                }
+                existing.localImageUrl == null && downloadedImage != null -> {
+                    articleDao.updateLocalImageUrl(existing.id, downloadedImage)
+                }
             }
-            Result.success(Unit)
-        } catch (e: Exception) {
-            Result.failure(NarraError.Unknown(e))
+        }
+    }
+
+    private suspend fun downloadFeedImages(
+        articles: List<Article>,
+        existingByUrl: Map<String?, ArticleEntity>,
+    ): Map<String, String> {
+        val requiringImages =
+            articles.filter { article ->
+                !article.imageUrl.isNullOrBlank() && existingByUrl[article.url]?.localImageUrl == null
+            }
+        if (requiringImages.isEmpty()) return emptyMap()
+
+        return coroutineScope {
+            val semaphore = Semaphore(MAX_CONCURRENT_IMAGE_DOWNLOADS)
+            requiringImages
+                .map { article ->
+                    async(Dispatchers.IO) {
+                        semaphore.withPermit {
+                            val fileName = "feed_${article.id.hashCode()}_${System.currentTimeMillis()}.png"
+                            article.id to imageDataSource.downloadAndSaveImage(article.imageUrl!!, fileName)
+                        }
+                    }
+                }.awaitAll()
+                .mapNotNull { (id, path) -> path?.let { id to it } }
+                .toMap()
         }
     }
 
