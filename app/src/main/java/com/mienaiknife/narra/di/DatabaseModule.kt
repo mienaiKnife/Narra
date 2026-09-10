@@ -31,6 +31,9 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import net.zetetic.database.sqlcipher.SupportOpenHelperFactory
 import java.io.File
+import java.nio.file.AtomicMoveNotSupportedException
+import java.nio.file.Files
+import java.nio.file.StandardCopyOption
 import javax.inject.Singleton
 
 @Module
@@ -177,20 +180,47 @@ object DatabaseModule {
                 null,
             ).use { db ->
                 val passphraseHex = passphrase.joinToString("") { "%02x".format(it) }
-                db.rawExecSQL("ATTACH DATABASE '${tempDbFile.absolutePath}' AS encrypted KEY x'$passphraseHex';")
+                // ATTACH does not support bound parameters, so the path must be escaped.
+                val escapedTempPath = tempDbFile.absolutePath.replace("'", "''")
+                db.rawExecSQL("ATTACH DATABASE '$escapedTempPath' AS encrypted KEY x'$passphraseHex';")
                 db.rawExecSQL("SELECT sqlcipher_export('encrypted');")
                 db.rawExecSQL("DETACH DATABASE encrypted;")
             }
 
-        // Verify temp file exists and has content before replacing
-        if (tempDbFile.exists() && (tempDbFile.length() > 0)) {
-            dbFile.delete()
-            File(dbFile.path + "-wal").let { if (it.exists()) it.delete() }
-            File(dbFile.path + "-shm").let { if (it.exists()) it.delete() }
-            tempDbFile.renameTo(dbFile)
-        } else {
+        // Verify temp file exists and has content before replacing.
+        if (!tempDbFile.exists() || tempDbFile.length() == 0L) {
             throw IllegalStateException("Encryption failed: temporary database is empty or missing")
         }
+
+        // Swap atomically and reversibly: move the original aside, then move the
+        // encrypted copy into place. If anything fails, restore the original.
+        val walFile = File(dbFile.path + "-wal")
+        val shmFile = File(dbFile.path + "-shm")
+        val backupFile = File(dbFile.path + ".old")
+        if (backupFile.exists()) backupFile.delete()
+
+        if (dbFile.exists() && !dbFile.renameTo(backupFile)) {
+            throw IllegalStateException("Encryption failed: could not back up original database")
+        }
+
+        try {
+            // Sidecars belong to the plaintext database and must not survive the swap.
+            if (walFile.exists()) walFile.delete()
+            if (shmFile.exists()) shmFile.delete()
+            try {
+                Files.move(tempDbFile.toPath(), dbFile.toPath(), StandardCopyOption.ATOMIC_MOVE)
+            } catch (e: AtomicMoveNotSupportedException) {
+                Files.move(tempDbFile.toPath(), dbFile.toPath(), StandardCopyOption.REPLACE_EXISTING)
+            }
+        } catch (e: Exception) {
+            if (dbFile.exists()) dbFile.delete()
+            if (!backupFile.renameTo(dbFile)) {
+                android.util.Log.e("DatabaseModule", "Failed to restore original database after encryption failure", e)
+            }
+            throw e
+        }
+
+        backupFile.delete()
     }
 
     @Provides

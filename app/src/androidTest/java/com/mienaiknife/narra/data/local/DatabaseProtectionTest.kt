@@ -106,6 +106,16 @@ class DatabaseProtectionTest {
             assertTrue("Data should match original", cursor.getString(0) == "unencrypted-data")
             cursor.close()
         }
+
+        // 6. Verify the atomic swap left no temporary or rollback artifacts behind
+        assertFalse(
+            "Temporary encryption file should be removed",
+            File(dbFile.parentFile, "temp_encrypt.db").exists(),
+        )
+        assertFalse(
+            "Original database rollback copy should be removed after a successful swap",
+            File(dbFile.path + ".old").exists(),
+        )
     }
 
     @Test
