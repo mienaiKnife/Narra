@@ -45,7 +45,7 @@ data class TtsModelEntity(
         name = name,
         language = language,
         description = description,
-        type = TtsModelType.valueOf(type),
+        type = parseType(type),
         modelUrl = modelUrl,
         tokensUrl = tokensUrl,
         extraUrls = parseExtraUrls(extraUrls),
@@ -56,6 +56,10 @@ data class TtsModelEntity(
         speakerId = speakerId,
         lastError = lastError,
     )
+
+    // Unknown/legacy values must not throw: a single bad row would otherwise break the whole
+    // models Flow. Fall back to VITS so the app stays usable.
+    private fun parseType(raw: String): TtsModelType = runCatching { TtsModelType.valueOf(raw) }.getOrDefault(TtsModelType.VITS)
 
     private fun parseExtraUrls(json: String): Map<String, String> {
         if (json.isBlank()) return emptyMap()

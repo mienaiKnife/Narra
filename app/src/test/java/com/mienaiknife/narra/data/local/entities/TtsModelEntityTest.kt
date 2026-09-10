@@ -46,4 +46,26 @@ class TtsModelEntityTest {
 
         assertEquals(originalExtraUrls, domain.extraUrls)
     }
+
+    @Test
+    fun `unknown model type falls back instead of throwing`() {
+        val entity =
+            TtsModelEntity(
+                id = "legacy",
+                name = "Legacy",
+                language = "en",
+                description = "",
+                type = "BOGUS_TYPE",
+                modelUrl = "",
+                tokensUrl = "",
+                dataDir = null,
+                sizeBytes = 0,
+                isDownloaded = false,
+                progress = 0f,
+            )
+
+        val domain = entity.toDomain()
+
+        assertEquals(TtsModelType.VITS, domain.type)
+    }
 }
