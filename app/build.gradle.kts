@@ -121,10 +121,9 @@ android {
     }
     packaging {
         resources {
-            excludes += "/META-INF/{AL2.0,LGPL2.1}"
-        }
-        jniLibs {
-            pickFirsts += "**/libonnxruntime.so"
+            // Merge (do not drop) license notices shipped by dependencies; Epublib is LGPL-3.0
+            // and its notice must be preserved in the distributed APK.
+            merges += "/META-INF/{AL2.0,LGPL2.1}"
         }
     }
     compileOptions {
