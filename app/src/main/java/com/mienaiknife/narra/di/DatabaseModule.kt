@@ -80,7 +80,19 @@ object DatabaseModule {
             AppDatabase.DATABASE_NAME,
         ).openHelperFactory(PreparingOpenHelperFactory(securityManager))
         .addMigrations(migration16to17)
+        // Schemas before 16 were never released and their Room schemas were not exported, so no
+        // faithful migration path exists. Rather than crashing on `IllegalStateException`, wipe
+        // and recreate the database for those legacy development installs. Real migrations must
+        // still be provided for every schema from 16 onwards.
+        .fallbackToDestructiveMigrationFrom(true, *LEGACY_UNSUPPORTED_SCHEMA_VERSIONS)
         .build()
+
+    /**
+     * Versions below [AppDatabase.MIN_SUPPORTED_VERSION] predate schema export and cannot be
+     * migrated losslessly; allow Room to recreate the database for them.
+     */
+    private val LEGACY_UNSUPPORTED_SCHEMA_VERSIONS =
+        (1 until AppDatabase.MIN_SUPPORTED_VERSION).toList().toIntArray()
 
     /**
      * Validates and repairs the on-disk database before it is opened. This reads the Keystore and

@@ -38,5 +38,12 @@ abstract class AppDatabase : RoomDatabase() {
 
     companion object {
         const val DATABASE_NAME = "narra_db"
+
+        /**
+         * The oldest schema version that was ever released. Schema files are only exported from
+         * this version onwards, so versions below it have no supported migration path and are
+         * recreated destructively by [com.mienaiknife.narra.di.DatabaseModule].
+         */
+        const val MIN_SUPPORTED_VERSION = 16
     }
 }

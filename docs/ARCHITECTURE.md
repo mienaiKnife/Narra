@@ -33,6 +33,21 @@ Narra uses **Room** for local persistence, ensuring that all articles and settin
 - **`FeedEntity`**: Stores RSS feed subscriptions and sync settings.
 - **`TtsModelEntity`**: Tracks downloaded TTS models and their local file paths.
 
+### Database Migrations
+
+Room schema JSON files are exported to `app/schemas/` and versioned. `AppDatabase.MIN_SUPPORTED_VERSION`
+(see `AppDatabase.kt`) marks the oldest schema that was ever released.
+
+- **Version >= `MIN_SUPPORTED_VERSION`**: a real `Migration` must be provided. Missing migrations
+  are treated as programming errors and will crash on startup.
+- **Version < `MIN_SUPPORTED_VERSION`**: these schemas were never exported, so no faithful
+  migration path exists. `DatabaseModule` whitelists them via
+  `fallbackToDestructiveMigrationFrom(...)`, which recreates the database instead of crashing.
+  This only affects pre-release development installs.
+
+When changing an entity, follow the schema-change rules in `AGENTS.md`: bump the version, add a
+`Migration`, update indices, and add a `DatabaseMigrationTest` case.
+
 ## Background Work
 
 Narra utilizes **WorkManager** for reliable background operations:
