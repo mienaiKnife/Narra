@@ -15,7 +15,7 @@ Every TTS implementation must reside in its own package under `com.<package>.tts
 ## Current Implementations
 
 - **Android TTS** (`/tts/android`): Wraps `android.speech.tts.TextToSpeech`. Best for low latency and zero-download availability.
-- **On-Device AI** (`/tts/ondevice`): Uses Sherpa-ONNX for high-quality offline synthesis. Supports various model types including VITS, Matcha, Kokoro, and more. Requires model management via `ModelRepository`.
+- **On-Device AI** (`/tts/ondevice`): Uses Sherpa-ONNX for high-quality offline synthesis. Supports various model types including VITS, Matcha, Kokoro, and more. Model files are large and **must never be bundled in the APK**; `ModelRepository` (separate from the `TtsEngine` interface) handles downloading, storing, and selecting them at runtime.
     - **Update Check**: To check if a newer version of Sherpa-ONNX is available on GitHub, run: `./gradlew :app:checkSherpaUpdate`.
     - **Updating**: If an update is available, bump the `sherpaOnnx` version in `gradle/libs.versions.toml`. The dependency is resolved from JitPack (`com.github.k2-fsa:sherpa-onnx`); no local `.aar` is vendored.
     - **Word Highlighting**: Uses a heuristic-based estimation for word boundaries (see `SherpaTtsEngine.estimateWordBoundaries`). Native word timestamps are supported in Sherpa-ONNX v1.13.4+ but not yet exposed in Java bindings.
