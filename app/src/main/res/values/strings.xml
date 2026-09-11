@@ -210,6 +210,7 @@
     <string name="widget_no_article">No article playing</string>
     <string name="widget_artwork_desc">Article artwork</string>
     <string name="widget_ff_desc">Fast Forward</string>
+    <string name="widget_rewind_desc">Rewind</string>
     <string name="widget_skip_next_desc">Skip Next</string>
 
     <string name="settings_ui_reader_font_family">Font family</string>

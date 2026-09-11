@@ -128,7 +128,7 @@ class NarraWidget : GlanceAppWidget() {
             ""
         }
 
-        val titleText = title ?: "No article playing"
+        val titleText = title ?: LocalContext.current.getString(R.string.widget_no_article)
 
         Box(
             modifier = GlanceModifier
@@ -216,7 +216,7 @@ class NarraWidget : GlanceAppWidget() {
                         ) {
                             Image(
                                 provider = ImageProvider(R.drawable.ic_rewind),
-                                contentDescription = "Rewind",
+                                contentDescription = LocalContext.current.getString(R.string.widget_rewind_desc),
                                 colorFilter = ColorFilter.tint(GlanceTheme.colors.onBackground),
                                 modifier = GlanceModifier.size(32.dp),
                             )

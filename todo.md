@@ -131,7 +131,7 @@ Check off items as they land. Prefer one isolated commit + regression test per i
 
 ### Localization
 - [x] Hardcoded nav labels (resources exist). `ui/components/BottomNavBar.kt:43-47`.
-- [ ] Hardcoded widget strings. `ui/widget/NarraWidget.kt:131,219`.
+- [x] Hardcoded widget strings. `ui/widget/NarraWidget.kt:131,219`.
 - [ ] Hardcoded interval/limit lists. `DownloadsSettingsScreen.kt:326,337`.
 - [ ] Hardcoded skip-time labels. `PlaybackSettingsScreen.kt:264,275`.
 - [ ] English-only search keywords. `ui/screens/SettingsSearchData.kt:38-258`.
