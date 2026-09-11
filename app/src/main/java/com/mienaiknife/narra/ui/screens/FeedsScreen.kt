@@ -90,6 +90,7 @@ import com.mienaiknife.narra.ui.components.BottomNavBar
 import com.mienaiknife.narra.ui.components.NarraScrollbar
 import com.mienaiknife.narra.ui.components.SortBottomSheet
 import com.mienaiknife.narra.ui.theme.NarraTheme
+import com.mienaiknife.narra.ui.utils.UrlUtils
 import com.mienaiknife.narra.ui.viewmodels.FeedsViewModel
 
 @Composable
@@ -373,7 +374,7 @@ fun FeedItem(
                     .background(MaterialTheme.colorScheme.surfaceContainer),
                 contentAlignment = Alignment.Center,
             ) {
-                val imageUrl = feed.imageUrl ?: "https://www.google.com/s2/favicons?domain=${feed.url}&sz=128"
+                val imageUrl = feed.imageUrl ?: UrlUtils.faviconUrl(feed.url)
                 var isImageLoaded by remember(imageUrl) { mutableStateOf(false) }
 
                 if (!isImageLoaded) {

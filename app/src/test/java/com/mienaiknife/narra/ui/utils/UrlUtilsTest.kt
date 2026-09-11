@@ -49,4 +49,23 @@ class UrlUtilsTest {
         assertEquals("blog.jetbrains.com", UrlUtils.getDomainName("https://blog.jetbrains.com/kotlin/"))
         assertEquals("sub.example.com", UrlUtils.getDomainName("http://sub.example.com"))
     }
+
+    @Test
+    fun `faviconUrl builds a favicon service url`() {
+        assertEquals(
+            "https://www.google.com/s2/favicons?domain=https://example.com&sz=128",
+            UrlUtils.faviconUrl("https://example.com"),
+        )
+        assertEquals(
+            "https://www.google.com/s2/favicons?domain=https://example.com&sz=64",
+            UrlUtils.faviconUrl("https://example.com", size = 64),
+        )
+    }
+
+    @Test
+    fun `faviconUrl returns null for blank or missing urls`() {
+        assertEquals(null, UrlUtils.faviconUrl(null))
+        assertEquals(null, UrlUtils.faviconUrl(""))
+        assertEquals(null, UrlUtils.faviconUrl("   "))
+    }
 }

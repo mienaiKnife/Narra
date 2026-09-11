@@ -121,7 +121,7 @@ Check off items as they land. Prefer one isolated commit + regression test per i
       `ReaderContentList.kt:385`.
 - [x] `NarraScrollbar` constant thumb fraction; hardcoded `contentDescription`.
       `ui/components/NarraScrollbar.kt:234-244,308-310`.
-- [ ] Favicon URL logic duplicated 4×. `HomeScreen.kt:337`, `QueueItem.kt:235`,
+- [x] Favicon URL logic duplicated 4×. `HomeScreen.kt:337`, `QueueItem.kt:235`,
       `MiniPlayer.kt:130`, `FeedsScreen.kt:385`.
 - [ ] Reader error uses `Icons.Default.Refresh` placeholder. `ReaderScreen.kt:553-558`.
 - [ ] Wrong dropdown anchor type. `ui/screens/SettingsScreen.kt:123`.

@@ -67,6 +67,7 @@ import com.mienaiknife.narra.data.models.SampleArticles
 import com.mienaiknife.narra.domain.models.Article
 import com.mienaiknife.narra.ui.theme.LocalNarraSpacing
 import com.mienaiknife.narra.ui.theme.NarraTheme
+import com.mienaiknife.narra.ui.utils.UrlUtils
 import com.mienaiknife.narra.ui.viewmodels.PlaybackViewModel
 
 @Composable
@@ -128,7 +129,7 @@ fun MiniPlayerContent(
                         .background(MaterialTheme.colorScheme.surfaceContainer),
                     contentAlignment = Alignment.Center,
                 ) {
-                    val imageUrl = article.imageUrl ?: article.feedImageUrl ?: article.url?.let { "https://www.google.com/s2/favicons?domain=$it&sz=128" }
+                    val imageUrl = article.imageUrl ?: article.feedImageUrl ?: UrlUtils.faviconUrl(article.url)
                     var isImageLoaded by remember(imageUrl) { mutableStateOf(false) }
 
                     if (!isImageLoaded) {

@@ -82,6 +82,11 @@ object UrlUtils {
         url
     }
 
+    /**
+     * Returns a favicon service URL for the given site URL, or null when no URL is available.
+     */
+    fun faviconUrl(url: String?, size: Int = 128): String? = url?.takeIf { it.isNotBlank() }?.let { "https://www.google.com/s2/favicons?domain=$it&sz=$size" }
+
     fun isUrlOrDomainLike(text: String): Boolean = text.contains("://") ||
         text.contains("www.") ||
         text.matches(Regex(".*\\.[a-z]{2,6}$", RegexOption.IGNORE_CASE)) ||
