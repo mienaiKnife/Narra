@@ -16,7 +16,6 @@
 package com.mienaiknife.narra.ui.screens
 
 import android.content.res.Configuration
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -31,6 +30,7 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -48,6 +48,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -182,7 +183,11 @@ fun PlaybackSettingsContent(
                     .fillMaxWidth()
                     .bringIntoViewRequester(pauseOnDisconnectRequester)
                     .flashHighlight(highlightSetting == "pauseOnDisconnect")
-                    .clickable { onPauseOnDisconnectChange(!uiState.pauseOnDisconnect) }
+                    .toggleable(
+                        value = uiState.pauseOnDisconnect,
+                        role = Role.Switch,
+                        onValueChange = onPauseOnDisconnectChange,
+                    )
                     .padding(vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -204,7 +209,7 @@ fun PlaybackSettingsContent(
                 }
                 Switch(
                     checked = uiState.pauseOnDisconnect,
-                    onCheckedChange = onPauseOnDisconnectChange,
+                    onCheckedChange = null,
                     colors = SwitchDefaults.colors(
                         checkedThumbColor = MaterialTheme.colorScheme.primary,
                         checkedTrackColor = MaterialTheme.colorScheme.primaryContainer,
@@ -219,7 +224,11 @@ fun PlaybackSettingsContent(
                     .fillMaxWidth()
                     .bringIntoViewRequester(pauseForInterruptionsRequester)
                     .flashHighlight(highlightSetting == "pauseForInterruptions")
-                    .clickable { onPauseForInterruptionsChange(!uiState.pauseForInterruptions) }
+                    .toggleable(
+                        value = uiState.pauseForInterruptions,
+                        role = Role.Switch,
+                        onValueChange = onPauseForInterruptionsChange,
+                    )
                     .padding(vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -241,7 +250,7 @@ fun PlaybackSettingsContent(
                 }
                 Switch(
                     checked = uiState.pauseForInterruptions,
-                    onCheckedChange = onPauseForInterruptionsChange,
+                    onCheckedChange = null,
                     colors = SwitchDefaults.colors(
                         checkedThumbColor = MaterialTheme.colorScheme.primary,
                         checkedTrackColor = MaterialTheme.colorScheme.primaryContainer,
@@ -323,7 +332,11 @@ fun PlaybackSettingsContent(
                     .fillMaxWidth()
                     .bringIntoViewRequester(autoPlayNextRequester)
                     .flashHighlight(highlightSetting == "autoPlayNext")
-                    .clickable { onAutoPlayNextChange(!uiState.autoPlayNext) }
+                    .toggleable(
+                        value = uiState.autoPlayNext,
+                        role = Role.Switch,
+                        onValueChange = onAutoPlayNextChange,
+                    )
                     .padding(vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -345,7 +358,7 @@ fun PlaybackSettingsContent(
                 }
                 Switch(
                     checked = uiState.autoPlayNext,
-                    onCheckedChange = onAutoPlayNextChange,
+                    onCheckedChange = null,
                     colors = SwitchDefaults.colors(
                         checkedThumbColor = MaterialTheme.colorScheme.primary,
                         checkedTrackColor = MaterialTheme.colorScheme.primaryContainer,
@@ -360,7 +373,11 @@ fun PlaybackSettingsContent(
                     .fillMaxWidth()
                     .bringIntoViewRequester(playChimeAndTitleRequester)
                     .flashHighlight(highlightSetting == "playChimeAndTitle")
-                    .clickable { onPlayChimeAndTitleChange(!uiState.playChimeAndTitle) }
+                    .toggleable(
+                        value = uiState.playChimeAndTitle,
+                        role = Role.Switch,
+                        onValueChange = onPlayChimeAndTitleChange,
+                    )
                     .padding(vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -382,7 +399,7 @@ fun PlaybackSettingsContent(
                 }
                 Switch(
                     checked = uiState.playChimeAndTitle,
-                    onCheckedChange = onPlayChimeAndTitleChange,
+                    onCheckedChange = null,
                     colors = SwitchDefaults.colors(
                         checkedThumbColor = MaterialTheme.colorScheme.primary,
                         checkedTrackColor = MaterialTheme.colorScheme.primaryContainer,
@@ -422,7 +439,11 @@ fun PlaybackSettingsContent(
                     .fillMaxWidth()
                     .bringIntoViewRequester(readAltTextRequester)
                     .flashHighlight(highlightSetting == "readAltText")
-                    .clickable { onReadAltTextChange(!uiState.readAltText) }
+                    .toggleable(
+                        value = uiState.readAltText,
+                        role = Role.Switch,
+                        onValueChange = onReadAltTextChange,
+                    )
                     .padding(vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -444,7 +465,7 @@ fun PlaybackSettingsContent(
                 }
                 Switch(
                     checked = uiState.readAltText,
-                    onCheckedChange = onReadAltTextChange,
+                    onCheckedChange = null,
                     colors = SwitchDefaults.colors(
                         checkedThumbColor = MaterialTheme.colorScheme.primary,
                         checkedTrackColor = MaterialTheme.colorScheme.primaryContainer,
@@ -459,7 +480,11 @@ fun PlaybackSettingsContent(
                     .fillMaxWidth()
                     .bringIntoViewRequester(shortenHyperlinksRequester)
                     .flashHighlight(highlightSetting == "shortenHyperlinks")
-                    .clickable { onShortenHyperlinksChange(!uiState.shortenHyperlinks) }
+                    .toggleable(
+                        value = uiState.shortenHyperlinks,
+                        role = Role.Switch,
+                        onValueChange = onShortenHyperlinksChange,
+                    )
                     .padding(vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -481,7 +506,7 @@ fun PlaybackSettingsContent(
                 }
                 Switch(
                     checked = uiState.shortenHyperlinks,
-                    onCheckedChange = onShortenHyperlinksChange,
+                    onCheckedChange = null,
                     colors = SwitchDefaults.colors(
                         checkedThumbColor = MaterialTheme.colorScheme.primary,
                         checkedTrackColor = MaterialTheme.colorScheme.primaryContainer,

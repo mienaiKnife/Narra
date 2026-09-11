@@ -53,6 +53,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
@@ -110,7 +111,7 @@ fun MiniPlayerContent(
             .semantics {
                 contentDescription = contentDesc
             }
-            .clickable { onExpand(article.id) },
+            .clickable(role = Role.Button) { onExpand(article.id) },
         color = MaterialTheme.colorScheme.surfaceContainer,
     ) {
         Column {

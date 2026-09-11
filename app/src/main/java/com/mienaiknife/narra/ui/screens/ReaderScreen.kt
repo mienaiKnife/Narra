@@ -81,6 +81,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
@@ -448,7 +449,7 @@ fun ReaderSleepTimerSheet(
             options.forEach { (label, minutes) ->
                 ListItem(
                     headlineContent = { Text(label) },
-                    modifier = Modifier.clickable {
+                    modifier = Modifier.clickable(role = Role.Button) {
                         onSetTimer(minutes)
                         onDismiss()
                     },
@@ -512,7 +513,7 @@ fun ReaderSearchSheet(
                         overlineContent = {
                             Text(stringResource(R.string.reader_paragraph_search_desc, result.paragraphIndex + 1))
                         },
-                        modifier = Modifier.clickable {
+                        modifier = Modifier.clickable(role = Role.Button) {
                             onResultClick(result)
                             onDismiss()
                         },

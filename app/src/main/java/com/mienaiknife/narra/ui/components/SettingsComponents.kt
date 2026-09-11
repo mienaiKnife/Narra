@@ -33,6 +33,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import com.mienaiknife.narra.ui.theme.LocalNarraSpacing
 
@@ -50,7 +51,7 @@ fun SettingDropDownItem(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .clickable { expanded = true }
+            .clickable(role = Role.Button) { expanded = true }
             .padding(vertical = 8.dp),
     ) {
         Row(

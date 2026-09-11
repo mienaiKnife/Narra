@@ -56,6 +56,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -353,7 +354,7 @@ fun DownloadsSettingsContent(
                     .fillMaxWidth()
                     .bringIntoViewRequester(importFeedsRequester)
                     .flashHighlight(highlightSetting == "importFeeds")
-                    .clickable { onImportOpml() }
+                    .clickable(role = Role.Button) { onImportOpml() }
                     .padding(vertical = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(LocalNarraSpacing.current.itemVertical),
             ) {
@@ -373,7 +374,7 @@ fun DownloadsSettingsContent(
                     .fillMaxWidth()
                     .bringIntoViewRequester(exportFeedsRequester)
                     .flashHighlight(highlightSetting == "exportFeeds")
-                    .clickable { onExportOpml() }
+                    .clickable(role = Role.Button) { onExportOpml() }
                     .padding(vertical = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(LocalNarraSpacing.current.itemVertical),
             ) {
@@ -400,7 +401,7 @@ fun DownloadsSettingsContent(
                     .fillMaxWidth()
                     .bringIntoViewRequester(backupDatabaseRequester)
                     .flashHighlight(highlightSetting == "exportDatabase")
-                    .clickable { onBackupDatabase() }
+                    .clickable(role = Role.Button) { onBackupDatabase() }
                     .padding(vertical = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(LocalNarraSpacing.current.itemVertical),
             ) {
@@ -428,7 +429,7 @@ fun DownloadsSettingsContent(
                     .fillMaxWidth()
                     .bringIntoViewRequester(restoreDatabaseRequester)
                     .flashHighlight(highlightSetting == "importDatabase")
-                    .clickable { onRestoreDatabase() }
+                    .clickable(role = Role.Button) { onRestoreDatabase() }
                     .padding(vertical = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(LocalNarraSpacing.current.itemVertical),
             ) {
@@ -522,7 +523,7 @@ fun DownloadsSettingsContent(
                         .fillMaxWidth()
                         .bringIntoViewRequester(autoExportLocationRequester)
                         .flashHighlight(highlightSetting == "autoExportLocation")
-                        .clickable { onSetAutoExportLocation() }
+                        .clickable(role = Role.Button) { onSetAutoExportLocation() }
                         .padding(vertical = 8.dp),
                 ) {
                     Text(
@@ -564,7 +565,7 @@ fun DownloadsSettingsContent(
                     .fillMaxWidth()
                     .bringIntoViewRequester(deleteDatabaseRequester)
                     .flashHighlight(highlightSetting == "deleteDatabase")
-                    .clickable { onDeleteDatabase() }
+                    .clickable(role = Role.Button) { onDeleteDatabase() }
                     .padding(vertical = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(LocalNarraSpacing.current.itemVertical),
             ) {

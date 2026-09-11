@@ -114,7 +114,7 @@ Check off items as they land. Prefer one isolated commit + regression test per i
       `SettingsScreen.kt:229`, `LicensesScreen.kt:103`, `ReaderScreen.kt:498-515`.
 - [x] Merged semantics swallow child controls. `ui/components/QueueItem.kt:215-224,361-362`,
       `ui/components/MiniPlayer.kt:107-113`.
-- [ ] Clickable rows missing `Role` (many files, see audit).
+- [x] Clickable rows missing `Role` (many files, see audit).
 - [ ] Notification toggle has no state semantics. `ui/screens/FeedsScreen.kt:429-436`.
 - [ ] Sort state conveyed by color only. `ui/components/SortBottomSheet.kt:111-149`.
 - [ ] `IntrinsicSize` in long lists. `VoicesSettingsScreen.kt:472-474`, `QueueItem.kt:388`,

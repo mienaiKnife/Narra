@@ -36,6 +36,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -74,6 +75,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -285,7 +287,7 @@ fun VoicesSettingsContent(
                             .bringIntoViewRequester(androidTtsSettingsRequester)
                             .flashHighlight(highlightSetting == "androidTtsSettings")
                             .padding(vertical = 16.dp)
-                            .clickable {
+                            .clickable(role = Role.Button) {
                                 try {
                                     context.startActivity(Intent("com.android.settings.TTS_SETTINGS"))
                                 } catch (_: Exception) {
@@ -473,7 +475,12 @@ fun TtsModelItem(
     ListItem(
         modifier = Modifier
             .height(IntrinsicSize.Min)
-            .clickable(enabled = model.isDownloaded && enabled) { onSelect() },
+            .selectable(
+                selected = isSelected,
+                enabled = model.isDownloaded && enabled,
+                role = Role.RadioButton,
+                onClick = onSelect,
+            ),
         colors = ListItemDefaults.colors(
             containerColor = containerColor,
         ),

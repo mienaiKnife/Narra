@@ -50,6 +50,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.navigation.compose.rememberNavController
@@ -128,7 +129,7 @@ fun AboutScreen(onBack: () -> Unit, onNavigateToLicenses: () -> Unit) {
                             tint = MaterialTheme.colorScheme.onBackground,
                         )
                     },
-                    modifier = Modifier.clickable {
+                    modifier = Modifier.clickable(role = Role.Button) {
                         uriHandler.openUri("https://github.com/mienaiKnife/Narra")
                     },
                     colors = ListItemDefaults.colors(containerColor = Color.Transparent),
@@ -147,7 +148,7 @@ fun AboutScreen(onBack: () -> Unit, onNavigateToLicenses: () -> Unit) {
                             tint = MaterialTheme.colorScheme.onBackground,
                         )
                     },
-                    modifier = Modifier.clickable {
+                    modifier = Modifier.clickable(role = Role.Button) {
                         onNavigateToLicenses()
                     },
                     colors = ListItemDefaults.colors(containerColor = Color.Transparent),
@@ -165,7 +166,7 @@ fun AboutScreen(onBack: () -> Unit, onNavigateToLicenses: () -> Unit) {
                             tint = MaterialTheme.colorScheme.onBackground,
                         )
                     },
-                    modifier = Modifier.clickable {
+                    modifier = Modifier.clickable(role = Role.Button) {
                         uriHandler.openUri("https://github.com/mienaiKnife/Narra/blob/main/docs/PRIVACY.md")
                     },
                     colors = ListItemDefaults.colors(containerColor = Color.Transparent),

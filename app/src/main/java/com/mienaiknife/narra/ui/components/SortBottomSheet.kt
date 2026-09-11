@@ -16,7 +16,6 @@
 package com.mienaiknife.narra.ui.components
 
 import android.content.res.Configuration
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -26,6 +25,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
@@ -47,6 +47,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -155,7 +156,11 @@ fun SortBottomSheetContent(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable { onKeepSortedChange(!keepSorted) }
+                    .toggleable(
+                        value = keepSorted,
+                        role = Role.Switch,
+                        onValueChange = onKeepSortedChange,
+                    )
                     .padding(horizontal = 16.dp, vertical = 8.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
@@ -166,7 +171,7 @@ fun SortBottomSheetContent(
                 )
                 Switch(
                     checked = keepSorted,
-                    onCheckedChange = onKeepSortedChange,
+                    onCheckedChange = null,
                     colors = SwitchDefaults.colors(
                         checkedThumbColor = MaterialTheme.colorScheme.primary,
                         checkedTrackColor = MaterialTheme.colorScheme.primaryContainer,
@@ -183,7 +188,11 @@ fun SortBottomSheetContent(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable { onShowPlayedChange(!showPlayed) }
+                    .toggleable(
+                        value = showPlayed,
+                        role = Role.Switch,
+                        onValueChange = onShowPlayedChange,
+                    )
                     .padding(horizontal = 16.dp, vertical = 8.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
@@ -194,7 +203,7 @@ fun SortBottomSheetContent(
                 )
                 Switch(
                     checked = showPlayed,
-                    onCheckedChange = onShowPlayedChange,
+                    onCheckedChange = null,
                     colors = SwitchDefaults.colors(
                         checkedThumbColor = MaterialTheme.colorScheme.primary,
                         checkedTrackColor = MaterialTheme.colorScheme.primaryContainer,
