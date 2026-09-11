@@ -26,8 +26,4 @@ sealed interface HomeUiState {
         val favoriteArticles: List<Article>,
         val isRefreshing: Boolean = false,
     ) : HomeUiState
-
-    data class Error(
-        val message: String,
-    ) : HomeUiState
 }

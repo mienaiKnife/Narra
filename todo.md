@@ -95,7 +95,7 @@ Check off items as they land. Prefer one isolated commit + regression test per i
 - [ ] **16-flow unchecked combine (and 5 others).** `ui/viewmodels/ReaderViewModel.kt:98-145`,
       `InboxViewModel.kt:67-96`, `HistoryViewModel.kt:62-77`, etc.
 - [x] **Reader parses article twice.** `ui/viewmodels/ReaderViewModel.kt:67-96,151-162,191-194`.
-- [ ] **Dead error states.** `ui/viewmodels/QueueUiState.kt:36-38`, `HomeUiState.kt:30-32`.
+- [x] **Dead error states.** `ui/viewmodels/QueueUiState.kt:36-38`, `HomeUiState.kt:30-32`.
 - [ ] **Theme manager scope/9 collectors.** `ui/theme/ThemeManager.kt:39,70-84`, `ThemeViewModel.kt:50-96`.
 - [ ] **`UiText` value equality.** `ui/UiText.kt:32-41`.
 - [ ] **Sort-toggle duplication (4×).** `QueueViewModel.kt:114-128`, `FeedsViewModel.kt:74-90`,

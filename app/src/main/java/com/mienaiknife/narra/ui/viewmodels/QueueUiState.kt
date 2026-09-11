@@ -32,8 +32,4 @@ sealed interface QueueUiState {
         val downloadingArticleIds: Set<String> = emptySet(),
         val totalRemainingTimeMs: Long = 0L,
     ) : QueueUiState
-
-    data class Error(
-        val message: String,
-    ) : QueueUiState
 }

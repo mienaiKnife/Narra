@@ -217,16 +217,6 @@ fun HomeScreenContent(
                         EmptyHomeContent(onAddClick, scrollState)
                     }
                 }
-                is com.mienaiknife.narra.ui.viewmodels.HomeUiState.Error -> {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .verticalScroll(scrollState),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Text(uiState.message)
-                    }
-                }
             }
         }
     }

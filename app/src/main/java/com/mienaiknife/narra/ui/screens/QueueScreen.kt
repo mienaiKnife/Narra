@@ -158,11 +158,6 @@ fun QueueScreen(
                     onReorder = { from, to -> viewModel.reorderQueue(from, to) },
                 )
             }
-            is com.mienaiknife.narra.ui.viewmodels.QueueUiState.Error -> {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text(state.message)
-                }
-            }
         }
 
         SnackbarHost(
