@@ -51,6 +51,24 @@ changing the relevant area.
   Never commit API keys or secrets. This project will never require a first-party account or a
   project-operated server. See [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md),
   [SECURITY.md](SECURITY.md), and [ROADMAP.md#non-goals](ROADMAP.md#non-goals).
+- **CI must pass**: every change must pass the checks in `.github/workflows/ci.yml`. A failing style
+  check blocks the whole pipeline, so run the checks locally (below) before declaring work complete.
+
+## Definition of Done
+Before you report a task as finished, run these locally and fix every failure:
+
+```bash
+./gradlew spotlessApply        # auto-fix ktlint formatting and add Apache 2.0 headers
+./gradlew spotlessCheck lintDebug
+./gradlew testDebugUnitTest
+```
+
+`spotlessApply` is the fast path to avoiding style failures; `spotlessCheck` is what CI runs. For
+schema, Compose, or UI changes also run `./gradlew verifyPaparazziDebug` and, where an emulator is
+available, `./gradlew connectedDebugAndroidTest`. `.github/workflows/ci.yml` gates merges on
+`spotlessCheck`, `lintDebug`, `testDebugUnitTest`, `testReleaseUnitTest`, `verifyPaparazziDebug`,
+`jacocoTestReport`, `connectedDebugAndroidTest`, and the release builds. Do not consider a task done
+while any of them fail. See [docs/TESTING_GUIDE.md](docs/TESTING_GUIDE.md#cicd).
 
 ## What to Ask Before Doing
 - If a task would require adding a new third-party dependency, confirm before adding it.
