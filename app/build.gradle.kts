@@ -24,31 +24,7 @@ plugins {
     alias(libs.plugins.hilt)
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.paparazzi)
-    alias(libs.plugins.spotless)
-}
-
-spotless {
-    kotlin {
-        target("**/*.kt")
-        targetExclude("**/build/**/*.kt")
-        ktlint("1.5.0")
-            .editorConfigOverride(
-                mapOf(
-                    "ktlint_standard_function-naming" to "disabled",
-                    "ktlint_standard_backing-property-naming" to "disabled",
-                    "ktlint_standard_no-wildcard-imports" to "disabled",
-                    "ktlint_standard_max-line-length" to "disabled",
-                    "ktlint_standard_property-naming" to "disabled",
-                    "ktlint_standard_comment-wrapping" to "disabled",
-                    "ktlint_standard_filename" to "disabled",
-                ),
-            )
-        licenseHeaderFile(rootProject.file("license.header"))
-    }
-    kotlinGradle {
-        target("**/*.gradle.kts")
-        ktlint()
-    }
+    id("narra.spotless")
 }
 
 // Release secrets may come from the environment (CI) or local.properties (local signing).

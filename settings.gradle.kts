@@ -48,3 +48,5 @@ dependencyResolutionManagement {
 
 rootProject.name = "Narra"
 include(":app")
+
+includeBuild("build-logic")
