@@ -51,6 +51,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.ByteArrayOutputStream
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -115,6 +116,8 @@ class TtsPlayer @Inject constructor(
     private var isEngineSpeaking = false
     private var isPreparing = false
     private var _pauseForInterruptions = true
+    private var _pauseOnDisconnect = true
+    private var isDucking = false
     private var lastEnqueuedUtteranceId: String? = null
 
     private var _seekForwardIncrement = 15000L
@@ -129,21 +132,33 @@ class TtsPlayer @Inject constructor(
             AudioManager.AUDIOFOCUS_GAIN -> {
                 val wasSuppressed = _playbackSuppressionReason != PLAYBACK_SUPPRESSION_REASON_NONE
                 _playbackSuppressionReason = PLAYBACK_SUPPRESSION_REASON_NONE
+                restoreVolumeAfterDuck()
                 if (_playWhenReady && wasSuppressed) {
                     resumeInternal()
                 }
                 invalidateState()
             }
             AudioManager.AUDIOFOCUS_LOSS -> {
+                restoreVolumeAfterDuck()
                 _playWhenReady = false
                 _playbackSuppressionReason = PLAYBACK_SUPPRESSION_REASON_NONE
                 pauseInternal()
                 invalidateState()
             }
-            AudioManager.AUDIOFOCUS_LOSS_TRANSIENT,
-            AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK,
-            -> {
+            AudioManager.AUDIOFOCUS_LOSS_TRANSIENT -> {
                 if (_playWhenReady) {
+                    _playbackSuppressionReason = PLAYBACK_SUPPRESSION_REASON_TRANSIENT_AUDIO_FOCUS_LOSS
+                    pauseInternal()
+                    invalidateState()
+                }
+            }
+            AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK -> {
+                if (_playWhenReady && !_pauseForInterruptions) {
+                    // Keep playing but lower the volume for notification sounds.
+                    isDucking = true
+                    ttsEngine.setVolume(VOLUME_DUCKED)
+                    invalidateState()
+                } else if (_playWhenReady) {
                     _playbackSuppressionReason = PLAYBACK_SUPPRESSION_REASON_TRANSIENT_AUDIO_FOCUS_LOSS
                     pauseInternal()
                     invalidateState()
@@ -154,9 +169,11 @@ class TtsPlayer @Inject constructor(
 
     private val powerLockManager = PowerLockManager(context)
     private val noisyAudioReceiver = NoisyAudioReceiver(context) {
-        _playWhenReady = false
-        pauseInternal()
-        invalidateState()
+        if (_pauseOnDisconnect) {
+            _playWhenReady = false
+            pauseInternal()
+            invalidateState()
+        }
     }
 
     init {
@@ -210,7 +227,7 @@ class TtsPlayer @Inject constructor(
                         if (index != null && index.toString() == lastEnqueuedUtteranceId) {
                             _playbackState = STATE_ENDED
                             _playWhenReady = false
-                            unregisterNoisyReceiver()
+                            releasePlaybackResources()
                             throttleInvalidateState()
                         }
                     }
@@ -231,6 +248,7 @@ class TtsPlayer @Inject constructor(
                             _playbackState = STATE_ENDED
                             _playWhenReady = false
                             pauseInternal()
+                            releasePlaybackResources()
                         }
                     } else if (_playbackState == STATE_IDLE || _playbackState == STATE_BUFFERING) {
                         _playerError = PlaybackException(state.message, null, PlaybackException.ERROR_CODE_IO_UNSPECIFIED)
@@ -248,6 +266,7 @@ class TtsPlayer @Inject constructor(
         settingsManager.fastForwardSkipTime.onEach { _seekForwardIncrement = parseSkipTime(it) }.launchIn(scope)
         settingsManager.rewindSkipTime.onEach { _seekBackIncrement = parseSkipTime(it) }.launchIn(scope)
         settingsManager.pauseForInterruptions.onEach { _pauseForInterruptions = it }.launchIn(scope)
+        settingsManager.pauseOnDisconnect.onEach { _pauseOnDisconnect = it }.launchIn(scope)
     }
 
     private fun parseSkipTime(time: String): Long = time.filter { it.isDigit() }.toLongOrNull()?.let { it * 1000L } ?: 15000L
@@ -410,12 +429,12 @@ class TtsPlayer @Inject constructor(
         _playerError = null
         pauseInternal()
         ttsEngine.stop()
+        releasePlaybackResources()
         paragraphs = emptyList()
         currentParagraphIndex = 0
         resumeWordOffset = 0
         baseWordOffset = 0
         currentWordRange = null
-        releaseLocks()
         invalidateState()
         return Futures.immediateVoidFuture()
     }
@@ -487,6 +506,13 @@ class TtsPlayer @Inject constructor(
 
     private fun abandonAudioFocusInternal() {
         audioFocusManager.abandonAudioFocus()
+    }
+
+    private fun restoreVolumeAfterDuck() {
+        if (isDucking) {
+            isDucking = false
+            ttsEngine.setVolume(VOLUME_FULL)
+        }
     }
 
     private fun pauseInternal() {
@@ -621,10 +647,13 @@ class TtsPlayer @Inject constructor(
                     .build()
                 val result = imageLoader.execute(request)
                 if (result is SuccessResult) {
-                    val bitmap = result.image.toBitmap()
-                    val stream = ByteArrayOutputStream()
-                    bitmap.compress(Bitmap.CompressFormat.JPEG, 75, stream)
-                    val bytes = stream.toByteArray()
+                    // JPEG encoding is CPU-bound; keep it off the main thread.
+                    val bytes = withContext(Dispatchers.Default) {
+                        val bitmap = result.image.toBitmap()
+                        val stream = ByteArrayOutputStream()
+                        bitmap.compress(Bitmap.CompressFormat.JPEG, 75, stream)
+                        stream.toByteArray()
+                    }
                     val currentItem = _currentMediaItem
                     if (currentItem != null && currentItem.mediaId == mediaId) {
                         _currentMediaItem = currentItem.buildUpon()
@@ -664,6 +693,7 @@ class TtsPlayer @Inject constructor(
     }
 
     fun releasePlaybackResources() {
+        restoreVolumeAfterDuck()
         audioFocusManager.abandonAudioFocus()
         noisyAudioReceiver.unregister()
         powerLockManager.releaseLocks()
@@ -738,5 +768,10 @@ class TtsPlayer @Inject constructor(
         }
         invalidateState()
         return Futures.immediateVoidFuture()
+    }
+
+    private companion object {
+        const val VOLUME_FULL = 1.0f
+        const val VOLUME_DUCKED = 0.2f
     }
 }
