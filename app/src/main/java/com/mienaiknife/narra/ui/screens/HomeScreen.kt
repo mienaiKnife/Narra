@@ -284,7 +284,7 @@ fun ArticleCarousel(
             contentPadding = PaddingValues(horizontal = 16.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            items(articles) { article ->
+            items(articles, key = { it.id }) { article ->
                 ArticleCard(
                     article = article,
                     onClick = { onArticleClick(article.id) },

@@ -319,7 +319,7 @@ fun FeedsScreenContent(
                         verticalArrangement = Arrangement.spacedBy(16.dp),
                         contentPadding = PaddingValues(bottom = 24.dp),
                     ) {
-                        items(feeds) { feed ->
+                        items(feeds, key = { it.url }) { feed ->
                             FeedItem(
                                 feed = feed,
                                 onClick = {

@@ -109,7 +109,7 @@ fun LicensesScreen(onBack: () -> Unit) {
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
         ) {
-            items(libraries) { library ->
+            items(libraries, key = { it.name }) { library ->
                 ListItem(
                     headlineContent = { Text(library.name) },
                     supportingContent = { Text("${library.author} • ${library.license}") },

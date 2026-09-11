@@ -497,7 +497,10 @@ fun ReaderSearchSheet(
             HorizontalDivider()
 
             LazyColumn(modifier = Modifier.weight(1f)) {
-                itemsIndexed(uiState.searchResults) { _, result ->
+                itemsIndexed(
+                    items = uiState.searchResults,
+                    key = { _, result -> "${result.paragraphIndex}:${result.wordRange.first}-${result.wordRange.last}" },
+                ) { _, result ->
                     ListItem(
                         headlineContent = {
                             Text(

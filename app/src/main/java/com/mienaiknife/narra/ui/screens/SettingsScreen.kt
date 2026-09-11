@@ -226,7 +226,7 @@ fun SettingsScreen(
             modifier = Modifier.fillMaxWidth(),
             contentPadding = PaddingValues(vertical = 8.dp),
         ) {
-            items(settingsItems) { item ->
+            items(settingsItems, key = { it.title }) { item ->
                 SettingsListItem(item)
             }
         }

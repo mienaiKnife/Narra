@@ -270,7 +270,7 @@ fun FeedArticlesScreenContent(
                     verticalArrangement = Arrangement.spacedBy(16.dp),
                     contentPadding = PaddingValues(bottom = 24.dp),
                 ) {
-                    items(uiState.articles) { article ->
+                    items(uiState.articles, key = { it.id }) { article ->
                         QueueItem(
                             article = article,
                             isPlaying = false,

@@ -110,7 +110,7 @@ Check off items as they land. Prefer one isolated commit + regression test per i
 - [x] `lastInteractionTrigger` mutated on every pointer event. `ui/screens/ReaderScreen.kt:265-294`.
 - [x] `LaunchedEffect` keyed on measured value. `ui/screens/reader/ReaderContentList.kt:127`.
 - [x] Migrate `Modifier.composed` flash highlight. `ui/components/ModifierExtensions.kt:32-56`.
-- [ ] Missing list keys. `HomeScreen.kt:297`, `FeedsScreen.kt:334`, `FeedArticlesScreen.kt:284`,
+- [x] Missing list keys. `HomeScreen.kt:297`, `FeedsScreen.kt:334`, `FeedArticlesScreen.kt:284`,
       `SettingsScreen.kt:229`, `LicensesScreen.kt:103`, `ReaderScreen.kt:498-515`.
 - [ ] Merged semantics swallow child controls. `ui/components/QueueItem.kt:215-224,361-362`,
       `ui/components/MiniPlayer.kt:107-113`.
