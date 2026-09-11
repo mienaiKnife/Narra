@@ -27,7 +27,7 @@ open class ThemeViewModel
 constructor(
     private val themeManager: ThemeManager,
 ) : ViewModel() {
-    val uiState: StateFlow<ThemeUiState> = themeManager.uiState
+    open val uiState: StateFlow<ThemeUiState> = themeManager.uiState
 
     // Kept for backward compatibility if needed by Compose previews or other manual initializations
     open fun initialize(context: Context) {

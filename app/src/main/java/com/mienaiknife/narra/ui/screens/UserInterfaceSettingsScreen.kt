@@ -61,8 +61,10 @@ import com.mienaiknife.narra.ui.components.flashHighlight
 import com.mienaiknife.narra.ui.theme.LocalNarraSpacing
 import com.mienaiknife.narra.ui.theme.NarraTheme
 import com.mienaiknife.narra.ui.theme.ThemeManager
+import com.mienaiknife.narra.ui.theme.ThemeUiState
 import com.mienaiknife.narra.ui.theme.ThemeViewModel
 import com.mienaiknife.narra.ui.theme.getFontFamily
+import kotlinx.coroutines.flow.MutableStateFlow
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -451,8 +453,14 @@ fun UserInterfaceSettingsScreen(
 @Composable
 fun UserInterfaceSettingsScreenPreview() {
     val context = androidx.compose.ui.platform.LocalContext.current
-    val themeManager = remember { ThemeManager(context) }
-    val themeViewModel = remember { ThemeViewModel(themeManager) }
+    // Subclass the ViewModel so the preview never subscribes to the real DataStore-backed state,
+    // which would perform file I/O in the layout preview and can crash it.
+    val themeViewModel =
+        remember {
+            object : ThemeViewModel(ThemeManager(context)) {
+                override val uiState = MutableStateFlow(ThemeUiState())
+            }
+        }
     val navController = rememberNavController()
     val fontFamily = getFontFamily("Roboto")
     NarraTheme(darkTheme = true, dynamicColor = false, fontFamily = fontFamily) {
