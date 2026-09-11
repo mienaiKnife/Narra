@@ -15,6 +15,7 @@
  */
 
 import com.android.build.api.variant.HostTestBuilder
+import org.gradle.testing.jacoco.tasks.JacocoReport
 import java.util.Properties
 
 plugins {
@@ -25,6 +26,7 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.paparazzi)
     id("narra.spotless")
+    jacoco
 }
 
 // Release secrets may come from the environment (CI) or local.properties (local signing).
@@ -84,6 +86,9 @@ android {
     }
 
     buildTypes {
+        debug {
+            enableUnitTestCoverage = true
+        }
         release {
             isMinifyEnabled = true
             isShrinkResources = true
@@ -154,6 +159,51 @@ tasks.register<Exec>("clearAppData") {
 ksp {
     arg("room.generateKotlin", "true")
     arg("room.schemaLocation", "$projectDir/schemas")
+}
+
+tasks.register<JacocoReport>("jacocoTestReport") {
+    group = "verification"
+    description = "Generates code coverage reports for the debug unit tests."
+
+    dependsOn("testDebugUnitTest")
+
+    val excludes =
+        listOf(
+            "**/R.class",
+            "**/R$*.class",
+            "**/BuildConfig.*",
+            "**/Manifest*.*",
+            "**/*_Hilt*.class",
+            "**/Hilt_*.class",
+            "**/*_Impl*.class",
+            "**/*_Factory*.class",
+            "**/*_MembersInjector*.class",
+            "**/di/**",
+            "**/data/local/entities/**",
+            "**/*Database_Impl*",
+            "**/*Dao_Impl*",
+            "**/*Directions*",
+        )
+
+    classDirectories.setFrom(
+        files(
+            fileTree(layout.buildDirectory.dir("intermediates/classes/debug/transformDebugClassesWithAsm/dirs")) { exclude(excludes) },
+            fileTree(layout.buildDirectory.dir("intermediates/classes/debug/hiltJavaCompileDebug")) { exclude(excludes) },
+            fileTree(layout.buildDirectory.dir("tmp/kotlin-classes/debug")) { exclude(excludes) },
+            fileTree(layout.buildDirectory.dir("intermediates/javac/debug/classes")) { exclude(excludes) },
+        ),
+    )
+    sourceDirectories.setFrom(files("src/main/java", "src/main/kotlin"))
+    executionData.setFrom(
+        fileTree(layout.buildDirectory) {
+            include("outputs/unit_test_code_coverage/debugUnitTest/testDebugUnitTest.exec")
+        },
+    )
+
+    reports {
+        xml.required.set(true)
+        html.required.set(true)
+    }
 }
 
 dependencies {

@@ -66,6 +66,15 @@ jobs:
       - name: Verify Paparazzi Screenshots
         run: ./gradlew verifyPaparazziDebug
 
+      - name: Generate Coverage Report
+        run: ./gradlew :app:jacocoTestReport
+
+      - name: Upload Coverage Report
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: narra-coverage-report
+          path: app/build/reports/jacoco/jacocoTestReport/html
+
   instrumentation:
     name: Instrumentation Tests
     runs-on: ubuntu-latest

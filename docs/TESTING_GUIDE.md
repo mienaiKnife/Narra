@@ -35,6 +35,7 @@ Every pull request runs the following checks via GitHub Actions (`.github/workfl
 - `spotlessCheck` and `lintDebug` — code style and Android Lint
 - `testDebugUnitTest` and `testReleaseUnitTest` — JVM unit tests
 - `verifyPaparazziDebug` — screenshot verification
+- `jacocoTestReport` — code coverage report (HTML/XML; uploaded as a CI artifact)
 - `connectedDebugAndroidTest` on an Android emulator — instrumentation tests
 - `assembleDebug`, `assembleDebugAndroidTest`, and `assembleRelease` — R8-minified release build
 
