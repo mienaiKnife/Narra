@@ -600,23 +600,27 @@ class PlaybackManager @Inject constructor(
     fun handleHardwareButton(isNext: Boolean) {
         scope.launch {
             if (isNext) {
-                val action = settingsManager.fastForwardHardwareButton.first()
-                android.util.Log.d("PlaybackManager", "Handling hardware Next: $action")
+                val action = HardwareButtonAction.fromKey(settingsManager.fastForwardHardwareButton.first())
+                android.util.Log.d("PlaybackManager", "Handling hardware Next: ${action?.key}")
                 when (action) {
-                    "skip_article" -> skipNext()
-                    "fast_forward" -> skipForward()
-                    else -> skipNext()
+                    HardwareButtonAction.SKIP_ARTICLE -> skipNext()
+                    HardwareButtonAction.RESTART_ARTICLE -> restartCurrentArticleIfAvailable()
+                    HardwareButtonAction.FAST_FORWARD, HardwareButtonAction.REWIND, null -> skipForward()
                 }
             } else {
-                val action = settingsManager.rewindHardwareButton.first()
-                android.util.Log.d("PlaybackManager", "Handling hardware Previous: $action")
+                val action = HardwareButtonAction.fromKey(settingsManager.rewindHardwareButton.first())
+                android.util.Log.d("PlaybackManager", "Handling hardware Previous: ${action?.key}")
                 when (action) {
-                    "previous_article" -> skipPrevious()
-                    "rewind" -> skipBackward()
-                    else -> skipPrevious()
+                    HardwareButtonAction.SKIP_ARTICLE -> skipPrevious()
+                    HardwareButtonAction.RESTART_ARTICLE -> restartCurrentArticleIfAvailable()
+                    HardwareButtonAction.REWIND, HardwareButtonAction.FAST_FORWARD, null -> skipBackward()
                 }
             }
         }
+    }
+
+    private fun restartCurrentArticleIfAvailable() {
+        _currentArticle.value?.let { restartCurrentArticle(it) }
     }
 
     fun setSleepTimer(minutes: Int?) {

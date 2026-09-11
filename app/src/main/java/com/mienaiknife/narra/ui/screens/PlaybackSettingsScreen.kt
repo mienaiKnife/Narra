@@ -54,6 +54,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.rememberNavController
 import com.mienaiknife.narra.R
+import com.mienaiknife.narra.playback.HardwareButtonAction
 import com.mienaiknife.narra.ui.components.BottomNavBar
 import com.mienaiknife.narra.ui.components.SettingDropDownItem
 import com.mienaiknife.narra.ui.components.flashHighlight
@@ -279,20 +280,16 @@ fun PlaybackSettingsContent(
                     .flashHighlight(highlightSetting == "rewindSkipTime"),
             )
 
-            val hardwareOptions = listOf(
-                "fast_forward" to stringResource(R.string.setting_ff),
-                "skip_article" to stringResource(R.string.setting_skip_article),
-                "rewind" to stringResource(R.string.setting_rewind),
-                "restart_article" to stringResource(R.string.setting_restart_article),
-            )
+            val fastForwardOptionLabels = HardwareButtonAction.fastForwardOptions.map { hardwareActionLabel(it) to it.key }
+            val rewindOptionLabels = HardwareButtonAction.rewindOptions.map { hardwareActionLabel(it) to it.key }
 
             SettingDropDownItem(
                 title = stringResource(R.string.settings_playback_ff_hardware),
                 subtitle = stringResource(R.string.settings_playback_ff_hardware_desc),
-                selectedValue = hardwareOptions.find { it.first == uiState.fastForwardHardwareButton }?.second ?: uiState.fastForwardHardwareButton,
-                options = hardwareOptions.map { it.second },
+                selectedValue = fastForwardOptionLabels.find { it.second == uiState.fastForwardHardwareButton }?.first ?: uiState.fastForwardHardwareButton,
+                options = fastForwardOptionLabels.map { it.first },
                 onValueChange = { selectedDisplay ->
-                    val key = hardwareOptions.find { it.second == selectedDisplay }?.first ?: selectedDisplay
+                    val key = fastForwardOptionLabels.find { it.first == selectedDisplay }?.second ?: selectedDisplay
                     onFastForwardHardwareButtonChange(key)
                 },
                 modifier = Modifier
@@ -303,10 +300,10 @@ fun PlaybackSettingsContent(
             SettingDropDownItem(
                 title = stringResource(R.string.settings_playback_rw_hardware),
                 subtitle = stringResource(R.string.settings_playback_rw_hardware_desc),
-                selectedValue = hardwareOptions.find { it.first == uiState.rewindHardwareButton }?.second ?: uiState.rewindHardwareButton,
-                options = hardwareOptions.map { it.second },
+                selectedValue = rewindOptionLabels.find { it.second == uiState.rewindHardwareButton }?.first ?: uiState.rewindHardwareButton,
+                options = rewindOptionLabels.map { it.first },
                 onValueChange = { selectedDisplay ->
-                    val key = hardwareOptions.find { it.second == selectedDisplay }?.first ?: selectedDisplay
+                    val key = rewindOptionLabels.find { it.first == selectedDisplay }?.second ?: selectedDisplay
                     onRewindHardwareButtonChange(key)
                 },
                 modifier = Modifier
@@ -488,6 +485,14 @@ fun PlaybackSettingsContent(
             }
         }
     }
+}
+
+@Composable
+private fun hardwareActionLabel(action: HardwareButtonAction): String = when (action) {
+    HardwareButtonAction.FAST_FORWARD -> stringResource(R.string.setting_ff)
+    HardwareButtonAction.SKIP_ARTICLE -> stringResource(R.string.setting_skip_article)
+    HardwareButtonAction.REWIND -> stringResource(R.string.setting_rewind)
+    HardwareButtonAction.RESTART_ARTICLE -> stringResource(R.string.setting_restart_article)
 }
 
 @Preview(uiMode = Configuration.UI_MODE_NIGHT_YES, showBackground = true)
