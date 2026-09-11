@@ -115,7 +115,7 @@ class FeedArticlesViewModel @Inject constructor(
     }
 
     fun setSortOption(option: SortOption) {
-        _sortOption.value = if (_sortOption.value == option) option.toggled() else option
+        _sortOption.value = option.selectedFrom(_sortOption.value)
     }
 
     fun refresh() {

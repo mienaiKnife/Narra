@@ -40,4 +40,13 @@ class SortOptionTest {
             assertEquals(option, option.toggled().toggled())
         }
     }
+
+    @Test
+    fun `selectedFrom flips the active option and applies a new one`() {
+        assertEquals(SortOption.DATE_ASC, SortOption.DATE_DESC.selectedFrom(SortOption.DATE_DESC))
+        assertEquals(SortOption.TITLE_ASC, SortOption.TITLE_ASC.selectedFrom(SortOption.DATE_DESC))
+        SortOption.entries.forEach { option ->
+            assertEquals(option.selectedFrom(option), option.toggled())
+        }
+    }
 }

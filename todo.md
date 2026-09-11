@@ -142,7 +142,7 @@ Check off items as they land. Prefer one isolated commit + regression test per i
 
 ### Duplication / structure
 - [x] Extract `ScreenHeader` + `SettingsSwitchRow`/`SettingsActionRow` (~9 screens).
-- [ ] Extract `SortOption.toggled()`.
+- [x] Extract `SortOption.toggled()`.
 - [ ] Extract `NetworkConstants`/User-Agent; model catalog constants.
 - [ ] Move HTML/TTS parsing out of `ui/` per AGENTS.md. `ui/utils/HtmlToAnnotatedString.kt`,
       `ui/models/ContentBlock.kt`.

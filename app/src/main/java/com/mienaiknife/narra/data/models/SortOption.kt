@@ -34,4 +34,10 @@ enum class SortOption {
         SOURCE_ASC -> SOURCE_DESC
         SOURCE_DESC -> SOURCE_ASC
     }
+
+    /**
+     * Resolves the option to apply when this option is selected while [current] is active.
+     * Selecting the active option again flips its direction; selecting any other option applies it.
+     */
+    fun selectedFrom(current: SortOption): SortOption = if (current == this) toggled() else this
 }
