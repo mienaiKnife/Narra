@@ -19,7 +19,6 @@ import android.content.Context
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
-import com.mienaiknife.narra.ui.theme.dataStore
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -37,34 +36,34 @@ constructor(
     private val inboxInitialLimitKey = stringPreferencesKey("inbox_initial_limit")
 
     val downloadOverWifiOnly: Flow<Boolean> =
-        context.dataStore.data.map { prefs ->
+        context.settingsDataStore.data.map { prefs ->
             prefs[downloadOverWifiOnlyKey] ?: true
         }
 
     val refreshInterval: Flow<String> =
-        context.dataStore.data.map { prefs ->
+        context.settingsDataStore.data.map { prefs ->
             prefs[refreshIntervalKey] ?: "12 hours"
         }
 
     val inboxInitialLimit: Flow<String> =
-        context.dataStore.data.map { prefs ->
+        context.settingsDataStore.data.map { prefs ->
             prefs[inboxInitialLimitKey] ?: "5"
         }
 
     suspend fun setDownloadOverWifiOnly(enabled: Boolean) {
-        context.dataStore.edit { prefs ->
+        context.settingsDataStore.edit { prefs ->
             prefs[downloadOverWifiOnlyKey] = enabled
         }
     }
 
     suspend fun setRefreshInterval(interval: String) {
-        context.dataStore.edit { prefs ->
+        context.settingsDataStore.edit { prefs ->
             prefs[refreshIntervalKey] = interval
         }
     }
 
     suspend fun setInboxInitialLimit(limit: String) {
-        context.dataStore.edit { prefs ->
+        context.settingsDataStore.edit { prefs ->
             prefs[inboxInitialLimitKey] = limit
         }
     }

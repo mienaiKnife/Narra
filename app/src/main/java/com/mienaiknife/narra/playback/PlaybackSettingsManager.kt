@@ -18,7 +18,7 @@ package com.mienaiknife.narra.playback
 import android.content.Context
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
-import com.mienaiknife.narra.ui.theme.dataStore
+import com.mienaiknife.narra.data.settings.settingsDataStore
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -71,163 +71,163 @@ constructor(
             .floatPreferencesKey("sherpa_length_scale")
 
     val chimeSound: Flow<String> =
-        context.dataStore.data.map { prefs ->
+        context.settingsDataStore.data.map { prefs ->
             prefs[chimeSoundKey] ?: "music_box_chime_positive"
         }
 
     val fastForwardSkipTime: Flow<String> =
-        context.dataStore.data.map { prefs ->
+        context.settingsDataStore.data.map { prefs ->
             prefs[fastForwardSkipTimeKey] ?: "30s"
         }
 
     val rewindSkipTime: Flow<String> =
-        context.dataStore.data.map { prefs ->
+        context.settingsDataStore.data.map { prefs ->
             prefs[rewindSkipTimeKey] ?: "10s"
         }
 
     val fastForwardHardwareButton: Flow<String> =
-        context.dataStore.data.map { prefs ->
+        context.settingsDataStore.data.map { prefs ->
             prefs[fastForwardHardwareButtonKey] ?: "fast_forward"
         }
 
     val rewindHardwareButton: Flow<String> =
-        context.dataStore.data.map { prefs ->
+        context.settingsDataStore.data.map { prefs ->
             prefs[rewindHardwareButtonKey] ?: "rewind"
         }
 
     val pauseOnDisconnect: Flow<Boolean> =
-        context.dataStore.data.map { prefs ->
+        context.settingsDataStore.data.map { prefs ->
             prefs[pauseOnDisconnectKey] ?: true
         }
 
     val pauseForInterruptions: Flow<Boolean> =
-        context.dataStore.data.map { prefs ->
+        context.settingsDataStore.data.map { prefs ->
             prefs[pauseForInterruptionsKey] ?: true
         }
 
     val autoPlayNext: Flow<Boolean> =
-        context.dataStore.data.map { prefs ->
+        context.settingsDataStore.data.map { prefs ->
             prefs[autoPlayNextKey] ?: true
         }
 
     val playChimeAndTitle: Flow<Boolean> =
-        context.dataStore.data.map { prefs ->
+        context.settingsDataStore.data.map { prefs ->
             prefs[playChimeAndTitleKey] ?: true
         }
 
     val readAltText: Flow<Boolean> =
-        context.dataStore.data.map { prefs ->
+        context.settingsDataStore.data.map { prefs ->
             prefs[readAltTextKey] ?: true
         }
 
     val shortenHyperlinks: Flow<Boolean> =
-        context.dataStore.data.map { prefs ->
+        context.settingsDataStore.data.map { prefs ->
             prefs[shortenHyperlinksKey] ?: true
         }
 
     val lastArticleId: Flow<String?> =
-        context.dataStore.data.map { prefs ->
+        context.settingsDataStore.data.map { prefs ->
             prefs[lastArticleIdKey]
         }
 
     val ttsEngine: Flow<String> =
-        context.dataStore.data.map { prefs ->
+        context.settingsDataStore.data.map { prefs ->
             prefs[ttsEngineKey] ?: "android"
         }
 
     val ttsModelId: Flow<String?> =
-        context.dataStore.data.map { prefs ->
+        context.settingsDataStore.data.map { prefs ->
             prefs[ttsModelIdKey]
         }
 
     val ttsSpeakerId: Flow<Int> =
-        context.dataStore.data.map { prefs ->
+        context.settingsDataStore.data.map { prefs ->
             prefs[ttsSpeakerIdKey] ?: 0
         }
 
     val sherpaSpeed: Flow<Float> =
-        context.dataStore.data.map { prefs ->
+        context.settingsDataStore.data.map { prefs ->
             prefs[sherpaSpeedKey] ?: 1.0f
         }
 
     val sherpaNoiseScale: Flow<Float> =
-        context.dataStore.data.map { prefs ->
+        context.settingsDataStore.data.map { prefs ->
             prefs[sherpaNoiseScaleKey] ?: 0.667f
         }
 
     val sherpaLengthScale: Flow<Float> =
-        context.dataStore.data.map { prefs ->
+        context.settingsDataStore.data.map { prefs ->
             prefs[sherpaLengthScaleKey] ?: 1.0f
         }
 
     suspend fun setFastForwardSkipTime(time: String) {
-        context.dataStore.edit { prefs ->
+        context.settingsDataStore.edit { prefs ->
             prefs[fastForwardSkipTimeKey] = time
         }
     }
 
     suspend fun setRewindSkipTime(time: String) {
-        context.dataStore.edit { prefs ->
+        context.settingsDataStore.edit { prefs ->
             prefs[rewindSkipTimeKey] = time
         }
     }
 
     suspend fun setFastForwardHardwareButton(action: String) {
-        context.dataStore.edit { prefs ->
+        context.settingsDataStore.edit { prefs ->
             prefs[fastForwardHardwareButtonKey] = action
         }
     }
 
     suspend fun setRewindHardwareButton(action: String) {
-        context.dataStore.edit { prefs ->
+        context.settingsDataStore.edit { prefs ->
             prefs[rewindHardwareButtonKey] = action
         }
     }
 
     suspend fun setPauseOnDisconnect(enabled: Boolean) {
-        context.dataStore.edit { prefs ->
+        context.settingsDataStore.edit { prefs ->
             prefs[pauseOnDisconnectKey] = enabled
         }
     }
 
     suspend fun setPauseForInterruptions(enabled: Boolean) {
-        context.dataStore.edit { prefs ->
+        context.settingsDataStore.edit { prefs ->
             prefs[pauseForInterruptionsKey] = enabled
         }
     }
 
     suspend fun setAutoPlayNext(enabled: Boolean) {
-        context.dataStore.edit { prefs ->
+        context.settingsDataStore.edit { prefs ->
             prefs[autoPlayNextKey] = enabled
         }
     }
 
     suspend fun setChimeSound(sound: String) {
-        context.dataStore.edit { prefs ->
+        context.settingsDataStore.edit { prefs ->
             prefs[chimeSoundKey] = sound
         }
     }
 
     suspend fun setPlayChimeAndTitle(enabled: Boolean) {
-        context.dataStore.edit { prefs ->
+        context.settingsDataStore.edit { prefs ->
             prefs[playChimeAndTitleKey] = enabled
         }
     }
 
     suspend fun setReadAltText(enabled: Boolean) {
-        context.dataStore.edit { prefs ->
+        context.settingsDataStore.edit { prefs ->
             prefs[readAltTextKey] = enabled
         }
     }
 
     suspend fun setShortenHyperlinks(enabled: Boolean) {
-        context.dataStore.edit { prefs ->
+        context.settingsDataStore.edit { prefs ->
             prefs[shortenHyperlinksKey] = enabled
         }
     }
 
     suspend fun setLastArticleId(articleId: String?) {
-        context.dataStore.edit { prefs ->
+        context.settingsDataStore.edit { prefs ->
             if (articleId == null) {
                 prefs.remove(lastArticleIdKey)
             } else {
@@ -237,13 +237,13 @@ constructor(
     }
 
     suspend fun setTtsEngine(engine: String) {
-        context.dataStore.edit { prefs ->
+        context.settingsDataStore.edit { prefs ->
             prefs[ttsEngineKey] = engine
         }
     }
 
     suspend fun setTtsModelId(modelId: String?) {
-        context.dataStore.edit { prefs ->
+        context.settingsDataStore.edit { prefs ->
             if (modelId == null) {
                 prefs.remove(ttsModelIdKey)
             } else {
@@ -253,25 +253,25 @@ constructor(
     }
 
     suspend fun setTtsSpeakerId(speakerId: Int) {
-        context.dataStore.edit { prefs ->
+        context.settingsDataStore.edit { prefs ->
             prefs[ttsSpeakerIdKey] = speakerId
         }
     }
 
     suspend fun setSherpaSpeed(speed: Float) {
-        context.dataStore.edit { prefs ->
+        context.settingsDataStore.edit { prefs ->
             prefs[sherpaSpeedKey] = speed
         }
     }
 
     suspend fun setSherpaNoiseScale(noiseScale: Float) {
-        context.dataStore.edit { prefs ->
+        context.settingsDataStore.edit { prefs ->
             prefs[sherpaNoiseScaleKey] = noiseScale
         }
     }
 
     suspend fun setSherpaLengthScale(lengthScale: Float) {
-        context.dataStore.edit { prefs ->
+        context.settingsDataStore.edit { prefs ->
             prefs[sherpaLengthScaleKey] = lengthScale
         }
     }

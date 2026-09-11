@@ -20,7 +20,6 @@ import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
-import com.mienaiknife.narra.ui.theme.dataStore
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -41,43 +40,43 @@ constructor(
     private val remoteLastModifiedKey = longPreferencesKey("remote_last_modified")
 
     val autoExportEnabled: Flow<Boolean> =
-        context.dataStore.data.map { prefs ->
+        context.settingsDataStore.data.map { prefs ->
             prefs[autoExportEnabledKey] ?: false
         }
 
     val autoExportUri: Flow<String?> =
-        context.dataStore.data.map { prefs ->
+        context.settingsDataStore.data.map { prefs ->
             prefs[autoExportUriKey]
         }
 
     val lastExportTimestamp: Flow<Long> =
-        context.dataStore.data.map { prefs ->
+        context.settingsDataStore.data.map { prefs ->
             prefs[lastExportTimestampKey] ?: 0L
         }
 
     val autoImportEnabled: Flow<Boolean> =
-        context.dataStore.data.map { prefs ->
+        context.settingsDataStore.data.map { prefs ->
             prefs[autoImportEnabledKey] ?: false
         }
 
     val pendingImport: Flow<Boolean> =
-        context.dataStore.data.map { prefs ->
+        context.settingsDataStore.data.map { prefs ->
             prefs[pendingImportKey] ?: false
         }
 
     val remoteLastModified: Flow<Long> =
-        context.dataStore.data.map { prefs ->
+        context.settingsDataStore.data.map { prefs ->
             prefs[remoteLastModifiedKey] ?: 0L
         }
 
     suspend fun setAutoExportEnabled(enabled: Boolean) {
-        context.dataStore.edit { prefs ->
+        context.settingsDataStore.edit { prefs ->
             prefs[autoExportEnabledKey] = enabled
         }
     }
 
     suspend fun setAutoExportUri(uri: String?) {
-        context.dataStore.edit { prefs ->
+        context.settingsDataStore.edit { prefs ->
             if (uri == null) {
                 prefs.remove(autoExportUriKey)
             } else {
@@ -87,25 +86,25 @@ constructor(
     }
 
     suspend fun setAutoImportEnabled(enabled: Boolean) {
-        context.dataStore.edit { prefs ->
+        context.settingsDataStore.edit { prefs ->
             prefs[autoImportEnabledKey] = enabled
         }
     }
 
     suspend fun setPendingImport(pending: Boolean) {
-        context.dataStore.edit { prefs ->
+        context.settingsDataStore.edit { prefs ->
             prefs[pendingImportKey] = pending
         }
     }
 
     suspend fun setRemoteLastModified(timestamp: Long) {
-        context.dataStore.edit { prefs ->
+        context.settingsDataStore.edit { prefs ->
             prefs[remoteLastModifiedKey] = timestamp
         }
     }
 
     suspend fun updateLastExportTimestamp() {
-        context.dataStore.edit { prefs ->
+        context.settingsDataStore.edit { prefs ->
             prefs[lastExportTimestampKey] = System.currentTimeMillis()
         }
     }

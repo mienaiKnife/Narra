@@ -16,13 +16,11 @@
 package com.mienaiknife.narra.ui.theme
 
 import android.content.Context
-import androidx.datastore.core.DataStore
-import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
-import androidx.datastore.preferences.preferencesDataStore
+import com.mienaiknife.narra.data.settings.settingsDataStore
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -30,8 +28,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-
-val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
 
 class ThemeManager(
     private val context: Context,
@@ -69,7 +65,7 @@ class ThemeManager(
 
     init {
         scope.launch {
-            context.dataStore.data.collect { preferences ->
+            context.settingsDataStore.data.collect { preferences ->
                 _isDarkMode.value = preferences[darkModeKey] ?: true
                 _isDynamicColor.value = preferences[dynamicColorKey] ?: false
                 _useSystemTheme.value = preferences[useSystemThemeKey] ?: true
@@ -85,55 +81,55 @@ class ThemeManager(
 
     fun setDarkMode(enabled: Boolean) {
         scope.launch {
-            context.dataStore.edit { it[darkModeKey] = enabled }
+            context.settingsDataStore.edit { it[darkModeKey] = enabled }
         }
     }
 
     fun setDynamicColor(enabled: Boolean) {
         scope.launch {
-            context.dataStore.edit { it[dynamicColorKey] = enabled }
+            context.settingsDataStore.edit { it[dynamicColorKey] = enabled }
         }
     }
 
     fun setUseSystemTheme(enabled: Boolean) {
         scope.launch {
-            context.dataStore.edit { it[useSystemThemeKey] = enabled }
+            context.settingsDataStore.edit { it[useSystemThemeKey] = enabled }
         }
     }
 
     fun setReaderFontFamily(fontFamily: String) {
         scope.launch {
-            context.dataStore.edit { it[readerFontFamilyKey] = fontFamily }
+            context.settingsDataStore.edit { it[readerFontFamilyKey] = fontFamily }
         }
     }
 
     fun setLineSpacing(lineSpacing: String) {
         scope.launch {
-            context.dataStore.edit { it[lineSpacingKey] = lineSpacing }
+            context.settingsDataStore.edit { it[lineSpacingKey] = lineSpacing }
         }
     }
 
     fun setReaderFontSize(fontSize: Float) {
         scope.launch {
-            context.dataStore.edit { it[readerFontSizeKey] = fontSize }
+            context.settingsDataStore.edit { it[readerFontSizeKey] = fontSize }
         }
     }
 
     fun setShowRemainingTime(showRemainingTime: Boolean) {
         scope.launch {
-            context.dataStore.edit { it[showRemainingTimeKey] = showRemainingTime }
+            context.settingsDataStore.edit { it[showRemainingTimeKey] = showRemainingTime }
         }
     }
 
     fun setTapToShowControls(enabled: Boolean) {
         scope.launch {
-            context.dataStore.edit { it[tapToShowControlsKey] = enabled }
+            context.settingsDataStore.edit { it[tapToShowControlsKey] = enabled }
         }
     }
 
     fun setAutoFullscreen(enabled: Boolean) {
         scope.launch {
-            context.dataStore.edit { it[autoFullscreenKey] = enabled }
+            context.settingsDataStore.edit { it[autoFullscreenKey] = enabled }
         }
     }
 }
