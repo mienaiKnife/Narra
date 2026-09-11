@@ -530,22 +530,6 @@ class TtsPlayer @Inject constructor(
         speakCurrentFrom(currentParagraphIndex, resumeWordOffset)
     }
 
-    private fun registerNoisyReceiver() {
-        noisyAudioReceiver.register()
-    }
-
-    private fun unregisterNoisyReceiver() {
-        noisyAudioReceiver.unregister()
-    }
-
-    private fun acquireLocks() {
-        powerLockManager.acquireLocks()
-    }
-
-    private fun releaseLocks() {
-        powerLockManager.releaseLocks()
-    }
-
     fun speak(
         article: Article,
         parsedParagraphs: List<SpeakableText>,
@@ -683,14 +667,6 @@ class TtsPlayer @Inject constructor(
         if (audioFocusManager.requestAudioFocus() == AudioManager.AUDIOFOCUS_REQUEST_GRANTED) {
             ttsEngine.speak(text, "announcement")
         }
-    }
-
-    fun acquireManualWakeLock() {
-        powerLockManager.acquireManualWakeLock()
-    }
-
-    fun releaseManualWakeLock() {
-        powerLockManager.releaseManualWakeLock()
     }
 
     fun releasePlaybackResources() {

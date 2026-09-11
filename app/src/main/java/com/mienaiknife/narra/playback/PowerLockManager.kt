@@ -25,7 +25,6 @@ class PowerLockManager(context: Context) {
 
     private var wakeLock: PowerManager.WakeLock? = null
     private var wifiLock: WifiManager.WifiLock? = null
-    private var manualWakeLock: PowerManager.WakeLock? = null
 
     fun acquireLocks() {
         if (wakeLock == null) {
@@ -47,19 +46,5 @@ class PowerLockManager(context: Context) {
         wakeLock = null
         wifiLock?.let { if (it.isHeld) it.release() }
         wifiLock = null
-    }
-
-    fun acquireManualWakeLock() {
-        if (manualWakeLock == null) {
-            manualWakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "Narra:ManualWakeLock").apply {
-                setReferenceCounted(false)
-                acquire()
-            }
-        }
-    }
-
-    fun releaseManualWakeLock() {
-        manualWakeLock?.let { if (it.isHeld) it.release() }
-        manualWakeLock = null
     }
 }

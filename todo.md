@@ -147,7 +147,7 @@ Check off items as they land. Prefer one isolated commit + regression test per i
 - [x] Move HTML/TTS parsing out of `ui/` per AGENTS.md. `ui/utils/HtmlToAnnotatedString.kt`,
       `ui/models/ContentBlock.kt`.
 - [x] Convention plugin for Spotless (both modules + root).
-- [ ] Remove dead code: `registerNoisyReceiver`, `acquireLocks`, manual wake-lock API,
+- [x] Remove dead code: `registerNoisyReceiver`, `acquireLocks`, manual wake-lock API,
       `reloadLastArticle`, `deleteStaleKokoroModels`, Opml reflection fallback, `KEY_ARTICLE_SOURCE`.
 
 ### Build / CI / deps / licensing

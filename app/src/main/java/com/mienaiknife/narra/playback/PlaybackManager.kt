@@ -295,18 +295,6 @@ class PlaybackManager @Inject constructor(
         }
     }
 
-    /**
-     * Reloads the last played article into the TtsPlayer.
-     * This is useful for session resumption after the app has been killed.
-     */
-    suspend fun reloadLastArticle(): Boolean {
-        val lastId = settingsManager.lastArticleId.firstOrNull() ?: return false
-        val article = repository.getArticleById(lastId) ?: return false
-
-        setCurrentArticle(article, playWhenReady = false, isAutomatic = false)
-        return true
-    }
-
     private fun startPlaybackService(action: String? = null) {
         val intent = Intent(context, PlaybackService::class.java).apply {
             if (action != null) this.action = action

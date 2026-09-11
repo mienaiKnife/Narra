@@ -26,35 +26,7 @@ import javax.inject.Inject
 class OpmlDataSourceImpl
 @Inject
 constructor() : OpmlDataSource {
-    private fun createParserFactory(): XmlPullParserFactory = try {
-        XmlPullParserFactory.newInstance()
-    } catch (e: Exception) {
-        // Fallback for JVM unit tests where XmlPullParserFactory might not be fully initialized
-        try {
-            // Try to load KXmlParser explicitly to avoid NullPointerException in newInstance()
-            val factory = XmlPullParserFactory.newInstance("org.kxml2.io.KXmlParser,org.kxml2.io.KXmlSerializer", null)
-            if (factory == null) throw e
-            factory
-        } catch (_: Exception) {
-            // Use default constructor as absolute last resort
-            try {
-                val constructor = XmlPullParserFactory::class.java.getDeclaredConstructor()
-                constructor.isAccessible = true
-                val factory = constructor.newInstance()
-                // Manually set implementation classes if we can find them
-                try {
-                    val parserClass = Class.forName("org.kxml2.io.KXmlParser")
-                    val serializerClass = Class.forName("org.kxml2.io.KXmlSerializer")
-                    // These fields are internal to XmlPullParserFactory
-                    // but we're in a desperate fallback situation
-                } catch (_: Exception) {
-                }
-                factory
-            } catch (_: Exception) {
-                throw e
-            }
-        }
-    }
+    private fun createParserFactory(): XmlPullParserFactory = XmlPullParserFactory.newInstance()
 
     override suspend fun parseOpml(inputStream: InputStream): Result<List<FeedEntity>> = try {
         val feeds = mutableListOf<FeedEntity>()

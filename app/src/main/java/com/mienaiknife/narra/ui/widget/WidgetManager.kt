@@ -41,7 +41,6 @@ constructor(
         val KEY_IS_PLAYING = booleanPreferencesKey("is_playing")
         val KEY_ARTICLE_ID = stringPreferencesKey("article_id")
         val KEY_ARTICLE_TITLE = stringPreferencesKey("article_title")
-        val KEY_ARTICLE_SOURCE = stringPreferencesKey("article_source")
         val KEY_ARTICLE_IMAGE_URL = stringPreferencesKey("article_image_url")
         val KEY_IMAGE_PATH = stringPreferencesKey("image_path")
         val KEY_PROGRESS = floatPreferencesKey("progress")
@@ -64,7 +63,6 @@ constructor(
         isPlaying: Boolean,
         articleId: String?,
         title: String?,
-        source: String?,
         imageUrl: String?,
         progress: Float?,
         duration: Long?,
@@ -92,7 +90,6 @@ constructor(
                     this[KEY_IS_PLAYING] = isPlaying
                     this[KEY_ARTICLE_ID] = articleId ?: ""
                     this[KEY_ARTICLE_TITLE] = title ?: ""
-                    this[KEY_ARTICLE_SOURCE] = source ?: ""
                     this[KEY_ARTICLE_IMAGE_URL] = imageUrl ?: ""
                     this[KEY_PROGRESS] = progress ?: 0f
                     this[KEY_DURATION] = duration ?: 0L

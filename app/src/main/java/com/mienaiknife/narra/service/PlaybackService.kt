@@ -171,7 +171,6 @@ class PlaybackService : MediaLibraryService() {
                     isPlaying = state.isPlaying,
                     articleId = state.article?.id,
                     title = state.article?.title,
-                    source = state.article?.source,
                     imageUrl = state.article?.imageUrl ?: state.article?.feedImageUrl,
                     progress = calculatedProgress,
                     duration = state.duration,
