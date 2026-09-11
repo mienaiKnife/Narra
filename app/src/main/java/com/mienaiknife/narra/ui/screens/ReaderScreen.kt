@@ -98,6 +98,7 @@ import com.mienaiknife.narra.ui.components.NarraScrollbar
 import com.mienaiknife.narra.ui.screens.reader.ReaderContentList
 import com.mienaiknife.narra.ui.screens.reader.ReaderPlaybackControls
 import com.mienaiknife.narra.ui.screens.reader.ReaderTopBar
+import com.mienaiknife.narra.ui.theme.DEFAULT_LINE_SPACING
 import com.mienaiknife.narra.ui.theme.NarraTheme
 import com.mienaiknife.narra.ui.theme.ThemeViewModel
 import com.mienaiknife.narra.ui.theme.getFontFamily
@@ -158,7 +159,7 @@ fun ReaderScreen(
                     uiState = uiState,
                     readerFontFamily = getFontFamily(themeUiState.readerFontFamily),
                     readerFontSize = themeUiState.readerFontSize,
-                    lineSpacing = themeUiState.lineSpacing.toFloatOrNull() ?: 1.6f,
+                    lineSpacing = themeUiState.lineSpacing.toFloatOrNull() ?: DEFAULT_LINE_SPACING,
                     tapToShowControls = themeUiState.tapToShowControls,
                     autoFullscreen = themeUiState.autoFullscreen,
                     onBack = onBack,
@@ -619,7 +620,7 @@ fun ReaderScreenPreview() {
             ),
             readerFontFamily = androidx.compose.ui.text.font.FontFamily.Default,
             readerFontSize = 20f,
-            lineSpacing = 1.6f,
+            lineSpacing = DEFAULT_LINE_SPACING,
             tapToShowControls = true,
             autoFullscreen = true,
             onBack = {},

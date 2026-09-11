@@ -125,7 +125,7 @@ Check off items as they land. Prefer one isolated commit + regression test per i
       `MiniPlayer.kt:130`, `FeedsScreen.kt:385`.
 - [x] Reader error uses `Icons.Default.Refresh` placeholder. `ReaderScreen.kt:553-558`.
 - [x] Wrong dropdown anchor type. `ui/screens/SettingsScreen.kt:123`.
-- [ ] Inconsistent reader line-spacing default. `ReaderScreen.kt:158` vs `ThemeManager.kt:54`.
+- [x] Inconsistent reader line-spacing default. `ReaderScreen.kt:158` vs `ThemeManager.kt:54`.
 - [ ] `UiText.fromError` wrong message for `WifiRequired`. `ui/UiText.kt:49`.
 - [ ] Manual `ThemeManager`/VM in preview can crash. `UserInterfaceSettingsScreen.kt:451-453`.
 

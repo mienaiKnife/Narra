@@ -35,12 +35,14 @@ data class ThemeUiState(
     val isDynamicColor: Boolean = false,
     val useSystemTheme: Boolean = true,
     val readerFontFamily: String = "Roboto",
-    val lineSpacing: String = "1.0",
+    val lineSpacing: String = DEFAULT_LINE_SPACING.toString(),
     val readerFontSize: Float = 18.0f,
     val showRemainingTime: Boolean = true,
     val tapToShowControls: Boolean = true,
     val autoFullscreen: Boolean = true,
 )
+
+const val DEFAULT_LINE_SPACING = 1.0f
 
 class ThemeManager(
     private val context: Context,
@@ -64,7 +66,7 @@ class ThemeManager(
                     isDynamicColor = preferences[dynamicColorKey] ?: false,
                     useSystemTheme = preferences[useSystemThemeKey] ?: true,
                     readerFontFamily = preferences[readerFontFamilyKey] ?: "Roboto",
-                    lineSpacing = preferences[lineSpacingKey] ?: "1.0",
+                    lineSpacing = preferences[lineSpacingKey] ?: DEFAULT_LINE_SPACING.toString(),
                     readerFontSize = preferences[readerFontSizeKey] ?: 18.0f,
                     showRemainingTime = preferences[showRemainingTimeKey] ?: true,
                     tapToShowControls = preferences[tapToShowControlsKey] ?: true,
