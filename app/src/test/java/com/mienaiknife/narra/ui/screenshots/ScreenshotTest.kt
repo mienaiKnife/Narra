@@ -18,9 +18,17 @@ package com.mienaiknife.narra.ui.screenshots
 import androidx.compose.material3.SnackbarHostState
 import app.cash.paparazzi.DeviceConfig
 import app.cash.paparazzi.Paparazzi
+import com.mienaiknife.narra.R
+import com.mienaiknife.narra.data.models.SampleArticles
+import com.mienaiknife.narra.ui.UiText
+import com.mienaiknife.narra.ui.screens.ErrorView
+import com.mienaiknife.narra.ui.screens.FeedsScreenContent
 import com.mienaiknife.narra.ui.screens.HomeScreenContent
+import com.mienaiknife.narra.ui.screens.PlaybackSettingsContent
+import com.mienaiknife.narra.ui.screens.QueueScreenContent
 import com.mienaiknife.narra.ui.theme.NarraTheme
 import com.mienaiknife.narra.ui.viewmodels.HomeUiState
+import com.mienaiknife.narra.ui.viewmodels.PlaybackSettingsUiState
 import org.junit.Rule
 import org.junit.Test
 
@@ -46,6 +54,93 @@ class ScreenshotTest {
                     onArticleClick = {},
                     onAddClick = {},
                     onRefresh = {},
+                )
+            }
+        }
+    }
+
+    @Test
+    fun homeScreen_SuccessDark() {
+        paparazzi.snapshot {
+            NarraTheme(darkTheme = true, dynamicColor = false) {
+                HomeScreenContent(
+                    uiState =
+                    HomeUiState.Success(
+                        continueListening = emptyList(),
+                        newFromFeeds = emptyList(),
+                        favoriteArticles = emptyList(),
+                    ),
+                    snackbarHostState = SnackbarHostState(),
+                    onArticleClick = {},
+                    onAddClick = {},
+                    onRefresh = {},
+                )
+            }
+        }
+    }
+
+    @Test
+    fun queueScreen_Empty() {
+        paparazzi.snapshot {
+            NarraTheme {
+                QueueScreenContent(articles = emptyList())
+            }
+        }
+    }
+
+    @Test
+    fun queueScreen_WithArticles() {
+        paparazzi.snapshot {
+            NarraTheme {
+                QueueScreenContent(articles = listOf(SampleArticles.sampleArticle1))
+            }
+        }
+    }
+
+    @Test
+    fun feedsScreen_Empty() {
+        paparazzi.snapshot {
+            NarraTheme {
+                FeedsScreenContent(
+                    onFeedClick = { _, _ -> },
+                    feeds = emptyList(),
+                    onBackClick = {},
+                )
+            }
+        }
+    }
+
+    @Test
+    fun reader_Error() {
+        paparazzi.snapshot {
+            NarraTheme {
+                ErrorView(
+                    error = UiText.StringResource(R.string.error_generic),
+                    onRetry = {},
+                    onBack = {},
+                )
+            }
+        }
+    }
+
+    @Test
+    fun playbackSettings_Success() {
+        paparazzi.snapshot {
+            NarraTheme {
+                PlaybackSettingsContent(
+                    onBack = {},
+                    uiState = PlaybackSettingsUiState(),
+                    onPauseOnDisconnectChange = {},
+                    onPauseForInterruptionsChange = {},
+                    onAutoPlayNextChange = {},
+                    onPlayChimeAndTitleChange = {},
+                    onChimeSoundChange = {},
+                    onFastForwardTimeChange = {},
+                    onRewindTimeChange = {},
+                    onFastForwardHardwareButtonChange = {},
+                    onRewindHardwareButtonChange = {},
+                    onReadAltTextChange = {},
+                    onShortenHyperlinksChange = {},
                 )
             }
         }
