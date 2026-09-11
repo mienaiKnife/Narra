@@ -178,7 +178,7 @@ Check off items as they land. Prefer one isolated commit + regression test per i
 - [x] Unit tests: `TtsPlayer`, `PlaybackManager`, `AndroidTtsEngine`, `DelegatingTtsEngine`,
       `ArticleRepositoryImpl`, `FeedRepositoryImpl`, `ImportExportRepositoryImpl`, workers.
 - [x] Migrate `SherpaTtsEngineTest` off its copied re-implementation; expose internal seam.
-- [ ] ViewModel tests for Reader, Queue, Feeds, FeedArticles, Inbox, History, PlaybackSettings,
+- [x] ViewModel tests for Reader, Queue, Feeds, FeedArticles, Inbox, History, PlaybackSettings,
       VoicesSettings, Theme.
 - [ ] Screenshot coverage for more screens/states (light/dark, loading/error/empty).
 - [ ] Add code-coverage reporting (JaCoCo/Kover) if coverage goals are to be enforced.
