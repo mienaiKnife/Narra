@@ -13,22 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.mienaiknife.narra.ui.utils
+package com.mienaiknife.narra.data.parsing
 
-import android.content.Context
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.AnnotatedString
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
-import androidx.compose.ui.text.font.FontStyle
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.BaselineShift
-import androidx.compose.ui.text.style.TextDecoration
-import androidx.compose.ui.text.withStyle
-import androidx.compose.ui.unit.sp
-import androidx.core.net.toUri
-import com.mienaiknife.narra.domain.models.SpeakableText
-import com.mienaiknife.narra.ui.models.ContentBlock
+import com.mienaiknife.narra.domain.models.ContentBlock
+import com.mienaiknife.narra.domain.models.RichText
+import com.mienaiknife.narra.domain.models.RichTextSpan
+import com.mienaiknife.narra.domain.models.RichTextSpanStyle
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Element
 import org.jsoup.nodes.Node
@@ -64,15 +54,15 @@ object HtmlParser {
 
         fun flushInline() {
             if (currentInlineNodes.isNotEmpty() || pendingListPrefix != null) {
-                val annotatedString =
-                    buildAnnotatedString {
+                val richText =
+                    RichTextBuilder().apply {
                         pendingListPrefix?.let { append(it) }
                         pendingListPrefix = null
                         currentInlineNodes.forEach { traverse(it, this) }
-                    }
-                val trimmed = annotatedString.trim()
-                if (trimmed.text.isNotBlank()) {
-                    addBlocksFromAnnotatedString(trimmed, blocks)
+                    }.build()
+                val trimmed = richText.trim()
+                if (!trimmed.isBlank()) {
+                    addBlocks(trimmed, blocks)
                 }
                 currentInlineNodes.clear()
             }
@@ -133,7 +123,7 @@ object HtmlParser {
                                     flushInline()
                                 } else {
                                     if (tagName == "p") {
-                                        addBlocksFromAnnotatedString(parseElement(node), blocks)
+                                        addBlocks(parseElement(node), blocks)
                                     } else {
                                         val level = tagName.substring(1).toIntOrNull() ?: 1
                                         blocks.add(ContentBlock.Heading(parseElement(node), level))
@@ -147,7 +137,7 @@ object HtmlParser {
                                     flushInline()
                                 } else {
                                     flushInline()
-                                    addBlocksFromAnnotatedString(parseElement(node), blocks)
+                                    addBlocks(parseElement(node), blocks)
                                 }
                             }
                             tagName == "blockquote" -> {
@@ -185,14 +175,14 @@ object HtmlParser {
         flushInline()
     }
 
-    private fun addBlocksFromAnnotatedString(
-        annotatedString: AnnotatedString,
+    private fun addBlocks(
+        richText: RichText,
         blocks: MutableList<ContentBlock>,
     ) {
-        val parts = splitAnnotatedString(annotatedString, Regex("\\n\\s*\\n+"))
+        val parts = splitRichText(richText, Regex("\\n\\s*\\n+"))
         parts.forEach { part ->
             val trimmed = part.trim()
-            if (trimmed.text.isNotBlank()) {
+            if (!trimmed.isBlank()) {
                 // Split long paragraphs to avoid TTS engine limits (typically ~4000 chars)
                 val splitParts = splitLongParagraph(trimmed, maxLength = 3000)
                 splitParts.forEach {
@@ -203,13 +193,13 @@ object HtmlParser {
     }
 
     private fun splitLongParagraph(
-        annotatedString: AnnotatedString,
+        richText: RichText,
         maxLength: Int,
-    ): List<AnnotatedString> {
-        if (annotatedString.length <= maxLength) return listOf(annotatedString)
+    ): List<RichText> {
+        if (richText.length <= maxLength) return listOf(richText)
 
-        val result = mutableListOf<AnnotatedString>()
-        val text = annotatedString.text
+        val result = mutableListOf<RichText>()
+        val text = richText.text
         var currentStart = 0
 
         while (currentStart < text.length) {
@@ -230,47 +220,39 @@ object HtmlParser {
                 }
             }
 
-            result.add(annotatedString.subSequence(currentStart, currentEnd))
+            result.add(richText.subSequence(currentStart, currentEnd))
             currentStart = currentEnd
         }
 
         return result
     }
 
-    private fun splitAnnotatedString(
-        annotatedString: AnnotatedString,
+    private fun splitRichText(
+        richText: RichText,
         regex: Regex,
-    ): List<AnnotatedString> {
-        val text = annotatedString.text
-        val result = mutableListOf<AnnotatedString>()
+    ): List<RichText> {
+        val text = richText.text
+        val result = mutableListOf<RichText>()
         var lastStart = 0
         regex.findAll(text).forEach { match ->
-            result.add(annotatedString.subSequence(lastStart, match.range.first))
+            result.add(richText.subSequence(lastStart, match.range.first))
             lastStart = match.range.last + 1
         }
-        result.add(annotatedString.subSequence(lastStart, text.length))
+        result.add(richText.subSequence(lastStart, text.length))
         return result
     }
 
-    private fun parseElement(element: Element): AnnotatedString {
-        val annotatedString =
-            buildAnnotatedString {
+    private fun parseElement(element: Element): RichText {
+        val richText =
+            RichTextBuilder().apply {
                 traverse(element, this)
-            }
-        return annotatedString.trim()
-    }
-
-    private fun AnnotatedString.trim(): AnnotatedString {
-        val text = this.text
-        val start = text.indexOfFirst { !it.isWhitespace() }
-        val end = text.indexOfLast { !it.isWhitespace() }
-        if (start == -1 || end == -1) return AnnotatedString("")
-        return this.subSequence(start, end + 1)
+            }.build()
+        return richText.trim()
     }
 
     private fun traverse(
         node: Node,
-        builder: AnnotatedString.Builder,
+        builder: RichTextBuilder,
     ) {
         when (node) {
             is TextNode -> {
@@ -362,97 +344,69 @@ object HtmlParser {
             .replace(Regex("\\s+"), " ")
     }
 
-    private fun getStyleForTag(tagName: String): SpanStyle? = when (tagName) {
-        "b", "strong" -> SpanStyle(fontWeight = FontWeight.Bold)
-        "i", "em" -> SpanStyle(fontStyle = FontStyle.Italic)
-        "u" -> SpanStyle(textDecoration = TextDecoration.Underline)
-        "del", "s", "strike" -> SpanStyle(textDecoration = TextDecoration.LineThrough)
-        "h1", "h2", "h3", "h4", "h5", "h6" -> SpanStyle(fontWeight = FontWeight.Bold)
-        "code" -> SpanStyle(background = Color.LightGray.copy(alpha = 0.3f))
-        "sup" ->
-            SpanStyle(
-                baselineShift = BaselineShift.Superscript,
-                fontSize = 12.sp,
-            )
-        "sub" ->
-            SpanStyle(
-                baselineShift = BaselineShift.Subscript,
-                fontSize = 12.sp,
-            )
-        "a" ->
-            SpanStyle(
-                textDecoration = TextDecoration.Underline,
-            )
+    private fun getStyleForTag(tagName: String): RichTextSpanStyle? = when (tagName) {
+        "b", "strong" -> RichTextSpanStyle.BOLD
+        "i", "em" -> RichTextSpanStyle.ITALIC
+        "u" -> RichTextSpanStyle.UNDERLINE
+        "del", "s", "strike" -> RichTextSpanStyle.STRIKETHROUGH
+        "h1", "h2", "h3", "h4", "h5", "h6" -> RichTextSpanStyle.BOLD
+        "code" -> RichTextSpanStyle.CODE
+        "sup" -> RichTextSpanStyle.SUPERSCRIPT
+        "sub" -> RichTextSpanStyle.SUBSCRIPT
+        "a" -> RichTextSpanStyle.UNDERLINE
         else -> null
     }
 }
 
-fun AnnotatedString.toSpeakableText(
-    context: Context,
-    shortenLinks: Boolean = true,
-): SpeakableText {
-    val resultText = this.text
-    val speakableText = StringBuilder(resultText)
+private class RichTextBuilder {
+    private enum class AnnotationKind { LINK, FOOTNOTE }
 
-    // 1. Handle footnotes: replace with spaces to preserve length
-    val footnotes = getStringAnnotations("footnote", 0, length)
-    for (annotation in footnotes) {
-        for (i in annotation.start until annotation.end) {
-            if (i < speakableText.length) speakableText.setCharAt(i, ' ')
-        }
+    private val text = StringBuilder()
+    private val spans = mutableListOf<RichTextSpan>()
+    private val styles = ArrayDeque<RichTextSpanStyle>()
+    private val links = ArrayDeque<String>()
+    private val annotations = ArrayDeque<AnnotationKind>()
+    private var footnoteDepth = 0
+
+    fun append(value: String) {
+        val start = text.length
+        text.append(value)
+        val end = text.length
+        if (start == end) return
+        styles.forEach { style -> spans.add(RichTextSpan(start, end, style = style)) }
+        links.lastOrNull()?.let { href -> spans.add(RichTextSpan(start, end, link = href)) }
+        if (footnoteDepth > 0) spans.add(RichTextSpan(start, end, isFootnote = true))
     }
 
-    if (shortenLinks) {
-        // 2. Handle links: shorten if they look like URLs, but preserve length via padding
-        val links = getStringAnnotations("link", 0, length)
-        val linkToPrefix = context.getString(com.mienaiknife.narra.R.string.reader_link_to)
-
-        for (annotation in links) {
-            val start = annotation.start
-            val end = annotation.end
-            val originalLength = end - start
-            if (originalLength <= 0) continue
-
-            val linkText = resultText.substring(start, end).trim()
-            if (isUrlLike(linkText)) {
-                val simplified =
-                    try {
-                        linkToPrefix.format(simplifyUrl(annotation.item))
-                    } catch (_: Exception) {
-                        linkText
-                    }
-
-                if (simplified.length <= originalLength) {
-                    val padded = simplified.padEnd(originalLength, ' ')
-                    for (i in 0 until originalLength) {
-                        speakableText.setCharAt(start + i, padded[i])
-                    }
-                } else {
-                    // Truncate if simplified text is somehow longer than original (rare for URLs)
-                    for (i in 0 until originalLength) {
-                        speakableText.setCharAt(start + i, simplified[i])
-                    }
-                }
+    fun pushStringAnnotation(tag: String, value: String) {
+        when (tag) {
+            "link" -> {
+                links.addLast(value)
+                annotations.addLast(AnnotationKind.LINK)
+            }
+            "footnote" -> {
+                footnoteDepth++
+                annotations.addLast(AnnotationKind.FOOTNOTE)
             }
         }
     }
 
-    val finalText = speakableText.toString()
-    val (transliterated, map) = LanguageUtils.transliterateWithMapping(finalText)
-    return SpeakableText(transliterated, map)
-}
-
-private fun isUrlLike(text: String): Boolean = text.startsWith("http://") ||
-    text.startsWith("https://") ||
-    text.contains(Regex("\\.[a-z]{2,3}/")) ||
-    text.split("/").size > 2
-
-private fun simplifyUrl(url: String): String {
-    return try {
-        val uri = url.toUri()
-        val host = uri.host ?: return url
-        host.removePrefix("www.")
-    } catch (_: Exception) {
-        url
+    fun pop() {
+        when (annotations.removeLastOrNull()) {
+            AnnotationKind.LINK -> links.removeLastOrNull()
+            AnnotationKind.FOOTNOTE -> footnoteDepth = (footnoteDepth - 1).coerceAtLeast(0)
+            null -> Unit
+        }
     }
+
+    fun withStyle(
+        style: RichTextSpanStyle,
+        block: RichTextBuilder.() -> Unit,
+    ) {
+        styles.addLast(style)
+        block()
+        styles.removeLastOrNull()
+    }
+
+    fun build(): RichText = RichText(text.toString(), spans.toList())
 }

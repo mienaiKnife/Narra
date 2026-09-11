@@ -16,8 +16,8 @@
 package com.mienaiknife.narra.ui.viewmodels
 
 import com.mienaiknife.narra.domain.models.Article
+import com.mienaiknife.narra.domain.models.ContentBlock
 import com.mienaiknife.narra.ui.UiText
-import com.mienaiknife.narra.ui.models.ContentBlock
 
 data class ReaderUiState(
     val article: Article? = null,

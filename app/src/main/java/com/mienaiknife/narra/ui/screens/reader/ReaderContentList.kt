@@ -87,7 +87,8 @@ import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import com.mienaiknife.narra.R
 import com.mienaiknife.narra.domain.models.Article
-import com.mienaiknife.narra.ui.models.ContentBlock
+import com.mienaiknife.narra.domain.models.ContentBlock
+import com.mienaiknife.narra.ui.utils.toAnnotatedString
 import com.mienaiknife.narra.ui.viewmodels.ReaderUiState
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -226,7 +227,7 @@ fun ReaderContentList(
                 Spacer(modifier = Modifier.height(((32 + 16 * (lineSpacing - 1)) * lineSpacing).dp))
             }
 
-            val baseAnnotatedString = block.text
+            val baseAnnotatedString = block.text.toAnnotatedString()
             val colorScheme = MaterialTheme.colorScheme
 
             val currentWordRange = uiState.currentWordRange
@@ -432,7 +433,7 @@ fun TableItem(
                         ) {
                             if (cell != null) {
                                 Text(
-                                    text = cell.text,
+                                    text = cell.text.toAnnotatedString(),
                                     style = if (cell.isHeader) baseStyle.copy(fontWeight = FontWeight.Bold) else baseStyle,
                                 )
                             }

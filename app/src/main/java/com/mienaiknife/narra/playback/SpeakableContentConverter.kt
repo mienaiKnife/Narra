@@ -17,9 +17,8 @@ package com.mienaiknife.narra.playback
 
 import android.content.Context
 import com.mienaiknife.narra.R
+import com.mienaiknife.narra.domain.models.ContentBlock
 import com.mienaiknife.narra.domain.models.SpeakableText
-import com.mienaiknife.narra.ui.models.ContentBlock
-import com.mienaiknife.narra.ui.utils.toSpeakableText
 
 object SpeakableContentConverter {
     fun convert(
@@ -27,16 +26,19 @@ object SpeakableContentConverter {
         blocks: List<ContentBlock>,
         readAltText: Boolean,
         shortenHyperlinks: Boolean,
-    ): List<SpeakableText> = blocks.map { block ->
-        if (block is ContentBlock.Image) {
-            if (readAltText) {
-                val alt = block.altText?.let { context.getString(R.string.reader_image_prefix, it) } ?: ""
-                SpeakableText(alt)
+    ): List<SpeakableText> {
+        val linkToFormat = context.getString(R.string.reader_link_to)
+        return blocks.map { block ->
+            if (block is ContentBlock.Image) {
+                if (readAltText) {
+                    val alt = block.altText?.let { context.getString(R.string.reader_image_prefix, it) } ?: ""
+                    SpeakableText(alt)
+                } else {
+                    SpeakableText("")
+                }
             } else {
-                SpeakableText("")
+                block.text.toSpeakableText(linkToFormat, shortenLinks = shortenHyperlinks)
             }
-        } else {
-            block.text.toSpeakableText(context, shortenLinks = shortenHyperlinks)
         }
     }
 }

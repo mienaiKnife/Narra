@@ -28,13 +28,13 @@ import androidx.media3.common.Player
 import androidx.media3.common.Timeline
 import androidx.media3.common.util.UnstableApi
 import com.mienaiknife.narra.R
+import com.mienaiknife.narra.data.parsing.HtmlParser
 import com.mienaiknife.narra.domain.TtsErrorReason
 import com.mienaiknife.narra.domain.TtsState
 import com.mienaiknife.narra.domain.models.Article
+import com.mienaiknife.narra.domain.models.ContentBlock
 import com.mienaiknife.narra.domain.repository.ArticleRepository
 import com.mienaiknife.narra.service.PlaybackService
-import com.mienaiknife.narra.ui.models.ContentBlock
-import com.mienaiknife.narra.ui.utils.HtmlParser
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers

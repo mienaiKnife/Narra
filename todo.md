@@ -144,7 +144,7 @@ Check off items as they land. Prefer one isolated commit + regression test per i
 - [x] Extract `ScreenHeader` + `SettingsSwitchRow`/`SettingsActionRow` (~9 screens).
 - [x] Extract `SortOption.toggled()`.
 - [x] Extract `NetworkConstants`/User-Agent; model catalog constants.
-- [ ] Move HTML/TTS parsing out of `ui/` per AGENTS.md. `ui/utils/HtmlToAnnotatedString.kt`,
+- [x] Move HTML/TTS parsing out of `ui/` per AGENTS.md. `ui/utils/HtmlToAnnotatedString.kt`,
       `ui/models/ContentBlock.kt`.
 - [ ] Convention plugin for Spotless (both modules + root).
 - [ ] Remove dead code: `registerNoisyReceiver`, `acquireLocks`, manual wake-lock API,

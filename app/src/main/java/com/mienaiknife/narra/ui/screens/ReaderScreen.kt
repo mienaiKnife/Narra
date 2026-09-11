@@ -93,6 +93,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.mienaiknife.narra.R
 import com.mienaiknife.narra.data.models.SampleArticles
+import com.mienaiknife.narra.data.parsing.HtmlParser
 import com.mienaiknife.narra.ui.UiText
 import com.mienaiknife.narra.ui.components.NarraScrollbar
 import com.mienaiknife.narra.ui.screens.reader.ReaderContentList
@@ -102,7 +103,6 @@ import com.mienaiknife.narra.ui.theme.DEFAULT_LINE_SPACING
 import com.mienaiknife.narra.ui.theme.NarraTheme
 import com.mienaiknife.narra.ui.theme.ThemeViewModel
 import com.mienaiknife.narra.ui.theme.getFontFamily
-import com.mienaiknife.narra.ui.utils.HtmlParser
 import com.mienaiknife.narra.ui.viewmodels.ReaderUiState
 import com.mienaiknife.narra.ui.viewmodels.ReaderViewModel
 import kotlinx.coroutines.delay

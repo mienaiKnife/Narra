@@ -13,23 +13,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.mienaiknife.narra.ui.models
-
-import androidx.compose.ui.text.AnnotatedString
+package com.mienaiknife.narra.domain.models
 
 sealed class ContentBlock {
-    abstract val text: AnnotatedString
+    abstract val text: RichText
 
     data class Paragraph(
-        override val text: AnnotatedString,
+        override val text: RichText,
     ) : ContentBlock()
 
     data class BlockQuote(
-        override val text: AnnotatedString,
+        override val text: RichText,
     ) : ContentBlock()
 
     data class Heading(
-        override val text: AnnotatedString,
+        override val text: RichText,
         val level: Int,
     ) : ContentBlock()
 
@@ -37,28 +35,30 @@ sealed class ContentBlock {
         val url: String,
         val altText: String?,
     ) : ContentBlock() {
-        override val text: AnnotatedString = AnnotatedString(altText ?: "")
+        override val text: RichText = RichText(altText ?: "")
     }
 
     data object HorizontalRule : ContentBlock() {
-        override val text: AnnotatedString = AnnotatedString("")
+        override val text: RichText = RichText("")
     }
 
     data class Table(
         val rows: List<List<Cell>>,
     ) : ContentBlock() {
-        override val text: AnnotatedString = androidx.compose.ui.text.buildAnnotatedString {
-            rows.forEach { row ->
-                row.forEach { cell ->
-                    append(cell.text)
-                    append(" ")
+        override val text: RichText = RichText(
+            buildString {
+                rows.forEach { row ->
+                    row.forEach { cell ->
+                        append(cell.text.text)
+                        append(" ")
+                    }
+                    append("\n")
                 }
-                append("\n")
-            }
-        }
+            },
+        )
 
         data class Cell(
-            val text: AnnotatedString,
+            val text: RichText,
             val isHeader: Boolean = false,
         )
     }

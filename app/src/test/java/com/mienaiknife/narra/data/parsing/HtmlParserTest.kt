@@ -13,9 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.mienaiknife.narra.ui.utils
+package com.mienaiknife.narra.data.parsing
 
-import com.mienaiknife.narra.ui.models.ContentBlock
+import com.mienaiknife.narra.domain.models.ContentBlock
+import com.mienaiknife.narra.domain.models.RichTextSpanStyle
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -207,8 +208,8 @@ class HtmlParserTest {
         assertEquals(1, result.size)
         val text = result[0].text
         // "Normal " is 7 chars. "deleted" starts at 7.
-        val delStyle = text.spanStyles.find { it.start == 7 }?.item
-        assertEquals(androidx.compose.ui.text.style.TextDecoration.LineThrough, delStyle?.textDecoration)
+        val delStyle = text.spans.firstOrNull { it.start == 7 }?.style
+        assertEquals(RichTextSpanStyle.STRIKETHROUGH, delStyle)
     }
 
     @Test

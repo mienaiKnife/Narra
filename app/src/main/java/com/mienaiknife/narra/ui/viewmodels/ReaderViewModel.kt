@@ -20,13 +20,13 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.toRoute
 import com.mienaiknife.narra.NavDestination
+import com.mienaiknife.narra.data.parsing.HtmlParser
 import com.mienaiknife.narra.domain.NarraError
 import com.mienaiknife.narra.domain.models.Article
+import com.mienaiknife.narra.domain.models.ContentBlock
 import com.mienaiknife.narra.domain.repository.ArticleRepository
 import com.mienaiknife.narra.playback.PlaybackManager
 import com.mienaiknife.narra.ui.UiText
-import com.mienaiknife.narra.ui.models.ContentBlock
-import com.mienaiknife.narra.ui.utils.HtmlParser
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
