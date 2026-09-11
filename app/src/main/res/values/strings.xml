@@ -184,6 +184,7 @@
     <string name="error_import_epub_failed">Failed to import EPUB</string>
     <string name="error_article_already_in_queue">Article is already in your queue</string>
     <string name="error_no_internet">Cannot download article without internet connection</string>
+    <string name="error_wifi_required">Connect to Wi-Fi to continue</string>
     <string name="error_download_failed">Failed to download article</string>
     <string name="error_subscribe_failed">Failed to subscribe to feed</string>
     <string name="error_generic">Something went wrong</string>

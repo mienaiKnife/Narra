@@ -18,6 +18,7 @@ package com.mienaiknife.narra.ui
 import android.content.Context
 import android.content.res.Resources
 import com.mienaiknife.narra.R
+import com.mienaiknife.narra.domain.NarraError
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
 import org.junit.Test
@@ -59,6 +60,15 @@ class UiTextTest {
         val result = UiText.fromError(error)
         assert(result is UiText.StringResource)
         assertEquals(R.string.error_generic, (result as UiText.StringResource).resId)
+    }
+
+    @Test
+    fun `fromError maps WifiRequired to a wifi message`() {
+        val result = UiText.fromError(NarraError.Network.WifiRequired())
+        assertEquals(
+            UiText.StringResource(R.string.error_wifi_required),
+            result,
+        )
     }
 
     @Test

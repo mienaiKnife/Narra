@@ -66,7 +66,7 @@ sealed class UiText {
             is NarraError.Content.ArticleAlreadyInQueue -> StringResource(R.string.error_article_already_in_queue)
             is NarraError.Content.NotFound -> StringResource(R.string.error_article_not_found)
             is NarraError.Content.InvalidFeed -> StringResource(R.string.error_subscribe_failed)
-            is NarraError.Network.WifiRequired -> StringResource(R.string.settings_downloads_wifi_only) // Using existing string for now
+            is NarraError.Network.WifiRequired -> StringResource(R.string.error_wifi_required)
             is NarraError.Model.DownloadFailed -> StringResource(R.string.error_download_failed)
             is NarraError.Content.ParsingFailed -> StringResource(R.string.error_generic)
             is NarraError.Network.ServerError -> error.message?.takeIf { it.isNotBlank() }?.let { DynamicString(it) }
