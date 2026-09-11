@@ -57,6 +57,7 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconToggleButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -416,7 +417,10 @@ fun FeedItem(
             }
 
             // Notification icon on the right
-            IconButton(onClick = onToggleNotifications) {
+            IconToggleButton(
+                checked = feed.notificationsEnabled,
+                onCheckedChange = { onToggleNotifications() },
+            ) {
                 Icon(
                     imageVector = if (feed.notificationsEnabled) Icons.Default.Notifications else Icons.Default.NotificationsNone,
                     contentDescription = stringResource(R.string.feeds_notifications_desc),
