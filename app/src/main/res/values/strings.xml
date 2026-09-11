@@ -361,6 +361,9 @@
 
     <!-- Playback Service -->
     <string name="notification_preparing">Preparing playback…</string>
+    <string name="notification_channel_name">Feed Notifications</string>
+    <string name="notification_channel_desc">Notifications for new articles from subscribed feeds</string>
+    <string name="notification_new_article_title">New article from %1$s</string>
     <string name="widget_no_article">No article playing</string>
     <string name="widget_artwork_desc">Article artwork</string>
     <string name="widget_ff_desc">Fast Forward</string>

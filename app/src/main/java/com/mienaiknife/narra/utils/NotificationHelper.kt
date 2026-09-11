@@ -27,6 +27,7 @@ import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import com.mienaiknife.narra.MainActivity
+import com.mienaiknife.narra.R
 import com.mienaiknife.narra.data.local.entities.ArticleEntity
 import com.mienaiknife.narra.data.local.entities.FeedEntity
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -41,7 +42,6 @@ constructor(
 ) {
     companion object {
         private const val CHANNEL_ID = "feed_notifications"
-        private const val CHANNEL_NAME = "Feed Notifications"
     }
 
     init {
@@ -52,8 +52,12 @@ constructor(
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val importance = NotificationManager.IMPORTANCE_DEFAULT
             val channel =
-                NotificationChannel(CHANNEL_ID, CHANNEL_NAME, importance).apply {
-                    description = "Notifications for new articles from subscribed feeds"
+                NotificationChannel(
+                    CHANNEL_ID,
+                    context.getString(R.string.notification_channel_name),
+                    importance,
+                ).apply {
+                    description = context.getString(R.string.notification_channel_desc)
                 }
             val notificationManager =
                 context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
@@ -89,8 +93,8 @@ constructor(
         val builder =
             NotificationCompat
                 .Builder(context, CHANNEL_ID)
-                .setSmallIcon(com.mienaiknife.narra.R.mipmap.ic_launcher)
-                .setContentTitle("New article from ${feed.title}")
+                .setSmallIcon(R.drawable.ic_launcher_foreground)
+                .setContentTitle(context.getString(R.string.notification_new_article_title, feed.title))
                 .setContentText(article.title)
                 .setPriority(NotificationCompat.PRIORITY_DEFAULT)
                 .setContentIntent(pendingIntent)
