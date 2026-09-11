@@ -48,4 +48,3 @@ dependencyResolutionManagement {
 
 rootProject.name = "Narra"
 include(":app")
-include(":benchmark")
