@@ -182,7 +182,11 @@ private fun QueueItemRow(
     onPlayPauseClick: () -> Unit = {},
     dragModifier: Modifier? = null,
 ) {
-    val context = androidx.compose.ui.platform.LocalContext.current
+    val playPauseDescription = when {
+        !article.isInQueue -> stringResource(R.string.action_add_to_queue_desc, article.title)
+        isPlaying -> stringResource(R.string.action_pause_desc, article.title)
+        else -> stringResource(R.string.action_play_desc, article.title)
+    }
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -363,11 +367,7 @@ private fun QueueItemRow(
             modifier = Modifier
                 .padding(end = 16.dp)
                 .semantics {
-                    contentDescription = when {
-                        !article.isInQueue -> context.getString(R.string.action_add_to_queue_desc, article.title)
-                        isPlaying -> context.getString(R.string.action_pause_desc, article.title)
-                        else -> context.getString(R.string.action_play_desc, article.title)
-                    }
+                    contentDescription = playPauseDescription
                 },
             enabled = !isDownloading,
         ) {
