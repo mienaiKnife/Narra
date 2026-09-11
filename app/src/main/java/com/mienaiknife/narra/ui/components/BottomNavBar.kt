@@ -16,6 +16,7 @@
 package com.mienaiknife.narra.ui.components
 
 import android.content.res.Configuration
+import androidx.annotation.StringRes
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.PlaylistPlay
 import androidx.compose.material.icons.filled.Add
@@ -31,20 +32,22 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.navigation.NavController
 import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.mienaiknife.narra.NavDestination
+import com.mienaiknife.narra.R
 import com.mienaiknife.narra.ui.theme.NarraTheme
 
-sealed class BottomNavItem<T : Any>(val route: T, val icon: ImageVector, val label: String) {
-    data object Home : BottomNavItem<NavDestination.Home>(NavDestination.Home, Icons.Filled.Home, "Home")
-    data object Queue : BottomNavItem<NavDestination.Queue>(NavDestination.Queue, Icons.AutoMirrored.Filled.PlaylistPlay, "Queue")
-    data object Add : BottomNavItem<NavDestination.Add>(NavDestination.Add, Icons.Filled.Add, "Add")
-    data object Inbox : BottomNavItem<NavDestination.Inbox>(NavDestination.Inbox, Icons.Filled.Inbox, "Inbox")
-    data object Settings : BottomNavItem<NavDestination.Settings>(NavDestination.Settings, Icons.Filled.Settings, "Settings")
+sealed class BottomNavItem<T : Any>(val route: T, val icon: ImageVector, @StringRes val labelRes: Int) {
+    data object Home : BottomNavItem<NavDestination.Home>(NavDestination.Home, Icons.Filled.Home, R.string.nav_home)
+    data object Queue : BottomNavItem<NavDestination.Queue>(NavDestination.Queue, Icons.AutoMirrored.Filled.PlaylistPlay, R.string.nav_queue)
+    data object Add : BottomNavItem<NavDestination.Add>(NavDestination.Add, Icons.Filled.Add, R.string.nav_add)
+    data object Inbox : BottomNavItem<NavDestination.Inbox>(NavDestination.Inbox, Icons.Filled.Inbox, R.string.nav_inbox)
+    data object Settings : BottomNavItem<NavDestination.Settings>(NavDestination.Settings, Icons.Filled.Settings, R.string.nav_settings)
 }
 
 @Composable
@@ -114,8 +117,8 @@ fun BottomNavBar(navController: NavController) {
                         }
                     }
                 },
-                icon = { Icon(item.icon, contentDescription = item.label) },
-                label = { Text(item.label) },
+                icon = { Icon(item.icon, contentDescription = stringResource(item.labelRes)) },
+                label = { Text(stringResource(item.labelRes)) },
                 colors = NavigationBarItemDefaults.colors(
                     selectedIconColor = MaterialTheme.colorScheme.onBackground,
                     selectedTextColor = MaterialTheme.colorScheme.onBackground,

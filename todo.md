@@ -130,7 +130,7 @@ Check off items as they land. Prefer one isolated commit + regression test per i
 - [x] Manual `ThemeManager`/VM in preview can crash. `UserInterfaceSettingsScreen.kt:451-453`.
 
 ### Localization
-- [ ] Hardcoded nav labels (resources exist). `ui/components/BottomNavBar.kt:43-47`.
+- [x] Hardcoded nav labels (resources exist). `ui/components/BottomNavBar.kt:43-47`.
 - [ ] Hardcoded widget strings. `ui/widget/NarraWidget.kt:131,219`.
 - [ ] Hardcoded interval/limit lists. `DownloadsSettingsScreen.kt:326,337`.
 - [ ] Hardcoded skip-time labels. `PlaybackSettingsScreen.kt:264,275`.
