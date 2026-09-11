@@ -88,4 +88,16 @@ class SherpaTtsEngineErrorTest {
         assertTrue(currentState is TtsState.Error)
         assertEquals("No Sherpa-ONNX model selected", (currentState as TtsState.Error).message)
     }
+
+    @Test
+    fun testSpeakErrorsWhenNoModelSelectedEvenIfStateIsNotIdle() {
+        val stateField = SherpaTtsEngine::class.java.getDeclaredField("_state")
+        stateField.isAccessible = true
+        @Suppress("UNCHECKED_CAST")
+        (stateField.get(engine) as MutableStateFlow<TtsState>).value = TtsState.Ready
+
+        engine.speak("Hello", "1")
+
+        assertTrue(engine.state.value is TtsState.Error)
+    }
 }

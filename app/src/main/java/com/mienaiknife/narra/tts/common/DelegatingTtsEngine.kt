@@ -89,15 +89,10 @@ constructor(
     private fun switchEngine(newEngine: TtsEngine) {
         if ((currentEngine == newEngine) && (engineStateJob != null)) return
 
+        // Stop the outgoing engine but do not release the Sherpa singleton: releasing it cancels
+        // its jobs and leaves the shared initialization flows unable to re-emit, so switching
+        // back to on-device would silently stop producing audio.
         currentEngine.stop()
-
-        // Performance/Memory: If switching AWAY from SherpaTtsEngine, we might want to release its models.
-        // However, we don't want to release if the user might switch back quickly.
-        // For now, let's at least call release if it's the on-device engine and we're switching to android.
-        if (currentEngine is SherpaTtsEngine && newEngine is AndroidTtsEngine) {
-            currentEngine.release()
-        }
-
         currentEngine = newEngine
 
         // Apply current settings to the new engine

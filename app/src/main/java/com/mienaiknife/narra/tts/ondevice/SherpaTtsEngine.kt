@@ -637,7 +637,7 @@ class SherpaTtsEngine @Inject constructor(
     }
 
     override fun speak(text: String, utteranceId: String) {
-        if (tts == null && _state.value is TtsState.Idle) {
+        if (tts == null) {
             _state.value = TtsState.Error("No Sherpa-ONNX model selected")
             return
         }
@@ -646,7 +646,7 @@ class SherpaTtsEngine @Inject constructor(
     }
 
     override fun enqueue(text: String, utteranceId: String) {
-        if (tts == null && _state.value is TtsState.Idle) {
+        if (tts == null) {
             _state.value = TtsState.Error("No Sherpa-ONNX model selected")
             return
         }
