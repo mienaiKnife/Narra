@@ -80,7 +80,7 @@ Check off items as they land. Prefer one isolated commit + regression test per i
 - [x] **Empty catch blocks in Samsung helper.** `utils/MediaSessionUtils.kt:104-199`.
 
 ### UI
-- [ ] **Composition-phase Toast.** `ui/screens/VoicesSettingsScreen.kt:101-104` → `LaunchedEffect`.
+- [x] **Composition-phase Toast.** `ui/screens/VoicesSettingsScreen.kt:101-104` → `LaunchedEffect`.
 - [ ] **Widget deep link ignored.** `MainActivity.kt:90-96` `onNewIntent`; `ui/widget/NarraWidget.kt:156-161`.
 - [ ] **Reorder gesture cancels itself.** `ui/screens/QueueScreen.kt:417` → stable key.
 - [ ] **ViewModel work on `PlaybackManager.scope`.** `ui/viewmodels/HistoryViewModel.kt:86,113`.

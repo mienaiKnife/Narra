@@ -98,9 +98,11 @@ fun VoicesSettingsScreen(
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
 
-    uiState.errorMessage?.let {
-        Toast.makeText(context, it.asString(context), Toast.LENGTH_LONG).show()
-        viewModel.clearErrorMessage()
+    LaunchedEffect(uiState.errorMessage) {
+        uiState.errorMessage?.let {
+            Toast.makeText(context, it.asString(context), Toast.LENGTH_LONG).show()
+            viewModel.clearErrorMessage()
+        }
     }
 
     VoicesSettingsContent(
