@@ -22,6 +22,7 @@ import androidx.work.WorkerParameters
 import com.mienaiknife.narra.domain.repository.FeedRepository
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
+import kotlinx.coroutines.CancellationException
 
 @HiltWorker
 class FeedRefreshWorker
@@ -31,16 +32,21 @@ constructor(
     @Assisted params: WorkerParameters,
     private val feedRepository: FeedRepository,
 ) : CoroutineWorker(context, params) {
+    // Periodic work: retry transient failures a bounded number of times, then let the next
+    // scheduled period handle it rather than returning a terminal failure.
     override suspend fun doWork(): Result = try {
         val result = feedRepository.refreshFeeds()
         if (result.isSuccess) {
             Result.success()
         } else {
-            android.util.Log.e("FeedRefreshWorker", "Feed refresh failed: ${result.exceptionOrNull()?.message}")
-            Result.retry()
+            val error = result.exceptionOrNull()
+            android.util.Log.e("FeedRefreshWorker", "Feed refresh failed: ${error?.message}")
+            if (error.isRetryable() && runAttemptCount < MAX_RETRY_ATTEMPTS) Result.retry() else Result.success()
         }
+    } catch (e: CancellationException) {
+        throw e
     } catch (e: Exception) {
         android.util.Log.e("FeedRefreshWorker", "Exception in FeedRefreshWorker", e)
-        Result.retry()
+        if (e.isRetryable() && runAttemptCount < MAX_RETRY_ATTEMPTS) Result.retry() else Result.success()
     }
 }

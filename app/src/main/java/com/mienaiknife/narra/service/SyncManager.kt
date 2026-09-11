@@ -168,9 +168,11 @@ constructor(
                 .setInputData(workDataOf("uri" to uri))
                 .build()
 
+        // APPEND_OR_REPLACE: let an in-flight export finish instead of cancelling it, then run
+        // this one so the latest snapshot is still exported.
         workManager.enqueueUniqueWork(
             "database_auto_export",
-            ExistingWorkPolicy.REPLACE,
+            ExistingWorkPolicy.APPEND_OR_REPLACE,
             exportRequest,
         )
     }

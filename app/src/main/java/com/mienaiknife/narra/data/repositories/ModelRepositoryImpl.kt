@@ -146,9 +146,10 @@ class ModelRepositoryImpl @Inject constructor(
             )
             .build()
 
+        // KEEP: don't cancel an in-flight download when the user re-enqueues the same model.
         workManager.enqueueUniqueWork(
             "download_$modelId",
-            ExistingWorkPolicy.REPLACE, // Ensure fresh start for debugging
+            ExistingWorkPolicy.KEEP,
             downloadRequest,
         )
     }

@@ -24,6 +24,7 @@ import com.mienaiknife.narra.data.local.AppDatabase
 import com.mienaiknife.narra.data.settings.SyncSettingsManager
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.FileInputStream
@@ -68,9 +69,11 @@ constructor(
             syncSettingsManager.updateLastExportTimestamp()
             android.util.Log.i("DatabaseExportWorker", "Database auto-export successful")
             Result.success()
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             android.util.Log.e("DatabaseExportWorker", "Database auto-export failed", e)
-            Result.retry()
+            if (e.isRetryable() && runAttemptCount < MAX_RETRY_ATTEMPTS) Result.retry() else Result.failure()
         }
     }
 }

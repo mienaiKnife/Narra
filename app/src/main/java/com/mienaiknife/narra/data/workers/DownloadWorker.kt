@@ -59,15 +59,16 @@ constructor(
             if (result.isSuccess) {
                 Result.success()
             } else {
-                android.util.Log.e("DownloadWorker", "Download failed for $modelId, retrying...")
-                Result.retry()
+                val error = result.exceptionOrNull()
+                android.util.Log.e("DownloadWorker", "Download failed for $modelId: ${error?.message}")
+                if (error.isRetryable() && runAttemptCount < MAX_RETRY_ATTEMPTS) Result.retry() else Result.failure()
             }
         } catch (e: CancellationException) {
             android.util.Log.i("DownloadWorker", "Download cancelled for $modelId")
             throw e
         } catch (e: Exception) {
             android.util.Log.e("DownloadWorker", "Exception in DownloadWorker for $modelId", e)
-            Result.retry()
+            if (e.isRetryable() && runAttemptCount < MAX_RETRY_ATTEMPTS) Result.retry() else Result.failure()
         }
     }
 

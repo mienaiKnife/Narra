@@ -24,6 +24,7 @@ import androidx.work.WorkerParameters
 import com.mienaiknife.narra.data.settings.SyncSettingsManager
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
@@ -64,9 +65,11 @@ constructor(
                 android.util.Log.i("DatabaseImportWorker", "Database successfully staged.")
             }
             Result.success()
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             android.util.Log.e("DatabaseImportWorker", "Database auto-import check failed", e)
-            Result.retry()
+            if (e.isRetryable() && runAttemptCount < MAX_RETRY_ATTEMPTS) Result.retry() else Result.success()
         }
     }
 
