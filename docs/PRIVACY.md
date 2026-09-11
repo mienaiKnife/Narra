@@ -12,7 +12,7 @@ All your data—including your RSS feed list, imported EPUBs, and playback histo
 When you use Narra, you may interact with third-party services:
 - **RSS Feeds**: When you fetch a feed, your IP address is visible to the server hosting that feed.
 - **On-Device AI**: If you use Sherpa-ONNX, synthesis happens entirely on your device and no text is sent to the internet.
-- **Cloud TTS Providers**: If you choose to use a Cloud TTS engine (e.g., Google, OpenAI), the text of the article is sent to that provider for synthesis. These services are subject to their own privacy policies.
+- **Cloud TTS Providers (planned)**: Cloud TTS engines are not yet available. If they are added later, choosing one would send the text of the article to that provider for synthesis, subject to that provider's own privacy policy.
 
 ## 4. Permissions
 - **Internet**: Used to fetch RSS feeds, web articles, and download TTS models.

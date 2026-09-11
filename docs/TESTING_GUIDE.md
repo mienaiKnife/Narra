@@ -31,4 +31,11 @@ Testing TTS engines can be tricky as they often depend on system services or lar
 - **Coverage**: Aim for high coverage in the `domain` and `data` layers.
 
 ## CI/CD
-Every Pull Request triggers an automated build and runs the unit test suite via GitHub Actions. Ensure your tests pass locally before submitting.
+Every pull request runs the following checks via GitHub Actions (`.github/workflows/ci.yml`):
+- `spotlessCheck` and `lintDebug` — code style and Android Lint
+- `testDebugUnitTest` and `testReleaseUnitTest` — JVM unit tests
+- `verifyPaparazziDebug` — screenshot verification
+- `connectedDebugAndroidTest` on an Android emulator — instrumentation tests
+- `assembleDebug`, `assembleDebugAndroidTest`, and `assembleRelease` — R8-minified release build
+
+Ensure these pass locally before submitting.

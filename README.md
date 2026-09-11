@@ -49,6 +49,8 @@ If you just want an APK and would rather not install Android Studio, you can bui
    ```bash
    ./build-apk.sh assembleRelease
    ```
+   The Docker build produces an unsigned, minified release APK. To build a signed release, see
+   [docs/RELEASING.md](docs/RELEASING.md).
 
 3. **Install on a device**:
    ```bash
@@ -73,7 +75,11 @@ Run unit tests using the following command:
 - [Content Parsing](docs/CONTENT_PARSING.md) - How we extract text from RSS, ebooks, and Web
 - [Playback Lifecycle](docs/PLAYBACK_LIFECYCLE.md) - Understanding the media service and audio flow
 - [Testing Guide](docs/TESTING_GUIDE.md) - How to run and write tests for Narra
+- [Releasing](docs/RELEASING.md) - Signing, versioning, and publishing releases
+- [Contributing](docs/CONTRIBUTING.md) - How to contribute, coding standards, and tests
+- [Roadmap](ROADMAP.md) - Where the project is headed
 - [Privacy Policy](docs/PRIVACY.md) - Our commitment to your privacy
+- [Security Policy](SECURITY.md) - How to report a vulnerability
 
 ## Current Features
 

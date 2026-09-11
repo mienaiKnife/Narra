@@ -78,7 +78,6 @@ app/
       playback/      # TtsPlayer and PlaybackManager
       di/            # Hilt dependency injection modules
 ```
-targetContent:
 
 ## Technologies
 - **Language**: Kotlin
