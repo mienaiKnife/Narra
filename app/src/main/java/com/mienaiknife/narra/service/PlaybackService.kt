@@ -413,14 +413,14 @@ class PlaybackService : MediaLibraryService() {
             PlaybackActionCallback.ACTION_SKIP_NEXT -> playbackManager.skipNext()
         }
         val result = super.onStartCommand(intent, flags, startId)
-        
-        // Pulse session state AFTER super.onStartCommand to ensure we don't interfere with 
+
+        // Pulse session state AFTER super.onStartCommand to ensure we don't interfere with
         // Media3's internal processing of hardware buttons (which also arrives via onStartCommand).
         // On Samsung, we only want to pulse if this isn't a direct hardware button event we just handled.
         if (intent?.action != Intent.ACTION_MEDIA_BUTTON) {
             mediaSession?.let { MediaSessionUtils.forceActivationAndMbr(this, it) }
         }
-        
+
         return result
     }
 
