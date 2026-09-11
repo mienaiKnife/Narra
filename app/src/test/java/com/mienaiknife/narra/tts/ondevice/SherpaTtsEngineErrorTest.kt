@@ -100,4 +100,11 @@ class SherpaTtsEngineErrorTest {
 
         assertTrue(engine.state.value is TtsState.Error)
     }
+
+    @Test
+    fun testReleaseResetsStateToIdle() {
+        engine.release()
+
+        assertEquals(TtsState.Idle, engine.state.value)
+    }
 }

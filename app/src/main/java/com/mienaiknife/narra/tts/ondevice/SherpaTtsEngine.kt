@@ -808,12 +808,32 @@ class SherpaTtsEngine @Inject constructor(
     }
 
     override fun release() {
-        synthesisJob?.cancel()
-        playbackJob?.cancel()
-        monitorJob?.cancel()
-        tts?.release()
-        audioTrack?.release()
-        tts = null
-        audioTrack = null
+        synchronized(this) {
+            synthesisJob?.cancel()
+            playbackJob?.cancel()
+            monitorJob?.cancel()
+            tts?.release()
+            audioTrack?.release()
+            tts = null
+            audioTrack = null
+
+            // Reset initialization guards and queues so the engine can be re-initialized if reused.
+            currentModelId = null
+            currentModelType = null
+            lastNoiseScale = -1f
+            lastLengthScale = -1f
+            currentSampleRate = -1
+            currentSessionId++
+
+            while (utteranceQueue.tryReceive().isSuccess) { /* consume */ }
+            var result = synthesizedQueue.tryReceive()
+            while (result.isSuccess) {
+                result.getOrNull()?.eventChannel?.close()
+                result = synthesizedQueue.tryReceive()
+            }
+            activeStreams.clear()
+
+            _state.value = TtsState.Idle
+        }
     }
 }
