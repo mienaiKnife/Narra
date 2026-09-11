@@ -64,6 +64,10 @@ class ReaderViewModel @Inject constructor(
     private val _error = MutableStateFlow<UiText?>(null)
     private val _searchQuery = MutableStateFlow("")
 
+    // Tracks the article whose content has already been parsed into [_blocks] so the
+    // currentArticle observer does not parse it a second time.
+    private var parsedArticleId: String? = null
+
     private val _searchResults = combine(_blocks, _searchQuery) { blocks, query ->
         if (query.length >= 2) {
             withContext(Dispatchers.Default) {
@@ -150,13 +154,15 @@ class ReaderViewModel @Inject constructor(
         // Automatically update blocks when the article changes in the PlaybackManager
         playbackManager.currentArticle
             .onEach { art ->
-                if (art != null) {
+                if (art == null) {
+                    parsedArticleId = null
+                    _blocks.value = emptyList()
+                } else if (art.id != parsedArticleId) {
                     val parsedBlocks = withContext(Dispatchers.Default) {
                         HtmlParser.parse(art.content, art.url)
                     }
+                    parsedArticleId = art.id
                     _blocks.value = parsedBlocks
-                } else {
-                    _blocks.value = emptyList()
                 }
             }
             .launchIn(viewModelScope)
@@ -187,10 +193,13 @@ class ReaderViewModel @Inject constructor(
                     }
 
                     if (articleData != null) {
-                        // This triggers the Flow in PlaybackManager, which our init block observes
+                        // Parse once here; [_blocks] is updated directly and the
+                        // currentArticle observer skips re-parsing the same article.
                         val blocks = withContext(Dispatchers.Default) {
                             HtmlParser.parse(articleData.content, articleData.url)
                         }
+                        parsedArticleId = articleData.id
+                        _blocks.value = blocks
                         playbackManager.setCurrentArticle(articleData, blocks, playWhenReady = false)
                     } else {
                         _error.value = UiText.fromError(NarraError.Content.NotFound())

@@ -94,7 +94,7 @@ Check off items as they land. Prefer one isolated commit + regression test per i
 - [x] **Unused `sherpaSpeed` UI state/setter.** `ui/viewmodels/VoicesSettingsViewModel.kt:56,118-122`.
 - [ ] **16-flow unchecked combine (and 5 others).** `ui/viewmodels/ReaderViewModel.kt:98-145`,
       `InboxViewModel.kt:67-96`, `HistoryViewModel.kt:62-77`, etc.
-- [ ] **Reader parses article twice.** `ui/viewmodels/ReaderViewModel.kt:67-96,151-162,191-194`.
+- [x] **Reader parses article twice.** `ui/viewmodels/ReaderViewModel.kt:67-96,151-162,191-194`.
 - [ ] **Dead error states.** `ui/viewmodels/QueueUiState.kt:36-38`, `HomeUiState.kt:30-32`.
 - [ ] **Theme manager scope/9 collectors.** `ui/theme/ThemeManager.kt:39,70-84`, `ThemeViewModel.kt:50-96`.
 - [ ] **`UiText` value equality.** `ui/UiText.kt:32-41`.
