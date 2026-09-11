@@ -24,6 +24,8 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -282,14 +284,13 @@ fun ReaderContent(
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
             .pointerInput(tapToShowControls) {
-                awaitPointerEventScope {
-                    while (true) {
-                        awaitPointerEvent(PointerEventPass.Initial)
-                        if (tapToShowControls) {
-                            isControlsVisible = true
-                            lastInteractionTrigger++
-                        }
-                    }
+                if (!tapToShowControls) return@pointerInput
+                awaitEachGesture {
+                    // React once per gesture (on pointer down) instead of on every pointer event,
+                    // so dragging does not churn state on each move.
+                    awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+                    isControlsVisible = true
+                    lastInteractionTrigger++
                 }
             },
     ) {
