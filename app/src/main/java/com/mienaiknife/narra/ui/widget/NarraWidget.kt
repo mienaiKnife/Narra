@@ -66,7 +66,7 @@ class NarraWidget : GlanceAppWidget() {
 
     companion object {
         val DarkThemeColors = ColorProviders(DarkColorScheme)
-        private val ARTICLE_ID_KEY = androidx.glance.action.ActionParameters.Key<String>("article_id")
+        private val ARTICLE_ID_KEY = androidx.glance.action.ActionParameters.Key<String>(MainActivity.EXTRA_ARTICLE_ID)
     }
 
     override val stateDefinition = PreferencesGlanceStateDefinition

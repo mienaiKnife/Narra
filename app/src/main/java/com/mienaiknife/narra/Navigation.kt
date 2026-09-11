@@ -62,7 +62,11 @@ import com.mienaiknife.narra.ui.screens.VoicesSettingsScreen
 import com.mienaiknife.narra.ui.theme.ThemeViewModel
 
 @Composable
-fun AppNavigation(themeViewModel: ThemeViewModel, initialArticleId: String? = null) {
+fun AppNavigation(
+    themeViewModel: ThemeViewModel,
+    initialArticleId: String? = null,
+    onArticleIdConsumed: () -> Unit = {},
+) {
     val navController = rememberNavController()
 
     LaunchedEffect(initialArticleId) {
@@ -70,6 +74,7 @@ fun AppNavigation(themeViewModel: ThemeViewModel, initialArticleId: String? = nu
             navController.navigate(NavDestination.Reader(initialArticleId)) {
                 launchSingleTop = true
             }
+            onArticleIdConsumed()
         }
     }
 

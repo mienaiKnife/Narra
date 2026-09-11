@@ -35,6 +35,7 @@ import com.mienaiknife.narra.ui.theme.ThemeViewModel
 import com.mienaiknife.narra.ui.theme.getFontFamily
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
@@ -46,8 +47,12 @@ class MainActivity : ComponentActivity() {
 
     private val themeViewModel: ThemeViewModel by viewModels()
 
-    private var initialArticleId: String? = null
+    private val pendingArticleId = MutableStateFlow<String?>(null)
     private var isReady = false
+
+    companion object {
+        const val EXTRA_ARTICLE_ID = "article_id"
+    }
 
     private val requestPermissionLauncher =
         registerForActivityResult(
@@ -60,7 +65,7 @@ class MainActivity : ComponentActivity() {
         installSplashScreen().setKeepOnScreenCondition { !isReady }
         super.onCreate(savedInstanceState)
 
-        initialArticleId = intent.getStringExtra("article_id")
+        pendingArticleId.value = intent.getStringExtra(EXTRA_ARTICLE_ID)
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (ContextCompat.checkSelfPermission(
@@ -90,11 +95,16 @@ class MainActivity : ComponentActivity() {
                 val isDynamicColor = uiState.isDynamicColor
                 val useSystemTheme = uiState.useSystemTheme
                 val fontFamily = getFontFamily(uiState.readerFontFamily)
+                val articleId by pendingArticleId.collectAsStateWithLifecycle()
 
                 val darkTheme = if (useSystemTheme) androidx.compose.foundation.isSystemInDarkTheme() else isDarkMode
 
                 NarraTheme(darkTheme = darkTheme, dynamicColor = isDynamicColor, fontFamily = fontFamily) {
-                    AppNavigation(themeViewModel = themeViewModel, initialArticleId = initialArticleId)
+                    AppNavigation(
+                        themeViewModel = themeViewModel,
+                        initialArticleId = articleId,
+                        onArticleIdConsumed = { pendingArticleId.value = null },
+                    )
                 }
             }
         }
@@ -102,9 +112,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onNewIntent(intent: android.content.Intent) {
         super.onNewIntent(intent)
-        val articleId = intent.getStringExtra("article_id")
-        if (articleId != null) {
-            // Trigger navigation if possible
-        }
+        setIntent(intent)
+        pendingArticleId.value = intent.getStringExtra(EXTRA_ARTICLE_ID)
     }
 }
