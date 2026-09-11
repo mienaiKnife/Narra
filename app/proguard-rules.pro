@@ -28,6 +28,11 @@
 -keep class com.mienaiknife.narra.tts.ondevice.SherpaTtsCallback { *; }
 -keep interface kotlin.jvm.functions.Function1 { *; }
 
+# OPML falls back to instantiating the kxml pull parser/serializer by name when the
+# platform XmlPullParserFactory is unavailable.
+-keep class org.kxml2.io.** { *; }
+-keep class org.xmlpull.v1.** { *; }
+
 # Preserve line numbers and source file names for debugging
 -keepattributes SourceFile,LineNumberTable
 -renamesourcefileattribute SourceFile

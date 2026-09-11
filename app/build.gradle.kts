@@ -14,6 +14,9 @@
  * limitations under the License.
  */
 
+import com.android.build.api.variant.HostTestBuilder
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
@@ -48,6 +51,21 @@ spotless {
     }
 }
 
+// Release secrets may come from the environment (CI) or local.properties (local signing).
+// They are never committed; see docs/RELEASING.md.
+val localProperties =
+    Properties().apply {
+        val file = rootProject.file("local.properties")
+        if (file.exists()) file.inputStream().use(::load)
+    }
+
+fun releaseProperty(key: String): String? =
+    System.getenv(key)?.takeIf { it.isNotBlank() } ?: localProperties.getProperty(key)?.takeIf { it.isNotBlank() }
+
+val releaseKeystorePath = releaseProperty("RELEASE_KEYSTORE_FILE")
+val configuredVersionCode = releaseProperty("VERSION_CODE")?.toIntOrNull()
+val configuredVersionName = releaseProperty("VERSION_NAME")
+
 android {
     namespace = "com.mienaiknife.narra"
     compileSdk = 36
@@ -57,10 +75,21 @@ android {
         applicationId = "com.mienaiknife.narra"
         minSdk = 24
         targetSdk = 36
-        versionCode = 1
-        versionName = "0.1"
+        versionCode = configuredVersionCode ?: 1
+        versionName = configuredVersionName ?: "0.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    signingConfigs {
+        create("release") {
+            if (releaseKeystorePath != null) {
+                storeFile = file(releaseKeystorePath)
+                storePassword = releaseProperty("RELEASE_KEYSTORE_PASSWORD")
+                keyAlias = releaseProperty("RELEASE_KEY_ALIAS")
+                keyPassword = releaseProperty("RELEASE_KEY_PASSWORD")
+            }
+        }
     }
 
     testOptions {
@@ -79,11 +108,15 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
             )
+            if (releaseKeystorePath != null) {
+                signingConfig = signingConfigs.getByName("release")
+            }
         }
     }
     packaging {
@@ -101,6 +134,18 @@ android {
     }
     buildFeatures {
         compose = true
+    }
+    lint {
+        abortOnError = true
+        checkReleaseBuilds = true
+    }
+}
+
+// AGP only creates unit-test tasks for the default build type. Opt the release variant in so the
+// suite is exercised against the release configuration (see docs/RELEASING.md).
+androidComponents {
+    beforeVariants(selector().withBuildType("release")) { variantBuilder ->
+        variantBuilder.hostTests[HostTestBuilder.UNIT_TEST_TYPE]?.enable = true
     }
 }
 
