@@ -18,7 +18,7 @@
 # or, for a debug APK:
 #   docker build --build-arg BUILD_TARGET=assembleDebug --output type=local,dest=./out .
 
-FROM eclipse-temurin:17-jdk
+FROM eclipse-temurin:21-jdk
 
 # Pin the versions required by the project (see app/build.gradle.kts and gradle/libs.versions.toml).
 ARG ANDROID_COMPILE_SDK=36
