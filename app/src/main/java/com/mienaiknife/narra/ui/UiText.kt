@@ -32,13 +32,33 @@ sealed class UiText {
     class StringResource(
         @StringRes val resId: Int,
         vararg val args: Any,
-    ) : UiText()
+    ) : UiText() {
+        override fun equals(other: Any?): Boolean = this === other ||
+            (other is StringResource && resId == other.resId && args.contentEquals(other.args))
+
+        override fun hashCode(): Int = 31 * resId + args.contentHashCode()
+    }
 
     class PluralResource(
         @PluralsRes val resId: Int,
         val count: Int,
         vararg val args: Any,
-    ) : UiText()
+    ) : UiText() {
+        override fun equals(other: Any?): Boolean = this === other ||
+            (
+                other is PluralResource &&
+                    resId == other.resId &&
+                    count == other.count &&
+                    args.contentEquals(other.args)
+                )
+
+        override fun hashCode(): Int {
+            var result = resId
+            result = 31 * result + count
+            result = 31 * result + args.contentHashCode()
+            return result
+        }
+    }
 
     companion object {
         fun fromError(error: Throwable): UiText = when (error) {

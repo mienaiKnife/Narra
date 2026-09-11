@@ -19,6 +19,7 @@ import android.content.Context
 import android.content.res.Resources
 import com.mienaiknife.narra.R
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotEquals
 import org.junit.Test
 import org.mockito.kotlin.any
 import org.mockito.kotlin.eq
@@ -58,5 +59,33 @@ class UiTextTest {
         val result = UiText.fromError(error)
         assert(result is UiText.StringResource)
         assertEquals(R.string.error_generic, (result as UiText.StringResource).resId)
+    }
+
+    @Test
+    fun `StringResource uses value equality`() {
+        val first = UiText.StringResource(R.string.error_generic)
+        val second = UiText.StringResource(R.string.error_generic)
+        assertEquals(first, second)
+        assertEquals(first.hashCode(), second.hashCode())
+        assertNotEquals(first, UiText.StringResource(R.string.error_no_internet))
+    }
+
+    @Test
+    fun `StringResource equality includes arguments`() {
+        val first = UiText.StringResource(R.string.message_import_failed, "a")
+        val second = UiText.StringResource(R.string.message_import_failed, "a")
+        val different = UiText.StringResource(R.string.message_import_failed, "b")
+        assertEquals(first, second)
+        assertEquals(first.hashCode(), second.hashCode())
+        assertNotEquals(first, different)
+    }
+
+    @Test
+    fun `PluralResource uses value equality`() {
+        val first = UiText.PluralResource(R.plurals.unit_articles, 2, 2)
+        val second = UiText.PluralResource(R.plurals.unit_articles, 2, 2)
+        assertEquals(first, second)
+        assertEquals(first.hashCode(), second.hashCode())
+        assertNotEquals(first, UiText.PluralResource(R.plurals.unit_articles, 3, 3))
     }
 }

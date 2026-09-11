@@ -97,7 +97,7 @@ Check off items as they land. Prefer one isolated commit + regression test per i
 - [x] **Reader parses article twice.** `ui/viewmodels/ReaderViewModel.kt:67-96,151-162,191-194`.
 - [x] **Dead error states.** `ui/viewmodels/QueueUiState.kt:36-38`, `HomeUiState.kt:30-32`.
 - [x] **Theme manager scope/9 collectors.** `ui/theme/ThemeManager.kt:39,70-84`, `ThemeViewModel.kt:50-96`.
-- [ ] **`UiText` value equality.** `ui/UiText.kt:32-41`.
+- [x] **`UiText` value equality.** `ui/UiText.kt:32-41`.
 - [x] **Sort-toggle duplication (4×).** `QueueViewModel.kt:114-128`, `FeedsViewModel.kt:74-90`,
       `FeedArticlesViewModel.kt:113-128`, `InboxViewModel.kt:107-122`.
 - [x] **Widget updates only first instance.** `ui/widget/WidgetManager.kt:63`, `WidgetImageWorker.kt:73`.
