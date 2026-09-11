@@ -121,7 +121,7 @@ fun SettingsScreen(
                 },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .menuAnchor(type = ExposedDropdownMenuAnchorType.PrimaryNotEditable),
+                    .menuAnchor(type = ExposedDropdownMenuAnchorType.PrimaryEditable),
                 placeholder = { Text(stringResource(R.string.settings_search_placeholder)) },
                 leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
                 trailingIcon = {
