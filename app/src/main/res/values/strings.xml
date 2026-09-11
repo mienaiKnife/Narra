@@ -152,6 +152,159 @@
     <string name="settings_downloads_export_feeds">Export feeds</string>
     <string name="settings_downloads_export_feeds_desc">Transfer your subscriptions to another RSS reader</string>
 
+    <!-- Settings search keywords -->
+    <string-array name="settings_search_keywords_use_system_theme">
+        <item>appearance</item>
+        <item>dark mode</item>
+        <item>light mode</item>
+    </string-array>
+    <string-array name="settings_search_keywords_dark_mode">
+        <item>appearance</item>
+        <item>theme</item>
+    </string-array>
+    <string-array name="settings_search_keywords_dynamic_colors">
+        <item>appearance</item>
+        <item>theme</item>
+        <item>material you</item>
+    </string-array>
+    <string-array name="settings_search_keywords_reader_font_family">
+        <item>reader</item>
+        <item>typography</item>
+    </string-array>
+    <string-array name="settings_search_keywords_tap_to_show">
+        <item>reader</item>
+        <item>fullscreen</item>
+    </string-array>
+    <string-array name="settings_search_keywords_reader_font_size">
+        <item>reader</item>
+        <item>text size</item>
+        <item>typography</item>
+    </string-array>
+    <string-array name="settings_search_keywords_line_spacing">
+        <item>reader</item>
+        <item>typography</item>
+        <item>spacing</item>
+    </string-array>
+    <string-array name="settings_search_keywords_show_remaining_time">
+        <item>playback</item>
+        <item>reader</item>
+    </string-array>
+    <string-array name="settings_search_keywords_auto_fullscreen">
+        <item>reader</item>
+        <item>fullscreen</item>
+        <item>immersive</item>
+    </string-array>
+    <string-array name="settings_search_keywords_pause_on_disconnect">
+        <item>headphones</item>
+        <item>bluetooth</item>
+    </string-array>
+    <string-array name="settings_search_keywords_pause_for_interruptions">
+        <item>notifications</item>
+        <item>audio focus</item>
+    </string-array>
+    <string-array name="settings_search_keywords_fast_forward_skip">
+        <item>controls</item>
+        <item>skip</item>
+    </string-array>
+    <string-array name="settings_search_keywords_rewind_skip">
+        <item>controls</item>
+        <item>skip</item>
+    </string-array>
+    <string-array name="settings_search_keywords_fast_forward_hardware">
+        <item>controls</item>
+        <item>hardware</item>
+        <item>remote</item>
+    </string-array>
+    <string-array name="settings_search_keywords_rewind_hardware">
+        <item>controls</item>
+        <item>hardware</item>
+        <item>remote</item>
+    </string-array>
+    <string-array name="settings_search_keywords_auto_play_next">
+        <item>queue</item>
+        <item>continuous</item>
+    </string-array>
+    <string-array name="settings_search_keywords_play_chime">
+        <item>queue</item>
+        <item>announcement</item>
+    </string-array>
+    <string-array name="settings_search_keywords_chime_sound">
+        <item>queue</item>
+        <item>notification</item>
+    </string-array>
+    <string-array name="settings_search_keywords_engine_selection">
+        <item>tts</item>
+        <item>sherpa</item>
+        <item>onnx</item>
+    </string-array>
+    <string-array name="settings_search_keywords_android_tts">
+        <item>tts</item>
+        <item>system</item>
+    </string-array>
+    <string-array name="settings_search_keywords_noise_scale">
+        <item>tts</item>
+        <item>ai</item>
+        <item>sherpa</item>
+    </string-array>
+    <string-array name="settings_search_keywords_length_scale">
+        <item>tts</item>
+        <item>ai</item>
+        <item>sherpa</item>
+    </string-array>
+    <string-array name="settings_search_keywords_kokoro_voice">
+        <item>tts</item>
+        <item>ai</item>
+        <item>kokoro</item>
+    </string-array>
+    <string-array name="settings_search_keywords_voice_data">
+        <item>tts</item>
+        <item>models</item>
+        <item>download</item>
+    </string-array>
+    <string-array name="settings_search_keywords_wifi_only">
+        <item>network</item>
+        <item>data</item>
+    </string-array>
+    <string-array name="settings_search_keywords_refresh_interval">
+        <item>automation</item>
+        <item>feeds</item>
+    </string-array>
+    <string-array name="settings_search_keywords_export_database">
+        <item>backup</item>
+        <item>sync</item>
+    </string-array>
+    <string-array name="settings_search_keywords_import_database">
+        <item>backup</item>
+        <item>sync</item>
+    </string-array>
+    <string-array name="settings_search_keywords_auto_export">
+        <item>backup</item>
+        <item>sync</item>
+        <item>syncthing</item>
+    </string-array>
+    <string-array name="settings_search_keywords_auto_import">
+        <item>backup</item>
+        <item>sync</item>
+        <item>syncthing</item>
+    </string-array>
+    <string-array name="settings_search_keywords_auto_export_location">
+        <item>backup</item>
+        <item>sync</item>
+    </string-array>
+    <string-array name="settings_search_keywords_delete_database">
+        <item>data</item>
+        <item>reset</item>
+        <item>clear</item>
+    </string-array>
+    <string-array name="settings_search_keywords_import_feeds">
+        <item>opml</item>
+        <item>rss</item>
+    </string-array>
+    <string-array name="settings_search_keywords_export_feeds">
+        <item>opml</item>
+        <item>rss</item>
+    </string-array>
+
     <!-- Feed Articles Screen -->
     <string name="feed_articles_empty_message">No articles found in this feed.</string>
 

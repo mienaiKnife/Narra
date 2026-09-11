@@ -134,7 +134,7 @@ Check off items as they land. Prefer one isolated commit + regression test per i
 - [x] Hardcoded widget strings. `ui/widget/NarraWidget.kt:131,219`.
 - [x] Hardcoded interval/limit lists. `DownloadsSettingsScreen.kt:326,337`.
 - [x] Hardcoded skip-time labels. `PlaybackSettingsScreen.kt:264,275`.
-- [ ] English-only search keywords. `ui/screens/SettingsSearchData.kt:38-258`.
+- [x] English-only search keywords. `ui/screens/SettingsSearchData.kt:38-258`.
 - [ ] Hardcoded separator `" • "` (4 files); About version string. `AboutScreen.kt:67`.
 - [ ] Hardcoded notification strings/icon. `utils/NotificationHelper.kt:44-45,55,92-93`.
 - [ ] Hardcoded `"Loading..."` / Sherpa error strings compared in code.

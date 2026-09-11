@@ -156,7 +156,9 @@ fun SettingsScreen(
                         // To avoid the lint warning, we can suppress it or just accept it's necessary here.
                         resources.getString(item.titleRes).contains(searchQuery, ignoreCase = true) ||
                             resources.getString(item.subtitleRes).contains(searchQuery, ignoreCase = true) ||
-                            item.keywords.any { it.contains(searchQuery, ignoreCase = true) }
+                            item.keywordsRes.let { keywordsRes ->
+                                resources.getStringArray(keywordsRes).any { it.contains(searchQuery, ignoreCase = true) }
+                            }
                     }.take(5)
                 }
             }
