@@ -32,7 +32,7 @@ class SherpaTtsEngineTest {
         // start sample = (6.2 / 11.2) * 1000 = 553.5 -> 553
         // end sample = (11.2 / 11.2) * 1000 = 1000
 
-        val boundaries = estimateWordBoundaries(text, totalSamples)
+        val boundaries = SherpaTtsEngine.estimateWordBoundaries(text, totalSamples, null)
 
         assertEquals(2, boundaries.size)
 
@@ -49,13 +49,13 @@ class SherpaTtsEngineTest {
 
     @Test
     fun testEmptyText() {
-        val boundaries = estimateWordBoundaries("", 1000)
+        val boundaries = SherpaTtsEngine.estimateWordBoundaries("", 1000, null)
         assertTrue(boundaries.isEmpty())
     }
 
     @Test
     fun testWhitespaceOnly() {
-        val boundaries = estimateWordBoundaries("   ", 1000)
+        val boundaries = SherpaTtsEngine.estimateWordBoundaries("   ", 1000, null)
         assertTrue(boundaries.isEmpty())
     }
 
@@ -63,68 +63,37 @@ class SherpaTtsEngineTest {
     fun testPartialEstimationDoesNotCompress() {
         val text = "The quick brown fox"
         val projectedTotal = 10000
-        val partialSamples = FloatArray(1000)
 
-        // The current implementation of estimateWordBoundaries uses the 'totalSamples' passed in
-        // to map the characters. If we pass the projected total, it should spread them out.
-        val boundaries = estimateWordBoundaries(text, projectedTotal, partialSamples)
+        // Without full samples the estimator maps the whole projected duration across the text,
+        // so the last word should end near the projected total rather than being compressed.
+        val boundaries = SherpaTtsEngine.estimateWordBoundaries(text, projectedTotal, null)
 
         assertEquals(4, boundaries.size)
-        // "fox" should end near 10000, not 1000
         assertTrue(
             "Last word should end near projected total, but was ${boundaries.last().endSample}",
             boundaries.last().endSample > 8000,
         )
     }
 
-    // Helper to test the logic (copied from SherpaTtsEngine)
-    private fun estimateWordBoundaries(
-        text: String,
-        totalSamples: Int,
-        samples: FloatArray? = null,
-    ): List<WordBoundaryWrapper> {
-        val boundaries = mutableListOf<WordBoundaryWrapper>()
-        if (text.isEmpty() || totalSamples == 0) return boundaries
-
-        val weights = text.map { getCharWeight(it) }
-        val totalWeight = weights.sum().coerceAtLeast(1.0f)
-
-        val regex = Regex("\\S+")
-        val matches = regex.findAll(text).toList()
-
-        if (matches.isEmpty()) {
-            if (text.trim().isEmpty()) return emptyList()
-            boundaries.add(WordBoundaryWrapper(0, text.length, 0, totalSamples))
-            return boundaries
+    @Test
+    fun testSpeechBoundsTrimSilence() {
+        // One second of (near) silence with a burst of speech in the middle.
+        val samples = FloatArray(1000)
+        for (i in 400 until 600) {
+            samples[i] = 1.0f
         }
 
-        matches.forEach { match ->
-            val startChar = match.range.first
-            val endChar = match.range.last + 1
-
-            val weightBefore = weights.take(startChar).sum()
-            val weightInWord = weights.subList(startChar, endChar).sum()
-
-            val wordStartSample = (weightBefore / totalWeight * totalSamples).toInt()
-            val wordEndSample = ((weightBefore + weightInWord) / totalWeight * totalSamples).toInt()
-
-            boundaries.add(WordBoundaryWrapper(startChar, endChar, wordStartSample, wordEndSample))
-        }
-
-        return boundaries
+        val bounds = SherpaTtsEngine.detectSpeechBounds(samples)
+        assertEquals(400, bounds.first)
+        assertEquals(600, bounds.second)
     }
 
-    private fun getCharWeight(c: Char): Float = when (c) {
-        '.', '!', '?' -> 3.0f
-        ',', ';', ':', '-' -> 2.0f
-        ' ' -> 1.2f
-        else -> 1.0f
+    @Test
+    fun testCharWeightPunctuation() {
+        assertEquals(3.0f, SherpaTtsEngine.getCharWeight('!'))
+        assertEquals(2.0f, SherpaTtsEngine.getCharWeight(','))
+        assertEquals(1.2f, SherpaTtsEngine.getCharWeight(' '))
+        assertEquals(0.1f, SherpaTtsEngine.getCharWeight('('))
+        assertEquals(1.0f, SherpaTtsEngine.getCharWeight('a'))
     }
-
-    data class WordBoundaryWrapper(
-        val startChar: Int,
-        val endChar: Int,
-        val startSample: Int,
-        val endSample: Int,
-    )
 }

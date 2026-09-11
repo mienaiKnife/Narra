@@ -737,84 +737,6 @@ class SherpaTtsEngine @Inject constructor(
     // NOTE: As of Sherpa-ONNX v1.13.4, native word-level timestamps are supported in the C++ core
     // but not yet exposed in the Java/JNI bindings (GeneratedAudio only contains samples/sampleRate).
     // Using this heuristic until the Java API is updated in a future release.
-    private fun estimateWordBoundaries(text: String, totalSamples: Int, samples: FloatArray?): List<WordBoundary> {
-        val boundaries = mutableListOf<WordBoundary>()
-        if (text.isEmpty() || totalSamples == 0) return boundaries
-
-        // 1. Detect actual speech bounds if we have the full audio
-        var speechStart = 0
-        var speechEnd = totalSamples
-
-        if (samples != null) {
-            val bounds = detectSpeechBounds(samples)
-            // Only trust bounds if they don't seem like the whole thing anyway
-            if (bounds.first > samples.size * 0.01 || bounds.second < samples.size * 0.99) {
-                speechStart = bounds.first
-                speechEnd = bounds.second
-            }
-        }
-
-        val speechSamples = (speechEnd - speechStart).coerceAtLeast(1)
-
-        // 2. Calculate weighted length of the text
-        val weights = text.map { getCharWeight(it) }
-        val totalWeight = weights.sum().coerceAtLeast(1.0f)
-
-        // 3. Find all non-whitespace tokens (words)
-        val regex = Regex("\\S+")
-        val matches = regex.findAll(text).toList()
-
-        if (matches.isEmpty()) {
-            // Fallback for single word or no whitespace
-            if (text.trim().isEmpty()) return emptyList()
-            boundaries.add(WordBoundary(0, text.length, speechStart, speechEnd))
-            return boundaries
-        }
-
-        matches.forEach { match ->
-            val startChar = match.range.first
-            val endChar = match.range.last + 1
-
-            // Weight-based heuristic: sum weights of characters before and within the word
-            val weightBefore = weights.take(startChar).sum()
-            val weightInWord = weights.subList(startChar, endChar).sum()
-
-            val wordStartSample = speechStart + (weightBefore / totalWeight * speechSamples).toInt()
-            val wordEndSample = speechStart + ((weightBefore + weightInWord) / totalWeight * speechSamples).toInt()
-
-            boundaries.add(WordBoundary(startChar, endChar, wordStartSample, wordEndSample))
-        }
-
-        return boundaries
-    }
-
-    private fun detectSpeechBounds(samples: FloatArray): Pair<Int, Int> {
-        val threshold = 0.005f // More sensitive threshold
-        var start = 0
-        // Search first 40% for start
-        val startLimit = (samples.size * 0.4).toInt()
-        while (start < startLimit && start < samples.size && abs(samples[start]) < threshold) {
-            start++
-        }
-
-        var end = samples.size - 1
-        // Search last 40% for end
-        val endLimit = (samples.size * 0.6).toInt()
-        while (end > endLimit && end > 0 && abs(samples[end]) < threshold) {
-            end--
-        }
-
-        return Pair(start, end)
-    }
-
-    private fun getCharWeight(c: Char): Float = when (c) {
-        '.', '!', '?' -> 3.0f // Significant pause
-        ',', ';', ':', '-' -> 2.0f // Medium pause
-        ' ' -> 1.2f // Gap between words
-        '(', ')', '[', ']', '{', '}', '"', '\'' -> 0.1f // Usually quick
-        else -> 1.0f // Standard character duration
-    }
-
     override fun release() {
         synchronized(this) {
             synthesisJob?.cancel()
@@ -842,6 +764,93 @@ class SherpaTtsEngine @Inject constructor(
             synchronized(activeStreams) { activeStreams.clear() }
 
             _state.value = TtsState.Idle
+        }
+    }
+
+    companion object {
+        /**
+         * Estimates per-word sample boundaries using a character-weight heuristic. Exposed for tests.
+         */
+        internal fun estimateWordBoundaries(
+            text: String,
+            totalSamples: Int,
+            samples: FloatArray?,
+        ): List<WordBoundary> {
+            val boundaries = mutableListOf<WordBoundary>()
+            if (text.isEmpty() || totalSamples == 0) return boundaries
+
+            // 1. Detect actual speech bounds if we have the full audio
+            var speechStart = 0
+            var speechEnd = totalSamples
+
+            if (samples != null) {
+                val bounds = detectSpeechBounds(samples)
+                // Only trust bounds if they don't seem like the whole thing anyway
+                if (bounds.first > samples.size * 0.01 || bounds.second < samples.size * 0.99) {
+                    speechStart = bounds.first
+                    speechEnd = bounds.second
+                }
+            }
+
+            val speechSamples = (speechEnd - speechStart).coerceAtLeast(1)
+
+            // 2. Calculate weighted length of the text
+            val weights = text.map { getCharWeight(it) }
+            val totalWeight = weights.sum().coerceAtLeast(1.0f)
+
+            // 3. Find all non-whitespace tokens (words)
+            val regex = Regex("\\S+")
+            val matches = regex.findAll(text).toList()
+
+            if (matches.isEmpty()) {
+                // Fallback for single word or no whitespace
+                if (text.trim().isEmpty()) return emptyList()
+                boundaries.add(WordBoundary(0, text.length, speechStart, speechEnd))
+                return boundaries
+            }
+
+            matches.forEach { match ->
+                val startChar = match.range.first
+                val endChar = match.range.last + 1
+
+                // Weight-based heuristic: sum weights of characters before and within the word
+                val weightBefore = weights.take(startChar).sum()
+                val weightInWord = weights.subList(startChar, endChar).sum()
+
+                val wordStartSample = speechStart + (weightBefore / totalWeight * speechSamples).toInt()
+                val wordEndSample = speechStart + ((weightBefore + weightInWord) / totalWeight * speechSamples).toInt()
+
+                boundaries.add(WordBoundary(startChar, endChar, wordStartSample, wordEndSample))
+            }
+
+            return boundaries
+        }
+
+        internal fun detectSpeechBounds(samples: FloatArray): Pair<Int, Int> {
+            val threshold = 0.005f // More sensitive threshold
+            var start = 0
+            // Search first 40% for start
+            val startLimit = (samples.size * 0.4).toInt()
+            while (start < startLimit && start < samples.size && abs(samples[start]) < threshold) {
+                start++
+            }
+
+            var end = samples.size - 1
+            // Search last 40% for end
+            val endLimit = (samples.size * 0.6).toInt()
+            while (end > endLimit && end > 0 && abs(samples[end]) < threshold) {
+                end--
+            }
+
+            return Pair(start, end)
+        }
+
+        internal fun getCharWeight(c: Char): Float = when (c) {
+            '.', '!', '?' -> 3.0f // Significant pause
+            ',', ';', ':', '-' -> 2.0f // Medium pause
+            ' ' -> 1.2f // Gap between words
+            '(', ')', '[', ']', '{', '}', '"', '\'' -> 0.1f // Usually quick
+            else -> 1.0f // Standard character duration
         }
     }
 }
