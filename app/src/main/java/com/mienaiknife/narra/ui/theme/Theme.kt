@@ -15,7 +15,6 @@
  */
 package com.mienaiknife.narra.ui.theme
 
-import android.app.Activity
 import android.os.Build
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
@@ -26,7 +25,7 @@ import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
@@ -60,28 +59,27 @@ fun NarraTheme(
     }
 
     val view = LocalView.current
-    if (!view.isInEditMode && view.context is Activity) {
-        SideEffect {
-            val window = (view.context as Activity).window
-            val activityContext = view.context
-            if (activityContext is ComponentActivity) {
-                activityContext.enableEdgeToEdge(
-                    statusBarStyle = SystemBarStyle.auto(
-                        android.graphics.Color.TRANSPARENT,
-                        android.graphics.Color.TRANSPARENT,
-                    ) { darkTheme },
-                    navigationBarStyle = SystemBarStyle.auto(
-                        colorScheme.surfaceContainer.toArgb(),
-                        colorScheme.surfaceContainer.toArgb(),
-                    ) { darkTheme },
-                )
-            }
+    val activity = view.context as? ComponentActivity
+    if (!view.isInEditMode && activity != null) {
+        // Only reinstall the edge-to-edge/system bar configuration when the host activity or the
+        // resolved color scheme actually changes, not on every recomposition.
+        LaunchedEffect(activity, darkTheme, colorScheme) {
+            activity.enableEdgeToEdge(
+                statusBarStyle = SystemBarStyle.auto(
+                    android.graphics.Color.TRANSPARENT,
+                    android.graphics.Color.TRANSPARENT,
+                ) { darkTheme },
+                navigationBarStyle = SystemBarStyle.auto(
+                    colorScheme.surfaceContainer.toArgb(),
+                    colorScheme.surfaceContainer.toArgb(),
+                ) { darkTheme },
+            )
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                window.isNavigationBarContrastEnforced = false
+                activity.window.isNavigationBarContrastEnforced = false
             }
 
-            val insetsController = WindowCompat.getInsetsController(window, view)
+            val insetsController = WindowCompat.getInsetsController(activity.window, view)
             insetsController.isAppearanceLightStatusBars = !darkTheme
             insetsController.isAppearanceLightNavigationBars = !darkTheme
         }

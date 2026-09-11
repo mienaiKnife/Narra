@@ -106,7 +106,7 @@ Check off items as they land. Prefer one isolated commit + regression test per i
 ## P2 — Medium
 
 ### Compose / perf / a11y
-- [ ] Edge-to-edge in `SideEffect` every recomposition. `ui/theme/Theme.kt:63-88`.
+- [x] Edge-to-edge in `SideEffect` every recomposition. `ui/theme/Theme.kt:63-88`.
 - [ ] `lastInteractionTrigger` mutated on every pointer event. `ui/screens/ReaderScreen.kt:265-294`.
 - [ ] `LaunchedEffect` keyed on measured value. `ui/screens/reader/ReaderContentList.kt:127`.
 - [ ] Migrate `Modifier.composed` flash highlight. `ui/components/ModifierExtensions.kt:32-56`.
