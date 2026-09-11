@@ -143,7 +143,7 @@ Check off items as they land. Prefer one isolated commit + regression test per i
 ### Duplication / structure
 - [x] Extract `ScreenHeader` + `SettingsSwitchRow`/`SettingsActionRow` (~9 screens).
 - [x] Extract `SortOption.toggled()`.
-- [ ] Extract `NetworkConstants`/User-Agent; model catalog constants.
+- [x] Extract `NetworkConstants`/User-Agent; model catalog constants.
 - [ ] Move HTML/TTS parsing out of `ui/` per AGENTS.md. `ui/utils/HtmlToAnnotatedString.kt`,
       `ui/models/ContentBlock.kt`.
 - [ ] Convention plugin for Spotless (both modules + root).

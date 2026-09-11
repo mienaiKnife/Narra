@@ -15,6 +15,7 @@
  */
 package com.mienaiknife.narra.data.remote
 
+import com.mienaiknife.narra.data.NetworkConstants
 import com.mienaiknife.narra.data.local.entities.FeedEntity
 import com.mienaiknife.narra.domain.NarraError
 import com.mienaiknife.narra.domain.models.Article
@@ -51,7 +52,7 @@ constructor(
                     Jsoup
                         .connect(url)
                         .userAgent(
-                            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
+                            NetworkConstants.BROWSER_USER_AGENT,
                         ).get()
 
                 val feedLink =
@@ -82,7 +83,7 @@ constructor(
                             Jsoup
                                 .connect(link)
                                 .userAgent(
-                                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
+                                    NetworkConstants.BROWSER_USER_AGENT,
                                 ).get()
                         val siteTitle = HtmlUtils.decodeHtmlEntities(doc.title().trim())
                         if (!siteTitle.isNullOrEmpty() && !UrlUtils.isUrlOrDomainLike(siteTitle)) {
@@ -104,7 +105,7 @@ constructor(
                         Jsoup
                             .connect(link)
                             .userAgent(
-                                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
+                                NetworkConstants.BROWSER_USER_AGENT,
                             ).get()
 
                     imageUrl = doc.select("link[rel~=(?i)^(shortcut|apple-touch-)?icon]").attr("abs:href")

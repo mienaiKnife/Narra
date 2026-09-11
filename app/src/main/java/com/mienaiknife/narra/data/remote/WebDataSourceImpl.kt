@@ -15,6 +15,7 @@
  */
 package com.mienaiknife.narra.data.remote
 
+import com.mienaiknife.narra.data.NetworkConstants
 import com.mienaiknife.narra.domain.models.Article
 import com.mienaiknife.narra.ui.utils.UrlUtils
 import com.mienaiknife.narra.utils.DateUtils
@@ -52,7 +53,7 @@ constructor(
                         .url(url)
                         .header(
                             "User-Agent",
-                            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
+                            NetworkConstants.BROWSER_USER_AGENT,
                         ).header("Referer", "https://www.google.com/")
                         .build()
 

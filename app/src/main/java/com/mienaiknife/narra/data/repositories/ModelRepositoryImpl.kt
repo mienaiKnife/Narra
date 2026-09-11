@@ -23,6 +23,7 @@ import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.workDataOf
+import com.mienaiknife.narra.data.NetworkConstants
 import com.mienaiknife.narra.data.local.dao.TtsModelDao
 import com.mienaiknife.narra.data.local.entities.TtsModelEntity
 import com.mienaiknife.narra.data.workers.DownloadWorker
@@ -82,7 +83,7 @@ class ModelRepositoryImpl @Inject constructor(
                 language = "en",
                 description = "Low quality, fast American English female voice",
                 type = TtsModelType.VITS,
-                modelUrl = "https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/vits-piper-en_US-amy-low.tar.bz2",
+                modelUrl = "${NetworkConstants.SHERPA_MODELS_BASE_URL}/vits-piper-en_US-amy-low.tar.bz2",
                 sizeBytes = 28000000,
             ),
             TtsModel(
@@ -91,7 +92,7 @@ class ModelRepositoryImpl @Inject constructor(
                 language = "en",
                 description = "Medium quality American English male voice",
                 type = TtsModelType.VITS,
-                modelUrl = "https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/vits-piper-en_US-ryan-medium.tar.bz2",
+                modelUrl = "${NetworkConstants.SHERPA_MODELS_BASE_URL}/vits-piper-en_US-ryan-medium.tar.bz2",
                 sizeBytes = 60000000,
             ),
             TtsModel(
@@ -100,7 +101,7 @@ class ModelRepositoryImpl @Inject constructor(
                 language = "en",
                 description = "High quality multi-voice Kokoro TTS",
                 type = TtsModelType.KOKORO,
-                modelUrl = "https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/kokoro-en-v0_19.tar.bz2",
+                modelUrl = "${NetworkConstants.SHERPA_MODELS_BASE_URL}/kokoro-en-v0_19.tar.bz2",
                 sizeBytes = 80000000,
             ),
             TtsModel(
@@ -109,7 +110,7 @@ class ModelRepositoryImpl @Inject constructor(
                 language = "en",
                 description = "High quality American English female TTS model",
                 type = TtsModelType.MATCHA,
-                modelUrl = "https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/matcha-icefall-en_US-ljspeech.tar.bz2",
+                modelUrl = "${NetworkConstants.SHERPA_MODELS_BASE_URL}/matcha-icefall-en_US-ljspeech.tar.bz2",
                 sizeBytes = 150000000,
             ),
         )
@@ -257,7 +258,7 @@ class ModelRepositoryImpl @Inject constructor(
 
         val request = Request.Builder()
             .url(url)
-            .header("User-Agent", "Narra/1.0")
+            .header("User-Agent", NetworkConstants.APP_USER_AGENT)
             .apply {
                 if (downloadedBytes > 0) {
                     addHeader("Range", "bytes=$downloadedBytes-")
