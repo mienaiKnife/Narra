@@ -24,17 +24,14 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.collectIsDraggedAsState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -394,6 +391,8 @@ fun TableItem(
     onMeasureWordY: (Float) -> Unit,
 ) {
     val scrollState = rememberScrollState()
+    val columnCount = table.rows.maxOfOrNull { it.size } ?: 0
+    val columnWidth = 140.dp
 
     Box(
         modifier = Modifier
@@ -412,22 +411,31 @@ fun TableItem(
                         onMeasureWordY(coords.size.height / 2f)
                     }
                 }
-                .width(IntrinsicSize.Max),
+                .width(columnWidth * columnCount.toFloat()),
         ) {
             table.rows.forEach { row ->
-                Row(modifier = Modifier.height(IntrinsicSize.Min)) {
-                    row.forEach { cell ->
+                Row(modifier = Modifier.fillMaxWidth()) {
+                    for (column in 0 until columnCount) {
+                        val cell = row.getOrNull(column)
                         Box(
                             modifier = Modifier
+                                .weight(1f)
                                 .padding(4.dp)
-                                .then(if (cell.isHeader) Modifier.background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)) else Modifier)
-                                .padding(8.dp)
-                                .widthIn(min = 100.dp, max = 300.dp),
+                                .then(
+                                    if (cell?.isHeader == true) {
+                                        Modifier.background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                                    } else {
+                                        Modifier
+                                    },
+                                )
+                                .padding(8.dp),
                         ) {
-                            Text(
-                                text = cell.text,
-                                style = if (cell.isHeader) baseStyle.copy(fontWeight = FontWeight.Bold) else baseStyle,
-                            )
+                            if (cell != null) {
+                                Text(
+                                    text = cell.text,
+                                    style = if (cell.isHeader) baseStyle.copy(fontWeight = FontWeight.Bold) else baseStyle,
+                                )
+                            }
                         }
                     }
                 }
@@ -450,19 +458,23 @@ fun BlockQuoteItem(
 ) {
     val haptic = LocalHapticFeedback.current
     val uriHandler = LocalUriHandler.current
+    val accentColor = MaterialTheme.colorScheme.primary
 
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .height(IntrinsicSize.Min)
             .clip(MaterialTheme.shapes.small)
             .then(modifier)
-            .then(if (isCurrentParagraph) Modifier.background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)) else Modifier)
-            .padding(vertical = 4.dp),
+            .then(if (isCurrentParagraph) Modifier.background(accentColor.copy(alpha = 0.15f)) else Modifier)
+            .padding(vertical = 4.dp)
+            .drawBehind {
+                drawRect(
+                    color = accentColor,
+                    size = Size(4.dp.toPx(), size.height),
+                )
+            }
+            .padding(start = 20.dp),
     ) {
-        Box(modifier = Modifier.width(4.dp).fillMaxHeight().background(MaterialTheme.colorScheme.primary))
-        Spacer(modifier = Modifier.width(16.dp))
-
         var layoutResult by remember { mutableStateOf<TextLayoutResult?>(null) }
         var contextMenuLink by remember { mutableStateOf<String?>(null) }
         var contextMenuOffset by remember { mutableStateOf(DpOffset.Zero) }
