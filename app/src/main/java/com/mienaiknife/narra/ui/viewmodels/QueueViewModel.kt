@@ -23,7 +23,6 @@ import com.mienaiknife.narra.domain.repository.ArticleRepository
 import com.mienaiknife.narra.domain.repository.FeedRepository
 import com.mienaiknife.narra.playback.PlaybackManager
 import com.mienaiknife.narra.ui.UiText
-import com.mienaiknife.narra.ui.utils.HtmlParser
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -161,8 +160,7 @@ class QueueViewModel @Inject constructor(
         if (currentState is QueueUiState.Success && currentState.currentArticle?.id == article.id) {
             playbackManager.togglePlayPause()
         } else {
-            val blocks = HtmlParser.parse(article.content, article.url)
-            playbackManager.setCurrentArticle(article, blocks)
+            playbackManager.setCurrentArticle(article)
         }
     }
 

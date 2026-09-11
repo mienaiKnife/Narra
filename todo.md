@@ -84,7 +84,7 @@ Check off items as they land. Prefer one isolated commit + regression test per i
 - [ ] **Widget deep link ignored.** `MainActivity.kt:90-96` `onNewIntent`; `ui/widget/NarraWidget.kt:156-161`.
 - [x] **Reorder gesture cancels itself.** `ui/screens/QueueScreen.kt:417` → stable key.
 - [x] **ViewModel work on `PlaybackManager.scope`.** `ui/viewmodels/HistoryViewModel.kt:86,113`.
-- [ ] **HTML parse on Main.** `ui/viewmodels/QueueViewModel.kt:164`, `HistoryViewModel.kt:93,106`.
+- [x] **HTML parse on Main.** `ui/viewmodels/QueueViewModel.kt:164`, `HistoryViewModel.kt:93,106`.
 - [ ] **Raw resource IDs as UI labels.** `ui/screens/PlaybackSettingsScreen.kt:402`.
 - [ ] **Wrong auto-fullscreen highlight requester + missing search entries.**
       `ui/screens/UserInterfaceSettingsScreen.kt:286-290`, `ui/screens/SettingsSearchData.kt`.

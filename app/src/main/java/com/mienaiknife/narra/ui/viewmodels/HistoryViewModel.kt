@@ -22,7 +22,6 @@ import com.mienaiknife.narra.domain.repository.ArticleRepository
 import com.mienaiknife.narra.domain.repository.FeedRepository
 import com.mienaiknife.narra.playback.PlaybackManager
 import com.mienaiknife.narra.ui.UiText
-import com.mienaiknife.narra.ui.utils.HtmlParser
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -90,8 +89,7 @@ class HistoryViewModel @Inject constructor(
                 repository.addToQueue(article.id).onSuccess {
                     val updatedArticle = repository.getArticleById(article.id)
                     if (updatedArticle != null && updatedArticle.content.isNotEmpty()) {
-                        val blocks = HtmlParser.parse(updatedArticle.content, updatedArticle.url)
-                        playbackManager.setCurrentArticle(updatedArticle, blocks)
+                        playbackManager.setCurrentArticle(updatedArticle)
                     }
                 }.onFailure { error ->
                     _uiEvent.emit(UiEvent.ShowSnackbar(UiText.fromError(error)))
@@ -103,8 +101,7 @@ class HistoryViewModel @Inject constructor(
             if (uiState.value.currentArticle?.id == article.id) {
                 playbackManager.togglePlayPause()
             } else {
-                val blocks = HtmlParser.parse(article.content, article.url)
-                playbackManager.setCurrentArticle(article, blocks)
+                playbackManager.setCurrentArticle(article)
             }
         }
     }
