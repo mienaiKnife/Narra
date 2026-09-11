@@ -116,7 +116,7 @@ Check off items as they land. Prefer one isolated commit + regression test per i
       `ui/components/MiniPlayer.kt:107-113`.
 - [x] Clickable rows missing `Role` (many files, see audit).
 - [x] Notification toggle has no state semantics. `ui/screens/FeedsScreen.kt:429-436`.
-- [ ] Sort state conveyed by color only. `ui/components/SortBottomSheet.kt:111-149`.
+- [x] Sort state conveyed by color only. `ui/components/SortBottomSheet.kt:111-149`.
 - [ ] `IntrinsicSize` in long lists. `VoicesSettingsScreen.kt:472-474`, `QueueItem.kt:388`,
       `ReaderContentList.kt:385`.
 - [ ] `NarraScrollbar` constant thumb fraction; hardcoded `contentDescription`.

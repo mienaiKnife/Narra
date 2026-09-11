@@ -164,6 +164,8 @@
     <string name="sort_source">Source</string>
     <string name="sort_keep_sorted">Keep sorted</string>
     <string name="sort_show_played">Show played</string>
+    <string name="sort_ascending">Ascending</string>
+    <string name="sort_descending">Descending</string>
 
     <!-- Common Actions -->
     <string name="action_undo">Undo</string>

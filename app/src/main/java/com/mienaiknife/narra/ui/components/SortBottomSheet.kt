@@ -48,6 +48,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -109,6 +112,9 @@ fun SortBottomSheetContent(
             val titleActive = selectedOption == SortOption.TITLE_ASC || selectedOption == SortOption.TITLE_DESC
             val sourceActive = selectedOption == SortOption.SOURCE_ASC || selectedOption == SortOption.SOURCE_DESC
 
+            val ascending = stringResource(R.string.sort_ascending)
+            val descending = stringResource(R.string.sort_descending)
+
             SortButton(
                 text = stringResource(R.string.sort_date),
                 isActive = dateActive,
@@ -117,6 +123,11 @@ fun SortBottomSheetContent(
                 },
                 icon = if (dateActive) {
                     if (selectedOption == SortOption.DATE_ASC) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown
+                } else {
+                    null
+                },
+                stateDescription = if (dateActive) {
+                    if (selectedOption == SortOption.DATE_ASC) ascending else descending
                 } else {
                     null
                 },
@@ -133,6 +144,11 @@ fun SortBottomSheetContent(
                 } else {
                     null
                 },
+                stateDescription = if (titleActive) {
+                    if (selectedOption == SortOption.TITLE_ASC) ascending else descending
+                } else {
+                    null
+                },
                 modifier = Modifier.weight(1f),
             )
             SortButton(
@@ -143,6 +159,11 @@ fun SortBottomSheetContent(
                 },
                 icon = if (sourceActive) {
                     if (selectedOption == SortOption.SOURCE_ASC) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown
+                } else {
+                    null
+                },
+                stateDescription = if (sourceActive) {
+                    if (selectedOption == SortOption.SOURCE_ASC) ascending else descending
                 } else {
                     null
                 },
@@ -223,12 +244,17 @@ private fun SortButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     icon: ImageVector? = null,
+    stateDescription: String? = null,
 ) {
     val contentPadding = ButtonDefaults.TextButtonContentPadding
+    val semanticsModifier = Modifier.semantics {
+        selected = isActive
+        stateDescription?.let { this.stateDescription = it }
+    }
     if (isActive) {
         Button(
             onClick = onClick,
-            modifier = modifier,
+            modifier = modifier.then(semanticsModifier),
             contentPadding = contentPadding,
         ) {
             SortButtonContent(text, icon)
@@ -236,7 +262,7 @@ private fun SortButton(
     } else {
         OutlinedButton(
             onClick = onClick,
-            modifier = modifier,
+            modifier = modifier.then(semanticsModifier),
             contentPadding = contentPadding,
         ) {
             SortButtonContent(text, icon)
