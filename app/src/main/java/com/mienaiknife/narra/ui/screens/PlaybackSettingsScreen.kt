@@ -16,40 +16,27 @@
 package com.mienaiknife.narra.ui.screens
 
 import android.content.res.Configuration
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -58,9 +45,10 @@ import androidx.navigation.compose.rememberNavController
 import com.mienaiknife.narra.R
 import com.mienaiknife.narra.playback.HardwareButtonAction
 import com.mienaiknife.narra.ui.components.BottomNavBar
+import com.mienaiknife.narra.ui.components.ScreenHeader
 import com.mienaiknife.narra.ui.components.SettingDropDownItem
+import com.mienaiknife.narra.ui.components.SettingsSwitchRow
 import com.mienaiknife.narra.ui.components.flashHighlight
-import com.mienaiknife.narra.ui.theme.LocalNarraSpacing
 import com.mienaiknife.narra.ui.theme.NarraTheme
 import com.mienaiknife.narra.ui.viewmodels.PlaybackSettingsUiState
 import com.mienaiknife.narra.ui.viewmodels.PlaybackSettingsViewModel
@@ -143,26 +131,10 @@ fun PlaybackSettingsContent(
     ) {
         Spacer(modifier = Modifier.height(16.dp))
 
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            IconButton(onClick = onBack) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = stringResource(R.string.action_back),
-                    modifier = Modifier.size(32.dp),
-                    tint = MaterialTheme.colorScheme.onBackground,
-                )
-            }
-            Text(
-                text = stringResource(R.string.settings_playback_title),
-                style = MaterialTheme.typography.headlineSmall,
-                color = MaterialTheme.colorScheme.onBackground,
-            )
-        }
+        ScreenHeader(
+            title = stringResource(R.string.settings_playback_title),
+            onBack = onBack,
+        )
 
         Spacer(modifier = Modifier.height(16.dp))
 
@@ -179,87 +151,25 @@ fun PlaybackSettingsContent(
                 modifier = Modifier.padding(bottom = 8.dp),
             )
 
-            Row(
+            SettingsSwitchRow(
+                title = stringResource(R.string.settings_playback_pause_on_disconnect),
+                subtitle = stringResource(R.string.settings_playback_pause_on_disconnect_desc),
+                checked = uiState.pauseOnDisconnect,
+                onCheckedChange = onPauseOnDisconnectChange,
                 modifier = Modifier
-                    .fillMaxWidth()
                     .bringIntoViewRequester(pauseOnDisconnectRequester)
-                    .flashHighlight(highlightSetting == "pauseOnDisconnect")
-                    .toggleable(
-                        value = uiState.pauseOnDisconnect,
-                        role = Role.Switch,
-                        onValueChange = onPauseOnDisconnectChange,
-                    )
-                    .padding(vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Column(
-                    modifier = Modifier
-                        .weight(1f)
-                        .padding(end = 8.dp),
-                    verticalArrangement = Arrangement.spacedBy(LocalNarraSpacing.current.itemVertical),
-                ) {
-                    Text(
-                        text = stringResource(R.string.settings_playback_pause_on_disconnect),
-                        style = MaterialTheme.typography.bodyLarge,
-                    )
-                    Text(
-                        text = stringResource(R.string.settings_playback_pause_on_disconnect_desc),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-                Switch(
-                    checked = uiState.pauseOnDisconnect,
-                    onCheckedChange = null,
-                    colors = SwitchDefaults.colors(
-                        checkedThumbColor = MaterialTheme.colorScheme.primary,
-                        checkedTrackColor = MaterialTheme.colorScheme.primaryContainer,
-                        uncheckedThumbColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                        uncheckedTrackColor = MaterialTheme.colorScheme.surfaceContainer,
-                    ),
-                )
-            }
+                    .flashHighlight(highlightSetting == "pauseOnDisconnect"),
+            )
 
-            Row(
+            SettingsSwitchRow(
+                title = stringResource(R.string.settings_playback_pause_for_interruptions),
+                subtitle = stringResource(R.string.settings_playback_pause_for_interruptions_desc),
+                checked = uiState.pauseForInterruptions,
+                onCheckedChange = onPauseForInterruptionsChange,
                 modifier = Modifier
-                    .fillMaxWidth()
                     .bringIntoViewRequester(pauseForInterruptionsRequester)
-                    .flashHighlight(highlightSetting == "pauseForInterruptions")
-                    .toggleable(
-                        value = uiState.pauseForInterruptions,
-                        role = Role.Switch,
-                        onValueChange = onPauseForInterruptionsChange,
-                    )
-                    .padding(vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Column(
-                    modifier = Modifier
-                        .weight(1f)
-                        .padding(end = 8.dp),
-                    verticalArrangement = Arrangement.spacedBy(LocalNarraSpacing.current.itemVertical),
-                ) {
-                    Text(
-                        text = stringResource(R.string.settings_playback_pause_for_interruptions),
-                        style = MaterialTheme.typography.bodyLarge,
-                    )
-                    Text(
-                        text = stringResource(R.string.settings_playback_pause_for_interruptions_desc),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-                Switch(
-                    checked = uiState.pauseForInterruptions,
-                    onCheckedChange = null,
-                    colors = SwitchDefaults.colors(
-                        checkedThumbColor = MaterialTheme.colorScheme.primary,
-                        checkedTrackColor = MaterialTheme.colorScheme.primaryContainer,
-                        uncheckedThumbColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                        uncheckedTrackColor = MaterialTheme.colorScheme.surfaceContainer,
-                    ),
-                )
-            }
+                    .flashHighlight(highlightSetting == "pauseForInterruptions"),
+            )
 
             Text(
                 text = stringResource(R.string.settings_playback_controls_section),
@@ -330,87 +240,25 @@ fun PlaybackSettingsContent(
                 modifier = Modifier.padding(top = 24.dp, bottom = 8.dp),
             )
 
-            Row(
+            SettingsSwitchRow(
+                title = stringResource(R.string.settings_playback_autoplay_next),
+                subtitle = stringResource(R.string.settings_playback_autoplay_next_desc),
+                checked = uiState.autoPlayNext,
+                onCheckedChange = onAutoPlayNextChange,
                 modifier = Modifier
-                    .fillMaxWidth()
                     .bringIntoViewRequester(autoPlayNextRequester)
-                    .flashHighlight(highlightSetting == "autoPlayNext")
-                    .toggleable(
-                        value = uiState.autoPlayNext,
-                        role = Role.Switch,
-                        onValueChange = onAutoPlayNextChange,
-                    )
-                    .padding(vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Column(
-                    modifier = Modifier
-                        .weight(1f)
-                        .padding(end = 8.dp),
-                    verticalArrangement = Arrangement.spacedBy(LocalNarraSpacing.current.itemVertical),
-                ) {
-                    Text(
-                        text = stringResource(R.string.settings_playback_autoplay_next),
-                        style = MaterialTheme.typography.bodyLarge,
-                    )
-                    Text(
-                        text = stringResource(R.string.settings_playback_autoplay_next_desc),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-                Switch(
-                    checked = uiState.autoPlayNext,
-                    onCheckedChange = null,
-                    colors = SwitchDefaults.colors(
-                        checkedThumbColor = MaterialTheme.colorScheme.primary,
-                        checkedTrackColor = MaterialTheme.colorScheme.primaryContainer,
-                        uncheckedThumbColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                        uncheckedTrackColor = MaterialTheme.colorScheme.surfaceContainer,
-                    ),
-                )
-            }
+                    .flashHighlight(highlightSetting == "autoPlayNext"),
+            )
 
-            Row(
+            SettingsSwitchRow(
+                title = stringResource(R.string.settings_playback_play_chime),
+                subtitle = stringResource(R.string.settings_playback_play_chime_desc),
+                checked = uiState.playChimeAndTitle,
+                onCheckedChange = onPlayChimeAndTitleChange,
                 modifier = Modifier
-                    .fillMaxWidth()
                     .bringIntoViewRequester(playChimeAndTitleRequester)
-                    .flashHighlight(highlightSetting == "playChimeAndTitle")
-                    .toggleable(
-                        value = uiState.playChimeAndTitle,
-                        role = Role.Switch,
-                        onValueChange = onPlayChimeAndTitleChange,
-                    )
-                    .padding(vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Column(
-                    modifier = Modifier
-                        .weight(1f)
-                        .padding(end = 8.dp),
-                    verticalArrangement = Arrangement.spacedBy(LocalNarraSpacing.current.itemVertical),
-                ) {
-                    Text(
-                        text = stringResource(R.string.settings_playback_play_chime),
-                        style = MaterialTheme.typography.bodyLarge,
-                    )
-                    Text(
-                        text = stringResource(R.string.settings_playback_play_chime_desc),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-                Switch(
-                    checked = uiState.playChimeAndTitle,
-                    onCheckedChange = null,
-                    colors = SwitchDefaults.colors(
-                        checkedThumbColor = MaterialTheme.colorScheme.primary,
-                        checkedTrackColor = MaterialTheme.colorScheme.primaryContainer,
-                        uncheckedThumbColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                        uncheckedTrackColor = MaterialTheme.colorScheme.surfaceContainer,
-                    ),
-                )
-            }
+                    .flashHighlight(highlightSetting == "playChimeAndTitle"),
+            )
 
             val chimeOptions = listOf(
                 stringResource(R.string.settings_playback_chime_music_box) to "music_box_chime_positive",
@@ -437,87 +285,25 @@ fun PlaybackSettingsContent(
                 modifier = Modifier.padding(top = 24.dp, bottom = 8.dp),
             )
 
-            Row(
+            SettingsSwitchRow(
+                title = stringResource(R.string.settings_playback_read_alt_text),
+                subtitle = stringResource(R.string.settings_playback_read_alt_text_desc),
+                checked = uiState.readAltText,
+                onCheckedChange = onReadAltTextChange,
                 modifier = Modifier
-                    .fillMaxWidth()
                     .bringIntoViewRequester(readAltTextRequester)
-                    .flashHighlight(highlightSetting == "readAltText")
-                    .toggleable(
-                        value = uiState.readAltText,
-                        role = Role.Switch,
-                        onValueChange = onReadAltTextChange,
-                    )
-                    .padding(vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Column(
-                    modifier = Modifier
-                        .weight(1f)
-                        .padding(end = 8.dp),
-                    verticalArrangement = Arrangement.spacedBy(LocalNarraSpacing.current.itemVertical),
-                ) {
-                    Text(
-                        text = stringResource(R.string.settings_playback_read_alt_text),
-                        style = MaterialTheme.typography.bodyLarge,
-                    )
-                    Text(
-                        text = stringResource(R.string.settings_playback_read_alt_text_desc),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-                Switch(
-                    checked = uiState.readAltText,
-                    onCheckedChange = null,
-                    colors = SwitchDefaults.colors(
-                        checkedThumbColor = MaterialTheme.colorScheme.primary,
-                        checkedTrackColor = MaterialTheme.colorScheme.primaryContainer,
-                        uncheckedThumbColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                        uncheckedTrackColor = MaterialTheme.colorScheme.surfaceContainer,
-                    ),
-                )
-            }
+                    .flashHighlight(highlightSetting == "readAltText"),
+            )
 
-            Row(
+            SettingsSwitchRow(
+                title = stringResource(R.string.settings_playback_shorten_hyperlinks),
+                subtitle = stringResource(R.string.settings_playback_shorten_hyperlinks_desc),
+                checked = uiState.shortenHyperlinks,
+                onCheckedChange = onShortenHyperlinksChange,
                 modifier = Modifier
-                    .fillMaxWidth()
                     .bringIntoViewRequester(shortenHyperlinksRequester)
-                    .flashHighlight(highlightSetting == "shortenHyperlinks")
-                    .toggleable(
-                        value = uiState.shortenHyperlinks,
-                        role = Role.Switch,
-                        onValueChange = onShortenHyperlinksChange,
-                    )
-                    .padding(vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Column(
-                    modifier = Modifier
-                        .weight(1f)
-                        .padding(end = 8.dp),
-                    verticalArrangement = Arrangement.spacedBy(LocalNarraSpacing.current.itemVertical),
-                ) {
-                    Text(
-                        text = stringResource(R.string.settings_playback_shorten_hyperlinks),
-                        style = MaterialTheme.typography.bodyLarge,
-                    )
-                    Text(
-                        text = stringResource(R.string.settings_playback_shorten_hyperlinks_desc),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-                Switch(
-                    checked = uiState.shortenHyperlinks,
-                    onCheckedChange = null,
-                    colors = SwitchDefaults.colors(
-                        checkedThumbColor = MaterialTheme.colorScheme.primary,
-                        checkedTrackColor = MaterialTheme.colorScheme.primaryContainer,
-                        uncheckedThumbColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                        uncheckedTrackColor = MaterialTheme.colorScheme.surfaceContainer,
-                    ),
-                )
-            }
+                    .flashHighlight(highlightSetting == "shortenHyperlinks"),
+            )
         }
     }
 }

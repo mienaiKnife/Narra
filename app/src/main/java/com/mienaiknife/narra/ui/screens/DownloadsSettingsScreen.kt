@@ -20,7 +20,6 @@ import android.content.res.Configuration
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -30,17 +29,12 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
@@ -57,7 +51,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -65,7 +58,10 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.rememberNavController
 import com.mienaiknife.narra.R
 import com.mienaiknife.narra.ui.components.BottomNavBar
+import com.mienaiknife.narra.ui.components.ScreenHeader
 import com.mienaiknife.narra.ui.components.SettingDropDownItem
+import com.mienaiknife.narra.ui.components.SettingsActionRow
+import com.mienaiknife.narra.ui.components.SettingsSwitchRow
 import com.mienaiknife.narra.ui.components.flashHighlight
 import com.mienaiknife.narra.ui.theme.LocalNarraSpacing
 import com.mienaiknife.narra.ui.theme.NarraTheme
@@ -243,26 +239,10 @@ fun DownloadsSettingsContent(
     ) {
         Spacer(modifier = Modifier.height(16.dp))
 
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            IconButton(onClick = onBack) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = stringResource(R.string.action_back),
-                    modifier = Modifier.size(32.dp),
-                    tint = MaterialTheme.colorScheme.onBackground,
-                )
-            }
-            Text(
-                text = stringResource(R.string.settings_downloads_title),
-                style = MaterialTheme.typography.headlineSmall,
-                color = MaterialTheme.colorScheme.onBackground,
-            )
-        }
+        ScreenHeader(
+            title = stringResource(R.string.settings_downloads_title),
+            onBack = onBack,
+        )
 
         Spacer(modifier = Modifier.height(16.dp))
 
@@ -352,45 +332,23 @@ fun DownloadsSettingsContent(
                 modifier = Modifier.padding(top = 24.dp, bottom = 8.dp),
             )
 
-            Column(
+            SettingsActionRow(
+                title = stringResource(R.string.settings_downloads_import_feeds),
+                subtitle = stringResource(R.string.settings_downloads_import_feeds_desc),
+                onClick = onImportOpml,
                 modifier = Modifier
-                    .fillMaxWidth()
                     .bringIntoViewRequester(importFeedsRequester)
-                    .flashHighlight(highlightSetting == "importFeeds")
-                    .clickable(role = Role.Button) { onImportOpml() }
-                    .padding(vertical = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(LocalNarraSpacing.current.itemVertical),
-            ) {
-                Text(
-                    text = stringResource(R.string.settings_downloads_import_feeds),
-                    style = MaterialTheme.typography.bodyLarge,
-                )
-                Text(
-                    text = stringResource(R.string.settings_downloads_import_feeds_desc),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
+                    .flashHighlight(highlightSetting == "importFeeds"),
+            )
 
-            Column(
+            SettingsActionRow(
+                title = stringResource(R.string.settings_downloads_export_feeds),
+                subtitle = stringResource(R.string.settings_downloads_export_feeds_desc),
+                onClick = onExportOpml,
                 modifier = Modifier
-                    .fillMaxWidth()
                     .bringIntoViewRequester(exportFeedsRequester)
-                    .flashHighlight(highlightSetting == "exportFeeds")
-                    .clickable(role = Role.Button) { onExportOpml() }
-                    .padding(vertical = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(LocalNarraSpacing.current.itemVertical),
-            ) {
-                Text(
-                    text = stringResource(R.string.settings_downloads_export_feeds),
-                    style = MaterialTheme.typography.bodyLarge,
-                )
-                Text(
-                    text = stringResource(R.string.settings_downloads_export_feeds_desc),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
+                    .flashHighlight(highlightSetting == "exportFeeds"),
+            )
 
             Text(
                 text = stringResource(R.string.settings_downloads_database_section),
@@ -399,24 +357,15 @@ fun DownloadsSettingsContent(
                 modifier = Modifier.padding(top = 24.dp, bottom = 8.dp),
             )
 
-            Column(
+            SettingsActionRow(
+                title = stringResource(R.string.settings_downloads_export_db),
+                subtitle = stringResource(R.string.settings_downloads_export_db_desc),
+                onClick = onBackupDatabase,
+                verticalPadding = 12.dp,
                 modifier = Modifier
-                    .fillMaxWidth()
                     .bringIntoViewRequester(backupDatabaseRequester)
-                    .flashHighlight(highlightSetting == "exportDatabase")
-                    .clickable(role = Role.Button) { onBackupDatabase() }
-                    .padding(vertical = 12.dp),
-                verticalArrangement = Arrangement.spacedBy(LocalNarraSpacing.current.itemVertical),
+                    .flashHighlight(highlightSetting == "exportDatabase"),
             ) {
-                Text(
-                    text = stringResource(R.string.settings_downloads_export_db),
-                    style = MaterialTheme.typography.bodyLarge,
-                )
-                Text(
-                    text = stringResource(R.string.settings_downloads_export_db_desc),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
                 if (uiState.lastExportTimestamp > 0) {
                     Text(
                         text = stringResource(R.string.settings_downloads_last_export, DateUtils.formatDateTime(uiState.lastExportTimestamp)),
@@ -427,122 +376,51 @@ fun DownloadsSettingsContent(
                 }
             }
 
-            Column(
+            SettingsActionRow(
+                title = stringResource(R.string.settings_downloads_import_db),
+                subtitle = stringResource(R.string.settings_downloads_import_db_desc),
+                onClick = onRestoreDatabase,
                 modifier = Modifier
-                    .fillMaxWidth()
                     .bringIntoViewRequester(restoreDatabaseRequester)
-                    .flashHighlight(highlightSetting == "importDatabase")
-                    .clickable(role = Role.Button) { onRestoreDatabase() }
-                    .padding(vertical = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(LocalNarraSpacing.current.itemVertical),
-            ) {
-                Text(
-                    text = stringResource(R.string.settings_downloads_import_db),
-                    style = MaterialTheme.typography.bodyLarge,
-                )
-                Text(
-                    text = stringResource(R.string.settings_downloads_import_db_desc),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
+                    .flashHighlight(highlightSetting == "importDatabase"),
+            )
 
-            Row(
+            SettingsSwitchRow(
+                title = stringResource(R.string.settings_downloads_auto_export),
+                subtitle = stringResource(R.string.settings_downloads_auto_export_desc),
+                checked = uiState.autoExportEnabled,
+                onCheckedChange = onAutoExportEnabledChange,
+                verticalPadding = 12.dp,
                 modifier = Modifier
-                    .fillMaxWidth()
                     .bringIntoViewRequester(autoExportEnabledRequester)
-                    .flashHighlight(highlightSetting == "autoExportDatabase")
-                    .padding(vertical = 12.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Column(
-                    modifier = Modifier
-                        .weight(1f)
-                        .padding(end = 8.dp),
-                    verticalArrangement = Arrangement.spacedBy(LocalNarraSpacing.current.itemVertical),
-                ) {
-                    Text(
-                        text = stringResource(R.string.settings_downloads_auto_export),
-                        style = MaterialTheme.typography.bodyLarge,
-                    )
-                    Text(
-                        text = stringResource(R.string.settings_downloads_auto_export_desc),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-                Switch(
-                    checked = uiState.autoExportEnabled,
-                    onCheckedChange = onAutoExportEnabledChange,
-                    enabled = true,
-                    colors = SwitchDefaults.colors(
-                        checkedThumbColor = MaterialTheme.colorScheme.primary,
-                        checkedTrackColor = MaterialTheme.colorScheme.primaryContainer,
-                        uncheckedThumbColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                        uncheckedTrackColor = MaterialTheme.colorScheme.surfaceContainer,
-                    ),
-                )
-            }
+                    .flashHighlight(highlightSetting == "autoExportDatabase"),
+            )
 
             if (uiState.autoExportEnabled) {
-                Row(
+                SettingsSwitchRow(
+                    title = stringResource(R.string.settings_downloads_auto_import),
+                    subtitle = stringResource(R.string.settings_downloads_auto_import_desc),
+                    checked = uiState.autoImportEnabled,
+                    onCheckedChange = onAutoImportEnabledChange,
+                    enabled = uiState.autoExportUri != null,
+                    verticalPadding = 12.dp,
                     modifier = Modifier
-                        .fillMaxWidth()
                         .bringIntoViewRequester(autoImportEnabledRequester)
-                        .flashHighlight(highlightSetting == "autoImportDatabase")
-                        .padding(vertical = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Column(
-                        modifier = Modifier
-                            .weight(1f)
-                            .padding(end = 8.dp),
-                    ) {
-                        Text(
-                            text = stringResource(R.string.settings_downloads_auto_import),
-                            style = MaterialTheme.typography.bodyLarge,
-                        )
-                        Text(
-                            text = stringResource(R.string.settings_downloads_auto_import_desc),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                    Switch(
-                        checked = uiState.autoImportEnabled,
-                        onCheckedChange = onAutoImportEnabledChange,
-                        enabled = uiState.autoExportUri != null,
-                        colors = SwitchDefaults.colors(
-                            checkedThumbColor = MaterialTheme.colorScheme.primary,
-                            checkedTrackColor = MaterialTheme.colorScheme.primaryContainer,
-                            uncheckedThumbColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                            uncheckedTrackColor = MaterialTheme.colorScheme.surfaceContainer,
-                        ),
-                    )
-                }
+                        .flashHighlight(highlightSetting == "autoImportDatabase"),
+                )
 
-                Column(
+                SettingsActionRow(
+                    title = stringResource(R.string.settings_downloads_auto_export_location),
+                    subtitle = if (uiState.autoExportUri != null) {
+                        stringResource(R.string.settings_downloads_auto_export_location_set)
+                    } else {
+                        stringResource(R.string.settings_downloads_auto_export_location_not_set)
+                    },
+                    onClick = onSetAutoExportLocation,
                     modifier = Modifier
-                        .fillMaxWidth()
                         .bringIntoViewRequester(autoExportLocationRequester)
-                        .flashHighlight(highlightSetting == "autoExportLocation")
-                        .clickable(role = Role.Button) { onSetAutoExportLocation() }
-                        .padding(vertical = 8.dp),
-                ) {
-                    Text(
-                        text = stringResource(R.string.settings_downloads_auto_export_location),
-                        style = MaterialTheme.typography.bodyLarge,
-                    )
-                    Text(
-                        text = if (uiState.autoExportUri != null) {
-                            stringResource(R.string.settings_downloads_auto_export_location_set)
-                        } else {
-                            stringResource(R.string.settings_downloads_auto_export_location_not_set)
-                        },
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
+                        .flashHighlight(highlightSetting == "autoExportLocation"),
+                )
 
                 if (uiState.lastExportTimestamp > 0 && uiState.autoExportEnabled) {
                     Text(
@@ -563,26 +441,15 @@ fun DownloadsSettingsContent(
                 }
             }
 
-            Column(
+            SettingsActionRow(
+                title = stringResource(R.string.settings_downloads_delete_db),
+                subtitle = stringResource(R.string.settings_downloads_delete_db_desc),
+                onClick = onDeleteDatabase,
+                titleColor = MaterialTheme.colorScheme.error,
                 modifier = Modifier
-                    .fillMaxWidth()
                     .bringIntoViewRequester(deleteDatabaseRequester)
-                    .flashHighlight(highlightSetting == "deleteDatabase")
-                    .clickable(role = Role.Button) { onDeleteDatabase() }
-                    .padding(vertical = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(LocalNarraSpacing.current.itemVertical),
-            ) {
-                Text(
-                    text = stringResource(R.string.settings_downloads_delete_db),
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.error,
-                )
-                Text(
-                    text = stringResource(R.string.settings_downloads_delete_db_desc),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
+                    .flashHighlight(highlightSetting == "deleteDatabase"),
+            )
         }
     }
 }

@@ -141,7 +141,7 @@ Check off items as they land. Prefer one isolated commit + regression test per i
       `TtsPlayer.kt:270`, `SherpaTtsEngine.kt:636,645`, `PlaybackManager.kt:139`.
 
 ### Duplication / structure
-- [ ] Extract `ScreenHeader` + `SettingsSwitchRow`/`SettingsActionRow` (~9 screens).
+- [x] Extract `ScreenHeader` + `SettingsSwitchRow`/`SettingsActionRow` (~9 screens).
 - [ ] Extract `SortOption.toggled()`.
 - [ ] Extract `NetworkConstants`/User-Agent; model catalog constants.
 - [ ] Move HTML/TTS parsing out of `ui/` per AGENTS.md. `ui/utils/HtmlToAnnotatedString.kt`,
