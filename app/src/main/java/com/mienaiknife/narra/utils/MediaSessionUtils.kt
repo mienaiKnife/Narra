@@ -24,6 +24,8 @@ import android.os.Bundle
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.session.MediaSession
 import com.mienaiknife.narra.service.NarraMediaButtonReceiver
+import java.lang.reflect.Field
+import java.lang.reflect.Method
 
 /**
  * Utility for performing low-level MediaSession operations, including reflection-based
@@ -48,39 +50,31 @@ object MediaSessionUtils {
         lastPingTime = currentTime
 
         try {
-            // Step 1: MediaSession.getImpl()
-            val getImplMethod = session.javaClass.getDeclaredMethod("getImpl")
-            getImplMethod.isAccessible = true
-            val impl = getImplMethod.invoke(session) ?: return
-
-            // Step 2: MediaSessionImpl.sessionLegacyStub
-            var currentClass: Class<*>? = impl.javaClass
-            var sessionLegacyStubField: java.lang.reflect.Field? = null
-            while (currentClass != null && sessionLegacyStubField == null) {
-                try {
-                    sessionLegacyStubField = currentClass.getDeclaredField("sessionLegacyStub")
-                } catch (e: NoSuchFieldException) {
-                    currentClass = currentClass.superclass
-                }
-            }
-
-            if (sessionLegacyStubField == null) {
+            // Step 1: MediaSession.getImpl() - Walk up hierarchy
+            val impl = findAndInvokeMethod(session, "getImpl") ?: run {
+                android.util.Log.e(TAG, "Could not find getImpl() on session")
                 return
             }
 
-            sessionLegacyStubField.isAccessible = true
-            val sessionLegacyStub = sessionLegacyStubField.get(impl) ?: return
+            // Step 2: MediaSessionImpl.sessionLegacyStub - Walk up hierarchy
+            val sessionLegacyStub = findAndGetField(impl, "sessionLegacyStub") ?: run {
+                android.util.Log.e(TAG, "Could not find sessionLegacyStub field")
+                return
+            }
 
-            // Step 3: MediaSessionLegacyStub.getSessionCompat()
-            val getSessionCompatMethod = sessionLegacyStub.javaClass.getDeclaredMethod("getSessionCompat")
-            getSessionCompatMethod.isAccessible = true
+            // Step 3: MediaSessionLegacyStub.getSessionCompat() - Return type changed in 1.11.0
+            val getSessionCompatMethod = findMethod(sessionLegacyStub, "getSessionCompat") ?: run {
+                android.util.Log.e(TAG, "Could not find getSessionCompat() method")
+                return
+            }
             val sessionCompat = getSessionCompatMethod.invoke(sessionLegacyStub) ?: run {
-                android.util.Log.e(TAG, "Could not get sessionCompat")
+                android.util.Log.e(TAG, "getSessionCompat() returned null")
                 return
             }
+
             android.util.Log.v(TAG, "Found sessionCompat: ${sessionCompat.javaClass.name}")
 
-            // Step 4: Construct MUTABLE MBR PendingIntent
+            // Step 4: Construct MBR PendingIntent
             val mbrIntent = Intent(Intent.ACTION_MEDIA_BUTTON)
             mbrIntent.setComponent(ComponentName(context, NarraMediaButtonReceiver::class.java))
             val mbrFlags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
@@ -96,21 +90,39 @@ object MediaSessionUtils {
                 mbrFlags,
             )
 
-            // Step 5: Set MBR on MediaSessionCompat
-            val setMbrMethod = sessionCompat.javaClass.getDeclaredMethod("setMediaButtonReceiver", PendingIntent::class.java)
-            setMbrMethod.invoke(sessionCompat, mbrPendingIntent)
+            // Step 5: Modern API 31+ MBR registration if possible
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                try {
+                    val getFwkSessionMethod = findMethod(sessionCompat, "getMediaSession")
+                    val fwkSession = getFwkSessionMethod?.invoke(sessionCompat) as? android.media.session.MediaSession
+                    if (fwkSession != null) {
+                        fwkSession.setMediaButtonBroadcastReceiver(ComponentName(context, NarraMediaButtonReceiver::class.java))
+                        android.util.Log.v(TAG, "Set modern media button broadcast receiver")
+                    }
+                } catch (e: Exception) {
+                    android.util.Log.w(TAG, "Failed to set modern MBR, falling back", e)
+                }
+            }
 
-            // Step 6: Force legacy flags for hardware buttons
+            // Step 6: Set MBR on MediaSessionCompat
             try {
-                val setFlagsMethod = sessionCompat.javaClass.getDeclaredMethod("setFlags", Int::class.javaPrimitiveType ?: Int::class.java)
-                setFlagsMethod.invoke(sessionCompat, 3)
+                val setMbrMethod = findMethod(sessionCompat, "setMediaButtonReceiver", PendingIntent::class.java)
+                setMbrMethod?.invoke(sessionCompat, mbrPendingIntent)
+            } catch (e: Exception) {
+                android.util.Log.w(TAG, "Failed to call setMediaButtonReceiver on compat", e)
+            }
+
+            // Step 7: Force legacy flags for hardware buttons
+            try {
+                val setFlagsMethod = findMethod(sessionCompat, "setFlags", Int::class.javaPrimitiveType ?: Int::class.java)
+                setFlagsMethod?.invoke(sessionCompat, 3)
             } catch (e: Exception) {
                 android.util.Log.w(TAG, "Failed to set legacy session flags", e)
             }
 
-            // Step 7: Push aggressive extras to legacy session
+            // Step 8: Push aggressive extras to legacy session
             try {
-                val setExtrasMethod = sessionCompat.javaClass.getDeclaredMethod("setExtras", Bundle::class.java)
+                val setExtrasMethod = findMethod(sessionCompat, "setExtras", Bundle::class.java)
                 val extras = Bundle().apply {
                     putBoolean("android.media.IS_EXPLICIT", true)
                     putLong("android.media.IS_EXPLICIT", 1L)
@@ -128,12 +140,12 @@ object MediaSessionUtils {
                     putString("android.media.session.extra.KEY_EVENT_RECEIVER_PACKAGE", context.packageName)
                     putString("android.media.session.extra.KEY_EVENT_RECEIVER_CLASS", NarraMediaButtonReceiver::class.java.name)
                 }
-                setExtrasMethod.invoke(sessionCompat, extras)
+                setExtrasMethod?.invoke(sessionCompat, extras)
             } catch (e: Exception) {
                 android.util.Log.w(TAG, "Failed to set legacy session extras", e)
             }
 
-            // Step 8: Set metadata from player
+            // Step 9: Set metadata from player
             try {
                 val metadataClassName = when {
                     isClassAvailable("androidx.media3.session.legacy.MediaMetadataCompat") -> "androidx.media3.session.legacy.MediaMetadataCompat"
@@ -143,7 +155,7 @@ object MediaSessionUtils {
 
                 if (metadataClassName != null) {
                     val metadataClass = Class.forName(metadataClassName)
-                    val builderClass = Class.forName("$metadataClassName\$Builder")
+                    val builderClass = Class.forName("${metadataClassName}\$Builder")
                     val builder = builderClass.getDeclaredConstructor().newInstance()
                     val putStringMethod = builderClass.getDeclaredMethod("putString", String::class.java, String::class.java)
                     val putLongMethod = builderClass.getDeclaredMethod("putLong", String::class.java, Long::class.javaPrimitiveType ?: Long::class.java)
@@ -164,14 +176,14 @@ object MediaSessionUtils {
                     }
 
                     val metadata = builderClass.getDeclaredMethod("build").invoke(builder)
-                    val setMetadataMethod = sessionCompat.javaClass.getDeclaredMethod("setMetadata", metadataClass)
-                    setMetadataMethod.invoke(sessionCompat, metadata)
+                    val setMetadataMethod = findMethod(sessionCompat, "setMetadata", metadataClass)
+                    setMetadataMethod?.invoke(sessionCompat, metadata)
                 }
             } catch (e: Exception) {
                 android.util.Log.w(TAG, "Failed to set legacy session metadata", e)
             }
 
-            // Step 9: Force AGGRESSIVE dynamic state
+            // Step 10: Force AGGRESSIVE dynamic state
             try {
                 val stateClassName = when {
                     isClassAvailable("androidx.media3.session.legacy.PlaybackStateCompat") -> "androidx.media3.session.legacy.PlaybackStateCompat"
@@ -181,7 +193,7 @@ object MediaSessionUtils {
 
                 if (stateClassName != null) {
                     val playbackStateClass = Class.forName(stateClassName)
-                    val builderClass = Class.forName("$stateClassName\$Builder")
+                    val builderClass = Class.forName("${stateClassName}\$Builder")
                     val builder = builderClass.getDeclaredConstructor().newInstance()
                     val setStateMethod = builderClass.getDeclaredMethod("setState", Int::class.javaPrimitiveType ?: Int::class.java, Long::class.javaPrimitiveType ?: Long::class.java, Float::class.javaPrimitiveType ?: Float::class.java)
 
@@ -199,22 +211,54 @@ object MediaSessionUtils {
                     setActionsMethod.invoke(builder, 3967L) // Standard actions + Preparations (895L -> 3967L)
 
                     val state = builderClass.getDeclaredMethod("build").invoke(builder)
-                    val setPlaybackStateMethod = sessionCompat.javaClass.getDeclaredMethod("setPlaybackState", playbackStateClass)
-                    setPlaybackStateMethod.invoke(sessionCompat, state)
+                    val setPlaybackStateMethod = findMethod(sessionCompat, "setPlaybackState", playbackStateClass)
+                    setPlaybackStateMethod?.invoke(sessionCompat, state)
                 }
             } catch (e: Exception) {
                 android.util.Log.w(TAG, "Failed to set legacy session playback state", e)
             }
 
-            // Step 10: Ensure Active with Pulse
-            val setActiveMethod = sessionCompat.javaClass.getDeclaredMethod("setActive", Boolean::class.javaPrimitiveType ?: Boolean::class.java)
-            setActiveMethod.invoke(sessionCompat, false)
-            setActiveMethod.invoke(sessionCompat, true)
+            // Step 11: Ensure Active with Pulse
+            val setActiveMethod = findMethod(sessionCompat, "setActive", Boolean::class.javaPrimitiveType ?: Boolean::class.java)
+            setActiveMethod?.invoke(sessionCompat, false)
+            setActiveMethod?.invoke(sessionCompat, true)
 
             android.util.Log.v(TAG, "Samsung priority claim complete")
         } catch (e: Exception) {
             android.util.Log.e(TAG, "Failed Samsung workaround", e)
         }
+    }
+
+    private fun findAndInvokeMethod(receiver: Any, methodName: String): Any? {
+        val method = findMethod(receiver, methodName)
+        method?.isAccessible = true
+        return method?.invoke(receiver)
+    }
+
+    private fun findMethod(receiver: Any, methodName: String, vararg parameterTypes: Class<*>): Method? {
+        var currentClass: Class<*>? = receiver.javaClass
+        while (currentClass != null) {
+            try {
+                return currentClass.getDeclaredMethod(methodName, *parameterTypes).apply { isAccessible = true }
+            } catch (e: NoSuchMethodException) {
+                currentClass = currentClass.superclass
+            }
+        }
+        return null
+    }
+
+    private fun findAndGetField(receiver: Any, fieldName: String): Any? {
+        var currentClass: Class<*>? = receiver.javaClass
+        while (currentClass != null) {
+            try {
+                val field = currentClass.getDeclaredField(fieldName)
+                field.isAccessible = true
+                return field.get(receiver)
+            } catch (e: NoSuchFieldException) {
+                currentClass = currentClass.superclass
+            }
+        }
+        return null
     }
 
     private fun isClassAvailable(className: String): Boolean = try {
