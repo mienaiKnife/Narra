@@ -50,6 +50,7 @@ commonsCompress = "1.28.0"
 sqlcipher = "4.16.0"
 mockito = "5.23.0"
 mockito-kotlin = "6.3.0"
+robolectric = "4.16.1"
 turbine = "1.2.1"
 coroutines-test = "1.11.0"
 glance = "1.1.1"
@@ -109,6 +110,7 @@ sqlcipher = { group = "net.zetetic", name = "sqlcipher-android", version.ref = "
 mockito-core = { group = "org.mockito", name = "mockito-core", version.ref = "mockito" }
 mockito-android = { group = "org.mockito", name = "mockito-android", version.ref = "mockito" }
 mockito-kotlin = { group = "org.mockito.kotlin", name = "mockito-kotlin", version.ref = "mockito-kotlin" }
+robolectric = { group = "org.robolectric", name = "robolectric", version.ref = "robolectric" }
 turbine = { group = "app.cash.turbine", name = "turbine", version.ref = "turbine" }
 kotlinx-coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version.ref = "coroutines-test" }
 androidx-glance-appwidget = { group = "androidx.glance", name = "glance-appwidget", version.ref = "glance" }

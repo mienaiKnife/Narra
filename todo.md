@@ -175,7 +175,7 @@ Check off items as they land. Prefer one isolated commit + regression test per i
       `docs/PRIVACY.md` unshipped cloud-provider claims, testing-guide CI accuracy.
 
 ### Tests
-- [ ] Unit tests: `TtsPlayer`, `PlaybackManager`, `AndroidTtsEngine`, `DelegatingTtsEngine`,
+- [x] Unit tests: `TtsPlayer`, `PlaybackManager`, `AndroidTtsEngine`, `DelegatingTtsEngine`,
       `ArticleRepositoryImpl`, `FeedRepositoryImpl`, `ImportExportRepositoryImpl`, workers.
 - [ ] Migrate `SherpaTtsEngineTest` off its copied re-implementation; expose internal seam.
 - [ ] ViewModel tests for Reader, Queue, Feeds, FeedArticles, Inbox, History, PlaybackSettings,
