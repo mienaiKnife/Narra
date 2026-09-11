@@ -57,9 +57,11 @@ import com.mienaiknife.narra.utils.MediaSessionUtils
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -83,7 +85,7 @@ class PlaybackService : MediaLibraryService() {
 
     private var isForegrounded = false
     private var silenceTrack: AudioTrack? = null
-    private var isSilenceRunning = false
+    private var silenceJob: Job? = null
 
     private data class WidgetState(
         val isPlaying: Boolean,
@@ -192,12 +194,15 @@ class PlaybackService : MediaLibraryService() {
 
         ttsPlayer.triggerStateInvalidation()
 
-        // Samsung Priority Loop
+        // Samsung Priority Loop. Only ping while playback is actually active; otherwise the
+        // service would reflect into the session every 10s while sitting idle in the background.
         serviceScope.launch {
             kotlinx.coroutines.delay(2000)
             while (true) {
-                mediaSession?.let { session ->
-                    MediaSessionUtils.forceActivationAndMbr(this@PlaybackService, session)
+                if (ttsPlayer.playWhenReady && isForegrounded) {
+                    mediaSession?.let { session ->
+                        MediaSessionUtils.forceActivationAndMbr(this@PlaybackService, session)
+                    }
                 }
                 kotlinx.coroutines.delay(10000)
             }
@@ -279,11 +284,12 @@ class PlaybackService : MediaLibraryService() {
                     android.util.Log.d("PlaybackService", "onPlaybackResumption triggered")
                     val currentItem = ttsPlayer.currentMediaItem
                     return if (currentItem != null) {
+                        // Only the single resume item is supplied, so the matching index must be 0.
                         Futures.immediateFuture(
                             MediaSession.MediaItemsWithStartPosition(
                                 listOf(currentItem),
-                                ttsPlayer.currentMediaItemIndex,
-                                ttsPlayer.currentPosition,
+                                0,
+                                ttsPlayer.currentPosition.coerceAtLeast(0L),
                             ),
                         )
                     } else {
@@ -437,13 +443,13 @@ class PlaybackService : MediaLibraryService() {
         super.onDestroy()
     }
 
+    @Synchronized
     private fun startSilence() {
-        if (isSilenceRunning) return
-        isSilenceRunning = true
-        serviceScope.launch(Dispatchers.IO) {
-            try {
-                val bufferSize = AudioTrack.getMinBufferSize(44100, AudioFormat.CHANNEL_OUT_MONO, AudioFormat.ENCODING_PCM_16BIT)
-                silenceTrack = AudioTrack(
+        if (silenceJob?.isActive == true) return
+        silenceJob = serviceScope.launch(Dispatchers.IO) {
+            val bufferSize = AudioTrack.getMinBufferSize(44100, AudioFormat.CHANNEL_OUT_MONO, AudioFormat.ENCODING_PCM_16BIT)
+            val track = try {
+                AudioTrack(
                     AudioManager.STREAM_MUSIC,
                     44100,
                     AudioFormat.CHANNEL_OUT_MONO,
@@ -451,23 +457,42 @@ class PlaybackService : MediaLibraryService() {
                     bufferSize,
                     AudioTrack.MODE_STREAM,
                 )
+            } catch (e: Exception) {
+                android.util.Log.e("PlaybackService", "Silence track init error", e)
+                null
+            } ?: return@launch
+
+            synchronized(this@PlaybackService) { silenceTrack = track }
+            try {
+                track.play()
                 val silence = ShortArray(bufferSize)
-                silenceTrack?.play()
-                while (isSilenceRunning) {
-                    silenceTrack?.write(silence, 0, silence.size)
+                while (isActive) {
+                    track.write(silence, 0, silence.size)
                 }
             } catch (e: Exception) {
                 android.util.Log.e("PlaybackService", "Silence track error", e)
             } finally {
-                silenceTrack?.stop()
-                silenceTrack?.release()
-                silenceTrack = null
+                synchronized(this@PlaybackService) {
+                    if (silenceTrack === track) silenceTrack = null
+                }
+                try {
+                    track.stop()
+                } catch (_: Exception) {
+                }
+                track.release()
             }
         }
     }
 
+    /**
+     * Cancels the silence loop. The owning coroutine releases its own [AudioTrack] in its
+     * `finally` block, so this never races with an in-flight `write`.
+     */
+    @Synchronized
     private fun stopSilence() {
-        isSilenceRunning = false
+        silenceJob?.cancel()
+        silenceJob = null
+        silenceTrack = null
     }
 
     private fun reinforceLegacyPriority() {
