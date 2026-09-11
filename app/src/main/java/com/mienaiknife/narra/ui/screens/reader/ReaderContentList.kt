@@ -54,7 +54,9 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
@@ -90,6 +92,16 @@ import com.mienaiknife.narra.R
 import com.mienaiknife.narra.domain.models.Article
 import com.mienaiknife.narra.ui.models.ContentBlock
 import com.mienaiknife.narra.ui.viewmodels.ReaderUiState
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.distinctUntilChanged
+
+private data class CenteringTarget(
+    val paragraphIndex: Int,
+    val wordRange: IntRange?,
+    val wordY: Float,
+    val wordYIndex: Int,
+    val isFollowing: Boolean,
+)
 
 @Composable
 fun ReaderContentList(
@@ -115,6 +127,9 @@ fun ReaderContentList(
     val density = LocalDensity.current
     val verticalPaddingPx = with(density) { 4.dp.toPx() }
 
+    val latestUiState by rememberUpdatedState(uiState)
+    val latestIsFollowing by rememberUpdatedState(isFollowing)
+
     val isDragged by scrollState.interactionSource.collectIsDraggedAsState()
     LaunchedEffect(isDragged) {
         if (isDragged) {
@@ -124,30 +139,46 @@ fun ReaderContentList(
         }
     }
 
-    LaunchedEffect(uiState.currentParagraphIndex, currentWordYInItem, uiState.currentWordRange, isFollowing) {
-        if (isFollowing) {
-            val layoutInfo = scrollState.layoutInfo
-            val viewportHeight = layoutInfo.viewportSize.height
-            if (viewportHeight > 0) {
+    LaunchedEffect(Unit) {
+        // Observe centering inputs (including the measured word offset) through a conflated flow
+        // instead of keying a LaunchedEffect on the measured value, which restarted the effect on
+        // every layout pass.
+        snapshotFlow {
+            CenteringTarget(
+                paragraphIndex = latestUiState.currentParagraphIndex,
+                wordRange = latestUiState.currentWordRange,
+                wordY = currentWordYInItem,
+                wordYIndex = currentWordYIndex,
+                isFollowing = latestIsFollowing,
+            )
+        }
+            .distinctUntilChanged()
+            .collectLatest { target ->
+                if (!target.isFollowing) return@collectLatest
+
+                val layoutInfo = scrollState.layoutInfo
+                val viewportHeight = layoutInfo.viewportSize.height
+                if (viewportHeight <= 0) return@collectLatest
+
                 val targetViewportY = viewportHeight * 0.5f
-                val visibleItem = layoutInfo.visibleItemsInfo.find { it.index == uiState.currentParagraphIndex }
+                val visibleItem = layoutInfo.visibleItemsInfo.find { it.index == target.paragraphIndex }
 
                 // Only use the measurement if it's for the current paragraph
-                val wordY = if (currentWordYIndex == uiState.currentParagraphIndex) currentWordYInItem else 0f
+                val wordY = if (target.wordYIndex == target.paragraphIndex) target.wordY else 0f
 
                 // Calculate the scroll offset to center the word.
                 // For item 0, the "natural" top is at topPadding from viewport top. For others, it's at 0.
-                val itemTopInViewport = if (uiState.currentParagraphIndex == 0) with(density) { topPadding.toPx() } else 0f
+                val itemTopInViewport = if (target.paragraphIndex == 0) with(density) { topPadding.toPx() } else 0f
                 // itemTopInViewport - scrollOffset + wordY = targetViewportY
                 val targetScrollOffset = (itemTopInViewport + wordY - targetViewportY).toInt()
 
-                if (visibleItem != null && currentWordYIndex == uiState.currentParagraphIndex) {
+                if (visibleItem != null && target.wordYIndex == target.paragraphIndex) {
                     val currentWordViewportY = visibleItem.offset - layoutInfo.viewportStartOffset + wordY
                     val delta = currentWordViewportY - targetViewportY
 
                     if (kotlin.math.abs(delta) > with(density) { 2.dp.toPx() }) {
                         if (isInitialScroll) {
-                            scrollState.scrollToItem(uiState.currentParagraphIndex, targetScrollOffset)
+                            scrollState.scrollToItem(target.paragraphIndex, targetScrollOffset)
                             if (wordY > 0) isInitialScroll = false
                         } else {
                             scrollState.animateScrollBy(
@@ -163,16 +194,15 @@ fun ReaderContentList(
                     }
                 } else {
                     if (isInitialScroll) {
-                        scrollState.scrollToItem(uiState.currentParagraphIndex, targetScrollOffset)
-                        if (wordY > 0 && currentWordYIndex == uiState.currentParagraphIndex) {
+                        scrollState.scrollToItem(target.paragraphIndex, targetScrollOffset)
+                        if (wordY > 0 && target.wordYIndex == target.paragraphIndex) {
                             isInitialScroll = false
                         }
                     } else {
-                        scrollState.animateScrollToItem(uiState.currentParagraphIndex, targetScrollOffset)
+                        scrollState.animateScrollToItem(target.paragraphIndex, targetScrollOffset)
                     }
                 }
             }
-        }
     }
 
     val articleSemanticsDesc = pluralStringResource(R.plurals.home_article_semantics_desc, 0, article.title, article.source, 0)
