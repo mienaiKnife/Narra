@@ -27,6 +27,7 @@ import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import dagger.hilt.android.qualifiers.ApplicationContext
+import java.io.File
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -47,6 +48,16 @@ constructor(
         val KEY_DURATION = longPreferencesKey("duration")
         val KEY_SHOW_REMAINING_TIME = booleanPreferencesKey("show_remaining_time")
         val KEY_PLAYBACK_SPEED = floatPreferencesKey("playback_speed")
+
+        private const val ARTWORK_FILE_PREFIX = "widget_artwork_"
+
+        fun artworkFile(context: Context, imageUrl: String): File = File(context.cacheDir, "$ARTWORK_FILE_PREFIX${imageUrl.hashCode()}.jpg")
+
+        fun pruneArtwork(context: Context, keep: File?) {
+            context.cacheDir
+                .listFiles { file -> file.name.startsWith(ARTWORK_FILE_PREFIX) }
+                ?.forEach { file -> if (file != keep) file.delete() }
+        }
     }
 
     suspend fun updateState(
@@ -74,6 +85,7 @@ constructor(
                 } else if (imageUrl == null && currentImageUrl.isNotEmpty()) {
                     // Clear image path if no image url
                     mutablePrefs.remove(KEY_IMAGE_PATH)
+                    artworkFile(context, currentImageUrl).delete()
                 }
 
                 mutablePrefs.apply {

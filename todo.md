@@ -101,7 +101,7 @@ Check off items as they land. Prefer one isolated commit + regression test per i
 - [x] **Sort-toggle duplication (4×).** `QueueViewModel.kt:114-128`, `FeedsViewModel.kt:74-90`,
       `FeedArticlesViewModel.kt:113-128`, `InboxViewModel.kt:107-122`.
 - [x] **Widget updates only first instance.** `ui/widget/WidgetManager.kt:63`, `WidgetImageWorker.kt:73`.
-- [ ] **Widget image cache file collisions/eviction.** `ui/widget/WidgetImageWorker.kt:56,66-68`.
+- [x] **Widget image cache file collisions/eviction.** `ui/widget/WidgetImageWorker.kt:56,66-68`.
 
 ## P2 — Medium
 

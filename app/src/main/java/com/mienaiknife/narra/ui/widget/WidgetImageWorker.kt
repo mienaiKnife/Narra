@@ -38,6 +38,10 @@ constructor(
     @Assisted private val context: Context,
     @Assisted workerParams: WorkerParameters,
 ) : CoroutineWorker(context, workerParams) {
+    companion object {
+        private const val MAX_ATTEMPTS = 3
+    }
+
     override suspend fun doWork(): Result {
         val imageUrl = inputData.getString("image_url") ?: return Result.failure()
 
@@ -53,11 +57,18 @@ constructor(
             val result = imageLoader.execute(request)
             if (result is SuccessResult) {
                 val bitmap = result.image.toBitmap()
-                val file = File(context.cacheDir, "widget_artwork.jpg")
-                FileOutputStream(file).use { out ->
+                val file = WidgetManager.artworkFile(context, imageUrl)
+                val tempFile = File(file.parentFile, "${file.name}.tmp")
+                FileOutputStream(tempFile).use { out ->
                     bitmap.compress(Bitmap.CompressFormat.JPEG, 80, out)
                 }
+                if (file.exists()) file.delete()
+                if (!tempFile.renameTo(file)) {
+                    tempFile.copyTo(file, overwrite = true)
+                    tempFile.delete()
+                }
 
+                WidgetManager.pruneArtwork(context, keep = file)
                 updateWidgetState(file.absolutePath)
                 Result.success()
             } else {
@@ -65,7 +76,7 @@ constructor(
             }
         } catch (e: Exception) {
             android.util.Log.e("WidgetImageWorker", "Error downloading widget image", e)
-            Result.retry()
+            if (runAttemptCount < MAX_ATTEMPTS) Result.retry() else Result.failure()
         }
     }
 
