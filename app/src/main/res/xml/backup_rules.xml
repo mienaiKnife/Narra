@@ -21,8 +21,10 @@
    Note: This file is ignored for devices older than API 31
    See https://developer.android.com/about/versions/12/backup-restore
 -->
+<!--
+    The encrypted database is deliberately excluded: its key is device-bound and not backed up,
+    so the ciphertext is useless after restore. Users export a portable backup from the app.
+-->
 <full-backup-content>
-    <include domain="database" path="."/>
     <include domain="file" path="datastore/"/>
-    <exclude domain="file" path="datastore/settings.preferences_pb"/>
 </full-backup-content>

@@ -16,10 +16,12 @@
 package com.mienaiknife.narra.data.repositories
 
 import android.content.Context
+import androidx.room.withTransaction
 import com.mienaiknife.narra.data.local.AppDatabase
 import com.mienaiknife.narra.data.local.EpubDataSource
 import com.mienaiknife.narra.data.local.ImageDataSource
 import com.mienaiknife.narra.data.local.OpmlDataSource
+import com.mienaiknife.narra.data.local.backup.BackupPayload
 import com.mienaiknife.narra.data.local.dao.ArticleDao
 import com.mienaiknife.narra.data.local.dao.FeedDao
 import com.mienaiknife.narra.data.local.entities.ArticleEntity
@@ -30,9 +32,6 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
-import java.io.File
-import java.io.FileInputStream
-import java.io.FileOutputStream
 import java.io.InputStream
 import java.io.OutputStream
 import javax.inject.Inject
@@ -95,16 +94,14 @@ class ImportExportRepositoryImpl @Inject constructor(
 
     override suspend fun backupDatabase(outputStream: OutputStream): Result<Unit> = withContext(Dispatchers.IO) {
         try {
-            appDatabase.close()
-            val dbFile = context.getDatabasePath(AppDatabase.DATABASE_NAME)
-            if (dbFile.exists()) {
-                FileInputStream(dbFile).use { input ->
-                    input.copyTo(outputStream)
-                }
-                Result.success(Unit)
-            } else {
-                Result.failure(NarraError.Storage.FileNotFound())
-            }
+            val payload =
+                BackupPayload(
+                    exportedAt = System.currentTimeMillis(),
+                    feeds = feedDao.getAllFeeds().first(),
+                    articles = articleDao.getAllArticleEntities(),
+                )
+            outputStream.bufferedWriter().use { it.write(BackupPayload.encode(payload)) }
+            Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(NarraError.Unknown(e))
         }
@@ -112,17 +109,14 @@ class ImportExportRepositoryImpl @Inject constructor(
 
     override suspend fun restoreDatabase(inputStream: InputStream): Result<Unit> = withContext(Dispatchers.IO) {
         try {
-            appDatabase.close()
-            val dbFile = context.getDatabasePath(AppDatabase.DATABASE_NAME)
-
-            val walFile = File(dbFile.path + "-wal")
-            val shmFile = File(dbFile.path + "-shm")
-            if (walFile.exists()) walFile.delete()
-            if (shmFile.exists()) shmFile.delete()
-
-            FileOutputStream(dbFile).use { output ->
-                inputStream.copyTo(output)
+            val payload = BackupPayload.decode(inputStream.bufferedReader().use { it.readText() })
+            appDatabase.withTransaction {
+                articleDao.deleteAllArticles()
+                feedDao.deleteAllFeeds()
+                payload.feeds.forEach { feedDao.insertFeed(it) }
+                payload.articles.forEach { articleDao.insertArticle(it) }
             }
+            imageDataSource.pruneUnreferenced(payload.articles.mapNotNull { it.localImageUrl }.toSet())
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(NarraError.Unknown(e))

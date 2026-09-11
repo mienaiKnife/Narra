@@ -19,7 +19,9 @@ import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
 import com.mienaiknife.narra.domain.models.Article
+import kotlinx.serialization.Serializable
 
+@Serializable
 @Entity(
     tableName = "articles",
     indices = [

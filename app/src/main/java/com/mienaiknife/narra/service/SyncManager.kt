@@ -25,11 +25,13 @@ import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.workDataOf
 import com.mienaiknife.narra.data.local.AppDatabase
+import com.mienaiknife.narra.data.local.backup.STAGED_BACKUP_FILE
 import com.mienaiknife.narra.data.settings.DownloadSettingsManager
 import com.mienaiknife.narra.data.settings.SyncSettingsManager
 import com.mienaiknife.narra.data.workers.DatabaseExportWorker
 import com.mienaiknife.narra.data.workers.DatabaseImportWorker
 import com.mienaiknife.narra.data.workers.FeedRefreshWorker
+import com.mienaiknife.narra.domain.repository.ImportExportRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -40,9 +42,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import java.io.File
 import java.io.FileInputStream
-import java.io.FileOutputStream
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -54,6 +54,7 @@ constructor(
     private val appDatabase: AppDatabase,
     private val syncSettingsManager: SyncSettingsManager,
     private val downloadSettingsManager: DownloadSettingsManager,
+    private val importExportRepository: ImportExportRepository,
     private val workManager: WorkManager,
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
@@ -115,27 +116,19 @@ constructor(
      */
     suspend fun applyStagedDatabaseIfNecessary(context: android.content.Context) {
         if (syncSettingsManager.pendingImport.first()) {
-            val stagedFile = context.getDatabasePath("narra_db_staged")
-            val dbFile = context.getDatabasePath(AppDatabase.DATABASE_NAME)
-
+            val stagedFile = context.getDatabasePath(STAGED_BACKUP_FILE)
             if (stagedFile.exists()) {
                 try {
-                    appDatabase.close()
-
-                    // Delete sidecar files
-                    File(dbFile.path + "-wal").delete()
-                    File(dbFile.path + "-shm").delete()
-
-                    FileInputStream(stagedFile).use { input ->
-                        FileOutputStream(dbFile).use { output ->
-                            input.copyTo(output)
-                        }
+                    val result = FileInputStream(stagedFile).use { importExportRepository.restoreDatabase(it) }
+                    if (result.isSuccess) {
+                        stagedFile.delete()
+                        syncSettingsManager.setPendingImport(false)
+                        android.util.Log.i("SyncManager", "Staged backup applied successfully")
+                    } else {
+                        android.util.Log.e("SyncManager", "Failed to apply staged backup", result.exceptionOrNull())
                     }
-                    stagedFile.delete()
-                    syncSettingsManager.setPendingImport(false)
-                    android.util.Log.i("SyncManager", "Staged database applied successfully")
                 } catch (e: Exception) {
-                    android.util.Log.e("SyncManager", "Failed to apply staged database", e)
+                    android.util.Log.e("SyncManager", "Failed to apply staged backup", e)
                 }
             }
         }

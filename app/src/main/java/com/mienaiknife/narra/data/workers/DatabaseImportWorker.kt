@@ -21,6 +21,7 @@ import androidx.core.net.toUri
 import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
+import com.mienaiknife.narra.data.local.backup.STAGED_BACKUP_FILE
 import com.mienaiknife.narra.data.settings.SyncSettingsManager
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
@@ -50,9 +51,9 @@ constructor(
 
             // If the remote file is newer than what we last staged
             if (lastModified > localLastKnown + 5000) { // 5s buffer
-                android.util.Log.i("DatabaseImportWorker", "Newer database detected. Staging for import.")
+                android.util.Log.i("DatabaseImportWorker", "Newer backup detected. Staging for import.")
 
-                val stagedFile = context.getDatabasePath("narra_db_staged")
+                val stagedFile = context.getDatabasePath(STAGED_BACKUP_FILE)
                 context.contentResolver.openInputStream(uri)?.use { input ->
                     FileOutputStream(stagedFile).use { output ->
                         input.copyTo(output)
@@ -62,7 +63,7 @@ constructor(
                 syncSettingsManager.setRemoteLastModified(lastModified)
                 syncSettingsManager.setPendingImport(true)
 
-                android.util.Log.i("DatabaseImportWorker", "Database successfully staged.")
+                android.util.Log.i("DatabaseImportWorker", "Backup successfully staged.")
             }
             Result.success()
         } catch (e: CancellationException) {

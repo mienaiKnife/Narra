@@ -20,14 +20,13 @@ import androidx.core.net.toUri
 import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
-import com.mienaiknife.narra.data.local.AppDatabase
 import com.mienaiknife.narra.data.settings.SyncSettingsManager
+import com.mienaiknife.narra.domain.repository.ImportExportRepository
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import java.io.FileInputStream
 
 @HiltWorker
 class DatabaseExportWorker
@@ -35,7 +34,7 @@ class DatabaseExportWorker
 constructor(
     @Assisted private val context: Context,
     @Assisted params: WorkerParameters,
-    private val appDatabase: AppDatabase,
+    private val importExportRepository: ImportExportRepository,
     private val syncSettingsManager: SyncSettingsManager,
 ) : CoroutineWorker(context, params) {
     override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
@@ -43,27 +42,8 @@ constructor(
         val uri = uriString.toUri()
 
         try {
-            // 1. Checkpoint to make the main file consistent
-            // Use try-catch because if the DB is closed or there's an issue, we don't want to crash
-            try {
-                appDatabase.openHelper.writableDatabase.execSQL("PRAGMA wal_checkpoint(FULL)")
-            } catch (e: Exception) {
-                android.util.Log.e("DatabaseExportWorker", "Checkpoint failed", e)
-                // Continue anyway, it might still be a valid snapshot
-            }
-
-            // 2. Get DB file path
-            val dbFile = context.getDatabasePath(AppDatabase.DATABASE_NAME)
-            if (!dbFile.exists()) {
-                android.util.Log.e("DatabaseExportWorker", "Database file not found")
-                return@withContext Result.failure()
-            }
-
-            // 3. Write to URI
             context.contentResolver.openOutputStream(uri, "wt")?.use { output ->
-                FileInputStream(dbFile).use { input ->
-                    input.copyTo(output)
-                }
+                importExportRepository.backupDatabase(output).getOrThrow()
             } ?: return@withContext Result.failure()
 
             syncSettingsManager.updateLastExportTimestamp()
