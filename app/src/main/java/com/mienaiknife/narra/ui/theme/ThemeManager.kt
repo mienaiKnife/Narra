@@ -24,15 +24,28 @@ import com.mienaiknife.narra.data.settings.settingsDataStore
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+
+data class ThemeUiState(
+    val isDarkMode: Boolean = true,
+    val isDynamicColor: Boolean = false,
+    val useSystemTheme: Boolean = true,
+    val readerFontFamily: String = "Roboto",
+    val lineSpacing: String = "1.0",
+    val readerFontSize: Float = 18.0f,
+    val showRemainingTime: Boolean = true,
+    val tapToShowControls: Boolean = true,
+    val autoFullscreen: Boolean = true,
+)
 
 class ThemeManager(
     private val context: Context,
 ) {
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val darkModeKey = booleanPreferencesKey("dark_mode")
     private val dynamicColorKey = booleanPreferencesKey("dynamic_color")
     private val useSystemThemeKey = booleanPreferencesKey("use_system_theme")
@@ -43,41 +56,25 @@ class ThemeManager(
     private val tapToShowControlsKey = booleanPreferencesKey("tap_to_show_controls")
     private val autoFullscreenKey = booleanPreferencesKey("auto_fullscreen")
 
-    private val _isDarkMode = MutableStateFlow(value = true)
-    private val _isDynamicColor = MutableStateFlow(value = false)
-    private val _useSystemTheme = MutableStateFlow(value = true)
-    private val _readerFontFamily = MutableStateFlow("Roboto")
-    private val _lineSpacing = MutableStateFlow("1.0")
-    private val _readerFontSize = MutableStateFlow(18.0f)
-    private val _showRemainingTime = MutableStateFlow(value = true)
-    private val _tapToShowControls = MutableStateFlow(value = true)
-    private val _autoFullscreen = MutableStateFlow(value = true)
-
-    val isDarkMode: StateFlow<Boolean> = _isDarkMode.asStateFlow()
-    val isDynamicColor: StateFlow<Boolean> = _isDynamicColor.asStateFlow()
-    val useSystemTheme: StateFlow<Boolean> = _useSystemTheme.asStateFlow()
-    val readerFontFamily: StateFlow<String> = _readerFontFamily.asStateFlow()
-    val lineSpacing: StateFlow<String> = _lineSpacing.asStateFlow()
-    val readerFontSize: StateFlow<Float> = _readerFontSize.asStateFlow()
-    val showRemainingTime: StateFlow<Boolean> = _showRemainingTime.asStateFlow()
-    val tapToShowControls: StateFlow<Boolean> = _tapToShowControls.asStateFlow()
-    val autoFullscreen: StateFlow<Boolean> = _autoFullscreen.asStateFlow()
-
-    init {
-        scope.launch {
-            context.settingsDataStore.data.collect { preferences ->
-                _isDarkMode.value = preferences[darkModeKey] ?: true
-                _isDynamicColor.value = preferences[dynamicColorKey] ?: false
-                _useSystemTheme.value = preferences[useSystemThemeKey] ?: true
-                _readerFontFamily.value = preferences[readerFontFamilyKey] ?: "Roboto"
-                _lineSpacing.value = preferences[lineSpacingKey] ?: "1.0"
-                _readerFontSize.value = preferences[readerFontSizeKey] ?: 18.0f
-                _showRemainingTime.value = preferences[showRemainingTimeKey] ?: true
-                _tapToShowControls.value = preferences[tapToShowControlsKey] ?: true
-                _autoFullscreen.value = preferences[autoFullscreenKey] ?: true
-            }
-        }
-    }
+    val uiState: StateFlow<ThemeUiState> =
+        context.settingsDataStore.data
+            .map { preferences ->
+                ThemeUiState(
+                    isDarkMode = preferences[darkModeKey] ?: true,
+                    isDynamicColor = preferences[dynamicColorKey] ?: false,
+                    useSystemTheme = preferences[useSystemThemeKey] ?: true,
+                    readerFontFamily = preferences[readerFontFamilyKey] ?: "Roboto",
+                    lineSpacing = preferences[lineSpacingKey] ?: "1.0",
+                    readerFontSize = preferences[readerFontSizeKey] ?: 18.0f,
+                    showRemainingTime = preferences[showRemainingTimeKey] ?: true,
+                    tapToShowControls = preferences[tapToShowControlsKey] ?: true,
+                    autoFullscreen = preferences[autoFullscreenKey] ?: true,
+                )
+            }.stateIn(
+                scope = scope,
+                started = SharingStarted.WhileSubscribed(5000),
+                initialValue = ThemeUiState(),
+            )
 
     fun setDarkMode(enabled: Boolean) {
         scope.launch {

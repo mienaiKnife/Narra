@@ -17,26 +17,9 @@ package com.mienaiknife.narra.ui.theme
 
 import android.content.Context
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.launch
 import javax.inject.Inject
-
-data class ThemeUiState(
-    val isDarkMode: Boolean = true,
-    val isDynamicColor: Boolean = false,
-    val useSystemTheme: Boolean = true,
-    val readerFontFamily: String = "Roboto",
-    val lineSpacing: String = "1.0",
-    val readerFontSize: Float = 18.0f,
-    val showRemainingTime: Boolean = true,
-    val tapToShowControls: Boolean = true,
-    val autoFullscreen: Boolean = true,
-)
 
 @HiltViewModel
 open class ThemeViewModel
@@ -44,56 +27,7 @@ open class ThemeViewModel
 constructor(
     private val themeManager: ThemeManager,
 ) : ViewModel() {
-    private val _uiState = MutableStateFlow(ThemeUiState())
-    val uiState: StateFlow<ThemeUiState> = _uiState.asStateFlow()
-
-    init {
-        viewModelScope.launch {
-            themeManager.isDarkMode.collect { isDark ->
-                _uiState.update { it.copy(isDarkMode = isDark) }
-            }
-        }
-        viewModelScope.launch {
-            themeManager.isDynamicColor.collect { isDynamic ->
-                _uiState.update { it.copy(isDynamicColor = isDynamic) }
-            }
-        }
-        viewModelScope.launch {
-            themeManager.useSystemTheme.collect { useSystem ->
-                _uiState.update { it.copy(useSystemTheme = useSystem) }
-            }
-        }
-        viewModelScope.launch {
-            themeManager.readerFontFamily.collect { fontFamily ->
-                _uiState.update { it.copy(readerFontFamily = fontFamily) }
-            }
-        }
-        viewModelScope.launch {
-            themeManager.lineSpacing.collect { spacing ->
-                _uiState.update { it.copy(lineSpacing = spacing) }
-            }
-        }
-        viewModelScope.launch {
-            themeManager.readerFontSize.collect { fontSize ->
-                _uiState.update { it.copy(readerFontSize = fontSize) }
-            }
-        }
-        viewModelScope.launch {
-            themeManager.showRemainingTime.collect { showRemainingTime ->
-                _uiState.update { it.copy(showRemainingTime = showRemainingTime) }
-            }
-        }
-        viewModelScope.launch {
-            themeManager.tapToShowControls.collect { tapToShowControls ->
-                _uiState.update { it.copy(tapToShowControls = tapToShowControls) }
-            }
-        }
-        viewModelScope.launch {
-            themeManager.autoFullscreen.collect { autoFullscreen ->
-                _uiState.update { it.copy(autoFullscreen = autoFullscreen) }
-            }
-        }
-    }
+    val uiState: StateFlow<ThemeUiState> = themeManager.uiState
 
     // Kept for backward compatibility if needed by Compose previews or other manual initializations
     open fun initialize(context: Context) {

@@ -61,6 +61,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -154,7 +155,7 @@ class PlaybackService : MediaLibraryService() {
                 playbackManager.currentPosition,
                 playbackManager.duration,
                 playbackManager.playbackSpeed,
-                themeManager.showRemainingTime,
+                themeManager.uiState.map { it.showRemainingTime },
             ) { array ->
                 WidgetState(
                     isPlaying = array[0] as Boolean,
