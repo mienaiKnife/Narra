@@ -86,7 +86,7 @@ Check off items as they land. Prefer one isolated commit + regression test per i
 - [x] **ViewModel work on `PlaybackManager.scope`.** `ui/viewmodels/HistoryViewModel.kt:86,113`.
 - [x] **HTML parse on Main.** `ui/viewmodels/QueueViewModel.kt:164`, `HistoryViewModel.kt:93,106`.
 - [x] **Raw resource IDs as UI labels.** `ui/screens/PlaybackSettingsScreen.kt:402`.
-- [ ] **Wrong auto-fullscreen highlight requester + missing search entries.**
+- [x] **Wrong auto-fullscreen highlight requester + missing search entries.**
       `ui/screens/UserInterfaceSettingsScreen.kt:286-290`, `ui/screens/SettingsSearchData.kt`.
 - [ ] **Dead "Search" overflow actions.** `QueueScreen.kt:269-279`, `FeedsScreen.kt:221-231`,
       `InboxScreen.kt:167-177`, `HistoryScreen.kt:175-185`, `FeedArticlesScreen.kt:172-182`.

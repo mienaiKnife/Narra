@@ -73,11 +73,25 @@ val allSearchableSettings =
             listOf("reader", "text size", "typography"),
         ),
         SearchableSetting(
+            "lineSpacing",
+            R.string.settings_ui_line_spacing,
+            R.string.settings_ui_line_spacing_desc,
+            NavDestination.SettingsUi("lineSpacing"),
+            listOf("reader", "typography", "spacing"),
+        ),
+        SearchableSetting(
             "showRemainingTime",
             R.string.settings_ui_show_remaining_time,
             R.string.settings_ui_show_remaining_time_desc,
             NavDestination.SettingsUi("showRemainingTime"),
             listOf("playback", "reader"),
+        ),
+        SearchableSetting(
+            "autoFullscreen",
+            R.string.settings_ui_auto_fullscreen,
+            R.string.settings_ui_auto_fullscreen_desc,
+            NavDestination.SettingsUi("autoFullscreen"),
+            listOf("reader", "fullscreen", "immersive"),
         ),
         // Playback
         SearchableSetting(

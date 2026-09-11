@@ -84,6 +84,7 @@ fun UserInterfaceSettingsScreen(
     val tapToShowControlsRequester = remember { BringIntoViewRequester() }
     val readerFontSizeRequester = remember { BringIntoViewRequester() }
     val showRemainingTimeRequester = remember { BringIntoViewRequester() }
+    val autoFullscreenRequester = remember { BringIntoViewRequester() }
 
     LaunchedEffect(highlightSetting) {
         when (highlightSetting) {
@@ -95,6 +96,7 @@ fun UserInterfaceSettingsScreen(
             "tapToShowControls" -> tapToShowControlsRequester.bringIntoView()
             "readerFontSize" -> readerFontSizeRequester.bringIntoView()
             "showRemainingTime" -> showRemainingTimeRequester.bringIntoView()
+            "autoFullscreen" -> autoFullscreenRequester.bringIntoView()
         }
     }
 
@@ -286,8 +288,8 @@ fun UserInterfaceSettingsScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .bringIntoViewRequester(showRemainingTimeRequester)
-                    .flashHighlight(highlightSetting == "showRemainingTime")
+                    .bringIntoViewRequester(autoFullscreenRequester)
+                    .flashHighlight(highlightSetting == "autoFullscreen")
                     .padding(vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
