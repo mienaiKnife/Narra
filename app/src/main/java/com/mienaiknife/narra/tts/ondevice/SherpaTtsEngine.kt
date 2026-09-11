@@ -58,6 +58,7 @@ class SherpaTtsEngine @Inject constructor(
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
+    @Volatile
     private var tts: OfflineTts? = null
     private var audioTrack: AudioTrack? = null
     private var playbackSpeed = 1.0f
@@ -75,8 +76,12 @@ class SherpaTtsEngine @Inject constructor(
     private var lastNoiseScale: Float = -1f
     private var lastLengthScale: Float = -1f
     private var currentModelType: TtsModelType? = null
+
+    @Volatile
     private var currentSessionId: Int = 0
     private var currentSampleRate: Int = -1
+
+    @Volatile
     private var samplesPerCharAverage: Float = 1800f // Default for ~12 chars/sec at 22050Hz
 
     private val activeStreams = java.util.Collections.synchronizedList(mutableListOf<StreamPlaybackInfo>())
@@ -191,11 +196,13 @@ class SherpaTtsEngine @Inject constructor(
                         result.getOrNull()?.eventChannel?.close()
                         result = synthesizedQueue.tryReceive()
                     }
-                }
 
-                tts?.release()
-                tts = null
-                currentSampleRate = -1
+                    // Release the previous engine under the same lock that guards `tts`, so no
+                    // synthesis/playback thread can be using it while it is freed.
+                    tts?.release()
+                    tts = null
+                    currentSampleRate = -1
+                }
 
                 if (modelId == null) {
                     Log.d("SherpaTtsEngine", "Engine skipped initialization: no model selected")
@@ -555,7 +562,7 @@ class SherpaTtsEngine @Inject constructor(
                 projectedTotalFrames = (stream.text.length * samplesPerCharAverage).toInt(),
             )
 
-            activeStreams.add(info)
+            synchronized(activeStreams) { activeStreams.add(info) }
 
             for (event in stream.eventChannel) {
                 if (stream.sessionId != currentSessionId) break
@@ -664,7 +671,7 @@ class SherpaTtsEngine @Inject constructor(
                 result.getOrNull()?.eventChannel?.close()
                 result = synthesizedQueue.tryReceive()
             }
-            activeStreams.clear()
+            synchronized(activeStreams) { activeStreams.clear() }
 
             try {
                 audioTrack?.let { track ->
@@ -831,7 +838,7 @@ class SherpaTtsEngine @Inject constructor(
                 result.getOrNull()?.eventChannel?.close()
                 result = synthesizedQueue.tryReceive()
             }
-            activeStreams.clear()
+            synchronized(activeStreams) { activeStreams.clear() }
 
             _state.value = TtsState.Idle
         }
