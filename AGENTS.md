@@ -1,153 +1,66 @@
 # AGENTS.md
 
+This file is the operating manual for AI agents working on Narra. It keeps the
+must-not-break rules inline and links to the authoritative documents for detail. For a
+human-facing overview, start with [README.md](README.md) and [CONTRIBUTING.md](docs/CONTRIBUTING.md).
+
 ## Project Overview
-Narra is an open source Android app that converts text from RSS feeds, imported EPUB files, and saved web articles into audio using text-to-speech (TTS), delivered in a podcast-like listening experience. The MVP targets native Android, with planned expansion to other platforms and additional features over time.
+Narra is an open source Android app that converts text from RSS feeds, imported EPUB files, and
+saved web articles into audio using text-to-speech (TTS), delivered in a podcast-like listening
+experience. The MVP targets native Android, with planned expansion to other platforms and features
+over time. See [README.md](README.md) for the full description.
 
-## License
-This project is licensed under the Apache License 2.0. All contributions must be compatible with this license. Add the standard Apache 2.0 header to all new source files.
+## Scope
+[ROADMAP.md](ROADMAP.md) is authoritative for what is in and out of scope. Do not implement
+**Planned** or **Non-goals** items unless the user explicitly asks.
 
-## MVP Scope
-The following defines the current build target. Do not implement beyond this unless explicitly asked:
-- RSS feed subscription and article fetching
-- EPUB file importing and parsing
-- Web page importing with reader-mode extraction for clean article text
-- A listening queue/playlist UI similar to a podcast app
-- TTS playback using Android's built-in TTS engine (android.speech.tts)
-- On-device AI TTS using Sherpa-ONNX (models downloaded at runtime, not bundled)
-- OPML export and import for feed list portability
-- File-based backup and restore (no account required)
-- Foreground service for background audio playback with media session controls
-- Home screen widget (Glance-based) for playback control and queue status
+## Critical Invariants
+These rules are load-bearing. Keep them in mind on every task, and read the linked document before
+changing the relevant area.
 
-## Planned Features (not yet in scope)
-Be aware these are coming so that current architectural decisions don't block them:
-- PDF file importing and parsing
-- Self-hosted AI TTS server support (e.g. Kokoro, Coqui, Piper via local API)
-- Additional cloud AI TTS providers
-- Builds for other platforms (e.g. desktop and iOS via Kotlin Multiplatform, or a separate app)
-- Optional sync via self-hosted compatible server (e.g. Nextcloud/gpodder-compatible API),
-  authenticated by server URL and credentials the user controls — no first-party accounts
-- Automatic readability/reader-mode heuristic improvements over time
-- Importing articles by scanning photos
-- User-customizable color themes
-- Support for more languages
-
-## Tech Stack
-- Language: Kotlin
-- UI: Jetpack Compose
-- Architecture: MVVM with a clean architecture layer separation (UI → ViewModel → Repository → Data sources)
-- Audio playback: Media3 / ExoPlayer
-- RSS parsing: RSSParser (lightweight alternative to Rome)
-- EPUB parsing: Epublib or equivalent JVM-compatible library
-- Web page parsing: Readability4J (JVM port of Mozilla's Readability) for reader-mode extraction
-- On-device AI TTS: Sherpa-ONNX (Apache 2.0)
-- Database encryption: SQLCipher
-- Image loading: Coil
-- Widget: Jetpack Glance
-- Dependency injection: Hilt
-- Build system: Gradle with Kotlin DSL
-
-## Code Style & Conventions
-- Follow the official Kotlin coding conventions and Android best practices
-- Use coroutines and Flow for async work; avoid callbacks
-- Keep ViewModels free of Android framework dependencies where possible
-- One class per file; file name matches class name
-- Prefer `sealed interface` or `sealed class` for UI state modeling
-- Write self-documenting code; only add comments for non-obvious logic
-- **Database Schema Changes**: Whenever modifying a Room `@Entity` (e.g., adding/removing fields, changing indices), you **MUST**:
-  1. Increment the `version` number in `AppDatabase.kt`.
-  2. Provide a `Migration` object in `DatabaseModule.kt` to handle the schema change.
-  3. Update any relevant `@Index` annotations in the entity class.
-  4. Ensure existing data is preserved or correctly migrated (e.g. setting default values for new columns).
-  **Failure to do this will cause the app to crash on startup for existing users.**
-- **Database Encryption**: The database is encrypted using SQLCipher. If the database file exists but cannot be opened with the current passphrase (e.g. due to corruption or a key change), the `DatabaseModule` is configured to delete the existing database and start fresh to avoid crashes.
-
-## Architecture Notes
-- TTS engines must be abstracted behind a common `TtsEngine` interface so Android TTS,
-  on-device AI TTS, cloud providers, and future self-hosted servers are all interchangeable
-- AI TTS providers (cloud or self-hosted) should be implemented as separate modules
-  conforming to the same interface, each configurable via a base URL + API key so
-  self-hosted servers can slot in without code changes
-- On-device TTS (Sherpa-ONNX) model files must be downloaded and stored at runtime;
-  model download, storage, and selection are handled by a dedicated `ModelRepository`
-  that is separate from the `TtsEngine` interface itself
-- **Sherpa-ONNX Word Highlighting**: As of v1.13.4, Sherpa-ONNX supports native word timestamps
-  in the C++ core, but these are NOT yet exposed in the Java/JNI bindings. `SherpaTtsEngine`
-  uses a heuristic-based estimation for word boundaries. Do not attempt to refactor to use
-  native timestamps until the Java API is confirmed to expose `GeneratedAudio.getTimestamps()`.
-- Do not bundle Sherpa-ONNX model files in the APK; they are too large and must be
-  fetched on demand. Support is included for various model types (VITS, Matcha, Kokoro, etc.).
-- RSS articles, EPUB content, and saved web articles flow through specialized repositories
-  (`ArticleRepository`, `FeedRepository`, `ImportExportRepository`) that normalize them
-  into a common `Article` model before handing off to TTS. A composite `ContentRepository`
-  interface is provided for convenience. Content source type is tracked on the model but
-  is otherwise transparent to the rest of the app
-- Saved web articles are stored persistently like RSS articles; always persist the
-  source URL so the content can be refreshed if the page changes.
-- **Content Persistence**: `ImageDataSource` is used to persist article and feed images locally
-  to ensure they are available offline.
-- Playback state should be managed in a single `PlaybackService` (foreground service);
-  ViewModels observe it, never control it directly
-- **Playback & Media Session**:
-  1. `TtsPlayer` (using `SimpleBasePlayer`) has a strict state contract: if a `PlaybackException`
-     is reported in `getState()`, the playback state MUST be `STATE_IDLE`. Violating this
-     will cause internal Media3 crashes.
-  2. Samsung devices require a valid `MediaButtonReceiver` PendingIntent on the underlying
-     `MediaSessionCompat` and an active session to prioritize hardware controls. Use
-     `MediaSessionUtils.forceActivationAndMbr()` whenever starting playback or reinforcing
-     session activation.
-  3. Aggressive session extras (e.g., `android.media.IS_EXPLICIT`, slot reservations) are
-     required for Samsung's "Now Playing" and Bluetooth routing to work reliably.
-  4. **Widget Responsiveness**: For home screen widgets, use direct `Intent` signals to
-     `PlaybackService` (e.g., `ACTION_TOGGLE`) instead of `MediaController` to avoid
-     latency/unresponsiveness caused by asynchronous connection setup.
-
-## Project Structure (target layout)
-
-```
-app/
-  src/main/
-    java/com/mienaiknife/narra/
-      data/          # Data sources, Room entities, workers
-        local/       # Local database, DAOs, and data sources (Epub, Opml, Image)
-        remote/      # Remote data sources (Web, Feed)
-        repositories/# Repository implementations
-        settings/    # Settings/DataStore managers (Sync, Download)
-      domain/        # Models (Article), repository interfaces, use cases
-      tts/           # TTS engine implementations
-        android/     # Android built-in TTS
-        ondevice/    # On-device AI TTS (Sherpa-ONNX)
-        common/      # Delegating engine and shared logic
-        cloud/       # Cloud AI TTS providers (planned)
-        selfhosted/  # Self-hosted AI TTS servers (planned)
-      ui/            # Composables, ViewModels, navigation, theme
-        widget/      # Glance-based home screen widgets
-      playback/      # TtsPlayer and PlaybackManager
-      service/       # PlaybackService and SyncManager
-      di/            # Hilt modules
-      utils/         # Core utilities
-    res/
-docs/                # Project documentation (Architecture, Lifecycle, etc.)
-```
+- **Clean Architecture layering**: UI → ViewModel → Repository → Data sources. ViewModels stay free
+  of Android framework dependencies. See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+- **TTS engines are interchangeable** behind the `TtsEngine` interface. New providers (cloud or
+  self-hosted) are separate modules configured by base URL + API key. See
+  [docs/TTS_ENGINES.md](docs/TTS_ENGINES.md).
+- **Database schema changes are mandatory migrations**: bump the version in `AppDatabase.kt`, add a
+  `Migration` in `DatabaseModule.kt`, update indices, and add a migration test. Missing migrations
+  crash existing installs. See
+  [docs/ARCHITECTURE.md#database-migrations](docs/ARCHITECTURE.md#database-migrations) and
+  [docs/CONTRIBUTING.md#database-changes](docs/CONTRIBUTING.md#database-changes).
+- **Database encryption**: the Room database is SQLCipher-encrypted; the key lives in the Android
+  Keystore. If it cannot be opened with the current passphrase, `DatabaseModule` deletes and
+  recreates it. See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+- **Playback state contract**: `TtsPlayer` MUST report `STATE_IDLE` whenever `getState()` exposes a
+  `PlaybackException`. Samsung devices require the `MediaButtonReceiver`/session-extras workarounds,
+  and widgets must use direct `Intent` signals (e.g. `ACTION_TOGGLE`) to `PlaybackService`, never
+  `MediaController`. See [docs/PLAYBACK_LIFECYCLE.md](docs/PLAYBACK_LIFECYCLE.md) and
+  [docs/samsung-media-session-fixes.md](docs/samsung-media-session-fixes.md).
+- **Content normalization**: RSS, EPUB, and web content flow through the specialized repositories
+  (`ArticleRepository`, `FeedRepository`, `ImportExportRepository`) into the common `Article` model;
+  always persist the source URL for saved web articles. See
+  [docs/CONTENT_PARSING.md](docs/CONTENT_PARSING.md).
+- **On-device models are downloaded, never bundled**: Sherpa-ONNX models are large and fetched at
+  runtime. `ModelRepository` owns download/storage/selection and is separate from `TtsEngine`. See
+  [docs/TTS_ENGINES.md](docs/TTS_ENGINES.md).
+- **Sherpa-ONNX word highlighting**: native timestamps exist in the C++ core (v1.13.4+) but are not
+  exposed in the Java/JNI bindings; `SherpaTtsEngine` uses a heuristic. Do not refactor to native
+  timestamps until `GeneratedAudio.getTimestamps()` is exposed. See
+  [docs/TTS_ENGINES.md](docs/TTS_ENGINES.md).
+- **Licensing & secrets**: all dependencies must be Apache 2.0/MIT/LGPL-compatible (flag copyleft).
+  Never commit API keys or secrets. This project will never require a first-party account or a
+  project-operated server. See [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md),
+  [SECURITY.md](SECURITY.md), and [ROADMAP.md#non-goals](ROADMAP.md#non-goals).
 
 ## What to Ask Before Doing
-- If a task would require adding a new third-party dependency, confirm before adding it
+- If a task would require adding a new third-party dependency, confirm before adding it.
 - If a feature touches the `TtsEngine`, `ArticleRepository`, `FeedRepository`,
-  `ImportExportRepository`, or `ModelRepository` contracts, flag it — these are
-  load-bearing abstractions
-- If something is ambiguous between MVP scope and planned features, ask rather than assume
+  `ImportExportRepository`, or `ModelRepository` contracts, flag it — these are load-bearing
+  abstractions.
+- If something is ambiguous between MVP scope and planned features, ask rather than assume.
 
-## Open Source Considerations
-- This project is Apache 2.0 licensed; all dependencies must be compatible (Apache 2.0,
-  MIT, LGPL, or similar) — flag any GPL dependencies before adding them
-- Sherpa-ONNX is Apache 2.0 licensed; verify that any Sherpa-ONNX models used are
-  redistributable or clearly documented as user-sourced
-- Do not include API keys or secrets in source files; use a `local.properties` or
-  environment variable pattern
-- Keep the project buildable from a clean checkout with no manual setup steps beyond
-  providing API keys and downloading TTS models at runtime
-- This app will never require a first-party user account; do not design any feature
-  that depends on users registering with or authenticating against a server operated
-  by this project
+## Keeping Docs in Sync
+When you change an invariant, update the linked document in the same change so this file and the
+`docs/` tree do not drift apart.
 
 Your contribution is very much appreciated. Thank you for your help!

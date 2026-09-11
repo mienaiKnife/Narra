@@ -96,13 +96,4 @@ Run unit tests using the following command:
 
 ## Planned Features
 
-- PDF file importing and parsing
-- Self-hosted AI TTS server support (e.g. Kokoro, Coqui, Piper via local API)
-- Additional cloud AI TTS providers
-- Builds for other platforms (e.g. desktop and iOS via Kotlin Multiplatform)
-- Optional sync via self-hosted compatible server (e.g. Nextcloud/gpodder-compatible API),
-  authenticated by server URL and credentials the user controls — no first-party accounts
-- Automatic readability/reader-mode heuristic improvements over time
-- Importing articles by scanning photos
-- User-customizable color themes
-- Support for more languages
+See [ROADMAP.md](ROADMAP.md) for planned features and non-goals.
