@@ -83,7 +83,7 @@ class HistoryViewModel @Inject constructor(
 
     fun onPlayPauseClick(article: Article) {
         if (!article.isInQueue) {
-            playbackManager.scope.launch {
+            viewModelScope.launch {
                 if (article.content.isEmpty()) {
                     _downloadingArticleIds.value += article.id
                 }
@@ -110,7 +110,7 @@ class HistoryViewModel @Inject constructor(
     }
 
     fun addToQueue(article: Article) {
-        playbackManager.scope.launch {
+        viewModelScope.launch {
             if (article.content.isEmpty()) {
                 _downloadingArticleIds.value += article.id
             }
