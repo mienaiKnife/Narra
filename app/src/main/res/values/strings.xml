@@ -224,6 +224,8 @@
     <string name="settings_playback_rw_hardware_desc">Customize rewind hardware button behavior</string>
     <string name="settings_playback_chime_sound">Chime sound</string>
     <string name="settings_playback_chime_sound_desc">Choose the sound to play before the title</string>
+    <string name="settings_playback_chime_music_box">Music box</string>
+    <string name="settings_playback_chime_vibraphone">Vibraphone</string>
     <string name="settings_voices_engine_selection_desc">Choose between Android TTS and on-device AI</string>
     <string name="settings_voices_android_settings_desc">Open system text-to-speech settings</string>
     <string name="settings_voices_noise_scale_title">Noise Scale</string>

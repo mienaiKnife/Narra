@@ -392,12 +392,19 @@ fun PlaybackSettingsContent(
                 )
             }
 
+            val chimeOptions = listOf(
+                stringResource(R.string.settings_playback_chime_music_box) to "music_box_chime_positive",
+                stringResource(R.string.settings_playback_chime_vibraphone) to "vibraphone_chime_positive",
+            )
             SettingDropDownItem(
                 title = stringResource(R.string.settings_playback_chime_sound),
                 subtitle = stringResource(R.string.settings_playback_chime_sound_desc),
-                selectedValue = uiState.chimeSound,
-                options = listOf("music_box_chime_positive", "vibraphone_chime_positive"),
-                onValueChange = onChimeSoundChange,
+                selectedValue = chimeOptions.firstOrNull { it.second == uiState.chimeSound }?.first
+                    ?: uiState.chimeSound,
+                options = chimeOptions.map { it.first },
+                onValueChange = { label ->
+                    chimeOptions.firstOrNull { it.first == label }?.second?.let(onChimeSoundChange)
+                },
                 modifier = Modifier
                     .bringIntoViewRequester(chimeSoundRequester)
                     .flashHighlight(highlightSetting == "chimeSound"),
