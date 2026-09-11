@@ -82,7 +82,7 @@ Check off items as they land. Prefer one isolated commit + regression test per i
 ### UI
 - [x] **Composition-phase Toast.** `ui/screens/VoicesSettingsScreen.kt:101-104` → `LaunchedEffect`.
 - [ ] **Widget deep link ignored.** `MainActivity.kt:90-96` `onNewIntent`; `ui/widget/NarraWidget.kt:156-161`.
-- [ ] **Reorder gesture cancels itself.** `ui/screens/QueueScreen.kt:417` → stable key.
+- [x] **Reorder gesture cancels itself.** `ui/screens/QueueScreen.kt:417` → stable key.
 - [ ] **ViewModel work on `PlaybackManager.scope`.** `ui/viewmodels/HistoryViewModel.kt:86,113`.
 - [ ] **HTML parse on Main.** `ui/viewmodels/QueueViewModel.kt:164`, `HistoryViewModel.kt:93,106`.
 - [ ] **Raw resource IDs as UI labels.** `ui/screens/PlaybackSettingsScreen.kt:402`.

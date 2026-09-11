@@ -66,6 +66,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -400,6 +401,8 @@ fun QueueScreenContent(
                             val offset =
                                 if (isDragged) IntOffset(0, draggingOffset.toInt()) else IntOffset.Zero
                             val zIndex = if (isDragged) 1f else 0f
+                            val currentIndex by rememberUpdatedState(index)
+                            val currentArticles by rememberUpdatedState(articles)
 
                             QueueItem(
                                 article = article,
@@ -414,10 +417,10 @@ fun QueueScreenContent(
                                 onPlayPauseClick = { onPlayPauseClick(article) },
                                 onMarkAsPlayedClick = { onMarkAsPlayedClick(article) },
                                 onRemoveClick = { onRemoveFromQueue(article) },
-                                dragModifier = Modifier.pointerInput(articles) {
+                                dragModifier = Modifier.pointerInput(Unit) {
                                     detectDragGestures(
                                         onDragStart = { _ ->
-                                            draggedItemIndex = index
+                                            draggedItemIndex = currentIndex
                                         },
                                         onDrag = { change, dragAmount ->
                                             change.consume()
@@ -437,7 +440,7 @@ fun QueueScreenContent(
                                                     else -> currentDraggedIndex
                                                 }
 
-                                                if (targetIndex in articles.indices && targetIndex != currentDraggedIndex) {
+                                                if (targetIndex in currentArticles.indices && targetIndex != currentDraggedIndex) {
                                                     onReorder(currentDraggedIndex, targetIndex)
                                                     draggedItemIndex = targetIndex
                                                     draggingOffset = 0f
