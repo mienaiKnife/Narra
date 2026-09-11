@@ -60,39 +60,42 @@ constructor(
         showRemainingTime: Boolean,
         playbackSpeed: Float,
     ) {
-        val glanceId = GlanceAppWidgetManager(context).getGlanceIds(NarraWidget::class.java).firstOrNull() ?: return
+        val glanceIds = GlanceAppWidgetManager(context).getGlanceIds(NarraWidget::class.java)
+        if (glanceIds.isEmpty()) return
 
         var shouldDownloadImage = false
 
-        updateAppWidgetState(context, NarraWidget().stateDefinition, glanceId) { prefs ->
-            val mutablePrefs = prefs.toMutablePreferences()
-            val currentImageUrl = prefs[KEY_ARTICLE_IMAGE_URL] ?: ""
-            if (imageUrl != null && imageUrl != currentImageUrl) {
-                shouldDownloadImage = true
-            } else if (imageUrl == null && currentImageUrl.isNotEmpty()) {
-                // Clear image path if no image url
-                mutablePrefs.remove(KEY_IMAGE_PATH)
+        glanceIds.forEach { glanceId ->
+            updateAppWidgetState(context, NarraWidget().stateDefinition, glanceId) { prefs ->
+                val mutablePrefs = prefs.toMutablePreferences()
+                val currentImageUrl = prefs[KEY_ARTICLE_IMAGE_URL] ?: ""
+                if (imageUrl != null && imageUrl != currentImageUrl) {
+                    shouldDownloadImage = true
+                } else if (imageUrl == null && currentImageUrl.isNotEmpty()) {
+                    // Clear image path if no image url
+                    mutablePrefs.remove(KEY_IMAGE_PATH)
+                }
+
+                mutablePrefs.apply {
+                    this[KEY_IS_PLAYING] = isPlaying
+                    this[KEY_ARTICLE_ID] = articleId ?: ""
+                    this[KEY_ARTICLE_TITLE] = title ?: ""
+                    this[KEY_ARTICLE_SOURCE] = source ?: ""
+                    this[KEY_ARTICLE_IMAGE_URL] = imageUrl ?: ""
+                    this[KEY_PROGRESS] = progress ?: 0f
+                    this[KEY_DURATION] = duration ?: 0L
+                    this[KEY_SHOW_REMAINING_TIME] = showRemainingTime
+                    this[KEY_PLAYBACK_SPEED] = playbackSpeed
+                }
+                mutablePrefs
             }
 
-            mutablePrefs.apply {
-                this[KEY_IS_PLAYING] = isPlaying
-                this[KEY_ARTICLE_ID] = articleId ?: ""
-                this[KEY_ARTICLE_TITLE] = title ?: ""
-                this[KEY_ARTICLE_SOURCE] = source ?: ""
-                this[KEY_ARTICLE_IMAGE_URL] = imageUrl ?: ""
-                this[KEY_PROGRESS] = progress ?: 0f
-                this[KEY_DURATION] = duration ?: 0L
-                this[KEY_SHOW_REMAINING_TIME] = showRemainingTime
-                this[KEY_PLAYBACK_SPEED] = playbackSpeed
-            }
-            mutablePrefs
+            NarraWidget().update(context, glanceId)
         }
 
         if (shouldDownloadImage && imageUrl != null) {
             enqueueImageDownload(imageUrl)
         }
-
-        NarraWidget().update(context, glanceId)
     }
 
     private fun enqueueImageDownload(imageUrl: String) {

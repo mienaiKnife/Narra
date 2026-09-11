@@ -70,12 +70,14 @@ constructor(
     }
 
     private suspend fun updateWidgetState(path: String) {
-        val glanceId = GlanceAppWidgetManager(context).getGlanceIds(NarraWidget::class.java).firstOrNull() ?: return
-        updateAppWidgetState(context, NarraWidget().stateDefinition, glanceId) { prefs ->
-            val mutablePrefs = prefs.toMutablePreferences()
-            mutablePrefs[WidgetManager.KEY_IMAGE_PATH] = path
-            mutablePrefs
+        val glanceIds = GlanceAppWidgetManager(context).getGlanceIds(NarraWidget::class.java)
+        glanceIds.forEach { glanceId ->
+            updateAppWidgetState(context, NarraWidget().stateDefinition, glanceId) { prefs ->
+                val mutablePrefs = prefs.toMutablePreferences()
+                mutablePrefs[WidgetManager.KEY_IMAGE_PATH] = path
+                mutablePrefs
+            }
+            NarraWidget().update(context, glanceId)
         }
-        NarraWidget().update(context, glanceId)
     }
 }
