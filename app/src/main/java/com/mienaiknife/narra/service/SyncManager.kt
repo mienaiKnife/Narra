@@ -40,7 +40,6 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
@@ -57,7 +56,7 @@ constructor(
     private val downloadSettingsManager: DownloadSettingsManager,
     private val workManager: WorkManager,
 ) {
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val exportTrigger = MutableSharedFlow<String>(replay = 0, extraBufferCapacity = 1)
     private var isStarted = false
 
@@ -112,33 +111,31 @@ constructor(
 
     /**
      * Checks if a staged database exists and applies it.
-     * This MUST be called before the database is used.
+     * This MUST be called before the database is used, and must not run on the main thread.
      */
-    fun applyStagedDatabaseIfNecessary(context: android.content.Context) {
-        runBlocking {
-            if (syncSettingsManager.pendingImport.first()) {
-                val stagedFile = context.getDatabasePath("narra_db_staged")
-                val dbFile = context.getDatabasePath(AppDatabase.DATABASE_NAME)
+    suspend fun applyStagedDatabaseIfNecessary(context: android.content.Context) {
+        if (syncSettingsManager.pendingImport.first()) {
+            val stagedFile = context.getDatabasePath("narra_db_staged")
+            val dbFile = context.getDatabasePath(AppDatabase.DATABASE_NAME)
 
-                if (stagedFile.exists()) {
-                    try {
-                        appDatabase.close()
+            if (stagedFile.exists()) {
+                try {
+                    appDatabase.close()
 
-                        // Delete sidecar files
-                        File(dbFile.path + "-wal").delete()
-                        File(dbFile.path + "-shm").delete()
+                    // Delete sidecar files
+                    File(dbFile.path + "-wal").delete()
+                    File(dbFile.path + "-shm").delete()
 
-                        FileInputStream(stagedFile).use { input ->
-                            FileOutputStream(dbFile).use { output ->
-                                input.copyTo(output)
-                            }
+                    FileInputStream(stagedFile).use { input ->
+                        FileOutputStream(dbFile).use { output ->
+                            input.copyTo(output)
                         }
-                        stagedFile.delete()
-                        syncSettingsManager.setPendingImport(false)
-                        android.util.Log.i("SyncManager", "Staged database applied successfully")
-                    } catch (e: Exception) {
-                        android.util.Log.e("SyncManager", "Failed to apply staged database", e)
                     }
+                    stagedFile.delete()
+                    syncSettingsManager.setPendingImport(false)
+                    android.util.Log.i("SyncManager", "Staged database applied successfully")
+                } catch (e: Exception) {
+                    android.util.Log.e("SyncManager", "Failed to apply staged database", e)
                 }
             }
         }

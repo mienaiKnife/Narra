@@ -28,11 +28,15 @@ import androidx.compose.runtime.getValue
 import androidx.core.content.ContextCompat
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.lifecycleScope
 import com.mienaiknife.narra.service.SyncManager
 import com.mienaiknife.narra.ui.theme.NarraTheme
 import com.mienaiknife.narra.ui.theme.ThemeViewModel
 import com.mienaiknife.narra.ui.theme.getFontFamily
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -43,6 +47,7 @@ class MainActivity : ComponentActivity() {
     private val themeViewModel: ThemeViewModel by viewModels()
 
     private var initialArticleId: String? = null
+    private var isReady = false
 
     private val requestPermissionLauncher =
         registerForActivityResult(
@@ -52,7 +57,7 @@ class MainActivity : ComponentActivity() {
         }
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        installSplashScreen()
+        installSplashScreen().setKeepOnScreenCondition { !isReady }
         super.onCreate(savedInstanceState)
 
         initialArticleId = intent.getStringExtra("article_id")
@@ -68,21 +73,29 @@ class MainActivity : ComponentActivity() {
         }
 
         themeViewModel.initialize(this)
-        syncManager.applyStagedDatabaseIfNecessary(this)
-        syncManager.start()
         enableEdgeToEdge()
 
-        setContent {
-            val uiState by themeViewModel.uiState.collectAsStateWithLifecycle()
-            val isDarkMode = uiState.isDarkMode
-            val isDynamicColor = uiState.isDynamicColor
-            val useSystemTheme = uiState.useSystemTheme
-            val fontFamily = getFontFamily(uiState.readerFontFamily)
+        // Applying a staged database touches the filesystem and closes the database, so keep it
+        // off the main thread and delay any database consumer until it completes.
+        lifecycleScope.launch {
+            withContext(Dispatchers.IO) {
+                syncManager.applyStagedDatabaseIfNecessary(applicationContext)
+            }
+            syncManager.start()
+            if (isFinishing || isDestroyed) return@launch
+            isReady = true
+            setContent {
+                val uiState by themeViewModel.uiState.collectAsStateWithLifecycle()
+                val isDarkMode = uiState.isDarkMode
+                val isDynamicColor = uiState.isDynamicColor
+                val useSystemTheme = uiState.useSystemTheme
+                val fontFamily = getFontFamily(uiState.readerFontFamily)
 
-            val darkTheme = if (useSystemTheme) androidx.compose.foundation.isSystemInDarkTheme() else isDarkMode
+                val darkTheme = if (useSystemTheme) androidx.compose.foundation.isSystemInDarkTheme() else isDarkMode
 
-            NarraTheme(darkTheme = darkTheme, dynamicColor = isDynamicColor, fontFamily = fontFamily) {
-                AppNavigation(themeViewModel = themeViewModel, initialArticleId = initialArticleId)
+                NarraTheme(darkTheme = darkTheme, dynamicColor = isDynamicColor, fontFamily = fontFamily) {
+                    AppNavigation(themeViewModel = themeViewModel, initialArticleId = initialArticleId)
+                }
             }
         }
     }

@@ -19,6 +19,7 @@ import android.content.Context
 import androidx.room.Room
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
+import androidx.sqlite.db.SupportSQLiteOpenHelper
 import com.mienaiknife.narra.data.local.AppDatabase
 import com.mienaiknife.narra.data.local.dao.ArticleDao
 import com.mienaiknife.narra.data.local.dao.FeedDao
@@ -75,77 +76,137 @@ object DatabaseModule {
     fun provideAppDatabase(
         @ApplicationContext context: Context,
         securityManager: SecurityManager,
-    ): AppDatabase {
+    ): AppDatabase = Room
+        .databaseBuilder(
+            context,
+            AppDatabase::class.java,
+            AppDatabase.DATABASE_NAME,
+        ).openHelperFactory(PreparingOpenHelperFactory(securityManager))
+        .addMigrations(migration16to17)
+        .build()
+
+    /**
+     * Validates and repairs the on-disk database before it is opened. This reads the Keystore and
+     * may encrypt or back up the whole database file, so it must never run on the main thread.
+     * [PreparingOpenHelperFactory] invokes it lazily just before the first open, which Room
+     * performs on a background thread for suspend DAO calls.
+     */
+    fun prepareDatabaseFile(
+        context: Context,
+        passphrase: ByteArray,
+    ) {
         System.loadLibrary("sqlcipher")
         val dbFile = context.getDatabasePath(AppDatabase.DATABASE_NAME)
-        val passphrase = securityManager.getDatabaseEncryptionKey()
 
-        // 1. If DB exists, check if it's already encrypted
-        if (dbFile.exists()) {
-            android.util.Log.i("DatabaseModule", "Database file exists at: ${dbFile.absolutePath}")
-            val isEncrypted =
-                try {
-                    net.zetetic.database.sqlcipher.SQLiteDatabase
-                        .openDatabase(
-                            dbFile.absolutePath,
-                            passphrase,
-                            null,
-                            net.zetetic.database.sqlcipher.SQLiteDatabase.OPEN_READONLY,
-                            null,
-                        ).use { it.hasReadableSchema() }
-                } catch (e: Exception) {
-                    android.util.Log.w("DatabaseModule", "Failed to open encrypted database: ${e.message}")
-                    false
-                }
-
-            if (!isEncrypted) {
-                // 2. Try to open as unencrypted to confirm it's a migration case
-                val isUnencrypted =
-                    try {
-                        net.zetetic.database.sqlcipher.SQLiteDatabase
-                            .openDatabase(
-                                dbFile.absolutePath,
-                                "",
-                                null,
-                                net.zetetic.database.sqlcipher.SQLiteDatabase.OPEN_READONLY,
-                                null,
-                            ).use { it.hasReadableSchema() }
-                    } catch (e: Exception) {
-                        android.util.Log.w("DatabaseModule", "Failed to open unencrypted database: ${e.message}")
-                        false
-                    }
-
-                if (isUnencrypted) {
-                    android.util.Log.i("DatabaseModule", "Unencrypted database found. Encrypting...")
-                    try {
-                        encryptDatabase(dbFile, passphrase)
-                        android.util.Log.i("DatabaseModule", "Database encrypted successfully.")
-                    } catch (e: Exception) {
-                        android.util.Log.e("DatabaseModule", "Failed to encrypt database", e)
-                        // This might happen if encryption fails mid-way, or file is weirdly formatted
-                        backupAndStartFresh(dbFile)
-                    }
-                } else {
-                    android.util.Log.e("DatabaseModule", "Database is corrupted, encrypted with a DIFFERENT key, or inaccessible. BACKING UP and starting fresh.")
-                    backupAndStartFresh(dbFile)
-                }
-            } else {
-                android.util.Log.i("DatabaseModule", "Database opened successfully with current passphrase.")
-            }
-        } else {
+        if (!dbFile.exists()) {
             android.util.Log.i("DatabaseModule", "No database file found. Creating new one.")
+            return
         }
 
-        val factory = SupportOpenHelperFactory(passphrase)
+        // 1. If DB exists, check if it's already encrypted
+        android.util.Log.i("DatabaseModule", "Database file exists at: ${dbFile.absolutePath}")
+        val isEncrypted =
+            try {
+                net.zetetic.database.sqlcipher.SQLiteDatabase
+                    .openDatabase(
+                        dbFile.absolutePath,
+                        passphrase,
+                        null,
+                        net.zetetic.database.sqlcipher.SQLiteDatabase.OPEN_READONLY,
+                        null,
+                    ).use { it.hasReadableSchema() }
+            } catch (e: Exception) {
+                android.util.Log.w("DatabaseModule", "Failed to open encrypted database: ${e.message}")
+                false
+            }
 
-        return Room
-            .databaseBuilder(
-                context,
-                AppDatabase::class.java,
-                AppDatabase.DATABASE_NAME,
-            ).openHelperFactory(factory)
-            .addMigrations(migration16to17)
-            .build()
+        if (isEncrypted) {
+            android.util.Log.i("DatabaseModule", "Database opened successfully with current passphrase.")
+            return
+        }
+
+        // 2. Try to open as unencrypted to confirm it's a migration case
+        val isUnencrypted =
+            try {
+                net.zetetic.database.sqlcipher.SQLiteDatabase
+                    .openDatabase(
+                        dbFile.absolutePath,
+                        "",
+                        null,
+                        net.zetetic.database.sqlcipher.SQLiteDatabase.OPEN_READONLY,
+                        null,
+                    ).use { it.hasReadableSchema() }
+            } catch (e: Exception) {
+                android.util.Log.w("DatabaseModule", "Failed to open unencrypted database: ${e.message}")
+                false
+            }
+
+        if (isUnencrypted) {
+            android.util.Log.i("DatabaseModule", "Unencrypted database found. Encrypting...")
+            try {
+                encryptDatabase(dbFile, passphrase)
+                android.util.Log.i("DatabaseModule", "Database encrypted successfully.")
+            } catch (e: Exception) {
+                android.util.Log.e("DatabaseModule", "Failed to encrypt database", e)
+                // This might happen if encryption fails mid-way, or file is weirdly formatted
+                backupAndStartFresh(dbFile)
+            }
+        } else {
+            android.util.Log.e("DatabaseModule", "Database is corrupted, encrypted with a DIFFERENT key, or inaccessible. BACKING UP and starting fresh.")
+            backupAndStartFresh(dbFile)
+        }
+    }
+
+    private class PreparingOpenHelperFactory(
+        private val securityManager: SecurityManager,
+    ) : SupportSQLiteOpenHelper.Factory {
+        override fun create(configuration: SupportSQLiteOpenHelper.Configuration): SupportSQLiteOpenHelper = PreparingOpenHelper(configuration, securityManager)
+    }
+
+    /**
+     * Defers all SQLCipher/Keystore work until the database is actually opened. Room calls
+     * [create] and [setWriteAheadLoggingEnabled] on the main thread during initialization, but
+     * only touches [writableDatabase]/[readableDatabase] on the background query thread.
+     */
+    private class PreparingOpenHelper(
+        private val configuration: SupportSQLiteOpenHelper.Configuration,
+        private val securityManager: SecurityManager,
+    ) : SupportSQLiteOpenHelper {
+        private var delegate: SupportSQLiteOpenHelper? = null
+        private var writeAheadLoggingEnabled: Boolean? = null
+
+        @Synchronized
+        private fun delegate(): SupportSQLiteOpenHelper {
+            delegate?.let { return it }
+            val passphrase = securityManager.getDatabaseEncryptionKey()
+            prepareDatabaseFile(configuration.context, passphrase)
+            return SupportOpenHelperFactory(passphrase)
+                .create(configuration)
+                .also { created ->
+                    writeAheadLoggingEnabled?.let(created::setWriteAheadLoggingEnabled)
+                    delegate = created
+                }
+        }
+
+        override val databaseName: String?
+            get() = configuration.name
+
+        @Synchronized
+        override fun setWriteAheadLoggingEnabled(enabled: Boolean) {
+            writeAheadLoggingEnabled = enabled
+            delegate?.setWriteAheadLoggingEnabled(enabled)
+        }
+
+        override val writableDatabase: SupportSQLiteDatabase
+            get() = delegate().writableDatabase
+
+        override val readableDatabase: SupportSQLiteDatabase
+            get() = delegate().readableDatabase
+
+        @Synchronized
+        override fun close() {
+            delegate?.close()
+        }
     }
 
     /**

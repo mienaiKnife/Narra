@@ -119,6 +119,38 @@ class DatabaseProtectionTest {
     }
 
     @Test
+    fun testDatabasePreparationIsDeferredUntilFirstOpen() {
+        // 1. Create an unencrypted database
+        System.loadLibrary("sqlcipher")
+        val flags = SQLiteDatabase.CREATE_IF_NECESSARY or SQLiteDatabase.OPEN_READWRITE
+        SQLiteDatabase.openDatabase(dbFile.absolutePath, "", null, flags, null).use { db ->
+            db.execSQL("CREATE TABLE test_table (id TEXT PRIMARY KEY, value TEXT)")
+        }
+
+        val securityManager = mock<SecurityManager>()
+        whenever(securityManager.getDatabaseEncryptionKey()).thenReturn(passphrase)
+
+        // 2. Building Room must not touch the file yet
+        val roomDb = DatabaseModule.provideAppDatabase(context, securityManager)
+        SQLiteDatabase.openDatabase(dbFile.absolutePath, "", null, SQLiteDatabase.OPEN_READONLY, null).use { db ->
+            db.rawQuery("SELECT COUNT(*) FROM sqlite_schema", null).use { it.moveToFirst() }
+        }
+
+        // 3. The first actual open triggers preparation/encryption
+        roomDb.openHelper.writableDatabase
+
+        val canOpenWithoutPassphrase = try {
+            SQLiteDatabase.openDatabase(dbFile.absolutePath, "", null, SQLiteDatabase.OPEN_READONLY, null).use { db ->
+                db.rawQuery("SELECT COUNT(*) FROM sqlite_schema", null).use { it.moveToFirst() }
+                true
+            }
+        } catch (e: Exception) {
+            false
+        }
+        assertFalse("Database should be encrypted after first open", canOpenWithoutPassphrase)
+    }
+
+    @Test
     fun testKeyMismatchCorruptionProtection() {
         // 1. Create an encrypted database with an OLD key
         val oldPassphrase = "old-passphrase".toByteArray()
