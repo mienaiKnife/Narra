@@ -15,11 +15,14 @@
  */
 package com.mienaiknife.narra.ui
 
+import android.content.Context
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.test.core.app.ApplicationProvider
+import com.mienaiknife.narra.R
 import com.mienaiknife.narra.ui.screens.HomeScreenContent
 import com.mienaiknife.narra.ui.viewmodels.HomeUiState
 import org.junit.Rule
@@ -28,6 +31,10 @@ import org.junit.Test
 class NavigationTest {
     @get:Rule
     val composeTestRule = createComposeRule()
+
+    private val context: Context = ApplicationProvider.getApplicationContext()
+    private val emptyTitle = context.getString(R.string.home_empty_title)
+    private val addContent = context.getString(R.string.home_add_content)
 
     @Test
     fun homeScreen_displaysEmptyState_whenNoArticles() {
@@ -45,8 +52,8 @@ class NavigationTest {
             )
         }
 
-        composeTestRule.onNodeWithText("Your library is empty").assertIsDisplayed()
-        composeTestRule.onNodeWithText("Add Content").assertIsDisplayed()
+        composeTestRule.onNodeWithText(emptyTitle).assertIsDisplayed()
+        composeTestRule.onNodeWithText(addContent).assertIsDisplayed()
     }
 
     @Test
@@ -66,7 +73,7 @@ class NavigationTest {
             )
         }
 
-        composeTestRule.onNodeWithText("Add Content").performClick()
+        composeTestRule.onNodeWithText(addContent).performClick()
         assert(addClicked)
     }
 }
