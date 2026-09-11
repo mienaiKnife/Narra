@@ -47,6 +47,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.tooling.preview.Preview
@@ -273,6 +274,7 @@ fun PlaybackSettingsContent(
                 selectedValue = uiState.fastForwardSkipTime,
                 options = listOf("10s", "15s", "30s", "60s"),
                 onValueChange = onFastForwardTimeChange,
+                optionLabel = { skipTimeLabel(it) },
                 modifier = Modifier
                     .bringIntoViewRequester(fastForwardSkipTimeRequester)
                     .flashHighlight(highlightSetting == "fastForwardSkipTime"),
@@ -284,6 +286,7 @@ fun PlaybackSettingsContent(
                 selectedValue = uiState.rewindSkipTime,
                 options = listOf("10s", "15s", "30s", "60s"),
                 onValueChange = onRewindTimeChange,
+                optionLabel = { skipTimeLabel(it) },
                 modifier = Modifier
                     .bringIntoViewRequester(rewindSkipTimeRequester)
                     .flashHighlight(highlightSetting == "rewindSkipTime"),
@@ -525,6 +528,12 @@ private fun hardwareActionLabel(action: HardwareButtonAction): String = when (ac
     HardwareButtonAction.SKIP_ARTICLE -> stringResource(R.string.setting_skip_article)
     HardwareButtonAction.REWIND -> stringResource(R.string.setting_rewind)
     HardwareButtonAction.RESTART_ARTICLE -> stringResource(R.string.setting_restart_article)
+}
+
+@Composable
+private fun skipTimeLabel(storedValue: String): String {
+    val seconds = storedValue.removeSuffix("s").toIntOrNull() ?: return storedValue
+    return pluralStringResource(R.plurals.unit_seconds, seconds, seconds)
 }
 
 @Preview(uiMode = Configuration.UI_MODE_NIGHT_YES, showBackground = true)
