@@ -31,7 +31,7 @@ class PowerLockManager(context: Context) {
         if (wakeLock == null) {
             wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "Narra:PlaybackWakeLock").apply {
                 setReferenceCounted(false)
-                acquire(10 * 60 * 1000L /*10 minutes*/)
+                acquire()
             }
         }
         if (wifiLock == null) {
@@ -53,7 +53,7 @@ class PowerLockManager(context: Context) {
         if (manualWakeLock == null) {
             manualWakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "Narra:ManualWakeLock").apply {
                 setReferenceCounted(false)
-                acquire(10 * 60 * 1000L /*10 minutes*/)
+                acquire()
             }
         }
     }
