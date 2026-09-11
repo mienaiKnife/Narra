@@ -24,7 +24,6 @@ data class VoicesSettingsUiState(
     val selectedEngine: String = "android",
     val selectedModelId: String? = null,
     val selectedSpeakerId: Int = 0,
-    val sherpaSpeed: Float = 1.0f,
     val sherpaNoiseScale: Float = 0.667f,
     val sherpaLengthScale: Float = 1.0f,
     val engineState: TtsState = TtsState.Idle,

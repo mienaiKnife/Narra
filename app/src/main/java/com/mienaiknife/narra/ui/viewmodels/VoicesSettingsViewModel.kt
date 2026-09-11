@@ -53,7 +53,6 @@ class VoicesSettingsViewModel @Inject constructor(
         settingsManager.ttsEngine,
         settingsManager.ttsModelId,
         settingsManager.ttsSpeakerId,
-        settingsManager.sherpaSpeed,
         settingsManager.sherpaNoiseScale,
         settingsManager.sherpaLengthScale,
         ttsEngine.state,
@@ -63,12 +62,11 @@ class VoicesSettingsViewModel @Inject constructor(
         val engine = args[1] as String
         val modelId = args[2] as String?
         val speakerId = args[3] as Int
-        val speed = args[4] as Float
-        val noiseScale = args[5] as Float
-        val lengthScale = args[6] as Float
-        val engineState = args[7] as TtsState
-        val errorMessage = args[8] as UiText?
-        VoicesSettingsUiState(models, engine, modelId, speakerId, speed, noiseScale, lengthScale, engineState, errorMessage)
+        val noiseScale = args[4] as Float
+        val lengthScale = args[5] as Float
+        val engineState = args[6] as TtsState
+        val errorMessage = args[7] as UiText?
+        VoicesSettingsUiState(models, engine, modelId, speakerId, noiseScale, lengthScale, engineState, errorMessage)
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
@@ -112,12 +110,6 @@ class VoicesSettingsViewModel @Inject constructor(
                 settingsManager.setTtsModelId(null)
             }
             modelRepository.deleteModel(modelId)
-        }
-    }
-
-    fun setSherpaSpeed(speed: Float) {
-        viewModelScope.launch {
-            settingsManager.setSherpaSpeed(speed)
         }
     }
 
