@@ -45,10 +45,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.mienaiknife.narra.R
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -234,11 +236,11 @@ fun BoxScope.NarraScrollbar(
     val thumbHeightFraction by remember {
         derivedStateOf {
             val maxValue = scrollState.maxValue
-            if (maxValue == 0) {
+            val viewportHeight = scrollState.viewportSize.toFloat()
+            if (maxValue <= 0 || viewportHeight <= 0f) {
                 1f
             } else {
-                // Rough estimate for verticalScroll
-                0.2f
+                (viewportHeight / (maxValue + viewportHeight)).coerceIn(0.1f, 1f)
             }
         }
     }
@@ -299,6 +301,7 @@ private fun BoxScope.ScrollbarContainer(
     thumbOffsetFraction: Float,
     modifier: Modifier = Modifier,
 ) {
+    val scrollbarDescription = stringResource(R.string.scrollbar_desc)
     Box(
         modifier = modifier
             .align(Alignment.CenterEnd)
@@ -306,7 +309,7 @@ private fun BoxScope.ScrollbarContainer(
             .fillMaxHeight()
             .width(16.dp)
             .semantics {
-                contentDescription = "Scrollbar"
+                contentDescription = scrollbarDescription
             },
     ) {
         Box(
