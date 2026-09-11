@@ -63,26 +63,30 @@ class FeedArticlesViewModel @Inject constructor(
 
     private val _downloadingArticleIds = MutableStateFlow<Set<String>>(emptySet())
 
+    private data class FeedData(
+        val articles: List<Article>,
+        val isRefreshing: Boolean,
+        val sort: SortOption,
+        val showPlayed: Boolean,
+        val downloadingIds: Set<String>,
+    )
+
     val uiState: StateFlow<FeedArticlesUiState> = combine(
-        repository.getArticlesByFeedUrl(feedUrl),
-        _isRefreshing,
-        _sortOption,
-        _showPlayed,
-        _downloadingArticleIds,
+        combine(
+            repository.getArticlesByFeedUrl(feedUrl),
+            _isRefreshing,
+            _sortOption,
+            _showPlayed,
+            _downloadingArticleIds,
+            ::FeedData,
+        ),
         playbackManager.playbackSpeed,
-    ) { args: Array<Any?> ->
-        val articles = args[0] as List<Article>
-        val isRefreshing = args[1] as Boolean
-        val sort = args[2] as SortOption
-        val showPlayed = args[3] as Boolean
-        val downloadingIds = args[4] as Set<String>
-        val playbackSpeed = args[5] as Float
-
+    ) { data, playbackSpeed ->
         // Use the source of the first article if available, as it might have been updated
-        val currentFeedTitle = articles.firstOrNull()?.source ?: initialFeedTitle
+        val currentFeedTitle = data.articles.firstOrNull()?.source ?: initialFeedTitle
 
-        val filteredArticles = if (showPlayed) articles else articles.filter { (it.progress ?: 0f) < 1f }
-        val sortedArticles = when (sort) {
+        val filteredArticles = if (data.showPlayed) data.articles else data.articles.filter { (it.progress ?: 0f) < 1f }
+        val sortedArticles = when (data.sort) {
             SortOption.MANUAL -> filteredArticles
             SortOption.DATE_DESC -> filteredArticles.sortedByDescending { it.publishedTimestamp ?: 0L }
             SortOption.DATE_ASC -> filteredArticles.sortedBy { it.publishedTimestamp ?: Long.MAX_VALUE }
@@ -93,12 +97,12 @@ class FeedArticlesViewModel @Inject constructor(
         }
         FeedArticlesUiState(
             articles = sortedArticles,
-            isRefreshing = isRefreshing,
-            sortOption = sort,
-            showPlayed = showPlayed,
+            isRefreshing = data.isRefreshing,
+            sortOption = data.sort,
+            showPlayed = data.showPlayed,
             playbackSpeed = playbackSpeed,
             feedTitle = currentFeedTitle,
-            downloadingArticleIds = downloadingIds,
+            downloadingArticleIds = data.downloadingIds,
         )
     }.stateIn(
         scope = viewModelScope,

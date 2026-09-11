@@ -92,7 +92,7 @@ Check off items as they land. Prefer one isolated commit + regression test per i
       `InboxScreen.kt:167-177`, `HistoryScreen.kt:175-185`, `FeedArticlesScreen.kt:172-182`.
 - [x] **Stale instrumentation assertions.** `androidTest/.../ui/NavigationTest.kt:49,69` (`"Add Content"`).
 - [x] **Unused `sherpaSpeed` UI state/setter.** `ui/viewmodels/VoicesSettingsViewModel.kt:56,118-122`.
-- [ ] **16-flow unchecked combine (and 5 others).** `ui/viewmodels/ReaderViewModel.kt:98-145`,
+- [x] **16-flow unchecked combine (and 5 others).** `ui/viewmodels/ReaderViewModel.kt:98-145`,
       `InboxViewModel.kt:67-96`, `HistoryViewModel.kt:62-77`, etc.
 - [x] **Reader parses article twice.** `ui/viewmodels/ReaderViewModel.kt:67-96,151-162,191-194`.
 - [x] **Dead error states.** `ui/viewmodels/QueueUiState.kt:36-38`, `HomeUiState.kt:30-32`.

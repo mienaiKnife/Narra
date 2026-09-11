@@ -99,48 +99,91 @@ class ReaderViewModel @Inject constructor(
         initialValue = emptyList(),
     )
 
-    @Suppress("UNCHECKED_CAST")
-    val uiState: StateFlow<ReaderUiState> = combine(
-        playbackManager.currentArticle,
-        _blocks,
-        _isLoading,
-        _error,
-        playbackManager.isPlaying,
-        playbackManager.isBuffering,
-        playbackManager.currentPosition,
-        playbackManager.duration,
-        playbackManager.playbackSpeed,
-        playbackManager.currentParagraphIndex,
-        playbackManager.currentWordRange,
-        playbackManager.settingsManager.fastForwardSkipTime,
-        playbackManager.settingsManager.rewindSkipTime,
-        playbackManager.sleepTimerMillisLeft,
-        _searchQuery,
-        _searchResults,
-    ) { flows ->
-        val article = flows[0] as Article?
-        val blocks = flows[1] as List<ContentBlock>
-        val isLoadingFlag = flows[2] as Boolean
+    private data class PlaybackCore(
+        val article: Article?,
+        val isPlaying: Boolean,
+        val isBuffering: Boolean,
+        val currentPosition: Long,
+        val duration: Long,
+    )
 
+    private data class PlaybackNav(
+        val playbackSpeed: Float,
+        val currentParagraphIndex: Int,
+        val currentWordRange: IntRange?,
+        val sleepTimerMillisLeft: Long?,
+    )
+
+    private data class ReaderContent(
+        val blocks: List<ContentBlock>,
+        val isLoading: Boolean,
+        val error: UiText?,
+    )
+
+    private data class ReaderSearch(
+        val query: String,
+        val results: List<SearchResult>,
+    )
+
+    private data class SkipTimes(
+        val fastForward: String,
+        val rewind: String,
+    )
+
+    val uiState: StateFlow<ReaderUiState> = combine(
+        combine(
+            playbackManager.currentArticle,
+            playbackManager.isPlaying,
+            playbackManager.isBuffering,
+            playbackManager.currentPosition,
+            playbackManager.duration,
+            ::PlaybackCore,
+        ),
+        combine(
+            playbackManager.playbackSpeed,
+            playbackManager.currentParagraphIndex,
+            playbackManager.currentWordRange,
+            playbackManager.sleepTimerMillisLeft,
+            ::PlaybackNav,
+        ),
+        combine(
+            _blocks,
+            _isLoading,
+            _error,
+            ::ReaderContent,
+        ),
+        combine(
+            _searchQuery,
+            _searchResults,
+            ::ReaderSearch,
+        ),
+        combine(
+            playbackManager.settingsManager.fastForwardSkipTime,
+            playbackManager.settingsManager.rewindSkipTime,
+            ::SkipTimes,
+        ),
+    ) { core, nav, content, search, skips ->
         ReaderUiState(
-            article = article,
-            blocks = blocks,
+            article = core.article,
+            blocks = content.blocks,
             // Keep loading if explicit flag is true OR if we have an article with content but no parsed blocks yet.
             // This prevents the UI from initializing with 0 items, which would reset the scroll state.
-            isLoading = isLoadingFlag || (article != null && blocks.isEmpty() && article.content.isNotBlank()),
-            error = flows[3] as UiText?,
-            isPlaying = flows[4] as Boolean,
-            isBuffering = flows[5] as Boolean,
-            currentPosition = flows[6] as Long,
-            duration = flows[7] as Long,
-            playbackSpeed = flows[8] as Float,
-            currentParagraphIndex = flows[9] as Int,
-            currentWordRange = flows[10] as IntRange?,
-            fastForwardSkipTime = flows[11] as String,
-            rewindSkipTime = flows[12] as String,
-            sleepTimerMillisLeft = flows[13] as Long?,
-            searchQuery = flows[14] as String,
-            searchResults = flows[15] as List<SearchResult>,
+            isLoading =
+            content.isLoading ||
+                (core.article != null && content.blocks.isEmpty() && core.article.content.isNotBlank()),
+            error = content.error,
+            isPlaying = core.isPlaying,
+            isBuffering = core.isBuffering,
+            currentPosition = core.currentPosition,
+            duration = core.duration,
+            playbackSpeed = nav.playbackSpeed,
+            currentParagraphIndex = nav.currentParagraphIndex,
+            currentWordRange = nav.currentWordRange,
+            fastForwardSkipTime = skips.fastForward,
+            rewindSkipTime = skips.rewind,
+            sleepTimerMillisLeft = nav.sleepTimerMillisLeft,
+            searchQuery = search.query,
+            searchResults = search.results,
         )
     }.stateIn(
         scope = viewModelScope,

@@ -46,27 +46,48 @@ class DownloadsSettingsViewModel @Inject constructor(
 
     private val _message = MutableStateFlow<UiText?>(null)
 
+    private data class DownloadsData(
+        val downloadOverWifiOnly: Boolean,
+        val refreshInterval: String,
+        val inboxInitialLimit: String,
+        val autoExportEnabled: Boolean,
+        val autoImportEnabled: Boolean,
+    )
+
+    private data class DownloadsSync(
+        val autoExportUri: String?,
+        val lastExportTimestamp: Long,
+        val pendingImport: Boolean,
+        val message: UiText?,
+    )
+
     val uiState: StateFlow<DownloadsSettingsUiState> = combine(
-        downloadSettingsManager.downloadOverWifiOnly,
-        downloadSettingsManager.refreshInterval,
-        downloadSettingsManager.inboxInitialLimit,
-        syncSettingsManager.autoExportEnabled,
-        syncSettingsManager.autoImportEnabled,
-        syncSettingsManager.autoExportUri,
-        syncSettingsManager.lastExportTimestamp,
-        syncSettingsManager.pendingImport,
-        _message,
-    ) { args: Array<Any?> ->
+        combine(
+            downloadSettingsManager.downloadOverWifiOnly,
+            downloadSettingsManager.refreshInterval,
+            downloadSettingsManager.inboxInitialLimit,
+            syncSettingsManager.autoExportEnabled,
+            syncSettingsManager.autoImportEnabled,
+            ::DownloadsData,
+        ),
+        combine(
+            syncSettingsManager.autoExportUri,
+            syncSettingsManager.lastExportTimestamp,
+            syncSettingsManager.pendingImport,
+            _message,
+            ::DownloadsSync,
+        ),
+    ) { data, sync ->
         DownloadsSettingsUiState(
-            downloadOverWifiOnly = args[0] as Boolean,
-            refreshInterval = args[1] as String,
-            inboxInitialLimit = args[2] as String,
-            autoExportEnabled = args[3] as Boolean,
-            autoImportEnabled = args[4] as Boolean,
-            autoExportUri = args[5] as String?,
-            lastExportTimestamp = args[6] as Long,
-            pendingImport = args[7] as Boolean,
-            message = args[8] as UiText?,
+            downloadOverWifiOnly = data.downloadOverWifiOnly,
+            refreshInterval = data.refreshInterval,
+            inboxInitialLimit = data.inboxInitialLimit,
+            autoExportEnabled = data.autoExportEnabled,
+            autoImportEnabled = data.autoImportEnabled,
+            autoExportUri = sync.autoExportUri,
+            lastExportTimestamp = sync.lastExportTimestamp,
+            pendingImport = sync.pendingImport,
+            message = sync.message,
         )
     }.stateIn(
         scope = viewModelScope,

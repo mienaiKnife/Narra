@@ -55,27 +55,35 @@ class InboxViewModel @Inject constructor(
 
     private val _downloadingArticleIds = MutableStateFlow<Set<String>>(emptySet())
 
-    val uiState: StateFlow<InboxUiState> = combine(
-        repository.getInboxArticles(),
-        _isRefreshing,
-        _sortOption,
-        _showPlayed,
-        _downloadingArticleIds,
-        playbackManager.currentArticle,
-        playbackManager.isPlaying,
-        playbackManager.playbackSpeed,
-    ) { args: Array<Any?> ->
-        val articles = args[0] as List<Article>
-        val isRefreshing = args[1] as Boolean
-        val sort = args[2] as SortOption
-        val showPlayed = args[3] as Boolean
-        val downloadingIds = args[4] as Set<String>
-        val currentArticle = args[5] as Article?
-        val isPlaying = args[6] as Boolean
-        val playbackSpeed = args[7] as Float
+    private data class InboxData(
+        val articles: List<Article>,
+        val isRefreshing: Boolean,
+        val sort: SortOption,
+        val showPlayed: Boolean,
+        val downloadingIds: Set<String>,
+    )
 
-        val filteredArticles = if (showPlayed) articles else articles.filter { (it.progress ?: 0f) < 1f }
-        val sortedArticles = when (sort) {
+    val uiState: StateFlow<InboxUiState> = combine(
+        combine(
+            repository.getInboxArticles(),
+            _isRefreshing,
+            _sortOption,
+            _showPlayed,
+            _downloadingArticleIds,
+            ::InboxData,
+        ),
+        combine(
+            playbackManager.currentArticle,
+            playbackManager.isPlaying,
+            playbackManager.playbackSpeed,
+        ) { currentArticle, isPlaying, playbackSpeed ->
+            Triple(currentArticle, isPlaying, playbackSpeed)
+        },
+    ) { data, playback ->
+        val (currentArticle, isPlaying, playbackSpeed) = playback
+
+        val filteredArticles = if (data.showPlayed) data.articles else data.articles.filter { (it.progress ?: 0f) < 1f }
+        val sortedArticles = when (data.sort) {
             SortOption.MANUAL -> filteredArticles
             SortOption.DATE_DESC -> filteredArticles.sortedByDescending { it.publishedTimestamp ?: 0L }
             SortOption.DATE_ASC -> filteredArticles.sortedBy { it.publishedTimestamp ?: Long.MAX_VALUE }
@@ -86,13 +94,13 @@ class InboxViewModel @Inject constructor(
         }
         InboxUiState(
             articles = sortedArticles,
-            isRefreshing = isRefreshing,
-            sortOption = sort,
-            showPlayed = showPlayed,
+            isRefreshing = data.isRefreshing,
+            sortOption = data.sort,
+            showPlayed = data.showPlayed,
             currentArticle = currentArticle,
             isPlaying = isPlaying,
             playbackSpeed = playbackSpeed,
-            downloadingArticleIds = downloadingIds,
+            downloadingArticleIds = data.downloadingIds,
         )
     }.stateIn(
         scope = viewModelScope,

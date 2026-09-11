@@ -18,7 +18,6 @@ package com.mienaiknife.narra.ui.viewmodels
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mienaiknife.narra.domain.TtsEngine
-import com.mienaiknife.narra.domain.TtsState
 import com.mienaiknife.narra.domain.models.TtsModel
 import com.mienaiknife.narra.domain.repository.ModelRepository
 import com.mienaiknife.narra.playback.PlaybackSettingsManager
@@ -48,25 +47,42 @@ class VoicesSettingsViewModel @Inject constructor(
         }
     }
 
+    private data class VoicesData(
+        val models: List<TtsModel>,
+        val engine: String,
+        val modelId: String?,
+        val speakerId: Int,
+        val noiseScale: Float,
+    )
+
     val uiState: StateFlow<VoicesSettingsUiState> = combine(
-        modelRepository.getAvailableModels(),
-        settingsManager.ttsEngine,
-        settingsManager.ttsModelId,
-        settingsManager.ttsSpeakerId,
-        settingsManager.sherpaNoiseScale,
-        settingsManager.sherpaLengthScale,
-        ttsEngine.state,
-        _errorMessage,
-    ) { args ->
-        val models = args[0] as List<TtsModel>
-        val engine = args[1] as String
-        val modelId = args[2] as String?
-        val speakerId = args[3] as Int
-        val noiseScale = args[4] as Float
-        val lengthScale = args[5] as Float
-        val engineState = args[6] as TtsState
-        val errorMessage = args[7] as UiText?
-        VoicesSettingsUiState(models, engine, modelId, speakerId, noiseScale, lengthScale, engineState, errorMessage)
+        combine(
+            modelRepository.getAvailableModels(),
+            settingsManager.ttsEngine,
+            settingsManager.ttsModelId,
+            settingsManager.ttsSpeakerId,
+            settingsManager.sherpaNoiseScale,
+            ::VoicesData,
+        ),
+        combine(
+            settingsManager.sherpaLengthScale,
+            ttsEngine.state,
+            _errorMessage,
+        ) { lengthScale, engineState, errorMessage ->
+            Triple(lengthScale, engineState, errorMessage)
+        },
+    ) { data, engineDetails ->
+        val (lengthScale, engineState, errorMessage) = engineDetails
+        VoicesSettingsUiState(
+            availableModels = data.models,
+            selectedEngine = data.engine,
+            selectedModelId = data.modelId,
+            selectedSpeakerId = data.speakerId,
+            sherpaNoiseScale = data.noiseScale,
+            sherpaLengthScale = lengthScale,
+            engineState = engineState,
+            errorMessage = errorMessage,
+        )
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),

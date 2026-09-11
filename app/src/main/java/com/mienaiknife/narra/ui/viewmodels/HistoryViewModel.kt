@@ -52,19 +52,23 @@ class HistoryViewModel @Inject constructor(
     private val _downloadingArticleIds = MutableStateFlow<Set<String>>(emptySet())
 
     val uiState: StateFlow<HistoryUiState> = combine(
-        repository.getHistoryArticles(),
-        _isRefreshing,
-        _downloadingArticleIds,
-        playbackManager.currentArticle,
-        playbackManager.isPlaying,
-        playbackManager.playbackSpeed,
-    ) { args: Array<Any?> ->
-        val articles = args[0] as List<Article>
-        val isRefreshing = args[1] as Boolean
-        val downloadingIds = args[2] as Set<String>
-        val currentArticle = args[3] as Article?
-        val isPlaying = args[4] as Boolean
-        val playbackSpeed = args[5] as Float
+        combine(
+            repository.getHistoryArticles(),
+            _isRefreshing,
+            _downloadingArticleIds,
+        ) { articles, isRefreshing, downloadingIds ->
+            Triple(articles, isRefreshing, downloadingIds)
+        },
+        combine(
+            playbackManager.currentArticle,
+            playbackManager.isPlaying,
+            playbackManager.playbackSpeed,
+        ) { currentArticle, isPlaying, playbackSpeed ->
+            Triple(currentArticle, isPlaying, playbackSpeed)
+        },
+    ) { listData, playback ->
+        val (articles, isRefreshing, downloadingIds) = listData
+        val (currentArticle, isPlaying, playbackSpeed) = playback
 
         HistoryUiState(
             articles = articles,
