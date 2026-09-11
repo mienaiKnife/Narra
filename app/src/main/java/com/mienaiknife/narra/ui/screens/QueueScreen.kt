@@ -42,7 +42,6 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -267,17 +266,6 @@ fun QueueScreenContent(
                     expanded = showMenu,
                     onDismissRequest = { showMenu = false },
                 ) {
-                    DropdownMenuItem(
-                        text = { Text(stringResource(R.string.action_search)) },
-                        onClick = { showMenu = false },
-                        leadingIcon = {
-                            Icon(
-                                Icons.Default.Search,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onBackground,
-                            )
-                        },
-                    )
                     DropdownMenuItem(
                         text = { Text(stringResource(R.string.action_sort)) },
                         onClick = {

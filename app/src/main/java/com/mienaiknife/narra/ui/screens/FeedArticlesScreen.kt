@@ -170,17 +170,6 @@ fun FeedArticlesScreenContent(
                     onDismissRequest = { showMenu = false },
                 ) {
                     DropdownMenuItem(
-                        text = { Text(stringResource(R.string.action_search)) },
-                        onClick = { showMenu = false },
-                        leadingIcon = {
-                            Icon(
-                                Icons.Default.Search,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onBackground,
-                            )
-                        },
-                    )
-                    DropdownMenuItem(
                         text = { Text(stringResource(R.string.action_sort)) },
                         onClick = {
                             showMenu = false

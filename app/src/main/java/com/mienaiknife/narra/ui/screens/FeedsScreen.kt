@@ -51,7 +51,6 @@ import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.NotificationsNone
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.RssFeed
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Upload
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -218,17 +217,6 @@ fun FeedsScreenContent(
                     expanded = showMenu,
                     onDismissRequest = { showMenu = false },
                 ) {
-                    DropdownMenuItem(
-                        text = { Text(stringResource(R.string.action_search)) },
-                        onClick = { showMenu = false },
-                        leadingIcon = {
-                            Icon(
-                                Icons.Default.Search,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onBackground,
-                            )
-                        },
-                    )
                     DropdownMenuItem(
                         text = { Text(stringResource(R.string.action_sort)) },
                         onClick = {
