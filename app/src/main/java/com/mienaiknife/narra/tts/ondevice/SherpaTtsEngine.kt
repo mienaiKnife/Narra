@@ -21,6 +21,7 @@ import android.media.AudioTrack
 import android.util.Log
 import com.k2fsa.sherpa.onnx.*
 import com.mienaiknife.narra.domain.TtsEngine
+import com.mienaiknife.narra.domain.TtsErrorReason
 import com.mienaiknife.narra.domain.TtsState
 import com.mienaiknife.narra.domain.models.TtsModel
 import com.mienaiknife.narra.domain.models.TtsModelType
@@ -645,7 +646,7 @@ class SherpaTtsEngine @Inject constructor(
 
     override fun speak(text: String, utteranceId: String) {
         if (tts == null) {
-            _state.value = TtsState.Error("No Sherpa-ONNX model selected")
+            _state.value = TtsState.Error("No Sherpa-ONNX model selected", TtsErrorReason.NO_MODEL_SELECTED)
             return
         }
         stop()
@@ -654,7 +655,7 @@ class SherpaTtsEngine @Inject constructor(
 
     override fun enqueue(text: String, utteranceId: String) {
         if (tts == null) {
-            _state.value = TtsState.Error("No Sherpa-ONNX model selected")
+            _state.value = TtsState.Error("No Sherpa-ONNX model selected", TtsErrorReason.NO_MODEL_SELECTED)
             return
         }
         utteranceQueue.trySend(UtteranceRequest(text, utteranceId, currentSessionId))

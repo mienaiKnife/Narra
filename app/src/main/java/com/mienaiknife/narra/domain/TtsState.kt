@@ -35,5 +35,10 @@ sealed class TtsState {
 
     data class Error(
         val message: String,
+        val reason: TtsErrorReason? = null,
     ) : TtsState()
+}
+
+enum class TtsErrorReason {
+    NO_MODEL_SELECTED,
 }

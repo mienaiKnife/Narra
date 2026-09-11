@@ -28,6 +28,7 @@ import androidx.media3.common.Player
 import androidx.media3.common.Timeline
 import androidx.media3.common.util.UnstableApi
 import com.mienaiknife.narra.R
+import com.mienaiknife.narra.domain.TtsErrorReason
 import com.mienaiknife.narra.domain.TtsState
 import com.mienaiknife.narra.domain.models.Article
 import com.mienaiknife.narra.domain.repository.ArticleRepository
@@ -136,9 +137,9 @@ class PlaybackManager @Inject constructor(
 
         scope.launch {
             ttsPlayer.engineState.collect { state ->
-                if (state is TtsState.Error && state.message == "No Sherpa-ONNX model selected") {
+                if (state is TtsState.Error && state.reason == TtsErrorReason.NO_MODEL_SELECTED) {
                     withContext(Dispatchers.Main) {
-                        Toast.makeText(context, state.message, Toast.LENGTH_LONG).show()
+                        Toast.makeText(context, R.string.error_no_tts_model_selected, Toast.LENGTH_LONG).show()
                     }
                 }
             }

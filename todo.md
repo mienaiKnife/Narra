@@ -137,7 +137,7 @@ Check off items as they land. Prefer one isolated commit + regression test per i
 - [x] English-only search keywords. `ui/screens/SettingsSearchData.kt:38-258`.
 - [x] Hardcoded separator `" • "` (4 files); About version string. `AboutScreen.kt:67`.
 - [x] Hardcoded notification strings/icon. `utils/NotificationHelper.kt:44-45,55,92-93`.
-- [ ] Hardcoded `"Loading..."` / Sherpa error strings compared in code.
+- [x] Hardcoded `"Loading..."` / Sherpa error strings compared in code.
       `TtsPlayer.kt:270`, `SherpaTtsEngine.kt:636,645`, `PlaybackManager.kt:139`.
 
 ### Duplication / structure

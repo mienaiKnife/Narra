@@ -37,6 +37,7 @@ import coil3.request.SuccessResult
 import coil3.toBitmap
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
+import com.mienaiknife.narra.R
 import com.mienaiknife.narra.domain.TtsEngine
 import com.mienaiknife.narra.domain.TtsState
 import com.mienaiknife.narra.domain.models.Article
@@ -285,7 +286,7 @@ class TtsPlayer @Inject constructor(
                     .setMediaId("preparing")
                     .setMediaMetadata(
                         MediaMetadata.Builder()
-                            .setTitle("Loading...")
+                            .setTitle(context.getString(R.string.state_loading))
                             .build(),
                     )
                     .build()

@@ -343,6 +343,8 @@
     <string name="error_subscribe_failed">Failed to subscribe to feed</string>
     <string name="error_generic">Something went wrong</string>
     <string name="error_article_not_found">Article not found</string>
+    <string name="error_no_tts_model_selected">No on-device voice model selected</string>
+    <string name="state_loading">Loading…</string>
 
     <!-- Backup/Import Messages -->
     <plurals name="message_imported_feeds">
