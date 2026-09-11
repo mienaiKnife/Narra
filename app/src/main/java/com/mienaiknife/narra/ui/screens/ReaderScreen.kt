@@ -46,7 +46,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CenterFocusStrong
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -556,7 +556,7 @@ fun ErrorView(
             verticalArrangement = Arrangement.Center,
         ) {
             Icon(
-                imageVector = Icons.Default.Refresh, // Using Refresh as a placeholder for error
+                imageVector = Icons.Default.ErrorOutline,
                 contentDescription = null,
                 modifier = Modifier.size(64.dp),
                 tint = MaterialTheme.colorScheme.error,
