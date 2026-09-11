@@ -105,11 +105,12 @@ fun ReaderTopBar(
                         overflow = TextOverflow.Ellipsis,
                         textAlign = TextAlign.Start,
                     )
+                    val separator = stringResource(R.string.separator_bullet)
                     val dateAndSource = buildString {
                         val formattedDate = DateUtils.formatPublishedDate(article.publishedAt)
                         if (formattedDate != null) {
                             append(formattedDate)
-                            append(" • ")
+                            append(separator)
                         }
                         append(article.source)
                     }

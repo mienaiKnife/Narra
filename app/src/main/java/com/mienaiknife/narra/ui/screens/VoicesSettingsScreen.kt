@@ -509,7 +509,7 @@ fun TtsModelItem(
                 verticalArrangement = Arrangement.spacedBy(LocalNarraSpacing.current.itemVertical),
             ) {
                 Text(
-                    text = "${model.language} • ${model.description}",
+                    text = "${model.language}${stringResource(R.string.separator_bullet)}${model.description}",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

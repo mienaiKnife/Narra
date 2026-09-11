@@ -112,7 +112,7 @@ fun LicensesScreen(onBack: () -> Unit) {
             items(libraries, key = { it.name }) { library ->
                 ListItem(
                     headlineContent = { Text(library.name) },
-                    supportingContent = { Text("${library.author} • ${library.license}") },
+                    supportingContent = { Text("${library.author}${stringResource(R.string.separator_bullet)}${library.license}") },
                     colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                 )
             }

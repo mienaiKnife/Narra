@@ -65,7 +65,7 @@ fun AboutScreen(onBack: () -> Unit, onNavigateToLicenses: () -> Unit) {
     val isPreview = LocalInspectionMode.current
     val unknownString = stringResource(R.string.reader_unknown)
     val previewString = stringResource(R.string.reader_preview)
-    val versionName = if (isPreview) "0.1-$previewString" else getVersionName(context, unknownString)
+    val versionName = if (isPreview) previewString else getVersionName(context, unknownString)
 
     Column(
         modifier = Modifier

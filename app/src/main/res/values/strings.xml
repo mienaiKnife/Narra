@@ -330,6 +330,7 @@
     <string name="action_clear">Clear</string>
     <string name="action_menu">Menu</string>
     <string name="action_back">Back</string>
+    <string name="separator_bullet">" • "</string>
     <string name="scrollbar_desc">Scrollbar</string>
 
     <!-- Snackbars & Dialogs -->

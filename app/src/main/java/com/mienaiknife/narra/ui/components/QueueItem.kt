@@ -273,11 +273,12 @@ private fun QueueItemRow(
                     Alignment.CenterVertically,
                 ),
             ) {
+                val separator = stringResource(R.string.separator_bullet)
                 val sourceText = buildString {
                     val formattedDate = DateUtils.formatPublishedDate(article.publishedAt)
                     if (formattedDate != null) {
                         append(formattedDate)
-                        append(" • ")
+                        append(separator)
                     }
                     append(article.source)
                 }

@@ -323,10 +323,11 @@ fun QueueScreenContent(
 
         if (articles.isNotEmpty()) {
             val articlesCountText = pluralStringResource(R.plurals.unit_articles, articles.size, articles.size)
+            val separator = stringResource(R.string.separator_bullet)
             Text(
                 text = buildString {
                     append(articlesCountText)
-                    append(" • ")
+                    append(separator)
                     append(timeLeftText)
                 },
                 style = MaterialTheme.typography.bodyMedium,
