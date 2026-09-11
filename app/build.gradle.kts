@@ -204,7 +204,6 @@ dependencies {
         exclude(group = "xmlpull", module = "xmlpull")
         exclude(group = "net.sf.kxml", module = "kxml2")
     }
-    implementation(libs.onnxruntime.android)
     implementation(libs.sherpa.onnx)
     implementation(libs.room.runtime)
     implementation(libs.room.ktx)
@@ -214,7 +213,6 @@ dependencies {
     ksp(libs.hilt.compiler)
     implementation(libs.androidx.hilt.navigation.compose)
     implementation(libs.androidx.media3.session)
-    implementation(libs.androidx.media3.exoplayer)
     implementation(libs.okhttp)
     implementation(libs.coil.compose)
     implementation(libs.coil.network)
