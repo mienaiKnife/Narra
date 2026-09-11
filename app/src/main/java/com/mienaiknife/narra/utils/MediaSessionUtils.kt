@@ -104,7 +104,9 @@ object MediaSessionUtils {
             try {
                 val setFlagsMethod = sessionCompat.javaClass.getDeclaredMethod("setFlags", Int::class.javaPrimitiveType ?: Int::class.java)
                 setFlagsMethod.invoke(sessionCompat, 3)
-            } catch (e: Exception) {}
+            } catch (e: Exception) {
+                android.util.Log.w(TAG, "Failed to set legacy session flags", e)
+            }
 
             // Step 7: Push aggressive extras to legacy session
             try {
@@ -127,7 +129,9 @@ object MediaSessionUtils {
                     putString("android.media.session.extra.KEY_EVENT_RECEIVER_CLASS", NarraMediaButtonReceiver::class.java.name)
                 }
                 setExtrasMethod.invoke(sessionCompat, extras)
-            } catch (e: Exception) {}
+            } catch (e: Exception) {
+                android.util.Log.w(TAG, "Failed to set legacy session extras", e)
+            }
 
             // Step 8: Set metadata from player
             try {
@@ -163,7 +167,9 @@ object MediaSessionUtils {
                     val setMetadataMethod = sessionCompat.javaClass.getDeclaredMethod("setMetadata", metadataClass)
                     setMetadataMethod.invoke(sessionCompat, metadata)
                 }
-            } catch (e: Exception) {}
+            } catch (e: Exception) {
+                android.util.Log.w(TAG, "Failed to set legacy session metadata", e)
+            }
 
             // Step 9: Force AGGRESSIVE dynamic state
             try {
@@ -196,7 +202,9 @@ object MediaSessionUtils {
                     val setPlaybackStateMethod = sessionCompat.javaClass.getDeclaredMethod("setPlaybackState", playbackStateClass)
                     setPlaybackStateMethod.invoke(sessionCompat, state)
                 }
-            } catch (e: Exception) {}
+            } catch (e: Exception) {
+                android.util.Log.w(TAG, "Failed to set legacy session playback state", e)
+            }
 
             // Step 10: Ensure Active with Pulse
             val setActiveMethod = sessionCompat.javaClass.getDeclaredMethod("setActive", Boolean::class.javaPrimitiveType ?: Boolean::class.java)
