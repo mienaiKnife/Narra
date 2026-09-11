@@ -107,7 +107,7 @@ fun MiniPlayerContent(
     Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .semantics(mergeDescendants = true) {
+            .semantics {
                 contentDescription = contentDesc
             }
             .clickable { onExpand(article.id) },
@@ -146,7 +146,7 @@ fun MiniPlayerContent(
 
                     AsyncImage(
                         model = imageUrl,
-                        contentDescription = stringResource(R.string.reader_cover_desc, article.title),
+                        contentDescription = null,
                         modifier = Modifier.fillMaxSize(),
                         contentScale = ContentScale.Crop,
                         onSuccess = { isImageLoaded = true },

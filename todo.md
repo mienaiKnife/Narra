@@ -112,7 +112,7 @@ Check off items as they land. Prefer one isolated commit + regression test per i
 - [x] Migrate `Modifier.composed` flash highlight. `ui/components/ModifierExtensions.kt:32-56`.
 - [x] Missing list keys. `HomeScreen.kt:297`, `FeedsScreen.kt:334`, `FeedArticlesScreen.kt:284`,
       `SettingsScreen.kt:229`, `LicensesScreen.kt:103`, `ReaderScreen.kt:498-515`.
-- [ ] Merged semantics swallow child controls. `ui/components/QueueItem.kt:215-224,361-362`,
+- [x] Merged semantics swallow child controls. `ui/components/QueueItem.kt:215-224,361-362`,
       `ui/components/MiniPlayer.kt:107-113`.
 - [ ] Clickable rows missing `Role` (many files, see audit).
 - [ ] Notification toggle has no state semantics. `ui/screens/FeedsScreen.kt:429-436`.

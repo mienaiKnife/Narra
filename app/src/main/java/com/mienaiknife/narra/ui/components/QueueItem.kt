@@ -215,7 +215,7 @@ private fun QueueItemRow(
         Row(
             modifier = Modifier
                 .weight(1f)
-                .semantics(mergeDescendants = true) {
+                .semantics {
                     contentDescription = itemContentDescription
                 }
                 .combinedClickable(
@@ -251,7 +251,7 @@ private fun QueueItemRow(
 
                 AsyncImage(
                     model = imageUrl,
-                    contentDescription = stringResource(R.string.home_cover_image_desc, article.title),
+                    contentDescription = null,
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Crop,
                     alpha = if (article.progress == 1f) 0.6f else 1f,
@@ -359,7 +359,6 @@ private fun QueueItemRow(
             modifier = Modifier
                 .padding(end = 16.dp)
                 .semantics {
-                    val context = context
                     contentDescription = when {
                         !article.isInQueue -> context.getString(R.string.action_add_to_queue_desc, article.title)
                         isPlaying -> context.getString(R.string.action_pause_desc, article.title)
@@ -368,10 +367,10 @@ private fun QueueItemRow(
                 },
             enabled = !isDownloading,
         ) {
-            val (icon, resId) = when {
-                !article.isInQueue -> Icons.AutoMirrored.Outlined.PlaylistAdd to R.string.reader_menu_add_queue
-                isPlaying -> Icons.Default.Pause to R.string.action_pause
-                else -> Icons.Default.PlayArrow to R.string.action_play
+            val icon = when {
+                !article.isInQueue -> Icons.AutoMirrored.Outlined.PlaylistAdd
+                isPlaying -> Icons.Default.Pause
+                else -> Icons.Default.PlayArrow
             }
 
             Box(
@@ -393,7 +392,7 @@ private fun QueueItemRow(
                 } else {
                     Icon(
                         imageVector = icon,
-                        contentDescription = stringResource(resId),
+                        contentDescription = null,
                         modifier = Modifier.size(24.dp),
                         tint = MaterialTheme.colorScheme.onSurface,
                     )
