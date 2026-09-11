@@ -45,6 +45,7 @@ fun SettingDropDownItem(
     options: List<String>,
     onValueChange: (String) -> Unit,
     modifier: Modifier = Modifier,
+    optionLabel: @Composable (String) -> String = { it },
 ) {
     var expanded by remember { mutableStateOf(false) }
 
@@ -75,7 +76,7 @@ fun SettingDropDownItem(
                 )
             }
             Text(
-                text = selectedValue,
+                text = optionLabel(selectedValue),
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.primary,
             )
@@ -94,7 +95,7 @@ fun SettingDropDownItem(
                                 onClick = null,
                             )
                             Text(
-                                text = option,
+                                text = optionLabel(option),
                                 style = MaterialTheme.typography.bodyLarge,
                                 modifier = Modifier.padding(start = 16.dp),
                             )

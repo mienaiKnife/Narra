@@ -55,6 +55,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.tooling.preview.Preview
@@ -326,6 +327,7 @@ fun DownloadsSettingsContent(
                 selectedValue = uiState.refreshInterval,
                 options = listOf("Never", "1 hour", "3 hours", "6 hours", "12 hours", "24 hours"),
                 onValueChange = onRefreshIntervalChange,
+                optionLabel = { refreshIntervalLabel(it) },
                 modifier = Modifier
                     .bringIntoViewRequester(refreshIntervalRequester)
                     .flashHighlight(highlightSetting == "refreshInterval"),
@@ -337,6 +339,7 @@ fun DownloadsSettingsContent(
                 selectedValue = uiState.inboxInitialLimit,
                 options = listOf("1", "5", "10", "20", "50", "All"),
                 onValueChange = onInboxInitialLimitChange,
+                optionLabel = { if (it == "All") stringResource(R.string.settings_downloads_inbox_limit_all) else it },
                 modifier = Modifier
                     .bringIntoViewRequester(inboxInitialLimitRequester)
                     .flashHighlight(highlightSetting == "inboxInitialLimit"),
@@ -582,6 +585,17 @@ fun DownloadsSettingsContent(
             }
         }
     }
+}
+
+@Composable
+private fun refreshIntervalLabel(storedValue: String): String = when (storedValue) {
+    "Never" -> stringResource(R.string.settings_downloads_refresh_never)
+    "1 hour" -> stringResource(R.string.unit_1_hour)
+    "3 hours" -> pluralStringResource(R.plurals.unit_hours, 3, 3)
+    "6 hours" -> pluralStringResource(R.plurals.unit_hours, 6, 6)
+    "12 hours" -> pluralStringResource(R.plurals.unit_hours, 12, 12)
+    "24 hours" -> pluralStringResource(R.plurals.unit_hours, 24, 24)
+    else -> storedValue
 }
 
 @Preview(uiMode = Configuration.UI_MODE_NIGHT_YES, showBackground = true)

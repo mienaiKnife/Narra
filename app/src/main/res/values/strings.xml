@@ -241,6 +241,8 @@
     <string name="settings_voices_voice_data_desc">Download or delete TTS models</string>
     <string name="settings_downloads_refresh_inbox">Refresh inbox</string>
     <string name="settings_downloads_refresh_inbox_desc">Automatic inbox refresh interval</string>
+    <string name="settings_downloads_refresh_never">Never</string>
+    <string name="settings_downloads_inbox_limit_all">All</string>
     <string name="settings_downloads_inbox_limit">Initial inbox limit</string>
     <string name="settings_downloads_inbox_limit_desc">Number of recent articles to keep in the Inbox when adding a new feed.</string>
     <string name="settings_voices_android_engine_name">Android\'s native TTS</string>
