@@ -32,9 +32,6 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import net.zetetic.database.sqlcipher.SupportOpenHelperFactory
 import java.io.File
-import java.nio.file.AtomicMoveNotSupportedException
-import java.nio.file.Files
-import java.nio.file.StandardCopyOption
 import javax.inject.Singleton
 
 @Module
@@ -268,10 +265,9 @@ object DatabaseModule {
             // Sidecars belong to the plaintext database and must not survive the swap.
             if (walFile.exists()) walFile.delete()
             if (shmFile.exists()) shmFile.delete()
-            try {
-                Files.move(tempDbFile.toPath(), dbFile.toPath(), StandardCopyOption.ATOMIC_MOVE)
-            } catch (e: AtomicMoveNotSupportedException) {
-                Files.move(tempDbFile.toPath(), dbFile.toPath(), StandardCopyOption.REPLACE_EXISTING)
+            // renameTo is atomic for paths on the same filesystem and works on all API levels.
+            if (!tempDbFile.renameTo(dbFile)) {
+                throw IllegalStateException("Encryption failed: could not move encrypted database into place")
             }
         } catch (e: Exception) {
             if (dbFile.exists()) dbFile.delete()
