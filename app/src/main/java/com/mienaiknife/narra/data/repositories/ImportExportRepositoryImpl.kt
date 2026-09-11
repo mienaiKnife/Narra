@@ -18,6 +18,7 @@ package com.mienaiknife.narra.data.repositories
 import android.content.Context
 import com.mienaiknife.narra.data.local.AppDatabase
 import com.mienaiknife.narra.data.local.EpubDataSource
+import com.mienaiknife.narra.data.local.ImageDataSource
 import com.mienaiknife.narra.data.local.OpmlDataSource
 import com.mienaiknife.narra.data.local.dao.ArticleDao
 import com.mienaiknife.narra.data.local.dao.FeedDao
@@ -43,6 +44,7 @@ class ImportExportRepositoryImpl @Inject constructor(
     private val feedDao: FeedDao,
     private val epubDataSource: EpubDataSource,
     private val opmlDataSource: OpmlDataSource,
+    private val imageDataSource: ImageDataSource,
 ) : ImportExportRepository {
 
     override suspend fun importEpub(inputStream: InputStream, title: String): Result<Unit> = withContext(Dispatchers.IO) {
@@ -129,5 +131,6 @@ class ImportExportRepositoryImpl @Inject constructor(
 
     override suspend fun deleteAllMetadata() {
         articleDao.deleteAllArticles()
+        imageDataSource.pruneUnreferenced(emptySet())
     }
 }

@@ -93,7 +93,7 @@ class ArticleRepositoryImpl @Inject constructor(
         }
 
         if (article.localImageUrl == null && !article.imageUrl.isNullOrBlank()) {
-            val fileName = "article_${article.id.hashCode()}_${System.currentTimeMillis()}.png"
+            val fileName = "article_${article.id.hashCode()}_${System.currentTimeMillis()}"
             val localPath = imageDataSource.downloadAndSaveImage(article.imageUrl, fileName)
             if (localPath != null) {
                 articleDao.updateLocalImageUrl(article.id, localPath)
@@ -106,18 +106,25 @@ class ArticleRepositoryImpl @Inject constructor(
 
     override suspend fun deleteArticle(id: String) {
         articleDao.deleteArticleById(id)
+        pruneOrphanedImages()
     }
 
     override suspend fun clearHistory() {
         articleDao.clearHistory()
+        pruneOrphanedImages()
     }
 
     override suspend fun clearInbox() {
         articleDao.clearInbox()
+        pruneOrphanedImages()
     }
 
     override suspend fun clearQueue() {
         articleDao.clearQueue()
+    }
+
+    private suspend fun pruneOrphanedImages() {
+        imageDataSource.pruneUnreferenced(articleDao.getAllLocalImageUrls().toSet())
     }
 
     override suspend fun markAsFinished(id: String) {
@@ -214,7 +221,7 @@ class ArticleRepositoryImpl @Inject constructor(
             val nextOrder = articleDao.getNextQueueOrder()
 
             val localImageUrl = (remoteArticle.imageUrl ?: existingArticle?.imageUrl)?.let { imageUrl ->
-                val fileName = "web_${remoteArticle.id.hashCode()}_${System.currentTimeMillis()}.png"
+                val fileName = "web_${remoteArticle.id.hashCode()}_${System.currentTimeMillis()}"
                 imageDataSource.downloadAndSaveImage(imageUrl, fileName)
             }
 

@@ -74,6 +74,9 @@ interface ArticleDao {
     @Query("SELECT * FROM articles WHERE url IN (:urls)")
     suspend fun getArticlesByUrls(urls: List<String>): List<ArticleEntity>
 
+    @Query("SELECT localImageUrl FROM articles WHERE localImageUrl IS NOT NULL")
+    suspend fun getAllLocalImageUrls(): List<String>
+
     @Query("SELECT COUNT(*) FROM articles WHERE feedUrl = :feedUrl")
     suspend fun getArticleCountByFeedUrl(feedUrl: String): Int
 

@@ -94,6 +94,7 @@ object RepositoryModule {
             feedDao,
             epubDataSource,
             opmlDataSource,
+            imageDataSource,
         )
         return ContentRepositoryImpl(
             articleRepo,

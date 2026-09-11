@@ -65,7 +65,7 @@ constructor(
             val coverImageResource = book.coverImage
             val coverImageUrl =
                 coverImageResource?.let { resource ->
-                    val fileName = "epub_cover_${bookTitle.hashCode()}.png"
+                    val fileName = "epub_cover_${bookTitle.hashCode()}"
                     imageDataSource.saveImage(resource.data, fileName)
                 }
 

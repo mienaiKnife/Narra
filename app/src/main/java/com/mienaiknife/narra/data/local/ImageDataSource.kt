@@ -36,4 +36,10 @@ interface ImageDataSource {
         data: ByteArray,
         fileName: String,
     ): String?
+
+    /**
+     * Deletes any locally stored images whose absolute path is not in [referencedPaths].
+     * Used to reclaim space when articles are deleted or cleared.
+     */
+    suspend fun pruneUnreferenced(referencedPaths: Set<String>)
 }

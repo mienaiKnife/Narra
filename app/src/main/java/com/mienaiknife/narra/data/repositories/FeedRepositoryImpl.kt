@@ -198,7 +198,7 @@ class FeedRepositoryImpl @Inject constructor(
                 .map { article ->
                     async(Dispatchers.IO) {
                         semaphore.withPermit {
-                            val fileName = "feed_${article.id.hashCode()}_${System.currentTimeMillis()}.png"
+                            val fileName = "feed_${article.id.hashCode()}_${System.currentTimeMillis()}"
                             article.id to imageDataSource.downloadAndSaveImage(article.imageUrl!!, fileName)
                         }
                     }
