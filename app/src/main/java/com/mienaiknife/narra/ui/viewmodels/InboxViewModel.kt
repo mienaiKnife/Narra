@@ -105,20 +105,7 @@ class InboxViewModel @Inject constructor(
     }
 
     fun setSortOption(option: SortOption) {
-        if (_sortOption.value == option) {
-            val next = when (option) {
-                SortOption.DATE_DESC -> SortOption.DATE_ASC
-                SortOption.DATE_ASC -> SortOption.DATE_DESC
-                SortOption.TITLE_ASC -> SortOption.TITLE_DESC
-                SortOption.TITLE_DESC -> SortOption.TITLE_ASC
-                SortOption.SOURCE_ASC -> SortOption.SOURCE_DESC
-                SortOption.SOURCE_DESC -> SortOption.SOURCE_ASC
-                SortOption.MANUAL -> SortOption.MANUAL
-            }
-            _sortOption.value = next
-        } else {
-            _sortOption.value = option
-        }
+        _sortOption.value = if (_sortOption.value == option) option.toggled() else option
     }
 
     fun refresh() {

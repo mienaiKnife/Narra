@@ -23,4 +23,15 @@ enum class SortOption {
     TITLE_DESC,
     SOURCE_ASC,
     SOURCE_DESC,
+    ;
+
+    fun toggled(): SortOption = when (this) {
+        MANUAL -> MANUAL
+        DATE_DESC -> DATE_ASC
+        DATE_ASC -> DATE_DESC
+        TITLE_ASC -> TITLE_DESC
+        TITLE_DESC -> TITLE_ASC
+        SOURCE_ASC -> SOURCE_DESC
+        SOURCE_DESC -> SOURCE_ASC
+    }
 }

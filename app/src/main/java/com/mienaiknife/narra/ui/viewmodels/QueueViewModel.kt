@@ -111,19 +111,7 @@ class QueueViewModel @Inject constructor(
     )
 
     fun setSortOption(option: SortOption) {
-        val finalOption = if (_sortOption.value == option) {
-            when (option) {
-                SortOption.DATE_DESC -> SortOption.DATE_ASC
-                SortOption.DATE_ASC -> SortOption.DATE_DESC
-                SortOption.TITLE_ASC -> SortOption.TITLE_DESC
-                SortOption.TITLE_DESC -> SortOption.TITLE_ASC
-                SortOption.SOURCE_ASC -> SortOption.SOURCE_DESC
-                SortOption.SOURCE_DESC -> SortOption.SOURCE_ASC
-                SortOption.MANUAL -> SortOption.MANUAL
-            }
-        } else {
-            option
-        }
+        val finalOption = if (_sortOption.value == option) option.toggled() else option
         _sortOption.value = finalOption
         if (!_keepSorted.value) {
             viewModelScope.launch {
