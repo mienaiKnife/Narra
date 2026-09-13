@@ -62,7 +62,8 @@ class PlaybackScreenTest {
         }
 
         composeTestRule.onNodeWithText(article.title).assertIsDisplayed()
-        composeTestRule.onNodeWithText(article.source).assertIsDisplayed()
+        // The source is displayed along with the date in ReaderTopBar, so we search for a node containing the source text
+        composeTestRule.onNodeWithText(article.source, substring = true).assertIsDisplayed()
     }
 
     @Test

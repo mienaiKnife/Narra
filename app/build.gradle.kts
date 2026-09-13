@@ -74,7 +74,7 @@ android {
         unitTests.isReturnDefaultValues = true
         unitTests.isIncludeAndroidResources = true
         unitTests.all {
-            it.maxHeapSize = "512m"
+            it.maxHeapSize = "2048m"
             it.maxParallelForks = 1
         }
     }

@@ -16,11 +16,13 @@
 package com.mienaiknife.narra.data.local
 
 import android.content.Context
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import org.mockito.kotlin.any
 import org.mockito.kotlin.mock
+import org.mockito.kotlin.whenever
 import java.io.ByteArrayInputStream
 
 class EpubDataSourceImplTest {
@@ -34,7 +36,10 @@ class EpubDataSourceImplTest {
     }
 
     @Test
-    fun parseEpub_returnsFailure_forInvalidStream() = runBlocking {
+    fun parseEpub_returnsFailure_forInvalidStream() = runTest {
+        // Stub imageDataSource to avoid any actual processing if called
+        whenever(imageDataSource.saveImage(any(), any())).thenReturn(null)
+
         val inputStream = ByteArrayInputStream("not an epub".toByteArray())
         val result = epubDataSource.parseEpub(context, inputStream, "Test Title")
         assertTrue(result.isFailure)

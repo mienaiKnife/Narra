@@ -35,7 +35,9 @@ class DatabaseProtectionTest {
 
     private lateinit var context: Context
     private lateinit var dbFile: File
-    private val passphrase = "test-passphrase".toByteArray()
+    private val passphrase = ByteArray(64).apply {
+        System.arraycopy("test-passphrase-must-be-64-bytes-long-for-raw-key-consistency-!!!".toByteArray(), 0, this, 0, 60)
+    }
 
     @Before
     fun setup() {
