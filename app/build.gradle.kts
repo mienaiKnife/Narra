@@ -16,6 +16,7 @@
 
 import com.android.build.api.variant.HostTestBuilder
 import org.gradle.testing.jacoco.tasks.JacocoReport
+import java.time.Duration
 import java.util.Properties
 
 plugins {
@@ -76,6 +77,12 @@ android {
         unitTests.all {
             it.maxHeapSize = "2048m"
             it.maxParallelForks = 1
+            // Kill runaway tests instead of hanging the build indefinitely.
+            it.timeout.set(Duration.ofMinutes(10))
+
+            if (project.hasProperty("skipPaparazzi")) {
+                (it as Test).exclude("**/screenshots/**")
+            }
         }
     }
 

@@ -20,9 +20,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import net.sf.jazzlib.ZipFile
 import nl.siegmann.epublib.domain.TOCReference
 import nl.siegmann.epublib.epub.EpubReader
 import org.jsoup.Jsoup
+import java.io.File
 import java.io.InputStream
 import java.util.UUID
 import javax.inject.Inject
@@ -37,8 +39,19 @@ constructor(
         inputStream: InputStream,
         fallbackTitle: String,
     ): Result<List<Article>> {
+        var tempFile: File? = null
+        var zipFile: ZipFile? = null
         return try {
-            val book = EpubReader().readEpub(inputStream)
+            // Epublib's streaming reader (readEpub(InputStream)) enters an infinite loop on
+            // non-ZIP or truncated input (psiegman/epublib#71, #122). Copy the stream to a temp
+            // file and use the file-based reader, which fails fast on invalid archives.
+            val epubFile = File.createTempFile("narra-epub-", ".epub", context.cacheDir)
+            tempFile = epubFile
+            epubFile.outputStream().use { output -> inputStream.copyTo(output) }
+
+            val zip = ZipFile(epubFile)
+            zipFile = zip
+            val book = EpubReader().readEpub(zip)
             val bookTitle = book.metadata.firstTitle ?: fallbackTitle
             val author =
                 book.metadata.authors
@@ -140,6 +153,9 @@ constructor(
                 com.mienaiknife.narra.domain.NarraError
                     .Unknown(e),
             )
+        } finally {
+            runCatching { zipFile?.close() }
+            tempFile?.delete()
         }
     }
 }

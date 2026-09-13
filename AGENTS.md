@@ -58,9 +58,14 @@ changing the relevant area.
 Before you report a task as finished, run these locally and fix every failure:
 
 ```bash
+./scripts/local-ci.sh  # Or ./scripts/local-ci.sh --low-mem if needed
+```
+
+For manual control:
+```bash
 ./gradlew spotlessApply        # auto-fix ktlint formatting and add Apache 2.0 headers
 ./gradlew spotlessCheck lintDebug
-./gradlew testDebugUnitTest
+./gradlew testDebugUnitTest -PskipPaparazzi # Skips memory-heavy screenshot tests
 ```
 
 `spotlessApply` is the fast path to avoiding style failures; `spotlessCheck` is what CI runs. For

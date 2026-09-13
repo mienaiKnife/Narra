@@ -40,3 +40,13 @@ Every pull request runs the following checks via GitHub Actions (`.github/workfl
 - `assembleDebug`, `assembleDebugAndroidTest`, and `assembleRelease` — R8-minified release build
 
 Ensure these pass locally before submitting.
+
+### Low Memory Environments
+If running the full suite causes memory issues on your machine, use the provided helper script:
+```bash
+./scripts/local-ci.sh --low-mem
+```
+Other useful flags:
+- `--fast`: Skips Lint and screenshot tests.
+- `--no-paparazzi`: Skips screenshot tests (which are memory intensive).
+- `--low-mem`: Disables parallel execution and reduces Gradle heap size.

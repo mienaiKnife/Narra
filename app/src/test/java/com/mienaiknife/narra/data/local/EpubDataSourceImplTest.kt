@@ -44,4 +44,16 @@ class EpubDataSourceImplTest {
         val result = epubDataSource.parseEpub(context, inputStream, "Test Title")
         assertTrue(result.isFailure)
     }
+
+    @Test
+    fun parseEpub_returnsFailure_forTruncatedZipStream() = runTest {
+        whenever(imageDataSource.saveImage(any(), any())).thenReturn(null)
+
+        // Starts with a valid ZIP local header but has no central directory, which used to
+        // send Epublib's streaming reader into an infinite loop.
+        val truncated = byteArrayOf(0x50, 0x4B, 0x03, 0x04) + ByteArray(32) { it.toByte() }
+        val inputStream = ByteArrayInputStream(truncated)
+        val result = epubDataSource.parseEpub(context, inputStream, "Test Title")
+        assertTrue(result.isFailure)
+    }
 }
