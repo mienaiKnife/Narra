@@ -9,13 +9,35 @@ updates:
       androidx:
         patterns:
           - "androidx.*"
-      kotlin:
+      toolchain:
         patterns:
           - "org.jetbrains.kotlin*"
           - "com.google.devtools.ksp*"
+          - "com.google.dagger*"
+          - "com.android.*"
+        update-types:
+          - "minor"
+          - "patch"
+    ignore:
+      - dependency-name: "org.jetbrains.kotlin*"
+        update-types:
+          - "version-update:semver-major"
+      - dependency-name: "com.google.devtools.ksp*"
+        update-types:
+          - "version-update:semver-major"
+      - dependency-name: "com.google.dagger*"
+        update-types:
+          - "version-update:semver-major"
+      - dependency-name: "com.android.*"
+        update-types:
+          - "version-update:semver-major"
 
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
+    groups:
+      github-actions:
+        patterns:
+          - "*"

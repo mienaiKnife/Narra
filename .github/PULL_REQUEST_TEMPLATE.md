@@ -19,3 +19,4 @@
 - [ ] I have added tests that prove my fix is effective or that my feature works.
 - [ ] All new and existing tests passed.
 - [ ] I have added the Apache 2.0 license header to all new source files.
+- [ ] (Dependency updates) CI passed against the current `main` via the merge queue, and the toolchain set (Kotlin/KSP/Hilt/AGP/`compileSdk`) moved together.

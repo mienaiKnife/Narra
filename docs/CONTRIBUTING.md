@@ -64,6 +64,28 @@ Screenshot tests use [Paparazzi](https://github.com/cashapp/paparazzi); verify w
 - Fill in the pull request template, including how you tested the change.
 - Link related issues with `Fixes #123` where applicable.
 
+## Dependency Updates
+
+Dependabot opens grouped pull requests weekly for the Gradle version catalog and GitHub Actions.
+Do not merge a dependency pull request until CI has passed against the current `main`; the merge
+queue re-tests each queued pull request against the latest `main` before it lands.
+
+Several Android toolchain pieces are compatibility-coupled and should be updated as a set:
+
+| Component | Coupled to | Failure mode if mismatched |
+| --- | --- | --- |
+| Kotlin | KSP, Hilt (Dagger), Compose compiler | Kotlin metadata `2.4.0` is unreadable by older `kotlin-metadata-jvm`, so Hilt/KSP fail |
+| androidx libraries | `compileSdk` | Newer AARs require a higher `compileSdk` (for example API 37) |
+| AGP / Android Lint | Kotlin, Hilt, KSP | Lint's bundled Kotlin can conflict with the project's Kotlin version |
+| Compose BOM | Compose compiler, `compileSdk` | Compiler/runtime mismatch or new lint checks |
+
+Rules of thumb:
+
+- Merge one Dependabot group at a time and wait for a green run on `main` before merging the next.
+- Run `./scripts/local-ci.sh` before merging anything non-trivial.
+- Toolchain major versions (Kotlin, AGP, Hilt, KSP) are ignored by Dependabot and must be handled
+  manually as a coordinated change.
+
 ## Licensing
 
 Narra is licensed under the [Apache License 2.0](../LICENSE). By contributing, you agree that your

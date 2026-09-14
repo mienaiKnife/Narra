@@ -53,6 +53,11 @@ changing the relevant area.
   [SECURITY.md](SECURITY.md), and [ROADMAP.md#non-goals](ROADMAP.md#non-goals).
 - **CI must pass**: every change must pass the checks in `.github/workflows/ci.yml`. A failing style
   check blocks the whole pipeline, so run the checks locally (below) before declaring work complete.
+- **Dependency toolchain versions move together**: Kotlin, KSP, Hilt (Dagger), AGP, Android Lint,
+  `compileSdk`, and the Compose BOM are compatibility-coupled. A newer Kotlin emits metadata that
+  older Hilt/KSP cannot read, and newer androidx libraries can require a higher `compileSdk`. Update
+  the set together and never merge a toolchain Dependabot group until CI passes against current
+  `main`. See [docs/CONTRIBUTING.md#dependency-updates](docs/CONTRIBUTING.md#dependency-updates).
 
 ## Definition of Done
 Before you report a task as finished, run these locally and fix every failure:
