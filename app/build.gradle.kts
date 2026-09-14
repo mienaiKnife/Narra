@@ -47,7 +47,7 @@ val configuredVersionName = releaseProperty("VERSION_NAME")
 
 android {
     namespace = "com.mienaiknife.narra"
-    compileSdk = 36
+    compileSdk = 37
 
     // Forced re-sync to fix IDE indexing
     defaultConfig {

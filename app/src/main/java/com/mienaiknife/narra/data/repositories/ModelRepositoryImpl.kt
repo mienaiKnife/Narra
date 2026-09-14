@@ -245,11 +245,14 @@ class ModelRepositoryImpl @Inject constructor(
             ttsModelDao.updateProgress(modelId, 0f)
             ttsModelDao.updateError(modelId, null)
             throw e
+        } catch (e: NarraError) {
+            android.util.Log.e("ModelRepository", "Failed to download model $modelId", e)
+            ttsModelDao.updateError(modelId, e.message ?: "Unknown error")
+            Result.failure(e)
         } catch (e: Exception) {
             android.util.Log.e("ModelRepository", "Failed to download model $modelId", e)
-            val narraError = if (e is NarraError) e else NarraError.Model.DownloadFailed(e.message)
             ttsModelDao.updateError(modelId, e.message ?: "Unknown error")
-            Result.failure(narraError)
+            Result.failure(NarraError.Model.DownloadFailed(e.message))
         }
     }
 
