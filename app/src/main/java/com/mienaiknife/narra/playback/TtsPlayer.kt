@@ -20,6 +20,7 @@ import android.graphics.Bitmap
 import android.media.AudioManager
 import android.os.Handler
 import android.os.Looper
+import android.util.Log
 import androidx.core.net.toUri
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
@@ -128,7 +129,7 @@ class TtsPlayer @Inject constructor(
     private var currentItemIndex = 0
 
     private val audioFocusManager = AudioFocusManager(context) { focusChange ->
-        android.util.Log.d("TtsPlayer", "onFocusChange: $focusChange")
+        Log.d("TtsPlayer", "onFocusChange: $focusChange")
         when (focusChange) {
             AudioManager.AUDIOFOCUS_GAIN -> {
                 val wasSuppressed = _playbackSuppressionReason != PLAYBACK_SUPPRESSION_REASON_NONE
@@ -212,10 +213,19 @@ class TtsPlayer @Inject constructor(
                         }
 
                         val speakable = paragraphs.getOrNull(index)
-                        val originalStart = speakable?.mapTtsToOriginal(ttsStart) ?: ttsStart
-                        val originalEnd = speakable?.mapTtsToOriginal(ttsEnd) ?: ttsEnd
-
-                        currentWordRange = originalStart until originalEnd
+                        currentWordRange = if (speakable == null) {
+                            ttsStart until ttsEnd
+                        } else {
+                            // Some engines report sub-word ranges (e.g. hyphenated compounds);
+                            // expand to the whole word so the entire word is highlighted.
+                            val wordRange = speakable.expandToWordRange(ttsStart, ttsEnd)
+                            if (wordRange.isEmpty()) {
+                                speakable.mapTtsToOriginal(ttsStart) until speakable.mapTtsToOriginal(ttsEnd)
+                            } else {
+                                speakable.mapTtsToOriginal(wordRange.first) until
+                                    speakable.mapTtsToOriginal(wordRange.last + 1)
+                            }
+                        }
                         resumeWordOffset = ttsStart
                         throttleInvalidateState()
                     }
@@ -237,7 +247,7 @@ class TtsPlayer @Inject constructor(
                     isEngineSpeaking = false
                 }
                 is TtsState.Error -> {
-                    android.util.Log.e("TtsPlayer", "Engine error: ${state.message}")
+                    Log.e("TtsPlayer", "Engine error: ${state.message}")
                     isEngineSpeaking = false
                     if (_playWhenReady && _playbackState == STATE_READY && !isPreparing) {
                         val nextIndex = currentParagraphIndex + 1
@@ -339,34 +349,34 @@ class TtsPlayer @Inject constructor(
             .setAvailableCommands(
                 Player.Commands.Builder()
                     .addAll(
-                        Player.COMMAND_PLAY_PAUSE,
-                        Player.COMMAND_PREPARE,
-                        Player.COMMAND_STOP,
-                        Player.COMMAND_SEEK_TO_DEFAULT_POSITION,
-                        Player.COMMAND_SEEK_IN_CURRENT_MEDIA_ITEM,
-                        Player.COMMAND_SEEK_TO_PREVIOUS_MEDIA_ITEM,
-                        Player.COMMAND_SEEK_TO_PREVIOUS,
-                        Player.COMMAND_SEEK_TO_NEXT_MEDIA_ITEM,
-                        Player.COMMAND_SEEK_TO_NEXT,
-                        Player.COMMAND_SEEK_TO_MEDIA_ITEM,
-                        Player.COMMAND_SEEK_BACK,
-                        Player.COMMAND_SEEK_FORWARD,
-                        Player.COMMAND_SET_SPEED_AND_PITCH,
-                        Player.COMMAND_SET_SHUFFLE_MODE,
-                        Player.COMMAND_SET_REPEAT_MODE,
-                        Player.COMMAND_GET_CURRENT_MEDIA_ITEM,
-                        Player.COMMAND_GET_TIMELINE,
-                        Player.COMMAND_GET_METADATA,
-                        Player.COMMAND_SET_PLAYLIST_METADATA,
-                        Player.COMMAND_SET_MEDIA_ITEM,
-                        Player.COMMAND_CHANGE_MEDIA_ITEMS,
-                        Player.COMMAND_GET_AUDIO_ATTRIBUTES,
-                        Player.COMMAND_GET_VOLUME,
-                        Player.COMMAND_GET_DEVICE_VOLUME,
-                        Player.COMMAND_SET_VOLUME,
-                        Player.COMMAND_SET_DEVICE_VOLUME_WITH_FLAGS,
-                        Player.COMMAND_GET_TRACKS,
-                        Player.COMMAND_RELEASE,
+                        COMMAND_PLAY_PAUSE,
+                        COMMAND_PREPARE,
+                        COMMAND_STOP,
+                        COMMAND_SEEK_TO_DEFAULT_POSITION,
+                        COMMAND_SEEK_IN_CURRENT_MEDIA_ITEM,
+                        COMMAND_SEEK_TO_PREVIOUS_MEDIA_ITEM,
+                        COMMAND_SEEK_TO_PREVIOUS,
+                        COMMAND_SEEK_TO_NEXT_MEDIA_ITEM,
+                        COMMAND_SEEK_TO_NEXT,
+                        COMMAND_SEEK_TO_MEDIA_ITEM,
+                        COMMAND_SEEK_BACK,
+                        COMMAND_SEEK_FORWARD,
+                        COMMAND_SET_SPEED_AND_PITCH,
+                        COMMAND_SET_SHUFFLE_MODE,
+                        COMMAND_SET_REPEAT_MODE,
+                        COMMAND_GET_CURRENT_MEDIA_ITEM,
+                        COMMAND_GET_TIMELINE,
+                        COMMAND_GET_METADATA,
+                        COMMAND_SET_PLAYLIST_METADATA,
+                        COMMAND_SET_MEDIA_ITEM,
+                        COMMAND_CHANGE_MEDIA_ITEMS,
+                        COMMAND_GET_AUDIO_ATTRIBUTES,
+                        COMMAND_GET_VOLUME,
+                        COMMAND_GET_DEVICE_VOLUME,
+                        COMMAND_SET_VOLUME,
+                        COMMAND_SET_DEVICE_VOLUME_WITH_FLAGS,
+                        COMMAND_GET_TRACKS,
+                        COMMAND_RELEASE,
                     ).build(),
             )
             .setPlayWhenReady(_playWhenReady, PLAY_WHEN_READY_CHANGE_REASON_USER_REQUEST)
@@ -385,7 +395,7 @@ class TtsPlayer @Inject constructor(
     }
 
     override fun handleSetPlayWhenReady(playWhenReady: Boolean): ListenableFuture<*> {
-        android.util.Log.d("TtsPlayer", "handleSetPlayWhenReady: current=$_playWhenReady, new=$playWhenReady")
+        Log.d("TtsPlayer", "handleSetPlayWhenReady: current=$_playWhenReady, new=$playWhenReady")
         if (_playWhenReady == playWhenReady && _playerError == null) {
             return Futures.immediateVoidFuture()
         }
@@ -505,10 +515,6 @@ class TtsPlayer @Inject constructor(
         return result
     }
 
-    private fun abandonAudioFocusInternal() {
-        audioFocusManager.abandonAudioFocus()
-    }
-
     private fun restoreVolumeAfterDuck() {
         if (isDucking) {
             isDucking = false
@@ -553,7 +559,7 @@ class TtsPlayer @Inject constructor(
         parsedParagraphs: List<SpeakableText>,
         playWhenReady: Boolean,
     ) {
-        android.util.Log.d("TtsPlayer", "speak() called: title=${article.title}, paragraphs=${parsedParagraphs.size}, playWhenReady=$playWhenReady")
+        Log.d("TtsPlayer", "speak() called: title=${article.title}, paragraphs=${parsedParagraphs.size}, playWhenReady=$playWhenReady")
         ttsEngine.stop()
         isEngineSpeaking = false
         lastEnqueuedUtteranceId = null
@@ -656,7 +662,7 @@ class TtsPlayer @Inject constructor(
                     }
                 }
             } catch (e: Exception) {
-                android.util.Log.e("TtsPlayer", "Error loading artwork", e)
+                Log.e("TtsPlayer", "Error loading artwork", e)
             }
         }
     }
