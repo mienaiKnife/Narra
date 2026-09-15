@@ -15,13 +15,8 @@
  */
 package com.mienaiknife.narra
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.calculateEndPadding
 import androidx.compose.foundation.layout.calculateStartPadding
@@ -87,11 +82,7 @@ fun AppNavigation(
     Scaffold(
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         bottomBar = {
-            AnimatedVisibility(
-                visible = !isReaderScreen,
-                enter = fadeIn(tween(400)) + slideInVertically(animationSpec = tween(400), initialOffsetY = { it }),
-                exit = fadeOut(tween(400)) + slideOutVertically(animationSpec = tween(400), targetOffsetY = { it }),
-            ) {
+            if (!isReaderScreen) {
                 Column {
                     MiniPlayer(onExpand = { articleId ->
                         navController.navigate(NavDestination.Reader(articleId)) {
@@ -104,14 +95,14 @@ fun AppNavigation(
         },
     ) { innerPadding ->
         val layoutDirection = LocalLayoutDirection.current
-        val bottomPadding by animateDpAsState(
-            targetValue = if (isReaderScreen) 0.dp else innerPadding.calculateBottomPadding(),
-            animationSpec = tween(400),
-            label = "bottomPadding",
-        )
+        val bottomPadding = if (isReaderScreen) 0.dp else innerPadding.calculateBottomPadding()
         NavHost(
             navController = navController,
             startDestination = NavDestination.Home,
+            enterTransition = { EnterTransition.None },
+            exitTransition = { ExitTransition.None },
+            popEnterTransition = { EnterTransition.None },
+            popExitTransition = { ExitTransition.None },
             modifier = Modifier.padding(
                 start = if (isReaderScreen) 0.dp else innerPadding.calculateStartPadding(layoutDirection),
                 end = if (isReaderScreen) 0.dp else innerPadding.calculateEndPadding(layoutDirection),
@@ -207,26 +198,7 @@ fun AppNavigation(
             composable<NavDestination.SettingsLicenses> {
                 LicensesScreen(onBack = { navController.popBackStack() })
             }
-            composable<NavDestination.Reader>(
-                enterTransition = {
-                    slideInVertically(
-                        initialOffsetY = { it },
-                        animationSpec = tween(400),
-                    ) + fadeIn(animationSpec = tween(400))
-                },
-                exitTransition = {
-                    fadeOut(animationSpec = tween(400))
-                },
-                popEnterTransition = {
-                    fadeIn(animationSpec = tween(400))
-                },
-                popExitTransition = {
-                    slideOutVertically(
-                        targetOffsetY = { it },
-                        animationSpec = tween(400),
-                    ) + fadeOut(animationSpec = tween(400))
-                },
-            ) {
+            composable<NavDestination.Reader> {
                 ReaderScreen(
                     onBack = { navController.popBackStack() },
                     themeViewModel = themeViewModel,

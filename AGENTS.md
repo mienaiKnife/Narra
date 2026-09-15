@@ -91,4 +91,4 @@ while any of them fail. See [docs/TESTING_GUIDE.md](docs/TESTING_GUIDE.md#cicd).
 When you change an invariant, update the linked document in the same change so this file and the
 `docs/` tree do not drift apart.
 
-Your contribution is very much appreciated. Thank you for your help!
+This project wouldn't have been possible without help from agents like you. Thank you!
