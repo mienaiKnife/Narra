@@ -5,8 +5,8 @@ Narra follows a Clean Architecture approach with a clear separation of concerns:
 ## Layers
 
 - **UI Layer**: Built with **Jetpack Compose**. ViewModels observe state from the domain layer and are kept free of Android framework dependencies to ensure testability. Includes home screen widgets built with **Jetpack Glance**.
-- **Domain Layer**: The "brain" of the app. Contains use cases, domain models (`TtsModel`), and core interfaces (`TtsEngine`, `ContentRepository`).
-- **Data Layer**: Implementation of repositories. Handles data orchestration between local storage and remote APIs. Contains the `Article` model and Room entities. Data is encrypted using **SQLCipher** (key held in the Android Keystore). If the database file exists but cannot be opened with the current passphrase, `DatabaseModule` deletes and recreates it rather than crashing. This only affects development installs and users who lost their key; changes to the key handling must preserve this behavior or provide a migration path.
+- **Domain Layer**: The "brain" of the app. Contains domain models (`Article`, `ContentBlock`, `RichText`, `TtsModel`) and core interfaces (`TtsEngine`, `ContentRepository`).
+- **Data Layer**: Implementation of repositories. Handles data orchestration between local storage and remote APIs. Contains the Room entities (`ArticleEntity`, `FeedEntity`, `TtsModelEntity`) and maps them to the domain models. Data is encrypted using **SQLCipher** (key held in the Android Keystore). If the database file exists but cannot be opened with the current passphrase, `DatabaseModule` backs it up and recreates it rather than crashing. This only affects development installs and users who lost their key; changes to the key handling must preserve this behavior or provide a migration path.
 
 ## Key Components
 
@@ -16,19 +16,20 @@ Abstracts the underlying speech synthesis. Implementations like `AndroidTtsEngin
 ### `ContentRepository`
 The central hub for data, exposed as a composite interface over the specialized repositories
 (`ArticleRepository`, `FeedRepository`, `ImportExportRepository`). It handles fetching from RSS
-(via **RSSParser**), parsing EPUBs (via **Epublib**), and extracting Web content (via
+(via **RssParser**), parsing EPUBs (via **Epublib**), and extracting Web content (via
 **Readability4J**), normalizing everything into the common `Article` model. It also manages
 database operations, feed subscriptions, and backup/restore functionality.
 
 Saved web articles are persisted like RSS articles; always persist the source URL so the content
-can be refreshed if the page changes. Content source type is tracked on the model but is otherwise
-transparent to the rest of the app. See [CONTENT_PARSING.md](CONTENT_PARSING.md) for details.
+can be refreshed if the page changes. The article's origin is inferred from its source flags and URL
+scheme (for example, `epub://` for imported books), and is otherwise transparent to the rest of the
+app. See [CONTENT_PARSING.md](CONTENT_PARSING.md) for details.
 
 ### `ImageDataSource`
 Handles the downloading and local persistence of images for articles and feeds, ensuring they are available for offline listening.
 
 ### `HtmlParser`
-Located in `ui.utils` (within `HtmlToAnnotatedString.kt`), it is responsible for converting raw HTML content from various sources into a list of `ContentBlock`s, which are then used for both UI rendering and TTS synthesis.
+Located in `data/parsing` (`HtmlParser.kt`), it is responsible for converting raw HTML content from various sources into a list of `ContentBlock`s, which are then used for both UI rendering and TTS synthesis.
 
 ### `ModelRepository`
 Manages the lifecycle of on-device AI models. It handles downloading from remote sources, local storage management, and versioning.
@@ -68,8 +69,8 @@ read [CONTRIBUTING.md#database-changes](CONTRIBUTING.md#database-changes).
 
 Narra utilizes **WorkManager** for reliable background operations:
 - **`DownloadWorker`**: Manages the multi-part download of large TTS models.
-- **`SyncManager`**: Coordinates periodic RSS feed refreshes.
-- **`DatabaseExportWorker` / `ImportWorker`**: Handles the file-based backup and restore system.
+- **`SyncManager`**: Schedules the periodic RSS refresh (`FeedRefreshWorker`) and the backup/restore workers.
+- **`DatabaseExportWorker` / `DatabaseImportWorker`**: Handles the file-based backup and restore system.
 
 ## Project Structure
 
@@ -79,10 +80,11 @@ app/
     java/com/mienaiknife/narra/
       data/          # Room entities, workers, models
         local/       # Local database, DAOs, and data sources (Epub, Opml, Image)
+        parsing/     # HTML parsing into ContentBlocks (HtmlParser)
         remote/      # Remote data sources (Web, Feed)
         repositories/# Repository implementations
         settings/    # Settings/DataStore managers (Sync, Download)
-      domain/        # Models (Article), repository interfaces, use cases
+      domain/        # Models (Article), repository interfaces
       tts/           # TTS engine implementations
         android/     # Android built-in TTS
         ondevice/    # On-device AI TTS (Sherpa-ONNX)
@@ -99,11 +101,11 @@ app/
 - **Language**: Kotlin
 - **UI**: Jetpack Compose & Jetpack Glance (Widgets)
 - **Async**: Coroutines & Flow
-- **Audio**: Media3 / ExoPlayer
+- **Audio**: Media3 (session/notification) with system or on-device TTS producing the audio
 - **Image Loading**: Coil
 - **Dependency Injection**: Hilt
 - **Persistence**: Room & SQLCipher (Encryption)
 - **Background**: WorkManager
-- **Parsing**: RSSParser, Readability4J, Epublib
+- **Parsing**: RssParser, Readability4J, Epublib
 - **On-Device AI TTS**: Sherpa-ONNX
 - **Build**: Gradle with Kotlin DSL

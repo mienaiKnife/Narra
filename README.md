@@ -20,7 +20,7 @@ I can't guarantee that data won't be lost when updating, even though I've done w
 Follow these steps to set up the development environment and build Narra.
 
 ### Building with Android Studio
-Requires Android Studio Ladybug or newer and JDK 21 or higher.
+Requires Android Studio Quail 4 (2026.1.4) or newer and JDK 21 or higher.
 
 1. **Clone the repository**:
    ```bash

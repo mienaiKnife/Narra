@@ -6,7 +6,7 @@ project, see [AGENTS.md](../AGENTS.md) and the documents linked from the [README
 ## Getting Started
 
 1. Fork and clone the repository.
-2. Open the project in Android Studio (Ladybug or newer) with JDK 21.
+2. Open the project in Android Studio (Quail 4 / 2026.1.4 or newer) with JDK 21.
 3. Let Gradle sync, then build with `./gradlew assembleDebug` or run the `app` configuration.
 
 See the [README](../README.md) for Docker-based builds if you'd rather not install Android Studio.

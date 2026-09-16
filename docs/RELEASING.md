@@ -49,7 +49,8 @@ The workflow requires these repository secrets:
 
 Release builds enable R8 (`isMinifyEnabled = true`) and resource shrinking
 (`isShrinkResources = true`). Keep rules live in `app/proguard-rules.pro`. Reflection-based code
-paths (Sherpa-ONNX JNI, ONNX Runtime, the OPML kxml fallback) have explicit keeps.
+paths (Sherpa-ONNX JNI and its Kotlin callback, plus the OPML kxml/xmlpull fallback) have explicit
+keeps.
 
 Because R8 issues often only surface at runtime, smoke-test a release build on a device before
 publishing if you touched reflection, serialization, or JNI code.

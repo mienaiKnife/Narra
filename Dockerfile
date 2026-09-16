@@ -21,7 +21,7 @@
 FROM eclipse-temurin:21-jdk
 
 # Pin the versions required by the project (see app/build.gradle.kts and gradle/libs.versions.toml).
-ARG ANDROID_COMPILE_SDK=36
+ARG ANDROID_COMPILE_SDK=37
 ARG ANDROID_BUILD_TOOLS=36.0.0
 ARG ANDROID_COMMAND_LINE_TOOLS=11076708
 ARG BUILD_TARGET=assembleDebug

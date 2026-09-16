@@ -36,7 +36,7 @@ Currently, only EPUBs are supported, but PDF support is planned:
 ### Playback Controls
 When listening to a text, you can:
 - **Play/Pause**: Control the flow of speech.
-- **Skip Forward/Backward**: Customize the skip duration in Settings (default is 15s).
+- **Skip Forward/Backward**: Customize the skip duration in Settings (defaults are 30s forward and 10s back).
 - **Adjust Speed**: Change the playback speed to suit your listening preference.
 - **Background Playback**: Narra continues playing even when you leave the app or turn off your screen. Use the media controls in your notification shade or lock screen.
 

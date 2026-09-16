@@ -27,7 +27,7 @@ Testing TTS engines can be tricky as they often depend on system services or lar
 
 ## Best Practices
 - **Test-Driven Development**: We encourage writing tests before implementation for bug fixes and new features.
-- **Avoid Flakiness**: Ensure tests are deterministic. Use `TestCoroutineDispatcher` for coroutines.
+- **Avoid Flakiness**: Ensure tests are deterministic. Use `runTest` with a `StandardTestDispatcher` (or `UnconfinedTestDispatcher`) for coroutines, as `TestCoroutineDispatcher` is deprecated.
 - **Coverage**: Aim for high coverage in the `domain` and `data` layers.
 
 ## CI/CD

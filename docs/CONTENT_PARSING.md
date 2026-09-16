@@ -12,6 +12,8 @@ Instead of handling raw HTML strings throughout the app, Narra parses content in
 - **`ContentBlock.BlockQuote`**: Represents quoted text blocks.
 - **`ContentBlock.Heading`**: Represents structural headers with a specific level (e.g., H1, H2).
 - **`ContentBlock.Image`**: Contains image metadata (URL, alt text).
+- **`ContentBlock.Table`**: Represents tabular content as rows of cells with a header flag.
+- **`ContentBlock.HorizontalRule`**: Represents a thematic break between sections.
 
 ## The Parsing Engine: `HtmlParser`
 
@@ -31,7 +33,7 @@ All sources are eventually mapped to the `Article` domain model, which tracks th
 
 ### EPUB Files
 - **Logic**: Uses a JVM EPUB library to extract the spine and manifest.
-- **Normalization**: Each chapter in an EPUB is treated as a separate `Chapter` (or sometimes a series of `Article`s depending on size), linked to the parent book.
+- **Normalization**: Each spine item in an EPUB becomes a separate `Article` (chapter), linked to the parent book via the shared source title.
 
 ### Web Articles
 - **Logic**: Uses a **Readability** port to extract the "clean" article text from a URL.

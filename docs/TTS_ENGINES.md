@@ -51,6 +51,14 @@ class MyNewTtsEngine @Inject constructor(
         // Adjust speed
     }
 
+    override fun setAudioAttributes(usage: Int, contentType: Int) {
+        // Store audio attributes for the underlying player
+    }
+
+    override fun setVolume(volume: Float) {
+        // Adjust output volume (0.0f to 1.0f)
+    }
+
     override fun release() {
         // Cleanup
     }
@@ -58,12 +66,12 @@ class MyNewTtsEngine @Inject constructor(
 ```
 
 ### 2. Update the Hilt Module
-If you want the new engine to be selectable, it must be provided via a Hilt module. We typically use a `TtsProvider` factory or a specific `Named` binding to switch between engines at runtime.
+If you want the new engine to be selectable, it must be provided via a Hilt module. Narra binds `DelegatingTtsEngine` as the single `TtsEngine`; it delegates to the engine currently selected by the user, so the new engine is wired up inside the delegating engine (or via a `@Named` binding) rather than bound directly.
 
 ### 3. Handle Configuration
-If the engine requires an API key or a Base URL (common for self-hosted or cloud), ensure these are fetched from a `PreferenceRepository` or `local.properties` rather than being hardcoded.
+If the engine requires an API key or a Base URL (common for self-hosted or cloud), ensure these are fetched from a settings manager (for example, `PlaybackSettingsManager`) or `local.properties` rather than being hardcoded.
 
 ## Best Practices
-- **Handle Interruption**: Ensure that if `synthesize` is called while another synthesis is active, the previous one is gracefully cancelled.
-- **Error Handling**: Map engine-specific errors to the domain-level `TtsError` sealed class so the UI can show consistent messages.
+- **Handle Interruption**: Ensure that if `speak` is called while another synthesis is active, the previous one is gracefully cancelled.
+- **Error Handling**: Report engine-specific failures through the domain-level `TtsState.Error` (optionally with a `TtsErrorReason`) so the UI can show consistent messages.
 - **Don't Block**: Always perform heavy computation or network requests on the appropriate `CoroutineDispatcher` (usually `Dispatchers.IO`).

@@ -15,5 +15,8 @@ When you use Narra, you may interact with third-party services:
 - **Cloud TTS Providers (planned)**: Cloud TTS engines are not yet available. If they are added later, choosing one would send the text of the article to that provider for synthesis, subject to that provider's own privacy policy.
 
 ## 4. Permissions
-- **Internet**: Used to fetch RSS feeds, web articles, and download TTS models.
-- **File Access**: Used to import EPUB files and save/restore backups.
+- **Internet / Network state**: Used to fetch RSS feeds and web articles, and download TTS models.
+- **Foreground service**: Keeps playback (and long model downloads) running while the app is in the background.
+- **Notifications**: Shows the playback and download notifications.
+- **Wake lock**: Keeps the device awake only while audio is playing.
+- **File access**: Narra uses the system file picker to import EPUB files and to save/restore backups, so no broad storage permission is requested.

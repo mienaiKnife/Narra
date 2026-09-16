@@ -29,8 +29,9 @@ changing the relevant area.
   [docs/ARCHITECTURE.md#database-migrations](docs/ARCHITECTURE.md#database-migrations) and
   [docs/CONTRIBUTING.md#database-changes](docs/CONTRIBUTING.md#database-changes).
 - **Database encryption**: the Room database is SQLCipher-encrypted; the key lives in the Android
-  Keystore. If it cannot be opened with the current passphrase, `DatabaseModule` deletes and
-  recreates it. See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+  Keystore. If it cannot be opened with the current passphrase, `DatabaseModule` backs up the
+  existing file (`.bak_<timestamp>`) and recreates the database. See
+  [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 - **Playback state contract**: `TtsPlayer` MUST report `STATE_IDLE` whenever `getState()` exposes a
   `PlaybackException`. Samsung devices require the `MediaButtonReceiver`/session-extras workarounds,
   and widgets must use direct `Intent` signals (e.g. `ACTION_TOGGLE`) to `PlaybackService`, never
