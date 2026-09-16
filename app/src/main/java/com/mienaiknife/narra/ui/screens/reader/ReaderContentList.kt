@@ -164,11 +164,11 @@ fun ReaderContentList(
                 // Only use the measurement if it's for the current paragraph
                 val wordY = if (target.wordYIndex == target.paragraphIndex) target.wordY else 0f
 
-                // Calculate the scroll offset to center the word.
-                // For item 0, the "natural" top is at topPadding from viewport top. For others, it's at 0.
-                val itemTopInViewport = if (target.paragraphIndex == 0) with(density) { topPadding.toPx() } else 0f
-                // itemTopInViewport - scrollOffset + wordY = targetViewportY
-                val targetScrollOffset = (itemTopInViewport + wordY - targetViewportY).toInt()
+                // Calculate the scroll offset to center the word. The list's top content padding
+                // shifts items down by topPadding, so it must be included for every index:
+                // itemOnScreenY = -scrollOffset + topPadding + wordY.
+                val topPaddingPx = with(density) { topPadding.toPx() }
+                val targetScrollOffset = (topPaddingPx + wordY - targetViewportY).toInt()
 
                 if (visibleItem != null && target.wordYIndex == target.paragraphIndex) {
                     val currentWordViewportY = visibleItem.offset - layoutInfo.viewportStartOffset + wordY
@@ -193,7 +193,7 @@ fun ReaderContentList(
                 } else {
                     if (isInitialScroll) {
                         scrollState.scrollToItem(target.paragraphIndex, targetScrollOffset)
-                        if (wordY > 0 && target.wordYIndex == target.paragraphIndex) {
+                        if (wordY > 0) {
                             isInitialScroll = false
                         }
                     } else {

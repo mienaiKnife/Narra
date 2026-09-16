@@ -75,11 +75,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextAlign
@@ -106,6 +106,7 @@ import com.mienaiknife.narra.ui.theme.getFontFamily
 import com.mienaiknife.narra.ui.viewmodels.ReaderUiState
 import com.mienaiknife.narra.ui.viewmodels.ReaderViewModel
 import kotlinx.coroutines.delay
+import kotlin.time.Duration.Companion.seconds
 
 private val ReaderTopPadding = 105.dp
 private val ReaderBottomPadding = 220.dp
@@ -218,17 +219,17 @@ fun ReaderContent(
     val context = LocalContext.current
     val view = LocalView.current
     val isPreview = LocalInspectionMode.current
-    val configuration = LocalConfiguration.current
+    val windowInfo = LocalWindowInfo.current
     val density = LocalDensity.current
 
     // Estimate the scroll offset needed to center the paragraph on the first frame.
     // This reduces flicker before the actual word measurement is available.
     val initialScrollOffset = remember(article.id) {
-        val screenHeightPx = with(density) { configuration.screenHeightDp.dp.toPx() }
+        val screenHeightPx = windowInfo.containerSize.height.toFloat()
         val targetViewportY = screenHeightPx * 0.5f
-        val itemTopInViewport = if (currentParagraphIndex == 0) with(density) { ReaderTopPadding.toPx() } else 0f
-        // itemTopInViewport - offset = targetViewportY => offset = itemTopInViewport - targetViewportY
-        (itemTopInViewport - targetViewportY).toInt()
+        val topPaddingPx = with(density) { ReaderTopPadding.toPx() }
+        // topPaddingPx - offset = targetViewportY => offset = topPaddingPx - targetViewportY
+        (topPaddingPx - targetViewportY).toInt()
     }
 
     val scrollState = rememberLazyListState(
@@ -271,7 +272,7 @@ fun ReaderContent(
             isControlsVisible = true
         } else if (uiState.isPlaying && autoFullscreen) {
             if (isControlsVisible) {
-                delay(5000)
+                delay(5.seconds)
                 isControlsVisible = false
             }
         } else if (!autoFullscreen) {
