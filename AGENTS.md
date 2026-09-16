@@ -59,6 +59,32 @@ changing the relevant area.
   the set together and never merge a toolchain Dependabot group until CI passes against current
   `main`. See [docs/CONTRIBUTING.md#dependency-updates](docs/CONTRIBUTING.md#dependency-updates).
 
+## Writing Warning-Free Code
+Android Studio warnings are defects: fix them instead of shipping them. CI only fails on lint
+**errors** (`app/build.gradle.kts` sets `lint.abortOnError = true`; `warningsAsErrors` is off), so a
+warning that is not checked here will slip through. Before writing or reviewing code, avoid these
+common patterns (each links to the class of Android Lint / Kotlin compiler warning it triggers):
+
+- **Unused declarations**: delete unused imports, parameters, local variables, and resources.
+  `UnusedResources` covers `strings.xml`/drawables too.
+- **Redundant API-level guards**: do not check `Build.VERSION.SDK_INT` for levels below `minSdk`
+  (24) — the check can never be false (`ObsoleteSdkInt`).
+- **Wake locks**: pass a timeout to `PowerManager.WakeLock.acquire(...)` (`WakelockTimeout`).
+- **Hardcoded user-facing values**: use `stringResource`/`getString` (and `<plurals>` for counts),
+  `dimens.xml`, and theme/color resources — never inline literals in layouts or composables
+  (`HardcodedText`, `PluralsCandidate`).
+- **Kotlin compiler warnings**: avoid unnecessary non-null assertions (`!!`), unchecked casts,
+  deprecated APIs, redundant qualifiers / `else` branches, non-exhaustive `when`, and unused
+  `suspend`/lambda parameters. Prefer safe calls, `requireNotNull` with a message, and exhaustive
+  `sealed` handling.
+- **Coroutines and Context**: no `GlobalScope`; scope work to the lifecycle/ViewModel; never retain
+  an `Activity`/`Context` in a longer-lived object.
+- **Localization**: keep every user-visible string in resources; mark intentionally-untranslated
+  strings with `translatable="false"` rather than leaving lint to guess.
+
+Do **not** silence a warning with `@Suppress`/`//noinspection` unless the suppression is
+unavoidable and the reason is documented in a comment on the same declaration.
+
 ## Definition of Done
 Before you report a task as finished, run these locally and fix every failure:
 
@@ -73,9 +99,12 @@ For manual control:
 ./gradlew testDebugUnitTest -PskipPaparazzi # Skips memory-heavy screenshot tests
 ```
 
-`spotlessApply` is the fast path to avoiding style failures; `spotlessCheck` is what CI runs. For
-schema, Compose, or UI changes also run `./gradlew verifyPaparazziDebug` and, where an emulator is
-available, `./gradlew connectedDebugAndroidTest`. `.github/workflows/ci.yml` gates merges on
+`spotlessApply` is the fast path to avoiding style failures; `spotlessCheck` is what CI runs. Because
+`lintDebug` only fails on errors, also open `app/build/reports/lint-results-debug.txt` and confirm
+your change adds **zero new warnings**; fix any warning in code you touched (see
+[Writing Warning-Free Code](#writing-warning-free-code)). For schema, Compose, or UI changes also run
+`./gradlew verifyPaparazziDebug` and, where an emulator is available,
+`./gradlew connectedDebugAndroidTest`. `.github/workflows/ci.yml` gates merges on
 `spotlessCheck`, `lintDebug`, `testDebugUnitTest`, `testReleaseUnitTest`, `verifyPaparazziDebug`,
 `jacocoTestReport`, `connectedDebugAndroidTest`, and the release builds. Do not consider a task done
 while any of them fail. See [docs/TESTING_GUIDE.md](docs/TESTING_GUIDE.md#cicd).
