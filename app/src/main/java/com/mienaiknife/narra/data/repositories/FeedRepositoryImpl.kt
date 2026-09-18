@@ -132,7 +132,12 @@ class FeedRepositoryImpl @Inject constructor(
 
         val localImages = downloadFeedImages(sortedArticles, existingByUrl)
 
+        val seenUrls = mutableSetOf<String?>()
         for ((index, article) in sortedArticles.withIndex()) {
+            // Feeds can repeat a link (e.g. multiple categories); process each URL once so it is
+            // neither re-inserted nor notified twice within a single refresh.
+            if (!seenUrls.add(article.url)) continue
+
             val existing = existingByUrl[article.url]
             val downloadedImage = localImages[article.id]
             when {
@@ -161,7 +166,7 @@ class FeedRepositoryImpl @Inject constructor(
                         )
                     articleDao.insertArticle(articleEntity)
 
-                    if (feed.notificationsEnabled && articleEntity.progress < 1.0f) {
+                    if (feed.notificationsEnabled && !isFirstImport) {
                         notificationHelper.showNewArticleNotification(feed, articleEntity)
                     }
                 }

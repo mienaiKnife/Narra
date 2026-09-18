@@ -63,7 +63,7 @@ Provides high-quality, natural-sounding AI voices that run entirely on your devi
 
 ### Network and Automation
 - **Wi-Fi Only**: In **Settings > Downloads**, you can restrict Narra to only download voices or refresh feeds when connected to Wi-Fi.
-- **Auto-Refresh**: Set how often Narra should check for new articles in your RSS feeds.
+- **Auto-Refresh**: Set how often Narra should check for new articles in your RSS feeds. Choosing **Never** disables only the background schedule; pulling to refresh (or subscribing to a feed) still fetches new articles.
 
 ### Backup and Restore
 Your data stays on your device. You can manage it in **Settings > Downloads**:

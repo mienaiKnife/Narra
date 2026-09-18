@@ -41,7 +41,7 @@ constructor(
     @ApplicationContext private val context: Context,
 ) {
     companion object {
-        private const val CHANNEL_ID = "feed_notifications"
+        internal const val CHANNEL_ID = "feed_notifications"
     }
 
     init {

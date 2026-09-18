@@ -18,6 +18,7 @@ package com.mienaiknife.narra.data.repositories
 import com.mienaiknife.narra.data.local.ImageDataSource
 import com.mienaiknife.narra.data.local.dao.ArticleDao
 import com.mienaiknife.narra.data.local.dao.FeedDao
+import com.mienaiknife.narra.data.local.entities.ArticleEntity
 import com.mienaiknife.narra.data.local.entities.FeedEntity
 import com.mienaiknife.narra.data.remote.RemoteFeedDataSource
 import com.mienaiknife.narra.data.settings.DownloadSettingsManager
@@ -31,8 +32,10 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.mockito.kotlin.any
+import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
+import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 
@@ -114,6 +117,105 @@ class FeedRepositoryImplTest {
         verify(articleDao).deleteArticlesByFeedUrlFromInbox("https://example.com/feed.xml")
         verify(feedDao).deleteFeedByUrl("https://example.com/feed.xml")
         verify(feedDao, never()).getFeedByUrl(any())
+    }
+
+    @Test
+    fun `refreshFeeds notifies for a new article when notifications are enabled`() = runTest {
+        val feed = FeedEntity(url = "feed", title = "Feed", notificationsEnabled = true)
+        whenever(feedDao.getAllFeeds()).thenReturn(flowOf(listOf(feed)))
+        whenever(remoteFeedDataSource.fetchArticles(feed)).thenReturn(
+            Result.success(RemoteFeedDataSource.FetchArticlesResult(articles = listOf(article("a1", "u1")), feedTitle = "Feed")),
+        )
+        whenever(downloadSettingsManager.inboxInitialLimit).thenReturn(flowOf("5"))
+        whenever(articleDao.getArticleCountByFeedUrl("feed")).thenReturn(1)
+        whenever(articleDao.getArticlesByUrls(any())).thenReturn(emptyList())
+        whenever(articleDao.insertArticle(any())).thenReturn(Unit)
+
+        repository.refreshFeeds()
+
+        verify(notificationHelper, times(1)).showNewArticleNotification(eq(feed), any())
+    }
+
+    @Test
+    fun `refreshFeeds does not notify when notifications are disabled`() = runTest {
+        val feed = FeedEntity(url = "feed", title = "Feed", notificationsEnabled = false)
+        whenever(feedDao.getAllFeeds()).thenReturn(flowOf(listOf(feed)))
+        whenever(remoteFeedDataSource.fetchArticles(feed)).thenReturn(
+            Result.success(RemoteFeedDataSource.FetchArticlesResult(articles = listOf(article("a1", "u1")), feedTitle = "Feed")),
+        )
+        whenever(downloadSettingsManager.inboxInitialLimit).thenReturn(flowOf("5"))
+        whenever(articleDao.getArticleCountByFeedUrl("feed")).thenReturn(1)
+        whenever(articleDao.getArticlesByUrls(any())).thenReturn(emptyList())
+        whenever(articleDao.insertArticle(any())).thenReturn(Unit)
+
+        repository.refreshFeeds()
+
+        verify(notificationHelper, never()).showNewArticleNotification(any(), any())
+    }
+
+    @Test
+    fun `refreshFeeds does not notify for articles that already exist`() = runTest {
+        val feed = FeedEntity(url = "feed", title = "Feed", notificationsEnabled = true)
+        val existing =
+            ArticleEntity(
+                id = "old",
+                title = "Old",
+                source = "test",
+                content = null,
+                url = "u1",
+                feedUrl = "feed",
+                isFromFeed = true,
+            )
+        whenever(feedDao.getAllFeeds()).thenReturn(flowOf(listOf(feed)))
+        whenever(remoteFeedDataSource.fetchArticles(feed)).thenReturn(
+            Result.success(RemoteFeedDataSource.FetchArticlesResult(articles = listOf(article("a1", "u1")), feedTitle = "Feed")),
+        )
+        whenever(downloadSettingsManager.inboxInitialLimit).thenReturn(flowOf("5"))
+        whenever(articleDao.getArticleCountByFeedUrl("feed")).thenReturn(1)
+        whenever(articleDao.getArticlesByUrls(any())).thenReturn(listOf(existing))
+
+        repository.refreshFeeds()
+
+        verify(articleDao, never()).insertArticle(any())
+        verify(notificationHelper, never()).showNewArticleNotification(any(), any())
+    }
+
+    @Test
+    fun `first import does not notify for backfilled articles even when enabled`() = runTest {
+        val feed = FeedEntity(url = "feed", title = "Feed", notificationsEnabled = true)
+        val articles = listOf(article("a1", "u1"), article("a2", "u2"), article("a3", "u3"))
+        whenever(feedDao.getAllFeeds()).thenReturn(flowOf(listOf(feed)))
+        whenever(remoteFeedDataSource.fetchArticles(feed)).thenReturn(
+            Result.success(RemoteFeedDataSource.FetchArticlesResult(articles = articles, feedTitle = "Feed")),
+        )
+        whenever(downloadSettingsManager.inboxInitialLimit).thenReturn(flowOf("5"))
+        whenever(articleDao.getArticleCountByFeedUrl("feed")).thenReturn(0)
+        whenever(articleDao.getArticlesByUrls(any())).thenReturn(emptyList())
+        whenever(articleDao.insertArticle(any())).thenReturn(Unit)
+
+        repository.refreshFeeds()
+
+        verify(articleDao, times(3)).insertArticle(any())
+        verify(notificationHelper, never()).showNewArticleNotification(any(), any())
+    }
+
+    @Test
+    fun `duplicate URLs in one fetch are inserted and notified only once`() = runTest {
+        val feed = FeedEntity(url = "feed", title = "Feed", notificationsEnabled = true)
+        val articles = listOf(article("a1", "u1"), article("a2", "u1"))
+        whenever(feedDao.getAllFeeds()).thenReturn(flowOf(listOf(feed)))
+        whenever(remoteFeedDataSource.fetchArticles(feed)).thenReturn(
+            Result.success(RemoteFeedDataSource.FetchArticlesResult(articles = articles, feedTitle = "Feed")),
+        )
+        whenever(downloadSettingsManager.inboxInitialLimit).thenReturn(flowOf("5"))
+        whenever(articleDao.getArticleCountByFeedUrl("feed")).thenReturn(1)
+        whenever(articleDao.getArticlesByUrls(any())).thenReturn(emptyList())
+        whenever(articleDao.insertArticle(any())).thenReturn(Unit)
+
+        repository.refreshFeeds()
+
+        verify(articleDao, times(1)).insertArticle(any())
+        verify(notificationHelper, times(1)).showNewArticleNotification(eq(feed), any())
     }
 
     private fun article(

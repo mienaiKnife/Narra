@@ -53,7 +53,9 @@ android {
     defaultConfig {
         applicationId = "com.mienaiknife.narra"
         minSdk = 24
-        targetSdk = 36
+        // targetSdk 37 was adopted deliberately; the behavior changes were reviewed before bumping.
+        //noinspection AndroidLintEditedTargetSdkVersion
+        targetSdk = 37
         versionCode = configuredVersionCode ?: 1
         versionName = configuredVersionName ?: "0.1"
 
@@ -81,14 +83,14 @@ android {
             it.timeout.set(Duration.ofMinutes(10))
 
             if (project.hasProperty("skipPaparazzi")) {
-                (it as Test).exclude("**/screenshots/**")
+                it.exclude("**/screenshots/**")
             }
         }
     }
 
     sourceSets {
         getByName("androidTest") {
-            assets.srcDirs(files("$projectDir/schemas"))
+            assets.directories.add("$projectDir/schemas")
         }
     }
 
@@ -131,6 +133,8 @@ android {
 
 // AGP only creates unit-test tasks for the default build type. Opt the release variant in so the
 // suite is exercised against the release configuration (see docs/RELEASING.md).
+// hostTests is incubating, but it is the only way to run the suite against the release variant.
+@Suppress("UnstableApiUsage")
 androidComponents {
     beforeVariants(selector().withBuildType("release")) { variantBuilder ->
         variantBuilder.hostTests[HostTestBuilder.UNIT_TEST_TYPE]?.enable = true
@@ -141,26 +145,18 @@ tasks.register<Exec>("clearAppData") {
     group = "verification"
     description = "Clears the app data using adb."
 
-    // Use the adb executable from the SDK if possible, fallback to "adb" in PATH
-    val adb =
-        try {
-            val extension = project.extensions.getByName("android") as com.android.build.gradle.BaseExtension
-            extension.adbExecutable.absolutePath
-        } catch (_: Exception) {
-            "adb"
-        }
-
-    doFirst {
-        println("Stopping and clearing data for com.mienaiknife.narra...")
-    }
-
-    commandLine(adb, "shell", "am force-stop com.mienaiknife.narra; pm clear com.mienaiknife.narra")
+    // Resolve adb through the AGP SDK components API (adbExecutable is deprecated).
+    val adbExecutable = androidComponents.sdkComponents.adb.map { it.asFile.absolutePath }
 
     // Ignore exit value in case no device is connected or app is not installed
     isIgnoreExitValue = true
-
     standardOutput = System.out
     errorOutput = System.err
+
+    doFirst {
+        println("Stopping and clearing data for com.mienaiknife.narra...")
+        commandLine(adbExecutable.get(), "shell", "am force-stop com.mienaiknife.narra; pm clear com.mienaiknife.narra")
+    }
 }
 
 ksp {
@@ -266,6 +262,7 @@ dependencies {
     testImplementation(libs.turbine)
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.robolectric)
+    testImplementation(libs.androidx.work.testing)
     testImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
