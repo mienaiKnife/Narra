@@ -17,6 +17,13 @@ package com.mienaiknife.narra.ui.components
 
 import android.content.res.Configuration
 import androidx.annotation.StringRes
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.PlaylistPlay
 import androidx.compose.material.icons.filled.Add
@@ -26,14 +33,19 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarDefaults
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -41,6 +53,9 @@ import androidx.navigation.compose.rememberNavController
 import com.mienaiknife.narra.NavDestination
 import com.mienaiknife.narra.R
 import com.mienaiknife.narra.ui.theme.NarraTheme
+
+private val BottomNavMaxContentWidth = 400.dp
+private const val TABLET_MIN_SMALLEST_WIDTH_DP = 600
 
 sealed class BottomNavItem<T : Any>(val route: T, val icon: ImageVector, @StringRes val labelRes: Int) {
     data object Home : BottomNavItem<NavDestination.Home>(NavDestination.Home, Icons.Filled.Home, R.string.nav_home)
@@ -62,7 +77,7 @@ fun BottomNavBar(navController: NavController) {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
 
-    NavigationBar {
+    val navItems: @Composable RowScope.() -> Unit = {
         items.forEach { item ->
             val isSelected = when (item) {
                 BottomNavItem.Home -> currentDestination?.hasRoute<NavDestination.Home>() == true
@@ -93,8 +108,6 @@ fun BottomNavBar(navController: NavController) {
                         NavDestination.Feed::class,
                     ).any { currentDestination?.hasRoute(it) == true }
                 }
-
-                else -> false
             }
 
             NavigationBarItem(
@@ -126,6 +139,25 @@ fun BottomNavBar(navController: NavController) {
                 ),
             )
         }
+    }
+
+    val isTablet = LocalConfiguration.current.smallestScreenWidthDp >= TABLET_MIN_SMALLEST_WIDTH_DP
+    if (isTablet) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(NavigationBarDefaults.containerColor)
+                .windowInsetsPadding(NavigationBarDefaults.windowInsets),
+            contentAlignment = Alignment.Center,
+        ) {
+            NavigationBar(
+                modifier = Modifier.widthIn(max = BottomNavMaxContentWidth),
+                windowInsets = WindowInsets(0, 0, 0, 0),
+                content = navItems,
+            )
+        }
+    } else {
+        NavigationBar(content = navItems)
     }
 }
 

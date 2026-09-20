@@ -27,6 +27,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.FastForward
@@ -48,6 +49,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
@@ -63,6 +65,9 @@ import com.mienaiknife.narra.ui.viewmodels.ReaderUiState
 import com.mienaiknife.narra.utils.DateUtils
 import java.util.Locale
 
+private val ReaderControlsMaxContentWidth = 400.dp
+private const val TABLET_MIN_SMALLEST_WIDTH_DP = 600
+
 @Composable
 fun ReaderPlaybackControls(
     modifier: Modifier = Modifier,
@@ -75,6 +80,7 @@ fun ReaderPlaybackControls(
     onCycleSpeed: () -> Unit,
 ) {
     val haptic = LocalHapticFeedback.current
+    val isTablet = LocalConfiguration.current.smallestScreenWidthDp >= TABLET_MIN_SMALLEST_WIDTH_DP
 
     AnimatedVisibility(
         visible = isControlsVisible,
@@ -91,6 +97,7 @@ fun ReaderPlaybackControls(
                     .fillMaxWidth()
                     .navigationBarsPadding()
                     .padding(top = 0.dp, bottom = 16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 // Progress Bar
                 val progress = if (uiState.duration > 0) uiState.currentPosition.toFloat() / uiState.duration else 0f
@@ -154,7 +161,13 @@ fun ReaderPlaybackControls(
                 // Control Buttons
                 Row(
                     modifier = Modifier
-                        .fillMaxWidth()
+                        .then(
+                            if (isTablet) {
+                                Modifier.widthIn(max = ReaderControlsMaxContentWidth).fillMaxWidth()
+                            } else {
+                                Modifier.fillMaxWidth()
+                            },
+                        )
                         .padding(horizontal = 8.dp),
                     horizontalArrangement = Arrangement.SpaceAround,
                     verticalAlignment = Alignment.CenterVertically,
