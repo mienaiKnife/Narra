@@ -1,6 +1,6 @@
 # Narra
 
-<img alt="Narra logo" src="./docs/images/NarraLogo.png" width="300"/>
+<img alt="Narra logo" src="./app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml" width="300"/>
 
 | <img alt="Preview of the Narra reader screen using the Roboto font family" src="./docs/images/NarraReaderScreenRoboto.jpg" width="300"/> | <img alt="Preview of the Narra reader screen using the OpenDyslexic3 font family" src="./docs/images/NarraReaderScreenOpenDyslexic3Light.jpg" width="300"/> |
 |:----------------------------------------------------------------------------------------------------------------------------------------:|:-----------------------------------------------------------------------------------------------------------------------------------------------------------:|
