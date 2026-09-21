@@ -1,6 +1,6 @@
 # Narra
 
-<img alt="Narra logo" src="./docs/app-icon.svg" width="300"/>
+<img alt="The Narra logo, which is a vector illustration of a tree reading a book" src="./docs/app-icon.svg" width="150"/>
 
 | <img alt="Preview of the Narra reader screen using the Roboto font family" src="./docs/images/NarraReaderScreenRoboto.jpg" width="300"/> | <img alt="Preview of the Narra reader screen using the OpenDyslexic3 font family" src="./docs/images/NarraReaderScreenOpenDyslexic3Light.jpg" width="300"/> |
 |:----------------------------------------------------------------------------------------------------------------------------------------:|:-----------------------------------------------------------------------------------------------------------------------------------------------------------:|
