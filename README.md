@@ -1,5 +1,7 @@
 # Narra
 
+<img alt="Narra logo" src="./docs/images/NarraLogo.png" width="300"/>
+
 | <img alt="Preview of the Narra reader screen using the Roboto font family" src="./docs/images/NarraReaderScreenRoboto.jpg" width="300"/> | <img alt="Preview of the Narra reader screen using the OpenDyslexic3 font family" src="./docs/images/NarraReaderScreenOpenDyslexic3Light.jpg" width="300"/> |
 |:----------------------------------------------------------------------------------------------------------------------------------------:|:-----------------------------------------------------------------------------------------------------------------------------------------------------------:|
 |                                                           Roboto and dark mode                                                           |                                                                OpenDyslexic3 and light mode                                                                 |
@@ -70,7 +72,7 @@ Run unit tests using the following command:
 ## Documentation
 
 - [User Guide](docs/USAGE.md) - Learn how to use Narra's features
-- [AGENTS.md](AGENTS.md) - Guide to the project for AI agents, which may also be useful for human contributors
+- [AGENTS.md](AGENTS.md) - Guide to the project for AI agents
 - [Localization](LOCALIZATION.md) - Guide to translating Narra into new languages
 - [Architecture](docs/ARCHITECTURE.md) - Learn about the project's technical design
 - [TTS Engines](docs/TTS_ENGINES.md) - Guide for implementing and extending TTS providers
