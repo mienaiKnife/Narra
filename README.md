@@ -11,7 +11,7 @@ Narra is a mobile app (currently Android exclusive) that allows users to listen 
 *At least, that's the goal.
 
 ## Disclaimer
-This project was vibecoded by someone who didn't start the project with the skills required to write this code by hand. Gemini 3 Flash has been used extensively due to its integration with Android Studio and the generous free tier. I would prefer to fully switch to something like Deepseek V4.1 Flash via OpenCode Go, but I haven't been able to connect it to Android Studio's built-in harness, so I find myself continuing to use Gemini Flash for some tasks even though it's a worse model.
+This project was vibecoded by someone who didn't start the project with the skills required to write this code by hand. I started out using Gemini 3 Flash because of its integration with Android Studio and generous free tier, but have since switched to using more recent and capable lightweight open models like Deepseek V4.1 Flash via Opencode (both the harness and the cloud hosting).
 
 I understand that I have a lot to learn in order to be a good head dev for this project, and I am sharing this repo with the hope of getting it looked over by more qualified devs. 
 

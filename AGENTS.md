@@ -110,6 +110,28 @@ your change adds **zero new warnings**; fix any warning in code you touched (see
 `jacocoTestReport`, `connectedDebugAndroidTest`, and the release builds. Do not consider a task done
 while any of them fail. See [docs/TESTING_GUIDE.md](docs/TESTING_GUIDE.md#cicd).
 
+## Android Tooling (Android CLI)
+Android CLI (`android`) is optional, per-developer tooling that exposes official Android tools to
+agents. When it is installed, prefer it over ad-hoc shell commands where it applies. Machine-specific
+paths (the `android` binary and any agent skills directory) belong in the uncommitted
+`local.properties`, never in this file or the build.
+
+- **Authoritative docs**: `android docs search "<query>"` then `android docs fetch kb://...` for
+  current Android guidance instead of relying on training data.
+- **Semantic code navigation**: `android studio find-declaration|find-usages|analyze-file` resolve
+  symbols and run the IDE's inspections; prefer these over `grep` for symbol work. They require a
+  running Android Studio (Quail 2+) with Gemini enabled and signed in.
+- **UI verification**: `android studio render-compose-preview --print-semantics` renders a `@Preview`
+  to an image plus its semantics tree.
+- **Dependency versions**: `android studio version-lookup <artifact|keyword>` checks repositories
+  such as Google Maven for the latest releases.
+- **Devices**: `android run`, `android layout`, `android screen capture`, and `android emulator ...`
+  deploy to and inspect an emulator or device.
+- **Android skills**: official skills load on demand from the agent's skills directory (for example
+  `adaptive`, `edge-to-edge`, `testing-setup`, `agp-9-upgrade`).
+
+Android CLI is a per-developer tool: do not add it to the build, CI, or project dependencies.
+
 ## What to Ask Before Doing
 - If a task would require adding a new third-party dependency, confirm before adding it.
 - If a feature touches the `TtsEngine`, `ArticleRepository`, `FeedRepository`,
