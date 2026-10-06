@@ -34,6 +34,7 @@ import org.mockito.kotlin.mock
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import java.io.InputStream
+import java.io.OutputStream
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class DownloadsSettingsViewModelTest {
@@ -56,7 +57,8 @@ class DownloadsSettingsViewModelTest {
         whenever(syncSettingsManager.autoExportEnabled).thenReturn(flowOf(false))
         whenever(syncSettingsManager.autoImportEnabled).thenReturn(flowOf(false))
         whenever(syncSettingsManager.autoExportUri).thenReturn(flowOf(null))
-        whenever(syncSettingsManager.lastExportTimestamp).thenReturn(flowOf(0L))
+        whenever(syncSettingsManager.lastAutoExportTimestamp).thenReturn(flowOf(0L))
+        whenever(syncSettingsManager.lastManualExportTimestamp).thenReturn(flowOf(0L))
         whenever(syncSettingsManager.pendingImport).thenReturn(flowOf(false))
 
         viewModel = DownloadsSettingsViewModel(
@@ -93,6 +95,19 @@ class DownloadsSettingsViewModelTest {
 
         verify(playbackManager).stop()
         verify(importExportRepository).restoreDatabase(inputStream)
+    }
+
+    @Test
+    fun `backupDatabase records the manual export timestamp`() = runTest {
+        val outputStream: OutputStream = mock()
+        whenever(importExportRepository.backupDatabase(outputStream)).thenReturn(Result.success(Unit))
+        whenever(syncSettingsManager.updateLastManualExportTimestamp()).thenReturn(Unit)
+
+        viewModel.backupDatabase(outputStream)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        verify(importExportRepository).backupDatabase(outputStream)
+        verify(syncSettingsManager).updateLastManualExportTimestamp()
     }
 
     @Test

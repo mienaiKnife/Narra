@@ -56,7 +56,8 @@ class DownloadsSettingsViewModel @Inject constructor(
 
     private data class DownloadsSync(
         val autoExportUri: String?,
-        val lastExportTimestamp: Long,
+        val lastAutoExportTimestamp: Long,
+        val lastManualExportTimestamp: Long,
         val pendingImport: Boolean,
         val message: UiText?,
     )
@@ -72,7 +73,8 @@ class DownloadsSettingsViewModel @Inject constructor(
         ),
         combine(
             syncSettingsManager.autoExportUri,
-            syncSettingsManager.lastExportTimestamp,
+            syncSettingsManager.lastAutoExportTimestamp,
+            syncSettingsManager.lastManualExportTimestamp,
             syncSettingsManager.pendingImport,
             _message,
             ::DownloadsSync,
@@ -85,7 +87,8 @@ class DownloadsSettingsViewModel @Inject constructor(
             autoExportEnabled = data.autoExportEnabled,
             autoImportEnabled = data.autoImportEnabled,
             autoExportUri = sync.autoExportUri,
-            lastExportTimestamp = sync.lastExportTimestamp,
+            lastAutoExportTimestamp = sync.lastAutoExportTimestamp,
+            lastManualExportTimestamp = sync.lastManualExportTimestamp,
             pendingImport = sync.pendingImport,
             message = sync.message,
         )
@@ -189,6 +192,7 @@ class DownloadsSettingsViewModel @Inject constructor(
             outputStream.use {
                 importExportRepository.backupDatabase(it)
                     .onSuccess {
+                        syncSettingsManager.updateLastManualExportTimestamp()
                         _message.value = UiText.StringResource(R.string.message_backup_created)
                     }
                     .onFailure { error ->

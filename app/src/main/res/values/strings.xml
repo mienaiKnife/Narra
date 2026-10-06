@@ -141,8 +141,10 @@
     <string name="settings_downloads_auto_export_desc">Automatically export database for external syncing (e.g. via Syncthing)</string>
     <string name="settings_downloads_auto_import">Auto-import database</string>
     <string name="settings_downloads_auto_import_desc">Automatically check for a newer database and stage it for import</string>
-    <string name="settings_downloads_auto_export_location">Auto-export location</string>
-    <string name="settings_downloads_last_export">Last auto-export: %1$s</string>
+    <string name="settings_downloads_sync_location">Sync file location</string>
+    <string name="settings_downloads_sync_location_desc">Shared file written by auto-export and read by auto-import</string>
+    <string name="settings_downloads_last_manual_export">Last manual export: %1$s</string>
+    <string name="settings_downloads_last_auto_export">Last auto-export: %1$s</string>
     <string name="settings_downloads_staged_message">New database staged. Restart app to apply.</string>
     <string name="settings_downloads_delete_db">Delete database</string>
     <string name="settings_downloads_delete_db_desc">Delete all articles, feeds, and playback progress from this device</string>
@@ -287,7 +289,7 @@
         <item>sync</item>
         <item>syncthing</item>
     </string-array>
-    <string-array name="settings_search_keywords_auto_export_location">
+    <string-array name="settings_search_keywords_sync_location">
         <item>backup</item>
         <item>sync</item>
     </string-array>
@@ -414,8 +416,8 @@
     <string name="settings_voices_cancel_download_desc">Cancel download</string>
     <string name="settings_voices_delete_model_desc">Delete model</string>
     <string name="settings_downloads_delete_db_confirm">Are you sure you want to delete all your data? This cannot be undone.</string>
-    <string name="settings_downloads_auto_export_location_set">File set. Tap to change.</string>
-    <string name="settings_downloads_auto_export_location_not_set">Not set. Tap to pick a folder</string>
+    <string name="settings_downloads_sync_location_set">File set. Tap to change.</string>
+    <string name="settings_downloads_sync_location_not_set">Not set. Tap to pick a file</string>
     <string name="action_delete">Delete</string>
     <string name="action_cancel">Cancel</string>
     <string name="feeds_icon_desc">Feed icon</string>

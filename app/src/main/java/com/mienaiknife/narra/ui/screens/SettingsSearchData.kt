@@ -245,11 +245,11 @@ val allSearchableSettings =
             R.array.settings_search_keywords_auto_import,
         ),
         SearchableSetting(
-            "autoExportLocation",
-            R.string.settings_downloads_auto_export_location,
-            R.string.settings_downloads_auto_export_location,
-            NavDestination.SettingsDownloads("autoExportLocation"),
-            R.array.settings_search_keywords_auto_export_location,
+            "syncLocation",
+            R.string.settings_downloads_sync_location,
+            R.string.settings_downloads_sync_location_desc,
+            NavDestination.SettingsDownloads("syncLocation"),
+            R.array.settings_search_keywords_sync_location,
         ),
         SearchableSetting(
             "deleteDatabase",

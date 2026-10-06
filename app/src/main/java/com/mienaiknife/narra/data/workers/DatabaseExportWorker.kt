@@ -46,7 +46,7 @@ constructor(
                 importExportRepository.backupDatabase(output).getOrThrow()
             } ?: return@withContext Result.failure()
 
-            syncSettingsManager.updateLastExportTimestamp()
+            syncSettingsManager.updateLastAutoExportTimestamp()
             android.util.Log.i("DatabaseExportWorker", "Database auto-export successful")
             Result.success()
         } catch (e: CancellationException) {

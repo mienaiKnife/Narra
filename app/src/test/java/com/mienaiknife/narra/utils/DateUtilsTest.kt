@@ -20,6 +20,7 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.time.LocalDate
+import java.time.ZoneId
 
 class DateUtilsTest {
     @Test
@@ -68,6 +69,20 @@ class DateUtilsTest {
         // More than an hour
         assertEquals("1:00:00", DateUtils.formatElapsedTime(3600 * 1000))
         assertEquals("1:05:01", DateUtils.formatElapsedTime((3600 + 301) * 1000))
+    }
+
+    @Test
+    fun `backupFileTimestamp formats sortable zero-padded timestamp`() {
+        // Built from the system zone so the expectation holds on any machine.
+        val timestamp =
+            LocalDate
+                .of(2025, 5, 21)
+                .atTime(9, 5, 3)
+                .atZone(ZoneId.systemDefault())
+                .toInstant()
+                .toEpochMilli()
+
+        assertEquals("2025-05-21_090503", DateUtils.backupFileTimestamp(timestamp))
     }
 
     @Test

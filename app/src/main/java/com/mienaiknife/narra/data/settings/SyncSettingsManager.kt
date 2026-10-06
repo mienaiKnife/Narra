@@ -35,6 +35,7 @@ constructor(
     private val autoExportEnabledKey = booleanPreferencesKey("auto_export_enabled")
     private val autoExportUriKey = stringPreferencesKey("auto_export_uri")
     private val lastExportTimestampKey = longPreferencesKey("last_export_timestamp")
+    private val lastManualExportTimestampKey = longPreferencesKey("last_manual_export_timestamp")
     private val autoImportEnabledKey = booleanPreferencesKey("auto_import_enabled")
     private val pendingImportKey = booleanPreferencesKey("pending_import")
     private val remoteLastModifiedKey = longPreferencesKey("remote_last_modified")
@@ -49,9 +50,14 @@ constructor(
             prefs[autoExportUriKey]
         }
 
-    val lastExportTimestamp: Flow<Long> =
+    val lastAutoExportTimestamp: Flow<Long> =
         context.settingsDataStore.data.map { prefs ->
             prefs[lastExportTimestampKey] ?: 0L
+        }
+
+    val lastManualExportTimestamp: Flow<Long> =
+        context.settingsDataStore.data.map { prefs ->
+            prefs[lastManualExportTimestampKey] ?: 0L
         }
 
     val autoImportEnabled: Flow<Boolean> =
@@ -103,9 +109,15 @@ constructor(
         }
     }
 
-    suspend fun updateLastExportTimestamp() {
+    suspend fun updateLastAutoExportTimestamp() {
         context.settingsDataStore.edit { prefs ->
             prefs[lastExportTimestampKey] = System.currentTimeMillis()
+        }
+    }
+
+    suspend fun updateLastManualExportTimestamp() {
+        context.settingsDataStore.edit { prefs ->
+            prefs[lastManualExportTimestampKey] = System.currentTimeMillis()
         }
     }
 }

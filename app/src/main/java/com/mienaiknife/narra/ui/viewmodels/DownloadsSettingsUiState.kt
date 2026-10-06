@@ -25,6 +25,7 @@ data class DownloadsSettingsUiState(
     val autoExportEnabled: Boolean = false,
     val autoImportEnabled: Boolean = false,
     val autoExportUri: String? = null,
-    val lastExportTimestamp: Long = 0L,
+    val lastAutoExportTimestamp: Long = 0L,
+    val lastManualExportTimestamp: Long = 0L,
     val pendingImport: Boolean = false,
 )

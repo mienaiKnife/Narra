@@ -15,8 +15,10 @@
  */
 package com.mienaiknife.narra.ui.screens
 
+import android.content.Context
 import android.content.Intent
 import android.content.res.Configuration
+import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -68,6 +70,7 @@ import com.mienaiknife.narra.ui.theme.NarraTheme
 import com.mienaiknife.narra.ui.viewmodels.DownloadsSettingsUiState
 import com.mienaiknife.narra.ui.viewmodels.DownloadsSettingsViewModel
 import com.mienaiknife.narra.utils.DateUtils
+import com.mienaiknife.narra.utils.OpenDocumentReadWrite
 
 @Composable
 fun DownloadsSettingsScreen(
@@ -104,7 +107,7 @@ fun DownloadsSettingsScreen(
     }
 
     val backupLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.CreateDocument("application/octet-stream"),
+        contract = ActivityResultContracts.CreateDocument("application/json"),
     ) { uri ->
         uri?.let {
             val outputStream = context.contentResolver.openOutputStream(it)
@@ -121,20 +124,23 @@ fun DownloadsSettingsScreen(
         }
     }
 
-    val autoExportLocationLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.CreateDocument("application/octet-stream"),
+    val exportLocationLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("application/json"),
     ) { uri ->
         uri?.let {
-            try {
-                context.contentResolver.takePersistableUriPermission(
-                    it,
-                    Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION,
-                )
-            } catch (e: Exception) {
-                android.util.Log.e("DownloadsSettingsScreen", "Failed to take persistable permission", e)
-            }
+            takePersistablePermissions(context, it)
             viewModel.setAutoExportUri(it.toString())
             viewModel.setAutoExportEnabled(true)
+        }
+    }
+
+    val importLocationLauncher = rememberLauncherForActivityResult(
+        contract = OpenDocumentReadWrite(),
+    ) { uri ->
+        uri?.let {
+            takePersistablePermissions(context, it)
+            viewModel.setAutoExportUri(it.toString())
+            viewModel.setAutoImportEnabled(true)
         }
     }
 
@@ -171,20 +177,57 @@ fun DownloadsSettingsScreen(
         onInboxInitialLimitChange = { viewModel.setInboxInitialLimit(it) },
         onImportOpml = { importLauncher.launch(arrayOf("application/xml", "text/xml", "application/octet-stream", "*/*")) },
         onExportOpml = { exportLauncher.launch("narra-subscriptions.opml") },
-        onBackupDatabase = { backupLauncher.launch("narra-backup.db") },
+        onBackupDatabase = {
+            backupLauncher.launch("narra-backup-${DateUtils.backupFileTimestamp()}.json")
+        },
         onRestoreDatabase = { restoreLauncher.launch(arrayOf("application/octet-stream", "*/*")) },
         onAutoExportEnabledChange = { enabled ->
             if (enabled && uiState.autoExportUri == null) {
-                autoExportLocationLauncher.launch("narra_db.sqlite")
+                exportLocationLauncher.launch("narra_db.json")
             } else {
                 viewModel.setAutoExportEnabled(enabled)
             }
         },
-        onAutoImportEnabledChange = { viewModel.setAutoImportEnabled(it) },
-        onSetAutoExportLocation = { autoExportLocationLauncher.launch("narra_db.sqlite") },
+        onAutoImportEnabledChange = { enabled ->
+            if (enabled && uiState.autoExportUri == null) {
+                importLocationLauncher.launch(SYNC_FILE_MIME_TYPES)
+            } else {
+                viewModel.setAutoImportEnabled(enabled)
+            }
+        },
+        onSetSyncLocation = {
+            if (uiState.autoExportEnabled) {
+                exportLocationLauncher.launch("narra_db.json")
+            } else {
+                importLocationLauncher.launch(SYNC_FILE_MIME_TYPES)
+            }
+        },
         onDeleteDatabase = { showDeleteConfirm.value = true },
         onBack = onBack,
     )
+}
+
+private val SYNC_FILE_MIME_TYPES = arrayOf("application/json", "application/octet-stream", "*/*")
+
+/**
+ * Keeps the shared sync-file URI readable and, where the provider allows it, writable so that
+ * auto-export can reuse a file that was originally picked for auto-import.
+ */
+private fun takePersistablePermissions(context: Context, uri: Uri) {
+    val contentResolver = context.contentResolver
+    val readWrite = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+    val writeGranted = runCatching {
+        contentResolver.takePersistableUriPermission(uri, readWrite)
+    }.isSuccess
+
+    if (writeGranted) return
+
+    // The provider may only have granted read access; auto-import still works with that.
+    runCatching {
+        contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+    }.onFailure { error ->
+        android.util.Log.e("DownloadsSettingsScreen", "Failed to take persistable permission", error)
+    }
 }
 
 @Composable
@@ -200,7 +243,7 @@ fun DownloadsSettingsContent(
     onRestoreDatabase: () -> Unit,
     onAutoExportEnabledChange: (Boolean) -> Unit,
     onAutoImportEnabledChange: (Boolean) -> Unit,
-    onSetAutoExportLocation: () -> Unit,
+    onSetSyncLocation: () -> Unit,
     onDeleteDatabase: () -> Unit,
     onBack: () -> Unit,
 ) {
@@ -211,7 +254,7 @@ fun DownloadsSettingsContent(
     val restoreDatabaseRequester = remember { BringIntoViewRequester() }
     val autoExportEnabledRequester = remember { BringIntoViewRequester() }
     val autoImportEnabledRequester = remember { BringIntoViewRequester() }
-    val autoExportLocationRequester = remember { BringIntoViewRequester() }
+    val syncLocationRequester = remember { BringIntoViewRequester() }
     val deleteDatabaseRequester = remember { BringIntoViewRequester() }
     val importFeedsRequester = remember { BringIntoViewRequester() }
     val exportFeedsRequester = remember { BringIntoViewRequester() }
@@ -225,7 +268,7 @@ fun DownloadsSettingsContent(
             "importDatabase" -> restoreDatabaseRequester.bringIntoView()
             "autoExportDatabase" -> autoExportEnabledRequester.bringIntoView()
             "autoImportDatabase" -> autoImportEnabledRequester.bringIntoView()
-            "autoExportLocation" -> autoExportLocationRequester.bringIntoView()
+            "syncLocation" -> syncLocationRequester.bringIntoView()
             "deleteDatabase" -> deleteDatabaseRequester.bringIntoView()
             "importFeeds" -> importFeedsRequester.bringIntoView()
             "exportFeeds" -> exportFeedsRequester.bringIntoView()
@@ -366,9 +409,12 @@ fun DownloadsSettingsContent(
                     .bringIntoViewRequester(backupDatabaseRequester)
                     .flashHighlight(highlightSetting == "exportDatabase"),
             ) {
-                if (uiState.lastExportTimestamp > 0) {
+                if (uiState.lastManualExportTimestamp > 0) {
                     Text(
-                        text = stringResource(R.string.settings_downloads_last_export, DateUtils.formatDateTime(uiState.lastExportTimestamp)),
+                        text = stringResource(
+                            R.string.settings_downloads_last_manual_export,
+                            DateUtils.formatDateTime(uiState.lastManualExportTimestamp),
+                        ),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.padding(top = 4.dp),
@@ -396,49 +442,51 @@ fun DownloadsSettingsContent(
                     .flashHighlight(highlightSetting == "autoExportDatabase"),
             )
 
-            if (uiState.autoExportEnabled) {
-                SettingsSwitchRow(
-                    title = stringResource(R.string.settings_downloads_auto_import),
-                    subtitle = stringResource(R.string.settings_downloads_auto_import_desc),
-                    checked = uiState.autoImportEnabled,
-                    onCheckedChange = onAutoImportEnabledChange,
-                    enabled = uiState.autoExportUri != null,
-                    verticalPadding = 12.dp,
-                    modifier = Modifier
-                        .bringIntoViewRequester(autoImportEnabledRequester)
-                        .flashHighlight(highlightSetting == "autoImportDatabase"),
-                )
+            SettingsSwitchRow(
+                title = stringResource(R.string.settings_downloads_auto_import),
+                subtitle = stringResource(R.string.settings_downloads_auto_import_desc),
+                checked = uiState.autoImportEnabled,
+                onCheckedChange = onAutoImportEnabledChange,
+                verticalPadding = 12.dp,
+                modifier = Modifier
+                    .bringIntoViewRequester(autoImportEnabledRequester)
+                    .flashHighlight(highlightSetting == "autoImportDatabase"),
+            )
 
+            if (uiState.autoExportEnabled || uiState.autoImportEnabled) {
                 SettingsActionRow(
-                    title = stringResource(R.string.settings_downloads_auto_export_location),
+                    title = stringResource(R.string.settings_downloads_sync_location),
                     subtitle = if (uiState.autoExportUri != null) {
-                        stringResource(R.string.settings_downloads_auto_export_location_set)
+                        stringResource(R.string.settings_downloads_sync_location_set)
                     } else {
-                        stringResource(R.string.settings_downloads_auto_export_location_not_set)
+                        stringResource(R.string.settings_downloads_sync_location_not_set)
                     },
-                    onClick = onSetAutoExportLocation,
+                    onClick = onSetSyncLocation,
                     modifier = Modifier
-                        .bringIntoViewRequester(autoExportLocationRequester)
-                        .flashHighlight(highlightSetting == "autoExportLocation"),
+                        .bringIntoViewRequester(syncLocationRequester)
+                        .flashHighlight(highlightSetting == "syncLocation"),
                 )
+            }
 
-                if (uiState.lastExportTimestamp > 0 && uiState.autoExportEnabled) {
-                    Text(
-                        text = stringResource(R.string.settings_downloads_last_export, DateUtils.formatDateTime(uiState.lastExportTimestamp)),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.padding(bottom = 8.dp),
-                    )
-                }
+            if (uiState.autoExportEnabled && uiState.lastAutoExportTimestamp > 0) {
+                Text(
+                    text = stringResource(
+                        R.string.settings_downloads_last_auto_export,
+                        DateUtils.formatDateTime(uiState.lastAutoExportTimestamp),
+                    ),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(bottom = 8.dp),
+                )
+            }
 
-                if (uiState.pendingImport) {
-                    Text(
-                        text = stringResource(R.string.settings_downloads_staged_message),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.padding(bottom = 8.dp),
-                    )
-                }
+            if (uiState.autoImportEnabled && uiState.pendingImport) {
+                Text(
+                    text = stringResource(R.string.settings_downloads_staged_message),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(bottom = 8.dp),
+                )
             }
 
             SettingsActionRow(
@@ -478,8 +526,9 @@ fun DownloadsSettingsScreenPreview() {
                     uiState = DownloadsSettingsUiState(
                         autoExportEnabled = true,
                         autoImportEnabled = true,
-                        autoExportUri = "content://com.android.externalstorage.documents/document/primary%3ANarra%2Fnarra_db.sqlite",
-                        lastExportTimestamp = System.currentTimeMillis(),
+                        autoExportUri = "content://com.android.externalstorage.documents/document/primary%3ANarra%2Fnarra_db.json",
+                        lastAutoExportTimestamp = System.currentTimeMillis(),
+                        lastManualExportTimestamp = System.currentTimeMillis(),
                     ),
                     highlightSetting = null,
                     onDownloadOverWifiOnlyChange = {},
@@ -491,7 +540,40 @@ fun DownloadsSettingsScreenPreview() {
                     onRestoreDatabase = {},
                     onAutoExportEnabledChange = {},
                     onAutoImportEnabledChange = {},
-                    onSetAutoExportLocation = {},
+                    onSetSyncLocation = {},
+                    onDeleteDatabase = {},
+                    onBack = {},
+                )
+            }
+        }
+    }
+}
+
+@Preview(uiMode = Configuration.UI_MODE_NIGHT_YES, showBackground = true)
+@Composable
+fun DownloadsSettingsImportOnlyPreview() {
+    val navController = rememberNavController()
+    NarraTheme(darkTheme = true, dynamicColor = false) {
+        Scaffold(
+            bottomBar = { BottomNavBar(navController) },
+        ) { innerPadding ->
+            Box(modifier = Modifier.padding(innerPadding)) {
+                DownloadsSettingsContent(
+                    uiState = DownloadsSettingsUiState(
+                        autoImportEnabled = true,
+                        autoExportUri = "content://com.android.externalstorage.documents/document/primary%3ASync%2Fnarra_db.json",
+                    ),
+                    highlightSetting = null,
+                    onDownloadOverWifiOnlyChange = {},
+                    onRefreshIntervalChange = {},
+                    onInboxInitialLimitChange = {},
+                    onImportOpml = {},
+                    onExportOpml = {},
+                    onBackupDatabase = {},
+                    onRestoreDatabase = {},
+                    onAutoExportEnabledChange = {},
+                    onAutoImportEnabledChange = {},
+                    onSetSyncLocation = {},
                     onDeleteDatabase = {},
                     onBack = {},
                 )

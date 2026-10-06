@@ -49,6 +49,8 @@ object DateUtils {
 
     private fun getDateTimeFormatter() = DateTimeFormatter.ofPattern("MMM d, HH:mm", Locale.getDefault())
 
+    private val backupTimestampFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd_HHmmss", Locale.US)
+
     fun formatDateTime(timestamp: Long): String {
         val dateTime =
             LocalDateTime.ofInstant(
@@ -57,6 +59,16 @@ object DateUtils {
             )
         return dateTime.format(getDateTimeFormatter())
     }
+
+    /**
+     * Locale-independent, zero-padded timestamp fragment for backup filenames so that
+     * manual exports get unique names that also sort chronologically.
+     */
+    fun backupFileTimestamp(timestamp: Long = System.currentTimeMillis()): String = LocalDateTime
+        .ofInstant(
+            java.time.Instant.ofEpochMilli(timestamp),
+            java.time.ZoneId.systemDefault(),
+        ).format(backupTimestampFormatter)
 
     fun formatPublishedDate(publishedAt: String?): String? {
         if (publishedAt.isNullOrBlank()) return null

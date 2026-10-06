@@ -67,8 +67,10 @@ Provides high-quality, natural-sounding AI voices that run entirely on your devi
 
 ### Backup and Restore
 Your data stays on your device. You can manage it in **Settings > Downloads**:
-- **Export/Import Database**: Create a full backup of your articles, feeds, and playback progress.
-- **Auto-Export**: Enable this to automatically save your database to a specific folder. This is useful for syncing your data across devices using tools like Syncthing.
+- **Export/Import Database**: Create a full backup of your articles, feeds, and playback progress. Each export is saved as a JSON file with the date and time in its name (e.g. `narra-backup-2025-05-21_143012.json`), so you can keep multiple backups side by side.
+- **Auto-Export**: Enable this to automatically save your database to a specific file. Unlike manual exports, it always overwrites the same file (`narra_db.json` by default) so auto-import can detect when another device has written a newer version. This is useful for syncing your data across devices using tools like Syncthing.
+- **Auto-Import**: Enable this on a second device to periodically check that file for a newer version and stage it for import (restart the app to apply it). It does not require auto-export: if no sync file has been picked yet, Narra asks you to select the existing file rather than creating one, so a receiving device never produces a duplicate such as `narra_db(1).json`.
+- **Sync file location**: Both switches share a single file. Pick it once from either switch, then adjust it here; the same file in the same synced folder must be used on every device.
 - **OPML Import/Export**: Easily move your RSS feed subscriptions to or from other apps.
 
 ## Privacy
