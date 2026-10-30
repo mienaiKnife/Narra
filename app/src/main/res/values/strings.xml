@@ -364,7 +364,6 @@
     <!-- Plurals Equivalents (templates) -->
 
     <!-- Playback Service -->
-    <string name="notification_preparing">Preparing playback…</string>
     <string name="notification_channel_name">Feed Notifications</string>
     <string name="notification_channel_desc">Notifications for new articles from subscribed feeds</string>
     <string name="notification_new_article_title">New article from %1$s</string>
@@ -429,7 +428,7 @@
     <string name="reader_menu_visit_site">Visit site</string>
     <string name="reader_article_image_desc">Article image</string>
     <string name="reader_scroll_to_current_position">Scroll to current position</string>
-    <string name="reader_playback_progress_desc">Playback progress: %1$d percent completed</string>
+    <string name="reader_playback_progress_desc">Playback progress: %1$d%%</string>
     <string name="reader_playback_speed_desc">Playback speed: current %1$.1fx</string>
     <string name="reader_rewind_desc">Rewind %1$s</string>
     <string name="reader_fast_forward_desc">Fast forward %1$s</string>
@@ -443,7 +442,6 @@
     <string name="reader_image_prefix">Image: %1$s</string>
     <string name="reader_playing_prefix">Playing %1$s. Tap to open player.</string>
     <string name="reader_paused_prefix">Paused %1$s. Tap to open player.</string>
-    <string name="reader_cover_desc">Cover for %1$s</string>
     <string name="reader_link_to">" link to %1$s "</string>
     <string name="reader_paragraph_semantics">Paragraph %1$d of %2$d</string>
     <string name="reader_unknown">Unknown</string>
@@ -482,7 +480,6 @@
     <string name="about_code_repository_desc">Report bugs, suggest features</string>
     <string name="about_licenses_desc">Open source software used in Narra</string>
     <string name="about_privacy_policy">Privacy policy</string>
-    <string name="playback_notification_channel_desc">Media controls for background playback</string>
     <string name="reader_menu_played">Mark as played</string>
     <string name="reader_menu_unplayed">Mark as unplayed</string>
     <string name="reader_menu_add_queue">Add to queue</string>

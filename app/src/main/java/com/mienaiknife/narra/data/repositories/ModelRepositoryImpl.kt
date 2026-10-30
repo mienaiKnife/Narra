@@ -281,7 +281,7 @@ class ModelRepositoryImpl @Inject constructor(
                     throw NarraError.Network.ServerError(response.code, response.message)
                 }
 
-                val body = response.body ?: throw NarraError.Model.DownloadFailed("Response body is null")
+                val body = response.body
                 val contentLength = body.contentLength()
 
                 val isPartial = response.code == 206

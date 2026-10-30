@@ -200,6 +200,7 @@ class PlaybackService : MediaLibraryService() {
             kotlinx.coroutines.delay(2000)
             while (true) {
                 if (ttsPlayer.playWhenReady && isForegrounded) {
+                    ttsPlayer.refreshPowerLocks()
                     mediaSession?.let { session ->
                         MediaSessionUtils.forceActivationAndMbr(this@PlaybackService, session)
                     }
@@ -280,6 +281,7 @@ class PlaybackService : MediaLibraryService() {
                 override fun onPlaybackResumption(
                     session: MediaSession,
                     controller: MediaSession.ControllerInfo,
+                    isForPlayback: Boolean,
                 ): ListenableFuture<MediaSession.MediaItemsWithStartPosition> {
                     android.util.Log.d("PlaybackService", "onPlaybackResumption triggered")
                     val currentItem = ttsPlayer.currentMediaItem
@@ -293,7 +295,7 @@ class PlaybackService : MediaLibraryService() {
                             ),
                         )
                     } else {
-                        super.onPlaybackResumption(session, controller)
+                        super.onPlaybackResumption(session, controller, isForPlayback)
                     }
                 }
 
@@ -309,7 +311,7 @@ class PlaybackService : MediaLibraryService() {
                             .add(Player.COMMAND_SEEK_BACK)
                             .add(Player.COMMAND_SEEK_FORWARD)
                             .build()
-                    return MediaSession.ConnectionResult.AcceptedResultBuilder(session)
+                    return MediaSession.ConnectionResult.AcceptedResultBuilder(session, controller)
                         .setAvailablePlayerCommands(availablePlayerCommands)
                         .setSessionExtras(sessionExtras)
                         .build()
@@ -457,14 +459,22 @@ class PlaybackService : MediaLibraryService() {
         silenceJob = serviceScope.launch(Dispatchers.IO) {
             val bufferSize = AudioTrack.getMinBufferSize(44100, AudioFormat.CHANNEL_OUT_MONO, AudioFormat.ENCODING_PCM_16BIT)
             val track = try {
-                AudioTrack(
-                    AudioManager.STREAM_MUSIC,
-                    44100,
-                    AudioFormat.CHANNEL_OUT_MONO,
-                    AudioFormat.ENCODING_PCM_16BIT,
-                    bufferSize,
-                    AudioTrack.MODE_STREAM,
-                )
+                AudioTrack.Builder()
+                    .setAudioAttributes(
+                        android.media.AudioAttributes.Builder()
+                            .setUsage(android.media.AudioAttributes.USAGE_MEDIA)
+                            .build(),
+                    )
+                    .setAudioFormat(
+                        AudioFormat.Builder()
+                            .setSampleRate(44100)
+                            .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
+                            .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
+                            .build(),
+                    )
+                    .setBufferSizeInBytes(bufferSize)
+                    .setTransferMode(AudioTrack.MODE_STREAM)
+                    .build()
             } catch (e: Exception) {
                 android.util.Log.e("PlaybackService", "Silence track init error", e)
                 null

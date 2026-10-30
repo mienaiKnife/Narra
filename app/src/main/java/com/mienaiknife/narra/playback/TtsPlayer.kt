@@ -727,6 +727,11 @@ class TtsPlayer @Inject constructor(
         invalidateState()
     }
 
+    /** Renews the playback wake lock timeout while playback keeps running. */
+    fun refreshPowerLocks() {
+        powerLockManager.acquireLocks()
+    }
+
     override fun handleSetRepeatMode(repeatMode: Int): ListenableFuture<*> = Futures.immediateVoidFuture()
     override fun handleSetShuffleModeEnabled(shuffleModeEnabled: Boolean): ListenableFuture<*> = Futures.immediateVoidFuture()
     override fun handleSetTrackSelectionParameters(trackSelectionParameters: TrackSelectionParameters): ListenableFuture<*> = Futures.immediateVoidFuture()

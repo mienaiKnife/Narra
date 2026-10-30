@@ -70,12 +70,10 @@ constructor(
                             }
 
                             // Log available voices for debugging
-                            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
-                                val voices = engine.voices
-                                android.util.Log.i("AndroidTtsEngine", "Available voices count: ${voices?.size ?: 0}")
-                                voices?.take(3)?.forEach {
-                                    android.util.Log.d("AndroidTtsEngine", "Voice: ${it.name}, Locale: ${it.locale}")
-                                }
+                            val voices = engine.voices
+                            android.util.Log.i("AndroidTtsEngine", "Available voices count: ${voices?.size ?: 0}")
+                            voices?.take(3)?.forEach {
+                                android.util.Log.d("AndroidTtsEngine", "Voice: ${it.name}, Locale: ${it.locale}")
                             }
 
                             engine.setOnUtteranceProgressListener(

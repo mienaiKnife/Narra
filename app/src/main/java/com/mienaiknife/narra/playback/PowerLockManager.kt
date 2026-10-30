@@ -28,13 +28,15 @@ class PowerLockManager(context: Context) {
 
     fun acquireLocks() {
         if (wakeLock == null) {
-            wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "Narra:PlaybackWakeLock").apply {
+            wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, WAKE_LOCK_TAG).apply {
                 setReferenceCounted(false)
-                acquire()
             }
         }
+        // Re-acquiring refreshes the timeout. PlaybackService renews the lock while playback is
+        // active, so the timeout only expires if the lock is ever leaked.
+        wakeLock?.acquire(WAKE_LOCK_TIMEOUT_MS)
         if (wifiLock == null) {
-            wifiLock = wifiManager.createWifiLock(WifiManager.WIFI_MODE_FULL_HIGH_PERF, "Narra:PlaybackWifiLock").apply {
+            wifiLock = wifiManager.createWifiLock(WIFI_LOCK_MODE, WIFI_LOCK_TAG).apply {
                 setReferenceCounted(false)
                 acquire()
             }
@@ -46,5 +48,18 @@ class PowerLockManager(context: Context) {
         wakeLock = null
         wifiLock?.let { if (it.isHeld) it.release() }
         wifiLock = null
+    }
+
+    private companion object {
+        const val WAKE_LOCK_TAG = "Narra:PlaybackWakeLock"
+        const val WIFI_LOCK_TAG = "Narra:PlaybackWifiLock"
+        const val WAKE_LOCK_TIMEOUT_MS = 10 * 60 * 1000L
+
+        // WIFI_MODE_FULL_HIGH_PERF is deprecated in favour of WIFI_MODE_FULL_LOW_LATENCY, but the
+        // replacement is only held while the screen is on, so it cannot keep Wi-Fi awake for
+        // screen-off playback. Keep the legacy mode; newer platform releases already substitute
+        // the low-latency mode automatically.
+        @Suppress("DEPRECATION")
+        const val WIFI_LOCK_MODE = WifiManager.WIFI_MODE_FULL_HIGH_PERF
     }
 }

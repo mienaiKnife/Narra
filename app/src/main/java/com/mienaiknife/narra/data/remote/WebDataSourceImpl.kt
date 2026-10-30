@@ -66,11 +66,7 @@ constructor(
                             )
                         }
 
-                        response.body?.string()
-                            ?: return@withContext Result.failure(
-                                com.mienaiknife.narra.domain.NarraError.Content
-                                    .ParsingFailed(),
-                            )
+                        response.body.string()
                     }
                 val doc = Jsoup.parse(html, url)
 

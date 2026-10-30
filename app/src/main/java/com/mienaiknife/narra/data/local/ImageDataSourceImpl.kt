@@ -45,7 +45,7 @@ constructor(
             val request = Request.Builder().url(url).build()
             okHttpClient.newCall(request).execute().use { response ->
                 if (!response.isSuccessful) return@withContext null
-                val body = response.body ?: return@withContext null
+                val body = response.body
                 val base = fileName.substringBeforeLast('.')
                 val knownExtension = extensionFromContentType(response.header("Content-Type"))
                 var file = File(imagesDir, "$base.${knownExtension ?: TEMP_EXTENSION}")
