@@ -70,6 +70,11 @@ constructor(
                     }
                 val doc = Jsoup.parse(html, url)
 
+                // Read metadata before preCleanDocument strips <script> tags, which carry the
+                // JSON-LD block used as the primary source for dates and images.
+                val publishedAt = extractPublishedDate(doc)
+                val imageUrl = extractImageUrl(doc)
+
                 preCleanDocument(doc)
 
                 val readability4J = Readability4J(url, doc.outerHtml())
@@ -81,9 +86,6 @@ constructor(
                             .ParsingFailed(),
                     )
                 }
-
-                val publishedAt = extractPublishedDate(doc)
-                val imageUrl = extractImageUrl(doc)
 
                 val article =
                     Article(
@@ -108,7 +110,7 @@ constructor(
                     )
 
                 Result.success(article)
-            } catch (e: java.net.SocketTimeoutException) {
+            } catch (_: java.net.SocketTimeoutException) {
                 Result.failure(
                     com.mienaiknife.narra.domain.NarraError.Network
                         .Timeout(),

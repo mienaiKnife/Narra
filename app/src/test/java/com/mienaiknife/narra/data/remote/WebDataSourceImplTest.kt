@@ -17,7 +17,12 @@ package com.mienaiknife.narra.data.remote
 
 import com.mienaiknife.narra.domain.NarraError
 import kotlinx.coroutines.runBlocking
+import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
+import okhttp3.Protocol
+import okhttp3.Response
+import okhttp3.ResponseBody.Companion.toResponseBody
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -65,13 +70,8 @@ class WebDataSourceImplTest {
         """.trimIndent()
 
         val doc = org.jsoup.Jsoup.parse(html, "https://example.com")
-        // Manually invoke preClean to simulate the behavior
-        // Since it's private, I'll use reflection or just test it via a public method if possible.
-        // WebDataSourceImpl.downloadArticle is public.
 
-        // Actually, I can just test the logic by copying it or making it internal for testing.
-        // For now, let's use reflection to test the private method if I can't mock the whole download flow easily.
-
+        // preCleanDocument is private, so exercise it through reflection.
         val method = webDataSource.javaClass.getDeclaredMethod("preCleanDocument", org.jsoup.nodes.Document::class.java)
         method.isAccessible = true
         method.invoke(webDataSource, doc)
@@ -141,6 +141,46 @@ class WebDataSourceImplTest {
         method.isAccessible = true
         val result = method.invoke(webDataSource, doc)
 
-        org.junit.Assert.assertEquals("https://example.com/cover.jpg", result)
+        assertEquals("https://example.com/cover.jpg", result)
+    }
+
+    @Test
+    fun `downloadArticle reads JSON-LD metadata before scripts are stripped`() = runBlocking {
+        val body =
+            """
+            <html>
+                <head>
+                    <script type="application/ld+json">
+                        {"@type":"Article","datePublished":"2020-01-02","image":"https://cdn.example.com/a.jpg"}
+                    </script>
+                </head>
+                <body>
+                    <article>
+                        <h1>Test Article</h1>
+                        <p>${"Long enough article body to satisfy readability extraction. ".repeat(20)}</p>
+                    </article>
+                </body>
+            </html>
+            """.trimIndent()
+
+        val client =
+            OkHttpClient.Builder()
+                .addInterceptor { chain ->
+                    Response.Builder()
+                        .request(chain.request())
+                        .protocol(Protocol.HTTP_1_1)
+                        .code(200)
+                        .message("OK")
+                        .body(body.toResponseBody("text/html".toMediaType()))
+                        .build()
+                }
+                .build()
+
+        val result = WebDataSourceImpl(client).downloadArticle("https://example.com/article")
+
+        assertTrue("Expected success but was ${result.exceptionOrNull()}", result.isSuccess)
+        val article = result.getOrThrow()
+        assertEquals("2020-01-02", article.publishedAt)
+        assertEquals("https://cdn.example.com/a.jpg", article.imageUrl)
     }
 }

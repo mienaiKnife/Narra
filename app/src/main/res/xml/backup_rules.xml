@@ -15,13 +15,6 @@
   limitations under the License.
   -->
 <!--
-   Sample backup rules file; uncomment and customize as necessary.
-   See https://developer.android.com/guide/topics/data/autobackup
-   for details.
-   Note: This file is ignored for devices older than API 31
-   See https://developer.android.com/about/versions/12/backup-restore
--->
-<!--
     The encrypted database is deliberately excluded: its key is device-bound and not backed up,
     so the ciphertext is useless after restore. Users export a portable backup from the app.
 -->

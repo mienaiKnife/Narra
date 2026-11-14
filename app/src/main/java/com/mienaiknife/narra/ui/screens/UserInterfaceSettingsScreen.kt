@@ -369,7 +369,7 @@ fun UserInterfaceSettingsScreen(
                     value = uiState.readerFontSize,
                     onValueChange = { themeViewModel.setReaderFontSize(it) },
                     valueRange = 12f..36f,
-                    steps = 24, // Increments of 1
+                    steps = 23, // Increments of 1
                     modifier = Modifier.fillMaxWidth(),
                     colors = sliderColors,
                     track = { sliderState ->

@@ -44,7 +44,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
@@ -53,6 +52,7 @@ import kotlinx.coroutines.withTimeoutOrNull
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.coroutines.resume
+import kotlin.time.Duration.Companion.milliseconds
 
 @OptIn(UnstableApi::class)
 @Singleton
@@ -154,7 +154,7 @@ class PlaybackManager @Inject constructor(
                 if (isPlaying) {
                     progressJob = scope.launch {
                         while (true) {
-                            delay(1000)
+                            delay(1000.milliseconds)
                             _currentPosition.value = ttsPlayer.currentPosition
                             updateProgress()
                         }
@@ -360,7 +360,7 @@ class PlaybackManager @Inject constructor(
 
                             playChime()
                             // Small delay to let the chime breathe
-                            delay(300)
+                            delay(300.milliseconds)
 
                             // Announcements usually sound better at normal speed even if the article is fast
                             val currentSpeed = _playbackSpeed.value
@@ -370,7 +370,7 @@ class PlaybackManager @Inject constructor(
 
                             // Wait for the announcement to start and then finish
                             // Increased timeout to 10s for slow TTS engines
-                            withTimeoutOrNull(10000) {
+                            withTimeoutOrNull(10000.milliseconds) {
                                 // Wait for Speaking state with "announcement" ID
                                 ttsPlayer.engineState.first {
                                     it is TtsState.Speaking && it.utteranceId == "announcement"
@@ -381,7 +381,7 @@ class PlaybackManager @Inject constructor(
                                 }
                             }
 
-                            delay(500) // Brief pause after announcement
+                            delay(500.milliseconds) // Brief pause after announcement
 
                             // Restore speed for the actual content
                             if (currentSpeed != 1.0f) {
@@ -480,7 +480,8 @@ class PlaybackManager @Inject constructor(
 
     fun stop() {
         transitionJob?.cancel()
-        ttsPlayer.stop() // Use stop() instead of pause() to release locks
+        // stop() (unlike pause()) abandons audio focus and clears the playback state
+        ttsPlayer.stop()
         _currentArticle.value = null
         _isPlaying.value = false
     }
@@ -622,7 +623,7 @@ class PlaybackManager @Inject constructor(
         _sleepTimerMillisLeft.value = minutes * 60 * 1000L
         sleepTimerJob = scope.launch {
             while ((_sleepTimerMillisLeft.value ?: 0) > 0) {
-                delay(1000)
+                delay(1000.milliseconds)
                 _sleepTimerMillisLeft.value = (_sleepTimerMillisLeft.value ?: 0) - 1000
             }
             _sleepTimerMillisLeft.value = 0

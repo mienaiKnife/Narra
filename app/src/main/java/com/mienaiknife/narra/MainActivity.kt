@@ -57,7 +57,7 @@ class MainActivity : ComponentActivity() {
     private val requestPermissionLauncher =
         registerForActivityResult(
             ActivityResultContracts.RequestPermission(),
-        ) { isGranted: Boolean ->
+        ) { _: Boolean ->
             // Handle permission result if needed
         }
 
@@ -80,8 +80,8 @@ class MainActivity : ComponentActivity() {
         themeViewModel.initialize(this)
         enableEdgeToEdge()
 
-        // Applying a staged database touches the filesystem and closes the database, so keep it
-        // off the main thread and delay any database consumer until it completes.
+        // Applying a staged backup reads the staged file and rewrites the database in a transaction,
+        // so keep it off the main thread and delay any database consumer until it completes.
         lifecycleScope.launch {
             withContext(Dispatchers.IO) {
                 syncManager.applyStagedDatabaseIfNecessary(applicationContext)

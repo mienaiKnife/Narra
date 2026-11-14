@@ -95,10 +95,10 @@ object DatabaseModule {
         (1 until AppDatabase.MIN_SUPPORTED_VERSION).toList().toIntArray()
 
     /**
-     * Validates and repairs the on-disk database before it is opened. This reads the Keystore and
-     * may encrypt or back up the whole database file, so it must never run on the main thread.
-     * [PreparingOpenHelperFactory] invokes it lazily just before the first open, which Room
-     * performs on a background thread for suspend DAO calls.
+     * Validates and repairs the on-disk database before it is opened, using the supplied passphrase.
+     * It may encrypt or back up the whole database file, so it must never run on the main thread.
+     * [PreparingOpenHelper] invokes it lazily just before the first open, which Room performs on a
+     * background thread for suspend DAO calls.
      */
     fun prepareDatabaseFile(
         context: Context,
@@ -174,8 +174,9 @@ object DatabaseModule {
 
     /**
      * Defers all SQLCipher/Keystore work until the database is actually opened. Room calls
-     * [create] and [setWriteAheadLoggingEnabled] on the main thread during initialization, but
-     * only touches [writableDatabase]/[readableDatabase] on the background query thread.
+     * `SupportSQLiteOpenHelper.Factory.create` and `setWriteAheadLoggingEnabled` on the main
+     * thread during initialization, but only touches [writableDatabase]/[readableDatabase] on
+     * the background query thread.
      */
     private class PreparingOpenHelper(
         private val configuration: SupportSQLiteOpenHelper.Configuration,
@@ -219,7 +220,7 @@ object DatabaseModule {
     }
 
     /**
-     * SQLCipher opens the database lazily, so [SQLiteDatabase.isOpen] can be `true` even when the
+     * SQLCipher opens the database lazily, so `SQLiteDatabase.isOpen` can be `true` even when the
      * provided key is wrong. Reading a page forces header/key validation and throws on mismatch.
      */
     private fun net.zetetic.database.sqlcipher.SQLiteDatabase.hasReadableSchema(): Boolean = rawQuery("SELECT count(*) FROM sqlite_schema", null).use { it.moveToFirst() }

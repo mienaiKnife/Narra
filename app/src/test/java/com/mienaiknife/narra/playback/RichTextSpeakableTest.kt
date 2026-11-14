@@ -42,9 +42,9 @@ class RichTextSpeakableTest {
 
     @Test
     fun `long URL links are shortened and padded to preserve length`() {
-        // URL length: 43 chars
+        // URL length: 42 chars
         // Simplified: " link to example.com " -> 21 chars
-        // Result should have 22 spaces of padding
+        // Result should have 21 spaces of padding
         val url = "https://example.com/very/long/path/to/page"
         val text = "Check out $url for more"
         val richText = RichText(text, listOf(RichTextSpan(start = 10, end = 10 + url.length, link = url)))

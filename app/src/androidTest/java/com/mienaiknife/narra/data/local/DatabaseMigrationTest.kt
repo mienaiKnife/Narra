@@ -90,9 +90,8 @@ class DatabaseMigrationTest {
         // Run migration first time
         helper.runMigrationsAndValidate(TEST_DB, 17, true, migration16to17).close()
 
-        // Run migration second time (simulated by calling the migration logic again)
-        // Room won't let us run the same migration twice via helper easily,
-        // but we can manually invoke it on the db.
+        // Re-open the already-migrated database. Room sees version 17 and skips the
+        // migration, so this only re-runs schema validation.
         helper.runMigrationsAndValidate(TEST_DB, 17, true, migration16to17).apply {
             // If it wasn't idempotent, it would crash or fail validation
             val cursor = query("SELECT isInInbox FROM articles")

@@ -150,10 +150,8 @@ fun SettingsScreen(
                     emptyList()
                 } else {
                     allSearchableSettings.filter { item ->
-                        // Using stringResource is not possible here as it's not a composable context (inside remember's lambda)
-                        // but actually, remember's lambda is NOT a composable context, but we are inside a Composable function.
-                        // However, allSearchableSettings uses resource IDs. We can use resources.getString here.
-                        // To avoid the lint warning, we can suppress it or just accept it's necessary here.
+                        // resources.getString is used instead of stringResource because this runs
+                        // inside remember, which is not a composable context.
                         resources.getString(item.titleRes).contains(searchQuery, ignoreCase = true) ||
                             resources.getString(item.subtitleRes).contains(searchQuery, ignoreCase = true) ||
                             item.keywordsRes.let { keywordsRes ->

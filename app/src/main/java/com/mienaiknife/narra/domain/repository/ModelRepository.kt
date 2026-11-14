@@ -55,7 +55,7 @@ interface ModelRepository {
     suspend fun getModelPath(modelId: String): String?
 
     /**
-     * Ensures that the default models are present in the database and updated if needed.
+     * Inserts the default models when the model table is empty.
      */
     suspend fun ensureDefaultModelsInitialized()
 }

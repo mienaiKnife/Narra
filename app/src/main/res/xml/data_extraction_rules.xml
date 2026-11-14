@@ -14,12 +14,7 @@
   See the License for the specific language governing permissions and
   limitations under the License.
   -->
-<!--
-   Sample data extraction rules file; uncomment and customize as necessary.
-   See https://developer.android.com/about/versions/12/backup-restore#xml-changes
-   for details.
--->
-<data-extraction-rules xmlns:android="http://schemas.android.com/apk/res/android">
+<data-extraction-rules>
     <!-- The encrypted database is excluded (device-bound key); portable backups are user-driven. -->
     <cloud-backup>
         <include domain="file" path="datastore/"/>

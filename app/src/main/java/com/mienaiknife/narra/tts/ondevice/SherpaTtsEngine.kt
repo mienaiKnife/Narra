@@ -47,6 +47,7 @@ import java.io.File
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.math.abs
+import kotlin.time.Duration.Companion.milliseconds
 
 @Singleton
 class SherpaTtsEngine @Inject constructor(
@@ -144,7 +145,7 @@ class SherpaTtsEngine @Inject constructor(
                 .collectLatest { (modelId, noiseScale, lengthScale) ->
                     // Delay for scales to avoid rapid re-init while sliding
                     if (modelId == currentModelId) {
-                        delay(500)
+                        delay(500.milliseconds)
                     }
                     initializeEngine(modelId, noiseScale, lengthScale)
                 }
@@ -412,7 +413,7 @@ class SherpaTtsEngine @Inject constructor(
         monitorJob = scope.launch(Dispatchers.Default) {
             while (isActive) {
                 updatePlaybackProgress()
-                delay(20)
+                delay(20.milliseconds)
             }
         }
     }
@@ -423,7 +424,7 @@ class SherpaTtsEngine @Inject constructor(
         val head = try {
             if (track.state != AudioTrack.STATE_INITIALIZED) return
             track.playbackHeadPosition.toLong() and 0xFFFFFFFFL
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             // Track might have been released just after our null check
             return
         }
@@ -536,7 +537,7 @@ class SherpaTtsEngine @Inject constructor(
                                 .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
                                 .build(),
                         )
-                        .setBufferSizeInBytes(maxOf(bufferSize, sampleRate * 4)) // ~250ms buffer
+                        .setBufferSizeInBytes(maxOf(bufferSize, sampleRate * 4)) // at least 1s (4 bytes per mono float frame)
                         .setTransferMode(AudioTrack.MODE_STREAM)
                         .build()
 
@@ -577,14 +578,14 @@ class SherpaTtsEngine @Inject constructor(
                             if (currentTrack.playState != AudioTrack.PLAYSTATE_PLAYING) {
                                 try {
                                     currentTrack.play()
-                                } catch (e: Exception) {
+                                } catch (_: Exception) {
                                     break
                                 }
                             }
                             val toWrite = samples.size - offset
                             val written = try {
                                 currentTrack.write(samples, offset, toWrite, AudioTrack.WRITE_NON_BLOCKING)
-                            } catch (e: Exception) {
+                            } catch (_: Exception) {
                                 -1
                             }
                             if (written < 0) {
@@ -592,7 +593,7 @@ class SherpaTtsEngine @Inject constructor(
                                 break
                             }
                             if (written == 0) {
-                                delay(10) // Wait for buffer to clear
+                                delay(10.milliseconds) // Wait for buffer to clear
                                 continue
                             }
 
@@ -681,7 +682,7 @@ class SherpaTtsEngine @Inject constructor(
                             track.pause()
                             track.flush()
                             track.stop()
-                        } catch (e: Exception) {
+                        } catch (_: Exception) {
                             // Ignore errors during stop/flush as track might already be in an invalid state
                         }
                         track.release()

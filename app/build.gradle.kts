@@ -49,7 +49,6 @@ android {
     namespace = "com.mienaiknife.narra"
     compileSdk = 37
 
-    // Forced re-sync to fix IDE indexing
     defaultConfig {
         applicationId = "com.mienaiknife.narra"
         minSdk = 24

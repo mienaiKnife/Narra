@@ -20,7 +20,8 @@ import com.mienaiknife.narra.domain.models.Article
 interface WebDataSource {
     /**
      * Downloads and parses a web page, extracting its content.
-     * Returns a partial Article object with title, content, excerpt, etc.
+     * Returns a partial Article object with title, source, content, publication date, image URL,
+     * and estimated reading duration.
      */
     suspend fun downloadArticle(url: String): Result<Article>
 }

@@ -21,15 +21,16 @@
 # For more details, see
 #   http://developer.android.com/guide/developing/tools/proguard.html
 
-# Keep Sherpa-ONNX JNI classes
--keep class com.k2fsa.sherpa.onnx.** { *; }
+# Keep the Sherpa-ONNX TTS JNI surface used by SherpaTtsEngine. The native library resolves
+# these classes and their members by name, so R8 must not rename, shrink, or strip them.
+-keep class com.k2fsa.sherpa.onnx.OfflineTts* { *; }
+-keep class com.k2fsa.sherpa.onnx.GeneratedAudio { *; }
+-keep class com.k2fsa.sherpa.onnx.GenerationConfig { *; }
 
 # Keep our stable callback and the Kotlin function interface it implements
 -keep class com.mienaiknife.narra.tts.ondevice.SherpaTtsCallback { *; }
 -keep interface kotlin.jvm.functions.Function1 { *; }
 
-# OPML falls back to instantiating the kxml pull parser/serializer by name when the
-# platform XmlPullParserFactory is unavailable.
 -keep class org.kxml2.io.** { *; }
 -keep class org.xmlpull.v1.** { *; }
 

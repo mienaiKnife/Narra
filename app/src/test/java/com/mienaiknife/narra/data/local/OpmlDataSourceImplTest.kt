@@ -16,7 +16,9 @@
 package com.mienaiknife.narra.data.local
 
 import com.mienaiknife.narra.data.local.entities.FeedEntity
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -61,7 +63,9 @@ class TestOpmlDataSource : OpmlDataSource {
             sb.append("<outline type=\"rss\" text=\"${feed.title}\" title=\"${feed.title}\" xmlUrl=\"${feed.url}\"/>\n")
         }
         sb.append("</body>\n</opml>")
-        outputStream.write(sb.toString().toByteArray())
+        withContext(Dispatchers.IO) {
+            outputStream.write(sb.toString().toByteArray())
+        }
         return Result.success(Unit)
     }
 }
@@ -71,8 +75,8 @@ class OpmlDataSourceImplTest {
 
     @Before
     fun setUp() {
-        // Use the test-friendly implementation to verify the logic/interface
-        // while the real implementation is verified in instrumented tests
+        // Use the test-friendly implementation to verify the interface contract;
+        // OpmlDataSourceImpl itself is not covered by these JVM tests
         opmlDataSource = TestOpmlDataSource()
     }
 

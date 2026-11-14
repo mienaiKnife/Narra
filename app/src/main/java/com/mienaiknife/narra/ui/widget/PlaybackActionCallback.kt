@@ -58,5 +58,3 @@ class PlaybackActionCallback : ActionCallback {
         }
     }
 }
-
-// Removed unused await extension
