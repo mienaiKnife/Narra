@@ -138,6 +138,13 @@ androidComponents {
     beforeVariants(selector().withBuildType("release")) { variantBuilder ->
         variantBuilder.hostTests[HostTestBuilder.UNIT_TEST_TYPE]?.enable = true
     }
+
+    // Release APKs target physical devices. The x86/x86_64 native libraries only exist for
+    // emulators and account for roughly half the APK size, so keep them out of release builds.
+    onVariants(selector().withBuildType("release")) { variant ->
+        variant.packaging.jniLibs.excludes
+            .addAll(listOf("lib/x86/**", "lib/x86_64/**"))
+    }
 }
 
 tasks.register<Exec>("clearAppData") {

@@ -42,11 +42,16 @@ jobs:
       - name: Decode signing keystore
         env:
           RELEASE_KEYSTORE_BASE64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
+          RELEASE_KEYSTORE_PASSWORD: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
+          RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
+          RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
         run: |
-          if [ -z "${RELEASE_KEYSTORE_BASE64}" ]; then
-            echo "Missing RELEASE_KEYSTORE_BASE64 repository secret" >&2
-            exit 1
-          fi
+          for name in RELEASE_KEYSTORE_BASE64 RELEASE_KEYSTORE_PASSWORD RELEASE_KEY_ALIAS RELEASE_KEY_PASSWORD; do
+            if [ -z "${!name}" ]; then
+              echo "Missing ${name} repository secret" >&2
+              exit 1
+            fi
+          done
           echo "${RELEASE_KEYSTORE_BASE64}" | base64 --decode > "${RUNNER_TEMP}/release.keystore"
 
       - name: Grant execute permission for gradlew
@@ -62,21 +67,64 @@ jobs:
           VERSION_CODE: ${{ steps.version.outputs.code }}
         run: ./gradlew assembleRelease
 
-      - name: Verify APK is signed
+      - name: Prepare release artifacts
         run: |
-          APK=app/build/outputs/apk/release/app-release.apk
-          if [ ! -f "${APK}" ]; then
+          APK="narra-${GITHUB_REF_NAME}.apk"
+          if [ ! -f app/build/outputs/apk/release/app-release.apk ]; then
             echo "Signed release APK not found. Outputs:" >&2
             ls -la app/build/outputs/apk/release/ >&2
             exit 1
           fi
-          echo "Signed APK: ${APK}"
+          cp app/build/outputs/apk/release/app-release.apk "${APK}"
+          sha256sum "${APK}" > "${APK}.sha256"
+          ls -lh "${APK}" "${APK}.sha256"
+
+      - name: Verify APK signature and version
+        env:
+          VERSION_NAME: ${{ steps.version.outputs.name }}
+          VERSION_CODE: ${{ steps.version.outputs.code }}
+        run: |
+          APK="narra-${GITHUB_REF_NAME}.apk"
+          APKSIGNER=$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort -V | tail -1)
+          "$APKSIGNER" verify --print-certs "${APK}"
+
+          AAPT=$(find "$ANDROID_HOME/build-tools" -name aapt -type f | sort -V | tail -1)
+          BADGING=$("$AAPT" dump badging "${APK}" | grep '^package:')
+          echo "${BADGING}"
+          echo "${BADGING}" | grep -q "versionCode='${VERSION_CODE}'"
+          echo "${BADGING}" | grep -q "versionName='${VERSION_NAME}'"
+
+          UNZIP_ENTRIES="${RUNNER_TEMP}/apk-entries.txt"
+          unzip -Z1 "${APK}" > "${UNZIP_ENTRIES}"
+
+          if grep -Eq '^lib/x86(_64)?/' "${UNZIP_ENTRIES}"; then
+            echo "Release APK unexpectedly contains x86 native libraries" >&2
+            exit 1
+          fi
+
+          for abi in arm64-v8a armeabi-v7a; do
+            if ! grep -q "^lib/${abi}/" "${UNZIP_ENTRIES}"; then
+              echo "Release APK is missing ${abi} native libraries" >&2
+              exit 1
+            fi
+          done
 
       - name: Publish GitHub release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release create "${GITHUB_REF_NAME}" \
-            app/build/outputs/apk/release/app-release.apk \
-            --title "${GITHUB_REF_NAME}" \
-            --generate-notes
+          APK="narra-${GITHUB_REF_NAME}.apk"
+          NOTES_ARGS=(--generate-notes)
+          NOTES_FILE="docs/releases/${GITHUB_REF_NAME}.md"
+          if [ -f "${NOTES_FILE}" ]; then
+            NOTES_ARGS=(--notes-file "${NOTES_FILE}")
+          fi
+
+          if gh release view "${GITHUB_REF_NAME}" >/dev/null 2>&1; then
+            gh release upload "${GITHUB_REF_NAME}" "${APK}" "${APK}.sha256" --clobber
+          else
+            gh release create "${GITHUB_REF_NAME}" \
+              "${APK}" "${APK}.sha256" \
+              --title "${GITHUB_REF_NAME}" \
+              "${NOTES_ARGS[@]}"
+          fi
