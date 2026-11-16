@@ -17,6 +17,12 @@ I understand that I have a lot to learn in order to be a good head dev for this 
 
 I can't guarantee that data won't be lost when updating, even though I've done what I can to implement database protection features. If you want to ensure that you keep your listening history and the content that you add to the app, please keep backups. OPML exports are handy for backing up feeds, but the database backup feature could potentially have problems that need fixing.
 
+## Download
+
+Grab the latest signed APK from [GitHub Releases](https://github.com/mienaiKnife/Narra/releases/latest).
+Narra requires Android 7.0 (API 24) or newer. Release APKs include 64-bit and 32-bit ARM native
+libraries; use a debug build for x86 emulators.
+
 ## Getting Started
 
 Follow these steps to set up the development environment and build Narra.
