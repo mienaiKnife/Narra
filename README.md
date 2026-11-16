@@ -47,7 +47,13 @@ Requires Android Studio Quail 4 (2026.1.4) or newer and JDK 21 or higher.
 
 ### Building without Android Studio
 
-If you just want an APK and would rather not install Android Studio, you can build inside a disposable Docker container instead. The only requirement on your machine is [Docker](https://docs.docker.com/get-docker/) (or Podman).
+If you just want an APK and would rather not install Android Studio, you can build inside a disposable container instead. The only requirement on your machine is [Docker](https://docs.docker.com/get-docker/) with BuildKit (the default in current versions).
+
+[Podman](https://podman.io/) works too, but `build-apk.sh` runs `docker`, so expose Podman under that name first: install the `podman-docker` package, or symlink the binary somewhere your `PATH` finds before any real `docker`.
+
+```bash
+mkdir -p ~/.local/bin && ln -s "$(command -v podman)" ~/.local/bin/docker
+```
 
 1. **Build a debug APK**:
    ```bash
@@ -59,7 +65,7 @@ If you just want an APK and would rather not install Android Studio, you can bui
    ```bash
    ./build-apk.sh assembleRelease
    ```
-   The Docker build produces an unsigned, minified release APK. To build a signed release, see
+   The container build produces an unsigned, minified release APK. To build a signed release, see
    [docs/RELEASING.md](docs/RELEASING.md).
 
 3. **Install on a device**:

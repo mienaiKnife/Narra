@@ -18,12 +18,16 @@
 *.iml
 local.properties
 .gradle
+.kotlin
+.artifacts
 **/build
 **/captures
+out
 .externalNativeBuild
 .cxx
 *.log
 .DS_Store
+dummy-docs
 docs
 README.md
 LOCALIZATION.md
