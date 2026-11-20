@@ -51,11 +51,19 @@ internal class NormalizedSpeech(
  *
  * The 2.x lexicons contain no digits, so "2026" or "CVE-2026-120382" are dropped as out-of-
  * vocabulary words and the sentence loses information. This expands numbers, currency, percentages
- * and ordinals into words, replaces "&" with "and", and turns numeric ranges into "to". Only
- * English output is produced because the on-device engine only ships an English lexicon; models
- * for other languages fail before reaching this class.
+ * and ordinals into words, replaces "&" with "and", turns numeric ranges into "to", converts
+ * typographic apostrophes to the ASCII apostrophe the lexicon uses as a key for contractions, and
+ * collapses runs of sentence punctuation ("...", "?!", "!!!") to a single mark. Only English output
+ * is produced because the on-device engine only ships an English lexicon; models for other languages
+ * fail before reaching this class.
  */
 internal object SpeechTextNormalizer {
+    /**
+     * Apostrophe-like characters that appear in web and EPUB text but are not the ASCII apostrophe
+     * the pronunciation lexicon uses as a word key.
+     */
+    private const val TYPOGRAPHIC_APOSTROPHES = "’‘‛ʼ′‵"
+
     private val ones = listOf(
         "zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine",
         "ten", "eleven", "twelve", "thirteen", "fourteen", "fifteen", "sixteen", "seventeen",
@@ -140,6 +148,16 @@ internal object SpeechTextNormalizer {
                 // Bullets carry no sound and are not in the lexicon.
                 c == '•' -> i++
 
+                // Runs of sentence punctuation are unsafe: the native frontend ends a sentence at
+                // every '.', '!', '?', ';' and ':', so "Wait...", "What?!" and "Wow!!" leave it
+                // synthesizing sentences that contain nothing but punctuation, which the vocoder
+                // renders as a click/noise. Collapse the run to one representative mark.
+                isSentencePunctuation(c) -> {
+                    val (end, punctuation) = collapseSentencePunctuation(input, i)
+                    appendExpanded(punctuation.toString(), i, end - i)
+                    i = end
+                }
+
                 // Em/en dashes are in the lexicon's out-of-vocabulary bucket and get dropped,
                 // losing the pause. A comma reads the same way and is pronounceable.
                 c == '—' || c == '–' -> {
@@ -217,6 +235,16 @@ internal object SpeechTextNormalizer {
                     i = consumedEnd
                 }
 
+                // The English lexicon keys contractions with U+0027 ("i'm", "i've"). Web articles
+                // and EPUBs use typographic apostrophes, which miss the lookup: the native
+                // tokenizer then falls back to splitting "I’m" into "I" + "m" (heard as "I em")
+                // and "I’ve" into "I" + "ve" (heard as "I vee"). Normalize the apostrophe so the
+                // contraction is looked up as a whole word.
+                c in TYPOGRAPHIC_APOSTROPHES -> {
+                    appendPreserved('\'', i)
+                    i++
+                }
+
                 else -> {
                     appendPreserved(c, i)
                     i++
@@ -225,6 +253,70 @@ internal object SpeechTextNormalizer {
         }
 
         return NormalizedSpeech(out.toString(), sources.toIntArray())
+    }
+
+    private fun isSentencePunctuation(c: Char): Boolean = c in ".!?;:…"
+
+    /**
+     * Collapses a run of sentence punctuation into one mark. Returns the exclusive end of the run
+     * and the mark to emit. Adjacent dots with spaces between them count as an ellipsis, and a
+     * question or exclamation mark wins over a period so "?!" reads as a question.
+     */
+    private fun collapseSentencePunctuation(text: String, start: Int): Pair<Int, Char> {
+        var index = start
+        var hasQuestion = false
+        var hasExclamation = false
+        var hasPeriod = false
+        var hasSemicolon = false
+        var hasColon = false
+        while (index < text.length) {
+            when (text[index]) {
+                '?' -> {
+                    hasQuestion = true
+                    index++
+                }
+                '!' -> {
+                    hasExclamation = true
+                    index++
+                }
+                '.', '…' -> {
+                    hasPeriod = true
+                    index++
+                }
+                ';' -> {
+                    hasSemicolon = true
+                    index++
+                }
+                ':' -> {
+                    hasColon = true
+                    index++
+                }
+                else -> {
+                    // Spaces belong to the run only when they are part of a spaced ellipsis.
+                    if (text[index].isWhitespace() && hasPeriod) {
+                        var lookahead = index
+                        while (lookahead < text.length && text[lookahead].isWhitespace()) lookahead++
+                        if (lookahead < text.length && (text[lookahead] == '.' || text[lookahead] == '…')) {
+                            index = lookahead
+                        } else {
+                            break
+                        }
+                    } else {
+                        break
+                    }
+                }
+            }
+        }
+        val punctuation = when {
+            hasQuestion -> '?'
+            hasExclamation -> '!'
+            hasPeriod -> '.'
+            hasSemicolon -> ';'
+            hasColon -> ':'
+            // Unreachable: every branch of the loop sets one of the flags above.
+            else -> text[start]
+        }
+        return index to punctuation
     }
 
     /** Returns the index just past a number token (`1,234.5`), or [start] when there is none. */
