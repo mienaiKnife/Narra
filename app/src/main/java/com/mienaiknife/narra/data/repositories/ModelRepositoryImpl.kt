@@ -37,6 +37,8 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.yield
 import okhttp3.OkHttpClient
@@ -46,6 +48,7 @@ import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
+import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -58,6 +61,14 @@ class ModelRepositoryImpl @Inject constructor(
 ) : ModelRepository {
 
     private val modelsDir = File(context.filesDir, "tts_models")
+    private val lexiconsDir = File(modelsDir, "lexicons")
+
+    /**
+     * Lexicons are shared between models, so a model download and an engine initialization can
+     * race for the same file. Serialize writes; readers are fine once the file is renamed into
+     * place.
+     */
+    private val lexiconMutex = Mutex()
 
     init {
         if (!modelsDir.exists()) {
@@ -235,6 +246,14 @@ class ModelRepositoryImpl @Inject constructor(
                 }
             }
 
+            // Sherpa-ONNX 2.x needs a pronunciation lexicon. It is shared per language, so reuse
+            // the file if another model (or an earlier engine init) already downloaded it.
+            // Lexicon download = 95% -> 100%.
+            ensureLexiconFile(model.language) { progress ->
+                yield()
+                ttsModelDao.updateProgress(modelId, 0.95f + progress * 0.05f)
+            }
+
             // Extra files / final cleanup = 95% -> 100%
             ttsModelDao.updateProgress(modelId, 1.0f)
             ttsModelDao.updateDownloadStatus(modelId, true, targetDir.absolutePath)
@@ -327,6 +346,48 @@ class ModelRepositoryImpl @Inject constructor(
         } catch (e: Exception) {
             Log.e("ModelRepository", "Exception during download of $url", e)
             throw e
+        }
+    }
+
+    override suspend fun ensureLexiconAvailable(language: String): String? = withContext(Dispatchers.IO) {
+        ensureLexiconFile(language)
+    }
+
+    /**
+     * Downloads the language-scoped lexicon into [lexiconsDir] on first use. The `.part` suffix lets
+     * a cancelled download resume, and the final rename keeps the engine from ever opening a
+     * partially written lexicon.
+     */
+    private suspend fun ensureLexiconFile(
+        language: String,
+        onProgress: suspend (Float) -> Unit = {},
+    ): String? {
+        val fileName = ModelLexicons.fileNameFor(language) ?: return null
+        val url = ModelLexicons.urlFor(language) ?: return null
+        val target = File(lexiconsDir, fileName)
+
+        return lexiconMutex.withLock {
+            if (target.isFile && target.length() > 0) {
+                return@withLock target.absolutePath
+            }
+
+            if (!lexiconsDir.exists() && !lexiconsDir.mkdirs()) {
+                throw IOException("Could not create lexicon directory: ${lexiconsDir.absolutePath}")
+            }
+
+            val partial = File(lexiconsDir, "$fileName.part")
+            Log.i("ModelRepository", "Downloading lexicon: $url")
+            downloadFile(url, partial, onProgress)
+
+            if (target.exists() && !target.delete()) {
+                throw IOException("Could not replace lexicon: ${target.absolutePath}")
+            }
+            if (!partial.renameTo(target)) {
+                throw IOException("Could not move lexicon into place: ${target.absolutePath}")
+            }
+            Log.i("ModelRepository", "Lexicon ready: ${target.absolutePath}")
+
+            target.absolutePath
         }
     }
 
