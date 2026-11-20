@@ -1,24 +1,50 @@
+# Dependabot configuration.
+#
+# Dependabot assigns a dependency to the first group whose patterns match, so the
+# ordering below is load-bearing: `toolchain` must stay first. The Compose BOM is
+# compatibility-coupled to Kotlin/AGP (`docs/CONTRIBUTING.md#dependency-updates`) and
+# has to travel with them even though it also matches the `androidx` group.
 version: 2
 updates:
   - package-ecosystem: gradle
     directory: /
     schedule:
       interval: weekly
-    open-pull-requests-limit: 5
+    # Comfortably above the number of groups below. At 5 the queue filled up with a
+    # handful of pending PRs and newer bumps never got opened.
+    open-pull-requests-limit: 15
     groups:
-      androidx:
-        patterns:
-          - "androidx.*"
       toolchain:
         patterns:
           - "org.jetbrains.kotlin*"
           - "com.google.devtools.ksp*"
           - "com.google.dagger*"
           - "com.android.*"
+          - "androidx.compose:compose-bom"
         update-types:
           - "minor"
           - "patch"
+      testing:
+        patterns:
+          - "junit*"
+          - "org.junit*"
+          - "org.mockito*"
+          - "org.robolectric*"
+          - "app.cash.turbine*"
+          - "org.jetbrains.kotlinx:kotlinx-coroutines-test*"
+      content-parsing:
+        patterns:
+          - "org.jsoup*"
+          - "net.dankito*"
+          - "com.prof18*"
+          - "org.apache.commons*"
+          - "com.positiondev*"
+      androidx:
+        patterns:
+          - "androidx.*"
     ignore:
+      # Toolchain majors are coupled across Kotlin, KSP, Hilt, AGP/Lint and compileSdk,
+      # so they are applied by hand as one coordinated change.
       - dependency-name: "org.jetbrains.kotlin*"
         update-types:
           - "version-update:semver-major"
@@ -29,6 +55,11 @@ updates:
         update-types:
           - "version-update:semver-major"
       - dependency-name: "com.android.*"
+        update-types:
+          - "version-update:semver-major"
+      # Sherpa-ONNX drives the TTS engine and its word-highlighting heuristic; a major
+      # bump needs an explicit decision. See docs/TTS_ENGINES.md.
+      - dependency-name: "com.github.k2-fsa.sherpa-onnx:sherpa-onnx"
         update-types:
           - "version-update:semver-major"
 

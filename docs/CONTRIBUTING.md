@@ -54,8 +54,12 @@ Run the unit tests with:
 ```
 
 Screenshot tests use [Paparazzi](https://github.com/cashapp/paparazzi); verify with
-`./gradlew verifyPaparazziDebug` (or record with `recordPaparazziDebug`). See the
-[Testing Guide](TESTING_GUIDE.md) for the full strategy and CI checks.
+`./gradlew verifyPaparazziDebug` (or record with `recordPaparazziDebug`).
+
+Instrumentation tests are destructive: `connectedDebugAndroidTest` uninstalls the app afterwards and
+deletes its databases, settings, and downloads. Run them on an emulator only, never on a phone with
+real subscriptions or queue data. See the
+[Testing Guide](TESTING_GUIDE.md#instrumented-tests) for the full strategy and CI checks.
 
 ## Commits and Pull Requests
 
@@ -70,7 +74,21 @@ Dependabot opens grouped pull requests weekly for the Gradle version catalog and
 Do not merge a dependency pull request until CI has passed against the current `main`; the merge
 queue re-tests each queued pull request against the latest `main` before it lands.
 
-Several Android toolchain pieces are compatibility-coupled and should be updated as a set:
+Routine bumps go through Dependabot rather than by hand. The groups live in
+[`.github/dependabot.yml`](../.github/dependabot.yml), and Dependabot puts a dependency in the
+**first** group whose patterns match, so the group order matters:
+
+| Group | Scope | Why it is grouped |
+| --- | --- | --- |
+| `toolchain` | Kotlin, KSP, Hilt, AGP, Compose BOM (minor/patch) | Compatibility-coupled; must be reviewed as one unit |
+| `testing` | JUnit, Mockito, Robolectric, Turbine, coroutines-test | Test-only; safe to merge together |
+| `content-parsing` | jsoup, readability4j, rssparser, commons-compress, epublib | Feeds the `Article` pipeline |
+| `androidx` | Everything else under `androidx.*` | Largest single source of bumps |
+
+`toolchain` is listed first deliberately: the Compose BOM also matches `androidx.*`, but it is
+coupled to Kotlin/AGP and has to arrive in the same pull request.
+
+The coupling that motivates the `toolchain` group:
 
 | Component | Coupled to | Failure mode if mismatched |
 | --- | --- | --- |
@@ -85,6 +103,22 @@ Rules of thumb:
 - Run `./scripts/local-ci.sh` before merging anything non-trivial.
 - Toolchain major versions (Kotlin, AGP, Hilt, KSP) are ignored by Dependabot and must be handled
   manually as a coordinated change.
+- A toolchain major is only "due" when something forces it — a new androidx AAR needing a higher
+  `compileSdk`, or a security fix. Do not pull one forward just because it exists.
+- Enable **Dependabot security updates** in the repository security settings (they are a separate
+  switch from version updates) and merge those ahead of the weekly schedule; do not wait a week for
+  a CVE fix in OkHttp, commons-compress, SQLCipher, or similar runtime dependencies.
+- Resolve `gradle/libs.versions.toml` conflicts version by version, never by taking one whole side
+  of a merge. A previous "take our side" merge silently dropped the jsoup, KSP, SQLCipher, and
+  Spotless bumps and only the jsoup one was never re-applied.
+
+Dependencies Dependabot cannot track reliably — JitPack artifacts such as
+`com.github.k2-fsa.sherpa-onnx:sherpa-onnx` — must be checked by hand with
+`./gradlew :app:checkSherpaUpdate`. Sherpa-ONNX majors are ignored in
+[`dependabot.yml`](../.github/dependabot.yml) deliberately: a major can change the TTS
+tokenization/frontend contract and needs a model/lexicon migration, not a version bump (2.x
+removed espeak-ng and requires downloaded lexicons). See
+[`TTS_ENGINES.md`](TTS_ENGINES.md) and [`AGENTS.md`](../AGENTS.md).
 
 ## Licensing
 
