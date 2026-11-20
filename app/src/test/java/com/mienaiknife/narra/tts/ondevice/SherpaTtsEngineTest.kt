@@ -117,4 +117,79 @@ class SherpaTtsEngineTest {
         assertEquals(0.1f, SherpaTtsEngine.getCharWeight('('))
         assertEquals(1.0f, SherpaTtsEngine.getCharWeight('a'))
     }
+
+    @Test
+    fun testSplitIntoSentences() {
+        val text = "First sentence. Second one! Third? Last"
+        val sentences = SherpaTtsEngine.splitIntoSentences(text, minWords = 1).map { text.substring(it) }
+
+        assertEquals(listOf("First sentence.", "Second one!", "Third?", "Last"), sentences)
+    }
+
+    @Test
+    fun testSplitIntoSentencesTrimsWhitespaceAndKeepsOffsets() {
+        val text = "  One.   Two.  "
+        val sentences = SherpaTtsEngine.splitIntoSentences(text, minWords = 1)
+
+        assertEquals(2, sentences.size)
+        assertEquals("One.", text.substring(sentences[0].first, sentences[0].last + 1))
+        assertEquals("Two.", text.substring(sentences[1].first, sentences[1].last + 1))
+    }
+
+    @Test
+    fun testSplitIntoSentencesKeepsClosingQuoteWithSentence() {
+        val text = "He said \"stop.\" Then left."
+        val sentences = SherpaTtsEngine.splitIntoSentences(text, minWords = 1).map { text.substring(it) }
+
+        assertEquals(listOf("He said \"stop.\"", "Then left."), sentences)
+    }
+
+    @Test
+    fun testSplitIntoSentencesDoesNotSplitDecimals() {
+        val text = "Pi is 3.14 today."
+        val sentences = SherpaTtsEngine.splitIntoSentences(text, minWords = 1).map { text.substring(it) }
+
+        assertEquals(listOf("Pi is 3.14 today."), sentences)
+    }
+
+    @Test
+    fun testSplitIntoSentencesHandlesCjkPunctuation() {
+        val text = "你好。再见！"
+        val sentences = SherpaTtsEngine.splitIntoSentences(text, minWords = 1).map { text.substring(it) }
+
+        assertEquals(listOf("你好。", "再见！"), sentences)
+    }
+
+    @Test
+    fun testSplitIntoSentencesGroupsShortSentences() {
+        // "Dr." must not be synthesized as a sentence of its own.
+        val text = "Dr. Smith arrived. He was late."
+        val sentences = SherpaTtsEngine.splitIntoSentences(text).map { text.substring(it) }
+
+        assertEquals(listOf("Dr. Smith arrived. He was late."), sentences)
+    }
+
+    @Test
+    fun testSplitIntoSentencesSplitsOnceEnoughWordsAccumulate() {
+        val text = "This first sentence has six words. This second sentence also has six words."
+        val sentences = SherpaTtsEngine.splitIntoSentences(text).map { text.substring(it) }
+
+        assertEquals(
+            listOf(
+                "This first sentence has six words.",
+                "This second sentence also has six words.",
+            ),
+            sentences,
+        )
+    }
+
+    @Test
+    fun testFramesPlayedSinceHandlesCounterWrap() {
+        assertEquals(0, SherpaTtsEngine.framesPlayedSince(100, 100))
+        assertEquals(400, SherpaTtsEngine.framesPlayedSince(500, 100))
+
+        // The audio track's head is a 32-bit counter and wraps back to zero.
+        val nearWrap = 0xFFFF_FF00L
+        assertEquals(356, SherpaTtsEngine.framesPlayedSince(100, nearWrap))
+    }
 }

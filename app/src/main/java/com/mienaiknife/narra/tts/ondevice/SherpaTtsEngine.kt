@@ -92,8 +92,12 @@ class SherpaTtsEngine @Inject constructor(
     private var currentSessionId: Int = 0
     private var currentSampleRate: Int = -1
 
-    @Volatile
-    private var samplesPerCharAverage: Float = 1800f // Default for ~12 chars/sec at 22050Hz
+    /**
+     * Frames queued to the current [AudioTrack] since it was created. Writes are non-blocking and
+     * run ahead of playback, so a stream starts at this position, not at the playback head observed
+     * when its first sample is written.
+     */
+    private var framesWrittenToTrack: Long = 0
 
     private val activeStreams = java.util.Collections.synchronizedList(mutableListOf<StreamPlaybackInfo>())
 
@@ -103,9 +107,6 @@ class SherpaTtsEngine @Inject constructor(
         var totalFrames: Int,
         var isWriteFinished: Boolean = false,
         var boundaries: List<WordBoundary> = emptyList(),
-        var fullSamplesAccumulator: MutableList<FloatArray> = mutableListOf(),
-        var isFirstChunkEstimated: Boolean = false,
-        var projectedTotalFrames: Int = 0,
     )
 
     data class UtteranceRequest(val text: String, val utteranceId: String, val sessionId: Int)
@@ -128,6 +129,12 @@ class SherpaTtsEngine @Inject constructor(
 
             override fun hashCode(): Int = samples.contentHashCode()
         }
+
+        /**
+         * Word boundaries for one synthesized sentence, in stream frames and character offsets.
+         * Sent before that sentence's audio so highlighting is ready as soon as it starts playing.
+         */
+        data class Boundaries(val boundaries: List<WordBoundary>) : AudioStreamEvent()
         object Finished : AudioStreamEvent()
     }
 
@@ -135,10 +142,6 @@ class SherpaTtsEngine @Inject constructor(
         val eventChannel: Channel<AudioStreamEvent>,
         val sampleRate: Int,
         val utteranceId: String,
-        /** Text as displayed by the reader; highlight offsets refer to this string. */
-        val text: String,
-        /** Text actually handed to the engine, plus the mapping back to [text]. */
-        val speech: NormalizedSpeech,
         val sessionId: Int,
     )
 
@@ -421,8 +424,6 @@ class SherpaTtsEngine @Inject constructor(
                             eventChannel,
                             sampleRate,
                             request.utteranceId,
-                            request.text,
-                            speech,
                             request.sessionId,
                         ),
                     )
@@ -432,16 +433,55 @@ class SherpaTtsEngine @Inject constructor(
                         sid = currentSpeakerId ?: 0,
                     )
 
-                    val callback = object : SherpaTtsCallback() {
-                        override fun invoke(samples: FloatArray): Int = if (request.sessionId == currentSessionId) {
-                            eventChannel.trySend(AudioStreamEvent.Chunk(samples))
-                            1
-                        } else {
-                            0
-                        }
-                    }
+                    var framesGenerated = 0
+                    for (sentence in splitIntoSentences(speech.text)) {
+                        if (request.sessionId != currentSessionId) break
+                        val sentenceText = speech.text.substring(sentence.first, sentence.last + 1)
+                        if (sentenceText.none { it.isLetterOrDigit() }) continue
 
-                    engine.generateWithConfigAndCallback(speech.text, genConfig, callback)
+                        // One `generate` call per sentence segment. Sherpa's frontend already runs
+                        // sentence by sentence (`maxNumSentences = 1`), so this does not change the
+                        // audio, but it makes each segment's exact sample span known. Word
+                        // highlighting then only has to be estimated within a segment instead of
+                        // accumulating error across a whole paragraph.
+                        val chunks = mutableListOf<FloatArray>()
+                        var sentenceFrames = 0
+                        val callback = object : SherpaTtsCallback() {
+                            override fun invoke(samples: FloatArray): Int {
+                                if (request.sessionId != currentSessionId) return 0
+                                chunks.add(samples)
+                                sentenceFrames += samples.size
+                                return 1
+                            }
+                        }
+
+                        engine.generateWithConfigAndCallback(sentenceText, genConfig, callback)
+                        if (request.sessionId != currentSessionId) break
+
+                        val sentenceSamples = concatenate(chunks, sentenceFrames)
+                        val boundaries = estimateWordBoundaries(
+                            sentenceText,
+                            sentenceFrames,
+                            sentenceSamples,
+                        ).map { boundary ->
+                            boundary.copy(
+                                startChar = boundary.startChar + sentence.first,
+                                endChar = boundary.endChar + sentence.first,
+                                startSample = boundary.startSample + framesGenerated,
+                                endSample = boundary.endSample + framesGenerated,
+                            )
+                        }
+
+                        // Boundaries go first so playback has them before the audio is queued.
+                        val mapped = mapToSource(speech, boundaries)
+                        if (mapped.isNotEmpty()) {
+                            eventChannel.trySend(AudioStreamEvent.Boundaries(mapped))
+                        }
+                        if (sentenceFrames > 0) {
+                            eventChannel.trySend(AudioStreamEvent.Chunk(sentenceSamples))
+                        }
+                        framesGenerated += sentenceFrames
+                    }
                     eventChannel.trySend(AudioStreamEvent.Finished)
                 } catch (e: Exception) {
                     Log.e("SherpaTtsEngine", "Synthesis failed", e)
@@ -493,10 +533,17 @@ class SherpaTtsEngine @Inject constructor(
                     continue
                 }
 
-                val relativeHead = if (info.startFrame != -1L) head - info.startFrame else -1L
+                val relativeHead = if (info.startFrame != -1L) {
+                    framesPlayedSince(head, info.startFrame)
+                } else {
+                    -1L
+                }
 
-                if (info.isWriteFinished && info.startFrame != -1L && relativeHead >= info.totalFrames) {
-                    // This stream is finished playing
+                if (
+                    info.isWriteFinished &&
+                    (info.totalFrames == 0 || (info.startFrame != -1L && relativeHead >= info.totalFrames))
+                ) {
+                    // This stream is finished playing (or produced no audio at all)
                     _state.value = TtsState.Finished(info.stream.utteranceId)
                     iterator.remove()
                     continue // IMPORTANT: Skip to next stream immediately
@@ -513,13 +560,12 @@ class SherpaTtsEngine @Inject constructor(
                         break
                     }
 
-                    // If we have boundaries, find current word
+                    // The spoken word is the last one that has started. Anchoring to the last
+                    // start (instead of a containment test) also keeps the most recent word
+                    // highlighted while the next sentence is still being synthesized.
                     val currentWord = if (relativeHead >= 0 && info.boundaries.isNotEmpty()) {
-                        info.boundaries.find {
-                            relativeHead in it.startSample.toLong() until it.endSample.toLong()
-                        } ?: if (!info.isWriteFinished) info.boundaries.firstOrNull() else info.boundaries.lastOrNull { relativeHead >= it.endSample }
-                    } else if (info.boundaries.isNotEmpty() && info.startFrame == -1L) {
-                        info.boundaries.firstOrNull()
+                        info.boundaries.lastOrNull { relativeHead >= it.startSample.toLong() }
+                            ?: info.boundaries.firstOrNull()
                     } else {
                         null
                     }
@@ -602,6 +648,7 @@ class SherpaTtsEngine @Inject constructor(
 
                     audioTrack = newTrack
                     currentSampleRate = sampleRate
+                    framesWrittenToTrack = 0
                     newTrack
                 } else {
                     audioTrack!!
@@ -616,7 +663,6 @@ class SherpaTtsEngine @Inject constructor(
             val info = StreamPlaybackInfo(
                 stream = stream,
                 totalFrames = 0,
-                projectedTotalFrames = (stream.speech.text.length * samplesPerCharAverage).toInt(),
             )
 
             synchronized(activeStreams) { activeStreams.add(info) }
@@ -625,6 +671,11 @@ class SherpaTtsEngine @Inject constructor(
                 if (stream.sessionId != currentSessionId) break
 
                 when (event) {
+                    is AudioStreamEvent.Boundaries -> {
+                        synchronized(activeStreams) {
+                            info.boundaries = info.boundaries + event.boundaries
+                        }
+                    }
                     is AudioStreamEvent.Chunk -> {
                         val samples = event.samples
                         var offset = 0
@@ -637,6 +688,7 @@ class SherpaTtsEngine @Inject constructor(
                                     break
                                 }
                             }
+
                             val toWrite = samples.size - offset
                             val written = try {
                                 currentTrack.write(samples, offset, toWrite, AudioTrack.WRITE_NON_BLOCKING)
@@ -652,48 +704,22 @@ class SherpaTtsEngine @Inject constructor(
                                 continue
                             }
 
-                            // Capture the actual start frame when we first successfully write audio
                             if (info.startFrame == -1L) {
-                                // For MODE_STREAM, the head position represents the frame currently being played.
-                                // If we just wrote audio, the head hasn't reached it yet.
-                                info.startFrame = (currentTrack.playbackHeadPosition.toLong() and 0xFFFFFFFFL)
+                                // Record where this stream starts in the track's frame sequence,
+                                // not where playback is right now: non-blocking writes queue up
+                                // to a buffer ahead of the playback head.
+                                synchronized(activeStreams) {
+                                    info.startFrame = framesWrittenToTrack and FRAME_COUNTER_MASK
+                                }
                             }
 
+                            framesWrittenToTrack += written
                             offset += written
                         }
-                        info.totalFrames += samples.size
-                        info.fullSamplesAccumulator.add(samples)
-
-                        // If synthesis is ongoing, we estimate boundaries for the first chunk
-                        // to get highlighting moving as soon as possible.
-                        if (info.totalFrames > 100) { // Even earlier
-                            info.boundaries = mapToSource(
-                                stream.speech,
-                                estimateWordBoundaries(stream.speech.text, info.projectedTotalFrames, null),
-                            )
-                            info.isFirstChunkEstimated = true
-                        }
+                        synchronized(activeStreams) { info.totalFrames += samples.size }
                     }
                     is AudioStreamEvent.Finished -> {
-                        val allSamples = FloatArray(info.totalFrames)
-                        var offset = 0
-                        for (chunk in info.fullSamplesAccumulator) {
-                            System.arraycopy(chunk, 0, allSamples, offset, chunk.size)
-                            offset += chunk.size
-                        }
-
-                        // Update our global average for future projections
-                        if (stream.speech.text.length > 10) {
-                            val currentAverage = info.totalFrames.toFloat() / stream.speech.text.length
-                            samplesPerCharAverage = (samplesPerCharAverage * 0.8f) + (currentAverage * 0.2f)
-                        }
-
-                        info.boundaries = mapToSource(
-                            stream.speech,
-                            estimateWordBoundaries(stream.speech.text, info.totalFrames, allSamples),
-                        )
-                        info.fullSamplesAccumulator.clear()
-                        info.isWriteFinished = true
+                        synchronized(activeStreams) { info.isWriteFinished = true }
                         break
                     }
                 }
@@ -751,6 +777,7 @@ class SherpaTtsEngine @Inject constructor(
                 }
                 audioTrack = null
                 currentSampleRate = -1
+                framesWrittenToTrack = 0
             } catch (e: Exception) {
                 Log.e("SherpaTtsEngine", "Error stopping AudioTrack", e)
             }
@@ -831,6 +858,130 @@ class SherpaTtsEngine @Inject constructor(
     }
 
     companion object {
+        private const val FRAME_COUNTER_MASK = 0xFFFFFFFFL
+        private const val FRAME_COUNTER_WRAP = 0x1_0000_0000L
+
+        /** Punctuation that ends a spoken sentence, matching Sherpa's own sentence frontends. */
+        private const val SENTENCE_TERMINATORS = ".!?;:。！？；：…\n"
+
+        /** Characters that belong to the sentence before them, e.g. a closing quote. */
+        private const val SENTENCE_CLOSERS = "\"')]}»”’"
+
+        /**
+         * Sentences shorter than this are grouped with their neighbours. Models with a character
+         * frontend (Kokoro, Matcha, Kitten, ZipVoice) do the same internally; grouping them here
+         * avoids handing an abbreviation such as "Dr." to the engine as a standalone sentence.
+         */
+        private const val MIN_WORDS_PER_SEGMENT = 5
+
+        /**
+         * Distance from [startFrame] to [head] in the AudioTrack's 32-bit frame counter, handling
+         * the counter wrapping back to zero after ~27 hours of audio. Exposed for tests.
+         */
+        internal fun framesPlayedSince(head: Long, startFrame: Long): Long = (head - (startFrame and FRAME_COUNTER_MASK) + FRAME_COUNTER_WRAP) and FRAME_COUNTER_MASK
+
+        /**
+         * Splits speech-ready text into sentence-sized segments that can be synthesized one at a
+         * time. Whitespace around each sentence is trimmed; the returned ranges index [text].
+         * Short sentences are grouped so that segments are at least [MIN_WORDS_PER_SEGMENT] words
+         * where the text allows it.
+         */
+        internal fun splitIntoSentences(
+            text: String,
+            minWords: Int = MIN_WORDS_PER_SEGMENT,
+        ): List<IntRange> {
+            if (text.isEmpty()) return emptyList()
+
+            val sentences = mutableListOf<IntRange>()
+            var start = 0
+            var index = 0
+            while (index < text.length) {
+                val c = text[index]
+                // A decimal point is not a sentence end ("3.14" survives normalization edge cases).
+                val isDecimalPoint =
+                    c == '.' &&
+                        index > 0 &&
+                        index + 1 < text.length &&
+                        text[index - 1].isDigit() &&
+                        text[index + 1].isDigit()
+                if (c in SENTENCE_TERMINATORS && !isDecimalPoint) {
+                    var end = index + 1
+                    while (end < text.length && text[end] in SENTENCE_TERMINATORS) end++
+                    while (end < text.length && text[end] in SENTENCE_CLOSERS) end++
+                    addSentence(text, start, end, sentences)
+                    start = end
+                    index = end
+                } else {
+                    index++
+                }
+            }
+            if (start < text.length) addSentence(text, start, text.length, sentences)
+
+            return mergeShortSentences(text, sentences, minWords)
+        }
+
+        private fun addSentence(text: String, from: Int, to: Int, sentences: MutableList<IntRange>) {
+            var start = from
+            var end = to
+            while (start < end && text[start].isWhitespace()) start++
+            while (end > start && text[end - 1].isWhitespace()) end--
+            if (start < end) sentences.add(start until end)
+        }
+
+        private fun mergeShortSentences(
+            text: String,
+            sentences: List<IntRange>,
+            minWords: Int,
+        ): List<IntRange> {
+            if (sentences.size < 2) return sentences
+
+            val merged = mutableListOf<IntRange>()
+            var groupStart = -1
+            var groupEnd = -1
+            var groupWords = 0
+            for (sentence in sentences) {
+                if (groupStart == -1) groupStart = sentence.first
+                groupEnd = sentence.last
+                groupWords += wordCount(text, sentence)
+                if (groupWords >= minWords) {
+                    merged.add(groupStart..groupEnd)
+                    groupStart = -1
+                    groupWords = 0
+                }
+            }
+            if (groupStart != -1) {
+                if (merged.isEmpty()) {
+                    merged.add(groupStart..groupEnd)
+                } else {
+                    merged[merged.lastIndex] = merged.last().first..groupEnd
+                }
+            }
+            return merged
+        }
+
+        private fun wordCount(text: String, range: IntRange): Int {
+            var count = 0
+            var inWord = false
+            for (index in range) {
+                val isWhitespace = text[index].isWhitespace()
+                if (!isWhitespace && !inWord) count++
+                inWord = !isWhitespace
+            }
+            return count
+        }
+
+        private fun concatenate(chunks: List<FloatArray>, totalFrames: Int): FloatArray {
+            if (chunks.isEmpty()) return FloatArray(0)
+            if (chunks.size == 1) return chunks[0]
+            val samples = FloatArray(totalFrames)
+            var offset = 0
+            for (chunk in chunks) {
+                System.arraycopy(chunk, 0, samples, offset, chunk.size)
+                offset += chunk.size
+            }
+            return samples
+        }
+
         /**
          * Rewrites boundary offsets from the synthesized text back to the displayed text.
          * Boundaries whose range cannot be mapped are dropped rather than reported out of bounds.
@@ -885,9 +1036,13 @@ class SherpaTtsEngine @Inject constructor(
 
             val speechSamples = (speechEnd - speechStart).coerceAtLeast(1)
 
-            // 2. Calculate weighted length of the text
-            val weights = text.map { getCharWeight(it) }
-            val totalWeight = weights.sum().coerceAtLeast(1.0f)
+            // 2. Calculate weighted length of the text. Prefix sums keep this linear in the text
+            // length even for long sentences.
+            val weights = FloatArray(text.length + 1)
+            for (index in text.indices) {
+                weights[index + 1] = weights[index] + getCharWeight(text[index])
+            }
+            val totalWeight = weights[text.length].coerceAtLeast(1.0f)
 
             // 3. Find all non-whitespace tokens (words)
             val regex = Regex("\\S+")
@@ -904,9 +1059,9 @@ class SherpaTtsEngine @Inject constructor(
                 val startChar = match.range.first
                 val endChar = match.range.last + 1
 
-                // Weight-based heuristic: sum weights of characters before and within the word
-                val weightBefore = weights.take(startChar).sum()
-                val weightInWord = weights.subList(startChar, endChar).sum()
+                // Weight-based heuristic: use the weight of characters before and within the word
+                val weightBefore = weights[startChar]
+                val weightInWord = weights[endChar] - weightBefore
 
                 val wordStartSample = speechStart + (weightBefore / totalWeight * speechSamples).toInt()
                 val wordEndSample = speechStart + ((weightBefore + weightInWord) / totalWeight * speechSamples).toInt()
