@@ -63,6 +63,29 @@ class UiTextTest {
     }
 
     @Test
+    fun `fromError maps PartialRefresh to a feed count message`() {
+        val result = UiText.fromError(
+            NarraError.PartialRefresh(
+                failedFeeds = listOf(
+                    NarraError.PartialRefresh.FeedFailure("Anti-Hate", "https://antihate.ca/feed"),
+                    NarraError.PartialRefresh.FeedFailure("BCCLA", "https://bccla.org/feed/"),
+                ),
+                totalCount = 12,
+            ),
+        )
+        assertEquals(
+            UiText.PluralResource(
+                R.plurals.error_feeds_refresh_failed,
+                12,
+                2,
+                12,
+                "Anti-Hate, BCCLA",
+            ),
+            result,
+        )
+    }
+
+    @Test
     fun `fromError maps WifiRequired to a wifi message`() {
         val result = UiText.fromError(NarraError.Network.WifiRequired())
         assertEquals(

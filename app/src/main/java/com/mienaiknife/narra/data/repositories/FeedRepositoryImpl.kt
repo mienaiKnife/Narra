@@ -81,27 +81,41 @@ class FeedRepositoryImpl @Inject constructor(
         }
 
         val feeds = feedDao.getAllFeeds().first()
-        val failures = mutableListOf<Throwable>()
+        val failedFeeds = mutableListOf<NarraError.PartialRefresh.FeedFailure>()
 
         for (feed in feeds) {
+            val failure = NarraError.PartialRefresh.FeedFailure(
+                title = feed.title.ifBlank { feed.url },
+                url = feed.url,
+            )
             remoteFeedDataSource.fetchArticles(feed).fold(
                 onSuccess = { result ->
                     try {
                         processFeed(feed, result)
+                        feedDao.clearRefreshError(feed.url)
                     } catch (e: CancellationException) {
                         throw e
                     } catch (e: Exception) {
-                        failures += e
+                        feedDao.markRefreshFailed(feed.url)
+                        failedFeeds += failure
                     }
                 },
-                onFailure = { failures += it },
+                onFailure = {
+                    feedDao.markRefreshFailed(feed.url)
+                    failedFeeds += failure
+                },
             )
         }
 
-        if (failures.isEmpty()) {
+        if (failedFeeds.isEmpty()) {
             Result.success(Unit)
         } else {
-            Result.failure(NarraError.Unknown(failures.first()))
+            Result.failure(
+                NarraError.PartialRefresh(
+                    failedFeeds = failedFeeds,
+                    totalCount = feeds.size,
+                ),
+            )
         }
     }
 

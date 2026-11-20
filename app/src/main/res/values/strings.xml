@@ -311,6 +311,7 @@
     <string name="feed_articles_empty_message">No articles found in this feed.</string>
 
     <!-- Feeds Screen -->
+    <string name="feeds_refresh_error_desc">This feed could not be refreshed</string>
     <string name="feeds_empty_message">No feeds yet. Add one to get started!</string>
 
     <!-- Sort Bottom Sheet -->
@@ -344,6 +345,10 @@
     <string name="error_download_failed">Failed to download article</string>
     <string name="error_subscribe_failed">Failed to subscribe to feed</string>
     <string name="error_generic">Something went wrong</string>
+    <plurals name="error_feeds_refresh_failed">
+        <item quantity="one">The only feed could not be refreshed: %3$s</item>
+        <item quantity="other">%1$d of %2$d feeds could not be refreshed: %3$s</item>
+    </plurals>
     <string name="error_article_not_found">Article not found</string>
     <string name="error_no_tts_model_selected">No on-device voice model selected</string>
     <string name="state_loading">Loading…</string>

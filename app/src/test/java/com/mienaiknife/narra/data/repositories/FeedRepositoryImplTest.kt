@@ -28,6 +28,7 @@ import com.mienaiknife.narra.ui.utils.NetworkMonitor
 import com.mienaiknife.narra.utils.NotificationHelper
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -85,7 +86,16 @@ class FeedRepositoryImplTest {
         val result = repository.refreshFeeds()
 
         assertTrue("One failing feed should surface as failure", result.isFailure)
+        val error = result.exceptionOrNull()
+        assertTrue("Failure should report how many feeds failed", error is NarraError.PartialRefresh)
+        val partialRefresh = error as NarraError.PartialRefresh
+        assertEquals(1, partialRefresh.failedCount)
+        assertEquals(2, partialRefresh.totalCount)
+        assertEquals("Bad", partialRefresh.failedFeeds.single().title)
+        assertEquals("bad", partialRefresh.failedFeeds.single().url)
         verify(articleDao).insertArticle(any())
+        verify(feedDao).markRefreshFailed(eq("bad"), any())
+        verify(feedDao).clearRefreshError("ok")
     }
 
     @Test

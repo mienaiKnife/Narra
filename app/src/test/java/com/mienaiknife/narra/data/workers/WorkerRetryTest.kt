@@ -37,6 +37,12 @@ class WorkerRetryTest {
         assertFalse(NarraError.Content.InvalidFeed().isRetryable())
         assertFalse(NarraError.Content.ParsingFailed().isRetryable())
         assertFalse(NarraError.Storage.AccessDenied("no").isRetryable())
+        assertFalse(
+            NarraError.PartialRefresh(
+                failedFeeds = listOf(NarraError.PartialRefresh.FeedFailure("Feed", "https://example.com/feed")),
+                totalCount = 2,
+            ).isRetryable(),
+        )
         assertFalse(RuntimeException("bug").isRetryable())
         assertFalse(null.isRetryable())
     }

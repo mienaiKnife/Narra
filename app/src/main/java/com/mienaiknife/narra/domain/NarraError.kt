@@ -61,6 +61,27 @@ sealed class NarraError : Throwable() {
         class InvalidFormat : Model()
     }
 
+    /**
+     * Some feeds refreshed successfully while others failed. Reported separately from [Unknown]
+     * so the UI can name the affected feeds instead of showing a generic error.
+     */
+    data class PartialRefresh(
+        val failedFeeds: List<FeedFailure>,
+        val totalCount: Int,
+    ) : NarraError() {
+        val failedCount: Int
+            get() = failedFeeds.size
+
+        override val message: String
+            get() = "Failed to refresh $failedCount of $totalCount feeds: " +
+                failedFeeds.joinToString { "${it.title} (${it.url})" }
+
+        data class FeedFailure(
+            val title: String,
+            val url: String,
+        )
+    }
+
     data class Unknown(
         override val cause: Throwable?,
     ) : NarraError()

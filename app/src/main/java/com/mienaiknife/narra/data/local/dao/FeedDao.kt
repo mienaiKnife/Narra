@@ -37,6 +37,15 @@ interface FeedDao {
     @Query("SELECT * FROM feeds WHERE url = :url")
     suspend fun getFeedByUrl(url: String): FeedEntity?
 
+    @Query("UPDATE feeds SET lastRefreshErrorAt = :timestamp WHERE url = :url")
+    suspend fun markRefreshFailed(
+        url: String,
+        timestamp: Long = System.currentTimeMillis(),
+    )
+
+    @Query("UPDATE feeds SET lastRefreshErrorAt = NULL WHERE url = :url")
+    suspend fun clearRefreshError(url: String)
+
     @Query("DELETE FROM feeds WHERE url = :url")
     suspend fun deleteFeedByUrl(url: String)
 

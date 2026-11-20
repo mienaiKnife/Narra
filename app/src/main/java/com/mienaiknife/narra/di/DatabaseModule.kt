@@ -68,6 +68,13 @@ object DatabaseModule {
             }
         }
 
+    val migration17to18 =
+        object : Migration(17, 18) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE feeds ADD COLUMN lastRefreshErrorAt INTEGER")
+            }
+        }
+
     @Provides
     @Singleton
     fun provideAppDatabase(
@@ -79,7 +86,7 @@ object DatabaseModule {
             AppDatabase::class.java,
             AppDatabase.DATABASE_NAME,
         ).openHelperFactory(PreparingOpenHelperFactory(securityManager))
-        .addMigrations(migration16to17)
+        .addMigrations(migration16to17, migration17to18)
         // Schemas before 16 were never released and their Room schemas were not exported, so no
         // faithful migration path exists. Rather than crashing on `IllegalStateException`, wipe
         // and recreate the database for those legacy development installs. Real migrations must

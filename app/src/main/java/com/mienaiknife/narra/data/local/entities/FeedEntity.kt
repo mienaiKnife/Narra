@@ -28,4 +28,6 @@ data class FeedEntity(
     val imageUrl: String? = null,
     val createdAt: Long = System.currentTimeMillis(),
     val notificationsEnabled: Boolean = false,
+    /** Timestamp of the last failed refresh, or null when the last refresh succeeded. */
+    val lastRefreshErrorAt: Long? = null,
 )

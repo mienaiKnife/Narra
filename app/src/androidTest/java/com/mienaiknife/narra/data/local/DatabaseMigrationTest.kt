@@ -80,6 +80,50 @@ class DatabaseMigrationTest {
     }
 
     @Test
+    @Throws(IOException::class)
+    fun migrate17To18() {
+        helper.createDatabase(TEST_DB, 17).apply {
+            execSQL(
+                "INSERT INTO feeds (url, title, createdAt, notificationsEnabled) " +
+                    "VALUES ('https://example.com/feed', 'Example Feed', 123456789, 0)",
+            )
+            close()
+        }
+
+        helper.runMigrationsAndValidate(TEST_DB, 18, true, DatabaseModule.migration17to18).apply {
+            val cursor = query("SELECT lastRefreshErrorAt FROM feeds WHERE url = 'https://example.com/feed'")
+            assertTrue("Feed row should survive the migration", cursor.moveToFirst())
+            assertTrue("New column should default to no error", cursor.isNull(0))
+            cursor.close()
+        }
+    }
+
+    @Test
+    @Throws(IOException::class)
+    fun migrate16To18() {
+        helper.createDatabase(TEST_DB, 16).apply {
+            execSQL(
+                "INSERT INTO feeds (url, title, createdAt, notificationsEnabled) " +
+                    "VALUES ('https://example.com/feed', 'Example Feed', 123456789, 0)",
+            )
+            close()
+        }
+
+        helper.runMigrationsAndValidate(
+            TEST_DB,
+            18,
+            true,
+            DatabaseModule.migration16to17,
+            DatabaseModule.migration17to18,
+        ).apply {
+            val cursor = query("SELECT lastRefreshErrorAt FROM feeds WHERE url = 'https://example.com/feed'")
+            assertTrue("Feed row should survive both migrations", cursor.moveToFirst())
+            assertTrue("New column should default to no error", cursor.isNull(0))
+            cursor.close()
+        }
+    }
+
+    @Test
     fun testMigrationIdempotency() {
         helper.createDatabase(TEST_DB, 16).apply {
             close()

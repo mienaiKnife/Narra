@@ -51,6 +51,7 @@ import androidx.compose.material.icons.filled.NotificationsNone
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.RssFeed
 import androidx.compose.material.icons.filled.Upload
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -396,6 +397,17 @@ fun FeedItem(
                 }
             }
 
+            if (feed.lastRefreshErrorAt != null) {
+                Icon(
+                    imageVector = Icons.Default.Warning,
+                    contentDescription = stringResource(R.string.feeds_refresh_error_desc),
+                    modifier = Modifier
+                        .padding(end = 8.dp)
+                        .size(24.dp),
+                    tint = MaterialTheme.colorScheme.error,
+                )
+            }
+
             // Notification icon on the right
             IconToggleButton(
                 checked = feed.notificationsEnabled,
@@ -432,7 +444,7 @@ fun FeedsScreenPreview() {
     val navController = rememberNavController()
     val sampleFeeds = listOf(
         FeedEntity(url = "1", title = "The Verge", description = "Tech news and more"),
-        FeedEntity(url = "2", title = "Android Central", description = "Android news and reviews"),
+        FeedEntity(url = "2", title = "Android Central", description = "Android news and reviews", lastRefreshErrorAt = 1L),
         FeedEntity(url = "3", title = "9to5Google", description = "Google and Android news"),
     )
     NarraTheme(darkTheme = true, dynamicColor = false) {

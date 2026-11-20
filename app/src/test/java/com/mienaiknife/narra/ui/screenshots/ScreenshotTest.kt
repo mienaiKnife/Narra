@@ -19,6 +19,7 @@ import androidx.compose.material3.SnackbarHostState
 import app.cash.paparazzi.DeviceConfig
 import app.cash.paparazzi.Paparazzi
 import com.mienaiknife.narra.R
+import com.mienaiknife.narra.data.local.entities.FeedEntity
 import com.mienaiknife.narra.data.models.SampleArticles
 import com.mienaiknife.narra.ui.UiText
 import com.mienaiknife.narra.ui.screens.ErrorView
@@ -104,6 +105,31 @@ class ScreenshotTest {
                 FeedsScreenContent(
                     onFeedClick = { _, _ -> },
                     feeds = emptyList(),
+                    onBackClick = {},
+                )
+            }
+        }
+    }
+
+    @Test
+    fun feedsScreen_WithRefreshError() {
+        paparazzi.snapshot {
+            NarraTheme {
+                FeedsScreenContent(
+                    onFeedClick = { _, _ -> },
+                    feeds = listOf(
+                        FeedEntity(
+                            url = "https://working.example.com/feed",
+                            title = "Working Feed",
+                            description = "Refreshing normally",
+                        ),
+                        FeedEntity(
+                            url = "https://blocked.example.com/feed",
+                            title = "Blocked Feed",
+                            description = "Cloudflare challenge",
+                            lastRefreshErrorAt = 1L,
+                        ),
+                    ),
                     onBackClick = {},
                 )
             }
