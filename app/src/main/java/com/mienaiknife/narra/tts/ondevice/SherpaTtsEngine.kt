@@ -62,6 +62,15 @@ class SherpaTtsEngine @Inject constructor(
 
     @Volatile
     private var tts: OfflineTts? = null
+
+    /**
+     * Words the engine's lexicon can pronounce. Built on the IO dispatcher during initialization
+     * and read by the synthesis loop, so it is volatile; `null` means "do not rewrite unknown
+     * words" (no model, a frontend without a lexicon, or a failed index build).
+     */
+    @Volatile
+    private var lexiconIndex: LexiconIndex? = null
+
     private var audioTrack: AudioTrack? = null
     private var playbackSpeed = 1.0f
     private var volume = 1.0f
@@ -206,6 +215,7 @@ class SherpaTtsEngine @Inject constructor(
                     // synthesis/playback thread can be using it while it is freed.
                     tts?.release()
                     tts = null
+                    lexiconIndex = null
                     currentSampleRate = -1
                 }
 
@@ -225,7 +235,7 @@ class SherpaTtsEngine @Inject constructor(
                 }
 
                 val lexiconPath = if (requiresLexicon(modelMetadata.type)) {
-                    modelRepository.ensureLexiconAvailable(modelMetadata.language) ?: run {
+                    val path = modelRepository.ensureLexiconAvailable(modelMetadata.language) ?: run {
                         Log.e(
                             "SherpaTtsEngine",
                             "No lexicon available for language '${modelMetadata.language}'",
@@ -237,7 +247,12 @@ class SherpaTtsEngine @Inject constructor(
                         )
                         return@withContext
                     }
+                    // Index the words before publishing `tts`: the synthesis loop uses this to
+                    // rewrite out-of-vocabulary words the native frontend would silently drop.
+                    lexiconIndex = loadLexiconIndex(path)
+                    path
                 } else {
+                    lexiconIndex = null
                     ""
                 }
 
@@ -263,6 +278,18 @@ class SherpaTtsEngine @Inject constructor(
                 _state.value = TtsState.Error(e.message ?: "Unknown initialization error")
             }
         }
+    }
+
+    /**
+     * Builds the lexicon index used to rewrite out-of-vocabulary words. It runs on the IO
+     * dispatcher and a failure is not fatal: without an index, synthesis still works and unknown
+     * words are skipped exactly as before.
+     */
+    private fun loadLexiconIndex(lexiconPath: String): LexiconIndex? = try {
+        LexiconIndex.load(File(lexiconPath))
+    } catch (e: Exception) {
+        Log.e("SherpaTtsEngine", "Could not index the pronunciation lexicon: $lexiconPath", e)
+        null
     }
 
     private fun createModelConfig(
@@ -379,9 +406,9 @@ class SherpaTtsEngine @Inject constructor(
                 val engine = tts ?: continue
                 val eventChannel = Channel<AudioStreamEvent>(Channel.UNLIMITED)
                 try {
-                    // Digits are out-of-vocabulary for the 2.x lexicons, so spell them out before
-                    // synthesis and keep the mapping for highlighting.
-                    val speech = SpeechTextNormalizer.normalize(request.text)
+                    // Digits and OOV words are not pronounceable by the 2.x lexicon, so rewrite
+                    // them before synthesis and keep the mapping for highlighting.
+                    val speech = SpeechTextPreparer.prepare(request.text, lexiconIndex)
                     if (speech.text.isBlank()) {
                         eventChannel.trySend(AudioStreamEvent.Finished)
                         continue
@@ -780,6 +807,7 @@ class SherpaTtsEngine @Inject constructor(
             tts?.release()
             audioTrack?.release()
             tts = null
+            lexiconIndex = null
             audioTrack = null
 
             // Reset initialization guards and queues so the engine can be re-initialized if reused.
