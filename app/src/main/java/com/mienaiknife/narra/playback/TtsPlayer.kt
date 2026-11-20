@@ -43,6 +43,7 @@ import com.mienaiknife.narra.domain.TtsEngine
 import com.mienaiknife.narra.domain.TtsState
 import com.mienaiknife.narra.domain.models.Article
 import com.mienaiknife.narra.domain.models.SpeakableText
+import com.mienaiknife.narra.domain.models.isHighlightWordSeparator
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -493,7 +494,7 @@ class TtsPlayer @Inject constructor(
         if (text.isNotEmpty()) {
             val start = wordOffset.coerceIn(0, text.length - 1)
             var end = start
-            while (end < text.length && !text[end].isWhitespace()) {
+            while (end < text.length && !text[end].isHighlightWordSeparator()) {
                 end++
             }
             currentWordRange = speakable.mapTtsToOriginal(start) until speakable.mapTtsToOriginal(end)
@@ -607,7 +608,7 @@ class TtsPlayer @Inject constructor(
             val ttsStart = resumeWordOffset.coerceIn(0, text.length.let { if (it > 0) it - 1 else 0 })
             if (text.isNotEmpty()) {
                 var ttsEnd = ttsStart
-                while (ttsEnd < text.length && !text[ttsEnd].isWhitespace()) {
+                while (ttsEnd < text.length && !text[ttsEnd].isHighlightWordSeparator()) {
                     ttsEnd++
                 }
                 currentWordRange = speakable.mapTtsToOriginal(ttsStart) until speakable.mapTtsToOriginal(ttsEnd)

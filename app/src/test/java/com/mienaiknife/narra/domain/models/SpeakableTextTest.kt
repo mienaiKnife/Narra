@@ -93,6 +93,45 @@ class SpeakableTextTest {
     }
 
     @Test
+    fun `expandToWordRange stops at an em dash instead of merging the next word`() {
+        // The speech normalizer rewrites "—" as ", ", so the reported word ends on the dash.
+        val speakable = identity("Press photograph—annotated with a circle")
+        val range = speakable.expandToWordRange(6, 17)
+        assertEquals("photograph—", speakable.text.substring(range.first, range.last + 1))
+        assertEquals(17 until 26, speakable.expandToWordRange(17, 20))
+    }
+
+    @Test
+    fun `expandToWordRange treats en dashes as word boundaries`() {
+        val speakable = identity("her finger–with the caption")
+        // Range reported at the end of "finger" must not swallow the following "with".
+        val range = speakable.expandToWordRange(4, 11)
+        assertEquals("finger–", speakable.text.substring(range.first, range.last + 1))
+        // A range that starts on the dash anchors to the word after it.
+        assertEquals(11 until 15, speakable.expandToWordRange(10, 11))
+    }
+
+    @Test
+    fun `expandToWordRange keeps multi-word ranges that cross a dash`() {
+        val speakable = identity("Press photograph—annotated with a circle")
+        assertEquals(6 until 26, speakable.expandToWordRange(6, 26))
+    }
+
+    @Test
+    fun `highlightWordRanges splits words joined by typographic dashes`() {
+        assertEquals(
+            listOf(0 until 5, 6 until 16, 17 until 26),
+            "Press photograph—annotated".highlightWordRanges(),
+        )
+    }
+
+    @Test
+    fun `highlightWordRanges keeps hyphenated compounds together`() {
+        assertEquals(listOf(0 until 6), "Ex-FTC".highlightWordRanges())
+        assertEquals(listOf(0 until 11), "92-year-old".highlightWordRanges())
+    }
+
+    @Test
     fun `expandToWordRange returns empty for an empty reported range`() {
         val speakable = identity("Hello world")
         assertTrue(speakable.expandToWordRange(0, 0).isEmpty())

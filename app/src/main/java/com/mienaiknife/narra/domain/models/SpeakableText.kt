@@ -56,6 +56,10 @@ data class SpeakableText(
      * Ranges that already span multiple words (e.g. a date like "April 10, 2026") are preserved
      * rather than truncated to the first word.
      *
+     * Words are separated by whitespace and by typographic dashes (see
+     * [isHighlightWordSeparator]), so "photograph—annotated" expands to "photograph—" rather than
+     * swallowing the next word.
+     *
      * Returns an empty range when [ttsEnd] does not extend past [ttsStart] or when there is no word
      * at [ttsStart].
      */
@@ -63,25 +67,25 @@ data class SpeakableText(
         if (text.isEmpty() || ttsEnd <= ttsStart) return IntRange.EMPTY
 
         var anchor = ttsStart.coerceIn(0, text.length - 1)
-        // If the reported range begins on whitespace, move onto the next word.
-        while (anchor < text.length && text[anchor].isWhitespace()) anchor++
+        // If the reported range begins on a separator, move onto the next word.
+        while (anchor < text.length && text[anchor].isHighlightWordSeparator()) anchor++
         if (anchor >= text.length) return IntRange.EMPTY
 
         var start = anchor
-        while (start > 0 && !text[start - 1].isWhitespace()) start--
+        while (start > 0 && !text[start - 1].isHighlightWordSeparator()) start--
 
         // Snap the end up to the end of the word containing the last reported character, but never
         // pull it back before the reported end so multi-word ranges are kept intact.
         var end = ttsEnd.coerceIn(start, text.length)
         val lastIndex = end - 1
-        if (lastIndex in 0 until text.length && !text[lastIndex].isWhitespace()) {
+        if (lastIndex in 0 until text.length && !text[lastIndex].isHighlightWordSeparator()) {
             var expandedEnd = lastIndex
-            while (expandedEnd < text.length && !text[expandedEnd].isWhitespace()) expandedEnd++
+            while (expandedEnd < text.length && !text[expandedEnd].isHighlightWordSeparator()) expandedEnd++
             end = expandedEnd
         }
         if (end <= start) {
             end = anchor
-            while (end < text.length && !text[end].isWhitespace()) end++
+            while (end < text.length && !text[end].isHighlightWordSeparator()) end++
         }
 
         return start until end
@@ -109,4 +113,36 @@ data class SpeakableText(
         result = 31 * result + (ttsToOriginalMap?.contentHashCode() ?: 0)
         return result
     }
+}
+
+/**
+ * Whether this character ends a word for per-word highlighting.
+ *
+ * Whitespace separates words, and so do typographic dashes (figure dash, en dash, em dash,
+ * horizontal bar, and the two- and three-em dashes): a dash joins clauses rather than syllables, so
+ * "photograph—annotated" must not be treated as one word. ASCII hyphens and hyphen-like characters
+ * are deliberately not separators, keeping compounds such as "Ex-FTC" and "92-year-old" whole.
+ */
+internal fun Char.isHighlightWordSeparator(): Boolean = isWhitespace() || this in '\u2012'..'\u2015' || this == '\u2E3A' || this == '\u2E3B'
+
+/**
+ * Ranges of this string that are highlighted as individual words, in order.
+ *
+ * Separators are excluded from the ranges, so a paragraph whose words are joined by typographic
+ * dashes yields one range per word instead of one range spanning the dash.
+ */
+internal fun String.highlightWordRanges(): List<IntRange> {
+    val ranges = mutableListOf<IntRange>()
+    var start = -1
+    for (index in 0..length) {
+        val isWordChar = index < length && !this[index].isHighlightWordSeparator()
+        when {
+            isWordChar && start == -1 -> start = index
+            !isWordChar && start != -1 -> {
+                ranges += start until index
+                start = -1
+            }
+        }
+    }
+    return ranges
 }

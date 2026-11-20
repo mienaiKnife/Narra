@@ -88,6 +88,7 @@ import coil3.compose.AsyncImage
 import com.mienaiknife.narra.R
 import com.mienaiknife.narra.domain.models.Article
 import com.mienaiknife.narra.domain.models.ContentBlock
+import com.mienaiknife.narra.domain.models.highlightWordRanges
 import com.mienaiknife.narra.ui.utils.toAnnotatedString
 import com.mienaiknife.narra.ui.viewmodels.ReaderUiState
 import kotlinx.coroutines.flow.collectLatest
@@ -250,15 +251,9 @@ fun ReaderContentList(
                         }
                     }
 
-                    val words = baseAnnotatedString.text.split(Regex("(?<=\\s)|(?=\\s)"))
-                    var currentOffset = 0
-                    words.forEach { word ->
-                        val start = currentOffset
-                        val end = currentOffset + word.length
-                        if (start < end && word.trim().isNotEmpty()) {
-                            addStringAnnotation("word", "$index|$start|$end", start, end)
-                        }
-                        currentOffset = end
+                    val words = baseAnnotatedString.text.highlightWordRanges()
+                    words.forEach { range ->
+                        addStringAnnotation("word", "$index|${range.first}|${range.last + 1}", range.first, range.last + 1)
                     }
                 }
             }
@@ -662,11 +657,19 @@ private fun Modifier.wordHighlight(
         val highlightTop = highlightCenterY - (rectHeight / 2)
 
         val offset = Offset(startRect.left - paddingPx, highlightTop)
-        val size = if (isSameLine) {
-            Size((endRect.right - startRect.left) + (paddingPx * 2), rectHeight)
+        // If the range wraps onto the next line, highlight it up to the end of its first line
+        // instead of drawing a box only as wide as the first character.
+        val width = if (isSameLine) {
+            endRect.right - startRect.left
         } else {
-            Size(startRect.width + (paddingPx * 2), rectHeight)
+            val firstLineEnd = layoutResult.getLineEnd(line)
+            if (firstLineEnd > start) {
+                layoutResult.getBoundingBox(firstLineEnd - 1).right - startRect.left
+            } else {
+                startRect.width
+            }
         }
+        val size = Size(width + (paddingPx * 2), rectHeight)
 
         Pair(offset, size)
     } ?: return this
