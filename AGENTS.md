@@ -108,8 +108,24 @@ For manual control:
 `lintDebug` only fails on errors, also open `app/build/reports/lint-results-debug.txt` and confirm
 your change adds **zero new warnings**; fix any warning in code you touched (see
 [Writing Warning-Free Code](#writing-warning-free-code)). For schema, Compose, or UI changes also run
-`./gradlew verifyPaparazziDebug` and, where an emulator is available,
-`./gradlew connectedDebugAndroidTest`. `.github/workflows/ci.yml` gates merges on
+`./gradlew verifyPaparazziDebug` and the instrumentation tests.
+
+**`connectedDebugAndroidTest` deletes app data.** Gradle installs both APKs and uninstalls them when
+the run finishes, wiping the app's databases, settings, and downloaded files even when every test
+passes. Run it only against an emulator, and pin the serial so it cannot fall through to a connected
+phone:
+
+```bash
+adb devices -l
+ANDROID_SERIAL=emulator-5554 ./gradlew connectedDebugAndroidTest
+```
+
+Never run it on a device that holds real feeds, queue items, or playback progress. If only a
+physical device is available, export a backup first (Settings → Downloads & Data → Export database),
+treat the device data as disposable, and get the user's explicit approval. See
+[docs/TESTING_GUIDE.md](docs/TESTING_GUIDE.md#instrumented-tests).
+
+`.github/workflows/ci.yml` gates merges on
 `spotlessCheck`, `lintDebug`, `testDebugUnitTest`, `testReleaseUnitTest`, `verifyPaparazziDebug`,
 `jacocoTestReport`, `connectedDebugAndroidTest`, and the release builds. Do not consider a task done
 while any of them fail. See [docs/TESTING_GUIDE.md](docs/TESTING_GUIDE.md#cicd).
@@ -136,12 +152,21 @@ paths (the `android` binary and any agent skills directory) belong in the uncomm
 
 Android CLI is a per-developer tool: do not add it to the build, CI, or project dependencies.
 
+## Local, Machine-Specific Instructions
+Device serials, local SDK paths, and other machine-specific setup notes belong in the gitignored
+`AGENTS.local.md`, never in this file, `docs/`, or committed configuration. If that file exists, read
+it before running device commands and follow its rules — for example, which emulator serial to pin
+for instrumentation tests. Do not copy its contents into tracked files.
+
 ## What to Ask Before Doing
 - If a task would require adding a new third-party dependency, confirm before adding it.
 - If a feature touches the `TtsEngine`, `ArticleRepository`, `FeedRepository`,
   `ImportExportRepository`, or `ModelRepository` contracts, flag it — these are load-bearing
   abstractions.
 - If something is ambiguous between MVP scope and planned features, ask rather than assume.
+- Before any command that can delete on-device app data — `connectedDebugAndroidTest`,
+  `adb uninstall`, `pm clear`, or installing a build with a different signing key — confirm the
+  target is an emulator, or back up the data and get the user's explicit approval.
 
 ## Keeping Docs in Sync
 When you change an invariant, update the linked document in the same change so this file and the

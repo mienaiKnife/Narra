@@ -5,6 +5,9 @@ build/
 # Local configuration file (sdk path, etc)
 local.properties
 
+# Machine-specific agent instructions (device serials, local paths, personal setup)
+AGENTS.local.md
+
 # Log/OS Files
 *.log
 

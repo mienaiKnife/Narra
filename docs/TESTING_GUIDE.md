@@ -12,7 +12,26 @@ This guide explains the testing strategy for Narra and how to run and write test
 ### Instrumented Tests
 - **Location**: `app/src/androidTest/java/`
 - **Focus**: UI components (Compose), Room database migrations, and logic that requires an Android environment.
-- **Run command**: `./gradlew connectedAndroidTest`
+- **Run command**:
+  ```bash
+  adb devices -l
+  ANDROID_SERIAL=emulator-5554 ./gradlew connectedDebugAndroidTest
+  ```
+
+> **These tests delete app data.** Gradle installs both APKs and uninstalls them when the run
+> finishes. That removes the app's databases, settings, and downloaded files even when every test
+> passes — including subscriptions, queue items, and playback progress.
+
+- **Always target an emulator.** Pin `ANDROID_SERIAL` to the emulator's serial. With more than one
+  device attached, Gradle runs on every one, including a connected phone. Start an emulator with
+  `android emulator ...` or `emulator -avd <name>` if none is running.
+- **Never point the run at a phone with real data.** If a physical device is unavoidable, export a
+  backup first (Settings → Downloads & Data → Export database, or enable auto-export), get the
+  user's approval, and treat the device data as disposable. Android Auto Backup is not a reliable
+  fallback for debug builds.
+- **Scope the run while iterating** with
+  `-Pandroid.testInstrumentationRunnerArguments.class=com.mienaiknife.narra.data.local.DatabaseMigrationTest`,
+  but remember the data wipe still happens after a scoped run.
 
 ## Testing Specialized Components
 
