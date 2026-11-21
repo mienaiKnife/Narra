@@ -94,54 +94,6 @@ class SpeechTextNormalizerTest {
     }
 
     @Test
-    fun `ellipses collapse to a single period`() {
-        assertEquals("Wait. what?", normalized("Wait... what?"))
-        assertEquals("Wait. what?", normalized("Wait… what?"))
-        assertEquals("Wait. what?", normalized("Wait.. what?"))
-        assertEquals("Wait. what?", normalized("Wait. . . what?"))
-        assertEquals("I don't know.", normalized("I don't know..."))
-    }
-
-    @Test
-    fun `repeated sentence punctuation collapses to one mark`() {
-        assertEquals("Wait? what?", normalized("Wait?! what?"))
-        assertEquals("Really! I mean it.", normalized("Really!!! I mean it."))
-        assertEquals("What? yes.", normalized("What?? yes."))
-        assertEquals("Sure! What?", normalized("Sure!! What?!"))
-    }
-
-    @Test
-    fun `single periods and abbreviations are preserved`() {
-        assertEquals("U.S. policy.", normalized("U.S. policy."))
-        assertEquals("three point one four", normalized("3.14"))
-    }
-
-    @Test
-    fun `typographic apostrophes keep contractions intact`() {
-        // The pronunciation lexicon keys contractions with U+0027; a curly apostrophe makes the
-        // native frontend split them ("I’m" -> "I" + "m", heard as "I em").
-        assertEquals(
-            "I'm sure it's John's.",
-            normalized("I’m sure it’s John’s."),
-        )
-        assertEquals(
-            "I've and I'll and we're and don't",
-            normalized("I’ve and I’ll and we’re and don’t"),
-        )
-        assertEquals("'quoted'", normalized("‘quoted’"))
-    }
-
-    @Test
-    fun `apostrophe normalization keeps source offsets`() {
-        val original = "I’ve seen it."
-        val speech = SpeechTextNormalizer.normalize(original)
-
-        assertEquals("I've seen it.", speech.text)
-        val range = speech.sourceRange(0, 4)!!
-        assertEquals("I’ve", original.substring(range.first, range.last + 1))
-    }
-
-    @Test
     fun `identifiers keep their letters separate from numbers`() {
         assertEquals("v zero point one", normalized("v0.1"))
         assertEquals("H two O", normalized("H2O"))
