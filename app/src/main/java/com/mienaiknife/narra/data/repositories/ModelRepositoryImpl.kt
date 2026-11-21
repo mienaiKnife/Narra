@@ -357,10 +357,6 @@ class ModelRepositoryImpl @Inject constructor(
      * Downloads the language-scoped lexicon into [lexiconsDir] on first use. The `.part` suffix lets
      * a cancelled download resume, and the final rename keeps the engine from ever opening a
      * partially written lexicon.
-     *
-     * The downloaded file is the base. When the language has a [LexiconSupplement], a merged copy
-     * (see [LexiconPatcher]) is returned instead so the engine can pronounce the words the base
-     * lexicon lacks. The base stays on disk and is what future merges start from.
      */
     private suspend fun ensureLexiconFile(
         language: String,
@@ -371,41 +367,27 @@ class ModelRepositoryImpl @Inject constructor(
         val target = File(lexiconsDir, fileName)
 
         return lexiconMutex.withLock {
-            if (!target.isFile || target.length() == 0L) {
-                if (!lexiconsDir.exists() && !lexiconsDir.mkdirs()) {
-                    throw IOException("Could not create lexicon directory: ${lexiconsDir.absolutePath}")
-                }
-
-                val partial = File(lexiconsDir, "$fileName.part")
-                Log.i("ModelRepository", "Downloading lexicon: $url")
-                downloadFile(url, partial, onProgress)
-
-                if (target.exists() && !target.delete()) {
-                    throw IOException("Could not replace lexicon: ${target.absolutePath}")
-                }
-                if (!partial.renameTo(target)) {
-                    throw IOException("Could not move lexicon into place: ${target.absolutePath}")
-                }
-                Log.i("ModelRepository", "Lexicon ready: ${target.absolutePath}")
+            if (target.isFile && target.length() > 0) {
+                return@withLock target.absolutePath
             }
 
-            patchedLexiconPath(target, language).absolutePath
-        }
-    }
-
-    /**
-     * Applies the language's supplement. A failure falls back to the downloaded base, because the
-     * supplement only adds words and the base still synthesizes on its own.
-     */
-    private fun patchedLexiconPath(base: File, language: String): File {
-        val supplement = LexiconSupplement.forLanguage(language)
-        return try {
-            LexiconPatcher.resolve(base, supplement, LexiconSupplement.VERSION).also { resolved ->
-                if (resolved != base) Log.i("ModelRepository", "Patched lexicon ready: ${resolved.absolutePath}")
+            if (!lexiconsDir.exists() && !lexiconsDir.mkdirs()) {
+                throw IOException("Could not create lexicon directory: ${lexiconsDir.absolutePath}")
             }
-        } catch (e: Exception) {
-            Log.e("ModelRepository", "Could not apply the lexicon supplement; using the base lexicon", e)
-            base
+
+            val partial = File(lexiconsDir, "$fileName.part")
+            Log.i("ModelRepository", "Downloading lexicon: $url")
+            downloadFile(url, partial, onProgress)
+
+            if (target.exists() && !target.delete()) {
+                throw IOException("Could not replace lexicon: ${target.absolutePath}")
+            }
+            if (!partial.renameTo(target)) {
+                throw IOException("Could not move lexicon into place: ${target.absolutePath}")
+            }
+            Log.i("ModelRepository", "Lexicon ready: ${target.absolutePath}")
+
+            target.absolutePath
         }
     }
 

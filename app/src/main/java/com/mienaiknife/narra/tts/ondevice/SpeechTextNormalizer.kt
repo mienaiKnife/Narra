@@ -40,12 +40,6 @@ internal class NormalizedSpeech(
         return start..end
     }
 
-    /**
-     * Original index for one character of [text]. Used when composing a second rewrite pass, which
-     * has to carry the existing mapping forward.
-     */
-    internal fun sourceIndexAt(charIndex: Int): Int = sourceIndexByChar[charIndex]
-
     companion object {
         /** Mapping for text that was already speech-ready. */
         fun identity(text: String): NormalizedSpeech = NormalizedSpeech(text, IntArray(text.length) { it })

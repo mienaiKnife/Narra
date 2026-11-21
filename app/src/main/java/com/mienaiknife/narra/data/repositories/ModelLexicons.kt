@@ -39,6 +39,5 @@ internal object ModelLexicons {
         return "${NetworkConstants.SHERPA_MODELS_BASE_URL}/$fileName"
     }
 
-    /** Reduces a BCP 47-ish language tag to the subtag the lexicon map is keyed by. */
-    internal fun primarySubtag(language: String): String = language.trim().lowercase(Locale.ROOT).substringBefore('-').substringBefore('_')
+    private fun primarySubtag(language: String): String = language.trim().lowercase(Locale.ROOT).substringBefore('-').substringBefore('_')
 }

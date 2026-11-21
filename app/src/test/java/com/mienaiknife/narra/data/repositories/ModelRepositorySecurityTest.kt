@@ -64,22 +64,15 @@ class ModelRepositorySecurityTest {
     }
 
     @Test
-    fun `ensureLexiconAvailable reuses an already downloaded lexicon and merges the supplement`() = runBlocking {
+    fun `ensureLexiconAvailable reuses an already downloaded lexicon`() = runBlocking {
         val lexicon = File(filesDir, "tts_models/lexicons/lexicon-en-us.txt")
         lexicon.parentFile?.mkdirs()
         lexicon.writeText("hello || h ə lˈ o ʊ\n")
 
         val path = requireNotNull(repository.ensureLexiconAvailable("en-US"))
 
-        val merged = File(path)
-        assertTrue(merged.isFile)
-        assertEquals("lexicon-en-us.narra.txt", merged.name)
-        assertTrue(merged.readText().contains("hello || h ə lˈ o ʊ"))
-        assertTrue(merged.readText().contains("seem || sˈ iː m"))
-
-        // The downloaded base is recoverable and untouched.
-        assertTrue(lexicon.isFile)
-        assertEquals("hello || h ə lˈ o ʊ\n", lexicon.readText())
+        assertTrue(File(path).isFile)
+        assertEquals(lexicon.absolutePath, path)
     }
 
     @Test
