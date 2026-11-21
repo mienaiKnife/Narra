@@ -16,6 +16,8 @@
 package com.mienaiknife.narra.ui.utils
 
 import androidx.core.net.toUri
+import java.net.URI
+import java.net.URISyntaxException
 import java.net.URL
 
 object UrlUtils {
@@ -83,9 +85,26 @@ object UrlUtils {
     }
 
     /**
-     * Returns a favicon service URL for the given site URL, or null when no URL is available.
+     * Returns the site's own favicon URL (`<scheme>://<host>/favicon.ico`), or null when the input
+     * is missing, cannot be parsed, or is not an http/https URL. Fetching the icon from the site
+     * itself keeps feed and article URLs from leaking to a third-party icon service.
      */
-    fun faviconUrl(url: String?, size: Int = 128): String? = url?.takeIf { it.isNotBlank() }?.let { "https://www.google.com/s2/favicons?domain=$it&sz=$size" }
+    fun faviconUrl(url: String?): String? {
+        val uri =
+            url?.trim()?.takeIf { it.isNotEmpty() }?.let {
+                try {
+                    URI(it)
+                } catch (_: URISyntaxException) {
+                    null
+                }
+            } ?: return null
+
+        val scheme = uri.scheme?.lowercase() ?: return null
+        if (scheme != "http" && scheme != "https") return null
+
+        val host = uri.host?.takeIf { it.isNotEmpty() } ?: return null
+        return "$scheme://$host/favicon.ico"
+    }
 
     fun isUrlOrDomainLike(text: String): Boolean = text.contains("://") ||
         text.contains("www.") ||

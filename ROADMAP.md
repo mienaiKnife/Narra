@@ -29,11 +29,11 @@ comes before any submission. See the
 
 Repository changes:
 
-- [ ] Replace the Google favicon fallback (`UrlUtils.faviconUrl` and its call sites in Home, Feeds,
+- [x] Replace the Google favicon fallback (`UrlUtils.faviconUrl` and its call sites in Home, Feeds,
       Queue, and MiniPlayer). Sending feed and article URLs to a third-party favicon service is a
       privacy leak and a likely `Tracking` anti-feature; use the site's own favicon or a locally
       generated letter avatar instead.
-- [ ] Send the source origin (or no `Referer`) instead of `https://www.google.com/` in
+- [x] Send the source origin (or no `Referer`) instead of `https://www.google.com/` in
       `WebDataSourceImpl`.
 - [ ] Move the version into a committed `version.properties` (`versionCode` and `versionName`) and
       read it from `app/build.gradle.kts`, so F-Droid can extract it from tags with

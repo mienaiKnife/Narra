@@ -29,6 +29,7 @@ import net.dankito.readability4j.Readability4J
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.jsoup.Jsoup
+import java.net.URI
 import java.util.UUID
 import javax.inject.Inject
 
@@ -54,8 +55,11 @@ constructor(
                         .header(
                             "User-Agent",
                             NetworkConstants.BROWSER_USER_AGENT,
-                        ).header("Referer", "https://www.google.com/")
-                        .build()
+                        ).apply {
+                            // Some sites reject requests that arrive without a Referer. Send the
+                            // article's own origin so no other host learns what is being read.
+                            originOf(url)?.let { header("Referer", it) }
+                        }.build()
 
                 val html =
                     okHttpClient.newCall(request).execute().use { response ->
@@ -122,6 +126,15 @@ constructor(
                 )
             }
         }
+    }
+
+    private fun originOf(url: String): String? = try {
+        val uri = URI(url)
+        val scheme = uri.scheme
+        val host = uri.host
+        if (scheme == null || host == null) null else "$scheme://$host/"
+    } catch (_: Exception) {
+        null
     }
 
     private fun preCleanDocument(doc: org.jsoup.nodes.Document) {

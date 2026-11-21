@@ -11,6 +11,8 @@ All your data—including your RSS feed list, imported EPUBs, and playback histo
 ## 3. Third-Party Services
 When you use Narra, you may interact with third-party services:
 - **RSS Feeds**: When you fetch a feed, your IP address is visible to the server hosting that feed.
+- **Favicons and images**: Icons and article images are loaded directly from the addresses published
+  by the feed or article. Narra does not route them through a third-party icon service.
 - **On-Device AI**: If you use Sherpa-ONNX, synthesis happens entirely on your device and no text is sent to the internet.
 - **Cloud TTS Providers (planned)**: Cloud TTS engines are not yet available. If they are added later, choosing one would send the text of the article to that provider for synthesis, subject to that provider's own privacy policy.
 
