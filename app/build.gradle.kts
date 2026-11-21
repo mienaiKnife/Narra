@@ -42,8 +42,30 @@ fun releaseProperty(key: String): String? =
     System.getenv(key)?.takeIf { it.isNotBlank() } ?: localProperties.getProperty(key)?.takeIf { it.isNotBlank() }
 
 val releaseKeystorePath = releaseProperty("RELEASE_KEYSTORE_FILE")
-val configuredVersionCode = releaseProperty("VERSION_CODE")?.toIntOrNull()
-val configuredVersionName = releaseProperty("VERSION_NAME")
+
+// The version is committed in version.properties so F-Droid can read it from tags. VERSION_CODE and
+// VERSION_NAME stay available as environment overrides for local smoke tests; see docs/RELEASING.md.
+val versionPropertiesFile = rootProject.file("version.properties")
+require(versionPropertiesFile.isFile) {
+    "Missing ${versionPropertiesFile.path}; it must define versionCode and versionName."
+}
+val versionProperties =
+    Properties().apply {
+        versionPropertiesFile.inputStream().use(::load)
+    }
+
+val fileVersionCode =
+    versionProperties.getProperty("versionCode")?.trim()?.toIntOrNull()
+        ?: error("version.properties must define an integer versionCode")
+val fileVersionName =
+    versionProperties.getProperty("versionName")?.trim()?.takeIf { it.isNotEmpty() }
+        ?: error("version.properties must define a non-empty versionName")
+
+val configuredVersionCode =
+    System.getenv("VERSION_CODE")?.takeIf { it.isNotBlank() }?.let { raw ->
+        requireNotNull(raw.toIntOrNull()) { "VERSION_CODE must be an integer, was '$raw'." }
+    } ?: fileVersionCode
+val configuredVersionName = System.getenv("VERSION_NAME")?.takeIf { it.isNotBlank() } ?: fileVersionName
 
 android {
     namespace = "com.mienaiknife.narra"
@@ -55,8 +77,8 @@ android {
         // targetSdk 37 was adopted deliberately; the behavior changes were reviewed before bumping.
         //noinspection AndroidLintEditedTargetSdkVersion
         targetSdk = 37
-        versionCode = configuredVersionCode ?: 1
-        versionName = configuredVersionName ?: "0.1"
+        versionCode = configuredVersionCode
+        versionName = configuredVersionName
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

@@ -35,7 +35,7 @@ Repository changes:
       generated letter avatar instead.
 - [x] Send the source origin (or no `Referer`) instead of `https://www.google.com/` in
       `WebDataSourceImpl`.
-- [ ] Move the version into a committed `version.properties` (`versionCode` and `versionName`) and
+- [x] Move the version into a committed `version.properties` (`versionCode` and `versionName`) and
       read it from `app/build.gradle.kts`, so F-Droid can extract it from tags with
       `UpdateCheckData`. Validate the file against the tag in `.github/workflows/release.yml` and
       update `docs/RELEASING.md`.

@@ -31,13 +31,36 @@ jobs:
       - name: Derive version from tag
         id: version
         run: |
+          if [ ! -f version.properties ]; then
+            echo "version.properties is missing from the repository root." >&2
+            echo "Commit it with versionCode and versionName before tagging." >&2
+            exit 1
+          fi
+
+          FILE_NAME=$(sed -n 's/^versionName=//p' version.properties | tr -d '\r')
+          FILE_CODE=$(sed -n 's/^versionCode=//p' version.properties | tr -d '\r')
+          if [ -z "${FILE_NAME}" ] || [ -z "${FILE_CODE}" ]; then
+            echo "version.properties must define both versionCode and versionName." >&2
+            exit 1
+          fi
+
           TAG="${GITHUB_REF_NAME#v}"
-          echo "name=${TAG}" >> "$GITHUB_OUTPUT"
           IFS='.' read -r major minor patch <<< "${TAG%%-*}"
           major=${major:-0}
           minor=${minor:-0}
           patch=${patch:-0}
-          echo "code=$((major * 10000 + minor * 100 + patch))" >> "$GITHUB_OUTPUT"
+          EXPECTED_CODE=$((major * 10000 + minor * 100 + patch))
+
+          if [ "${FILE_NAME}" != "${TAG}" ] || [ "${FILE_CODE}" != "${EXPECTED_CODE}" ]; then
+            echo "version.properties does not match tag ${GITHUB_REF_NAME}:" >&2
+            echo "  file: versionName=${FILE_NAME} versionCode=${FILE_CODE}" >&2
+            echo "  tag:  versionName=${TAG} versionCode=${EXPECTED_CODE}" >&2
+            echo "Bump version.properties, commit it, and tag that commit." >&2
+            exit 1
+          fi
+
+          echo "name=${FILE_NAME}" >> "$GITHUB_OUTPUT"
+          echo "code=${FILE_CODE}" >> "$GITHUB_OUTPUT"
 
       - name: Decode signing keystore
         env:
@@ -63,8 +86,6 @@ jobs:
           RELEASE_KEYSTORE_PASSWORD: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
           RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
           RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
-          VERSION_NAME: ${{ steps.version.outputs.name }}
-          VERSION_CODE: ${{ steps.version.outputs.code }}
         run: ./gradlew assembleRelease
 
       - name: Prepare release artifacts

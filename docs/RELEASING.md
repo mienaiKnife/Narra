@@ -2,14 +2,26 @@
 
 ## Versioning
 
-Releases are driven by Git tags of the form `vMAJOR.MINOR.PATCH` (for example `v0.1.0`).
+The version is committed in [`version.properties`](../version.properties) at the repository root:
+
+```properties
+versionCode=100
+versionName=0.1.0
+```
+
+Releases are driven by Git tags of the form `vMAJOR.MINOR.PATCH` (for example `v0.1.0`), and the
+file must match the tag:
 
 - `versionName` is the tag without the `v` prefix (`0.1.0`).
 - `versionCode` is derived from the tag as `MAJOR * 10000 + MINOR * 100 + PATCH` (`100`).
 
-Locally, when no version is provided, the build falls back to `versionCode = 1` and
-`versionName = "0.1"`. Do not edit the version in `app/build.gradle.kts` for a release; the
-`Release` workflow derives it from the tag.
+To release, bump both values in `version.properties`, commit them, and tag that commit (see
+[Cutting a release](#cutting-a-release)). The `Release` workflow reads the committed file, fails if
+it does not match the tag, and builds the APK from it. Do not edit the version in
+`app/build.gradle.kts`.
+
+Local builds read the same file. For local smoke tests the `VERSION_NAME` and `VERSION_CODE`
+environment variables override it; CI never sets them, so released APKs always match the file.
 
 ## Signing
 
@@ -25,8 +37,6 @@ git-ignored), in that order:
 | `RELEASE_KEYSTORE_PASSWORD` | Keystore password |
 | `RELEASE_KEY_ALIAS` | Key alias |
 | `RELEASE_KEY_PASSWORD` | Key password |
-| `VERSION_NAME` | Overrides `versionName` |
-| `VERSION_CODE` | Overrides `versionCode` |
 
 `local.properties` does not expand `~` or environment variables, so use an absolute path there.
 
@@ -68,17 +78,19 @@ database or OPML backup, uninstall the old build, install the new release, and r
 
 ## Cutting a release
 
-1. Make sure `main` is green and the commit you are tagging is the one CI tested.
+1. Bump `versionName` and `versionCode` in `version.properties` and add
+   `fastlane/metadata/android/en-US/changelogs/<versionCode>.txt` with user-facing notes (500
+   characters max), then commit the changes and make sure `main` is green on that commit.
 2. Build and smoke-test a signed release locally (see below).
-3. Create and push an annotated tag:
+3. Create and push an annotated tag matching the version:
    ```bash
    git tag -a v0.1.0 -m "Narra v0.1.0"
    git push origin v0.1.0
    ```
-4. The `Release` workflow (`.github/workflows/release.yml`) decodes the keystore, builds the signed
-   APK, verifies its signature and version, and publishes `narra-v0.1.0.apk` plus a `.sha256`
-   checksum. If `docs/releases/v0.1.0.md` exists, it is used for the release notes; otherwise GitHub
-   generates notes from the commits.
+4. The `Release` workflow (`.github/workflows/release.yml`) checks that `version.properties` matches
+   the tag, decodes the keystore, builds the signed APK, verifies its signature and version, and
+   publishes `narra-v0.1.0.apk` plus a `.sha256` checksum. If `docs/releases/v0.1.0.md` exists, it is
+   used for the release notes; otherwise GitHub generates notes from the commits.
 
 Do not create the GitHub Release in the web UI first. The web UI creates the tag, which triggers the
 workflow, and then the workflow cannot create the release because it already exists. Push only the
@@ -95,8 +107,6 @@ read -rsp 'Keystore password: ' STORE_PASS; echo
 export RELEASE_KEYSTORE_PASSWORD="$STORE_PASS"
 export RELEASE_KEY_ALIAS='narra'
 export RELEASE_KEY_PASSWORD="$STORE_PASS"
-export VERSION_NAME='0.1.0'
-export VERSION_CODE='100'
 
 ./gradlew clean assembleRelease
 ```
