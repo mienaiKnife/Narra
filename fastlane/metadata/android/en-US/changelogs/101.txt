@@ -1,0 +1,8 @@
+Privacy fix: feed and article addresses are no longer sent to a third-party
+favicon service. Site icons now come from the site's own /favicon.ico, with
+the letter avatar as fallback, and article downloads send the page's own
+origin as the Referer instead of google.com.
+
+Also in this update: feed refresh reports which feeds failed, typographic
+dashes split words correctly in the reader, and bundled asset license texts
+can be read in full.
