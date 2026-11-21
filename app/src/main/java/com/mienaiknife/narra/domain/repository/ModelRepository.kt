@@ -55,15 +55,6 @@ interface ModelRepository {
     suspend fun getModelPath(modelId: String): String?
 
     /**
-     * Ensures the shared, language-scoped pronunciation lexicon required by Sherpa-ONNX 2.x is
-     * stored locally, downloading it on first use, and returns its absolute path.
-     *
-     * The file is shared by every model of the same language. Returns `null` when Narra has no
-     * lexicon for [language]; callers must refuse to synthesize rather than fall back to silence.
-     */
-    suspend fun ensureLexiconAvailable(language: String): String?
-
-    /**
      * Inserts the default models when the model table is empty.
      */
     suspend fun ensureDefaultModelsInitialized()

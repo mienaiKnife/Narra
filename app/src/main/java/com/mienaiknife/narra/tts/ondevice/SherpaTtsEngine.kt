@@ -88,7 +88,7 @@ class SherpaTtsEngine @Inject constructor(
 
     private val activeStreams = java.util.Collections.synchronizedList(mutableListOf<StreamPlaybackInfo>())
 
-    internal data class StreamPlaybackInfo(
+    data class StreamPlaybackInfo(
         val stream: SynthesizedAudioStream,
         var startFrame: Long = -1,
         var totalFrames: Int,
@@ -122,14 +122,11 @@ class SherpaTtsEngine @Inject constructor(
         object Finished : AudioStreamEvent()
     }
 
-    internal data class SynthesizedAudioStream(
+    data class SynthesizedAudioStream(
         val eventChannel: Channel<AudioStreamEvent>,
         val sampleRate: Int,
         val utteranceId: String,
-        /** Text as displayed by the reader; highlight offsets refer to this string. */
         val text: String,
-        /** Text actually handed to the engine, plus the mapping back to [text]. */
-        val speech: NormalizedSpeech,
         val sessionId: Int,
     )
 
@@ -224,24 +221,7 @@ class SherpaTtsEngine @Inject constructor(
                     return@withContext
                 }
 
-                val lexiconPath = if (requiresLexicon(modelMetadata.type)) {
-                    modelRepository.ensureLexiconAvailable(modelMetadata.language) ?: run {
-                        Log.e(
-                            "SherpaTtsEngine",
-                            "No lexicon available for language '${modelMetadata.language}'",
-                        )
-                        _state.value = TtsState.Error(
-                            "No pronunciation lexicon available for language " +
-                                "'${modelMetadata.language}'. Sherpa-ONNX 2.x cannot synthesize " +
-                                "this model without one.",
-                        )
-                        return@withContext
-                    }
-                } else {
-                    ""
-                }
-
-                val modelConfig = createModelConfig(modelMetadata, modelPath, lexiconPath, noiseScale, lengthScale)
+                val modelConfig = createModelConfig(modelMetadata, modelPath, noiseScale, lengthScale)
                 val config = OfflineTtsConfig(
                     model = modelConfig,
                     ruleFsts = "",
@@ -268,7 +248,6 @@ class SherpaTtsEngine @Inject constructor(
     private fun createModelConfig(
         model: TtsModel,
         modelPath: String,
-        lexiconPath: String,
         noiseScale: Float,
         lengthScale: Float,
     ): OfflineTtsModelConfig {
@@ -284,8 +263,9 @@ class SherpaTtsEngine @Inject constructor(
             TtsModelType.VITS -> {
                 vits = OfflineTtsVitsModelConfig(
                     model = File(modelPath, "model.onnx").absolutePath,
-                    lexicon = lexiconPath,
+                    lexicon = "",
                     tokens = File(modelPath, "tokens.txt").absolutePath,
+                    dataDir = File(modelPath, "espeak-ng-data").absolutePath,
                     noiseScale = noiseScale,
                     noiseScaleW = 0.8f,
                     lengthScale = lengthScale,
@@ -296,8 +276,9 @@ class SherpaTtsEngine @Inject constructor(
                 matcha = OfflineTtsMatchaModelConfig(
                     acousticModel = File(modelPath, "model.onnx").absolutePath,
                     vocoder = File(modelPath, "vocoder.onnx").absolutePath,
-                    lexicon = lexiconPath,
+                    lexicon = "",
                     tokens = File(modelPath, "tokens.txt").absolutePath,
+                    dataDir = modelPath,
                     noiseScale = noiseScale,
                     lengthScale = lengthScale,
                 )
@@ -308,7 +289,7 @@ class SherpaTtsEngine @Inject constructor(
                     model = File(modelPath, "model.onnx").absolutePath,
                     voices = File(modelPath, "voices.bin").absolutePath,
                     tokens = File(modelPath, "tokens.txt").absolutePath,
-                    lexicon = lexiconPath,
+                    dataDir = modelPath,
                     lengthScale = lengthScale,
                 )
             }
@@ -318,7 +299,7 @@ class SherpaTtsEngine @Inject constructor(
                     encoder = File(modelPath, "encoder.onnx").absolutePath,
                     decoder = File(modelPath, "decoder.onnx").absolutePath,
                     tokens = File(modelPath, "tokens.txt").absolutePath,
-                    lexicon = lexiconPath,
+                    dataDir = modelPath,
                 )
             }
             TtsModelType.KITTEN -> {
@@ -326,8 +307,8 @@ class SherpaTtsEngine @Inject constructor(
                     model = File(modelPath, "model.onnx").absolutePath,
                     voices = File(modelPath, "voices.bin").absolutePath,
                     tokens = File(modelPath, "tokens.txt").absolutePath,
+                    dataDir = modelPath,
                     lengthScale = lengthScale,
-                    lexicon = lexiconPath,
                 )
             }
             TtsModelType.POCKET -> {
@@ -379,14 +360,6 @@ class SherpaTtsEngine @Inject constructor(
                 val engine = tts ?: continue
                 val eventChannel = Channel<AudioStreamEvent>(Channel.UNLIMITED)
                 try {
-                    // Digits are out-of-vocabulary for the 2.x lexicons, so spell them out before
-                    // synthesis and keep the mapping for highlighting.
-                    val speech = SpeechTextNormalizer.normalize(request.text)
-                    if (speech.text.isBlank()) {
-                        eventChannel.trySend(AudioStreamEvent.Finished)
-                        continue
-                    }
-
                     val sampleRate = engine.sampleRate()
 
                     synthesizedQueue.send(
@@ -395,7 +368,6 @@ class SherpaTtsEngine @Inject constructor(
                             sampleRate,
                             request.utteranceId,
                             request.text,
-                            speech,
                             request.sessionId,
                         ),
                     )
@@ -414,7 +386,7 @@ class SherpaTtsEngine @Inject constructor(
                         }
                     }
 
-                    engine.generateWithConfigAndCallback(speech.text, genConfig, callback)
+                    engine.generateWithConfigAndCallback(request.text, genConfig, callback)
                     eventChannel.trySend(AudioStreamEvent.Finished)
                 } catch (e: Exception) {
                     Log.e("SherpaTtsEngine", "Synthesis failed", e)
@@ -589,7 +561,7 @@ class SherpaTtsEngine @Inject constructor(
             val info = StreamPlaybackInfo(
                 stream = stream,
                 totalFrames = 0,
-                projectedTotalFrames = (stream.speech.text.length * samplesPerCharAverage).toInt(),
+                projectedTotalFrames = (stream.text.length * samplesPerCharAverage).toInt(),
             )
 
             synchronized(activeStreams) { activeStreams.add(info) }
@@ -640,10 +612,7 @@ class SherpaTtsEngine @Inject constructor(
                         // If synthesis is ongoing, we estimate boundaries for the first chunk
                         // to get highlighting moving as soon as possible.
                         if (info.totalFrames > 100) { // Even earlier
-                            info.boundaries = mapToSource(
-                                stream.speech,
-                                estimateWordBoundaries(stream.speech.text, info.projectedTotalFrames, null),
-                            )
+                            info.boundaries = estimateWordBoundaries(stream.text, info.projectedTotalFrames, null)
                             info.isFirstChunkEstimated = true
                         }
                     }
@@ -656,15 +625,12 @@ class SherpaTtsEngine @Inject constructor(
                         }
 
                         // Update our global average for future projections
-                        if (stream.speech.text.length > 10) {
-                            val currentAverage = info.totalFrames.toFloat() / stream.speech.text.length
+                        if (stream.text.length > 10) {
+                            val currentAverage = info.totalFrames.toFloat() / stream.text.length
                             samplesPerCharAverage = (samplesPerCharAverage * 0.8f) + (currentAverage * 0.2f)
                         }
 
-                        info.boundaries = mapToSource(
-                            stream.speech,
-                            estimateWordBoundaries(stream.speech.text, info.totalFrames, allSamples),
-                        )
+                        info.boundaries = estimateWordBoundaries(stream.text, info.totalFrames, allSamples)
                         info.fullSamplesAccumulator.clear()
                         info.isWriteFinished = true
                         break
@@ -769,9 +735,9 @@ class SherpaTtsEngine @Inject constructor(
         }
     }
 
-    // NOTE: As of Sherpa-ONNX v2.0.2, native word-level timestamps are supported in the C++ core
-    // but not exposed in the Kotlin/JVM bindings (GeneratedAudio only contains samples/sampleRate).
-    // Using this heuristic until the bindings expose timestamps.
+    // NOTE: As of Sherpa-ONNX v1.13.4, native word-level timestamps are supported in the C++ core
+    // but not yet exposed in the Java/JNI bindings (GeneratedAudio only contains samples/sampleRate).
+    // Using this heuristic until the Java API is updated in a future release.
     override fun release() {
         synchronized(this) {
             synthesisJob?.cancel()
@@ -803,34 +769,6 @@ class SherpaTtsEngine @Inject constructor(
     }
 
     companion object {
-        /**
-         * Rewrites boundary offsets from the synthesized text back to the displayed text.
-         * Boundaries whose range cannot be mapped are dropped rather than reported out of bounds.
-         */
-        internal fun mapToSource(
-            speech: NormalizedSpeech,
-            boundaries: List<WordBoundary>,
-        ): List<WordBoundary> = boundaries.mapNotNull { boundary ->
-            val range = speech.sourceRange(boundary.startChar, boundary.endChar) ?: return@mapNotNull null
-            WordBoundary(range.first, range.last + 1, boundary.startSample, boundary.endSample)
-        }
-
-        /**
-         * Model types whose text frontend is a lexicon in Sherpa-ONNX 2.x. Pocket and Supertonic
-         * ship their own character frontends and expose no lexicon config. Exposed for tests.
-         */
-        internal fun requiresLexicon(type: TtsModelType): Boolean = when (type) {
-            TtsModelType.VITS,
-            TtsModelType.MATCHA,
-            TtsModelType.KOKORO,
-            TtsModelType.ZIPVOICE,
-            TtsModelType.KITTEN,
-            -> true
-            TtsModelType.POCKET,
-            TtsModelType.SUPERTONIC,
-            -> false
-        }
-
         /**
          * Estimates per-word sample boundaries using a character-weight heuristic. Exposed for tests.
          */

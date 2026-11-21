@@ -15,32 +15,11 @@
  */
 package com.mienaiknife.narra.tts.ondevice
 
-import com.mienaiknife.narra.domain.models.TtsModelType
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class SherpaTtsEngineTest {
-    @Test
-    fun testLexiconIsRequiredForPhonemeBasedModels() {
-        listOf(
-            TtsModelType.VITS,
-            TtsModelType.MATCHA,
-            TtsModelType.KOKORO,
-            TtsModelType.ZIPVOICE,
-            TtsModelType.KITTEN,
-        ).forEach { type ->
-            assertTrue("$type should require a lexicon", SherpaTtsEngine.requiresLexicon(type))
-        }
-    }
-
-    @Test
-    fun testLexiconIsNotRequiredForSelfContainedFrontends() {
-        assertFalse(SherpaTtsEngine.requiresLexicon(TtsModelType.POCKET))
-        assertFalse(SherpaTtsEngine.requiresLexicon(TtsModelType.SUPERTONIC))
-    }
-
     @Test
     fun testEstimateWordBoundaries() {
         val text = "Hello world"

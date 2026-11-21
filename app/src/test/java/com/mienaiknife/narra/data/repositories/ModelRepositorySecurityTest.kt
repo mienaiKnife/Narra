@@ -23,10 +23,7 @@ import okhttp3.OkHttpClient
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry
 import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream
 import org.apache.commons.compress.compressors.bzip2.BZip2CompressorOutputStream
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
 import org.junit.Assert.assertThrows
-import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -42,7 +39,6 @@ class ModelRepositorySecurityTest {
 
     private lateinit var repository: ModelRepositoryImpl
     private lateinit var targetDir: File
-    private lateinit var filesDir: File
 
     @Before
     fun setUp() {
@@ -51,28 +47,11 @@ class ModelRepositorySecurityTest {
         val mockClient = mock(OkHttpClient::class.java)
         val mockWorkManager = mock(WorkManager::class.java)
 
-        filesDir = tempFolder.newFolder("files")
+        val filesDir = tempFolder.newFolder("files")
         `when`(mockContext.filesDir).thenReturn(filesDir)
 
         repository = ModelRepositoryImpl(mockContext, mockDao, mockClient, mockWorkManager)
         targetDir = tempFolder.newFolder("target")
-    }
-
-    @Test
-    fun `ensureLexiconAvailable returns null for a language without a lexicon`() = runBlocking {
-        assertNull(repository.ensureLexiconAvailable("fr"))
-    }
-
-    @Test
-    fun `ensureLexiconAvailable reuses an already downloaded lexicon`() = runBlocking {
-        val lexicon = File(filesDir, "tts_models/lexicons/lexicon-en-us.txt")
-        lexicon.parentFile?.mkdirs()
-        lexicon.writeText("hello || h ə lˈ o ʊ\n")
-
-        val path = requireNotNull(repository.ensureLexiconAvailable("en-US"))
-
-        assertTrue(File(path).isFile)
-        assertEquals(lexicon.absolutePath, path)
     }
 
     @Test

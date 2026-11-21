@@ -55,7 +55,7 @@ turbine = "1.2.1"
 coroutines-test = "1.11.0"
 glance = "1.1.1"
 spotless = "8.11.0"
-sherpaOnnx = "v2.0.2"
+sherpaOnnx = "1.13.3"
 testServices = "1.6.0"
 
 [libraries]
@@ -101,7 +101,7 @@ coil-svg = { group = "io.coil-kt.coil3", name = "coil-svg", version.ref = "coil"
 okhttp = { group = "com.squareup.okhttp3", name = "okhttp", version.ref = "okhttp" }
 epublib = { group = "com.positiondev.epublib", name = "epublib-core", version.ref = "epublib" }
 kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "kotlinxSerialization" }
-sherpa-onnx = { group = "com.github.k2-fsa.sherpa-onnx", name = "sherpa-onnx", version.ref = "sherpaOnnx" }
+sherpa-onnx = { group = "com.github.k2-fsa", name = "sherpa-onnx", version.ref = "sherpaOnnx" }
 commons-compress = { group = "org.apache.commons", name = "commons-compress", version.ref = "commonsCompress" }
 androidx-work-runtime-ktx = { group = "androidx.work", name = "work-runtime-ktx", version.ref = "work" }
 androidx-work-testing = { group = "androidx.work", name = "work-testing", version.ref = "work" }

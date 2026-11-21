@@ -261,10 +261,6 @@ dependencies {
         exclude(group = "xmlpull", module = "xmlpull")
         exclude(group = "net.sf.kxml", module = "kxml2")
     }
-    // 2.x is published as the Android AAR module `com.github.k2-fsa.sherpa-onnx:sherpa-onnx`
-    // (tag `v2.0.2`). The aggregator `com.github.k2-fsa:sherpa-onnx` is avoided: its POM pulls in
-    // the desktop JVM API plus six desktop native bundles. 2.x ignores the espeak-ng `dataDir`, so
-    // ModelRepository/ensureLexiconAvailable supplies a lexicon instead; see docs/TTS_ENGINES.md.
     implementation(libs.sherpa.onnx)
     implementation(libs.room.runtime)
     implementation(libs.room.ktx)
@@ -312,10 +308,7 @@ tasks.register("checkSherpaUpdate") {
     group = "help"
     description = "Checks if there is a newer version of Sherpa-ONNX available on GitHub."
     doLast {
-        // JitPack publishes some releases under a tag-prefixed coordinate (`v2.0.2`), so normalise
-        // before comparing against the GitHub tag name.
         val currentVersion = libs.versions.sherpaOnnx.get()
-        val currentComparable = currentVersion.removePrefix("v")
         val latestReleaseUrl = "https://api.github.com/repos/k2-fsa/sherpa-onnx/releases/latest"
         try {
             val url = uri(latestReleaseUrl).toURL()
@@ -333,7 +326,7 @@ tasks.register("checkSherpaUpdate") {
                 println("Current version: $currentVersion")
                 println("Latest version:  $latestVersion")
 
-                if (currentComparable != latestVersion) {
+                if (currentVersion != latestVersion) {
                     println("\n[!] A newer version of Sherpa-ONNX is available!")
                     println("Check releases here: https://github.com/k2-fsa/sherpa-onnx/releases")
                 } else {
