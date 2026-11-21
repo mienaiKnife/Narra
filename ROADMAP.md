@@ -41,7 +41,7 @@ Repository changes:
       update `docs/RELEASING.md`.
 - [ ] Replace the Chequered Ink chime sounds in `res/raw` with CC0/public-domain audio, or confirm
       their license permits redistribution inside the app.
-- [ ] Ship the non-code asset licenses: SIL OFL 1.1 for OpenDyslexic 3 and LGPL for
+- [x] Ship the non-code asset licenses: SIL OFL 1.1 for OpenDyslexic 3 and LGPL for
       `epublib-core` (the jar contains no license file), surfaced from the in-app licenses screen.
 - [x] Add store metadata under `fastlane/metadata/android/en-US/`: title, short and full
       descriptions, a 512×512 icon, phone screenshots, and a changelog per version code.

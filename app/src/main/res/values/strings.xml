@@ -462,6 +462,8 @@
     <string name="unit_45_minutes">45 minutes</string>
     <string name="unit_1_hour">1 hour</string>
     <string name="reader_menu_licenses">Licenses</string>
+    <string name="licenses_view_full_text">View full license text</string>
+    <string name="action_close">Close</string>
 
     <plurals name="unit_minutes">
         <item quantity="one">1 minute</item>
