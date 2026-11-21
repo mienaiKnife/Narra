@@ -41,21 +41,16 @@ changing the relevant area.
   (`ArticleRepository`, `FeedRepository`, `ImportExportRepository`) into the common `Article` model;
   always persist the source URL for saved web articles. See
   [docs/CONTENT_PARSING.md](docs/CONTENT_PARSING.md).
-- **On-device models and large lexicons are downloaded, never bundled**: Sherpa-ONNX models and the
+- **On-device models and lexicons are downloaded, never bundled**: Sherpa-ONNX models and the
   per-language 2.x lexicons are large and fetched at runtime. `ModelRepository` owns
-  download/storage/selection and is separate from `TtsEngine`. Only a small, versioned English
-  pronunciation supplement (`LexiconSupplement`) ships in the app; it is hand-derived from entries
-  in the downloaded lexicon, merged into a patched copy at runtime, and the downloaded base stays
-  recoverable. The 2.x frontend silently drops words the lexicon lacks, so the OOV pass
-  (`SpeechTextPreparer` + `LexiconIndex`) must stay in front of synthesis to keep unknown words
-  audible. A model whose language has no sourced lexicon must fail loudly (`TtsState.Error`), never
-  play silence. See [docs/TTS_ENGINES.md](docs/TTS_ENGINES.md#known-issue-dropped-out-of-vocabulary-words-sherpa-onnx-2x).
+  download/storage/selection and is separate from `TtsEngine`. A model whose language has no
+  sourced lexicon must fail loudly (`TtsState.Error`), never play silence. See
+  [docs/TTS_ENGINES.md](docs/TTS_ENGINES.md).
 - **Sherpa-ONNX word highlighting**: native timestamps exist in the C++ core (v1.13.4+) but are not
-  exposed in the Java/JNI bindings as of v2.0.2; `SherpaTtsEngine` uses a heuristic, anchored per
-  sentence because each sentence is synthesized in its own `generate` call. Do not refactor to
-  native timestamps until `GeneratedAudio` exposes them. The sanctioned alternative is the Kaldi
-  HMM/GMM `ForcedAligner` shipped in 2.x (audio + transcript → word intervals), which needs its own
-  downloaded model package and should be added deliberately. See
+  exposed in the Java/JNI bindings as of v2.0.2; `SherpaTtsEngine` uses a heuristic. Do not refactor
+  to native timestamps until `GeneratedAudio` exposes them. The sanctioned alternative is the
+  Kaldi HMM/GMM `ForcedAligner` shipped in 2.x (audio + transcript → word intervals), which needs
+  its own downloaded model package and should be added deliberately. See
   [docs/TTS_ENGINES.md](docs/TTS_ENGINES.md).
 - **Licensing & secrets**: all dependencies must be Apache 2.0/MIT/LGPL-compatible (flag copyleft).
   Never commit API keys or secrets. This project will never require a first-party account or a

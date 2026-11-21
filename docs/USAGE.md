@@ -58,7 +58,6 @@ Uses the text-to-speech engine built into your phone (like Google Speech Service
 Provides high-quality, natural-sounding AI voices that run entirely on your device without an internet connection.
 - **Download Models**: Go to **Settings > Voices**, select "On-device AI", and download a voice model (e.g., Piper or Kokoro).
 - **Customization**: Adjust "Noise Scale" (expressiveness) and "Length Scale" (speed) for these models.
-- **Known limitation**: These voices pronounce from a downloaded dictionary, and the dictionary does not contain every word. Narra patches common gaps and falls back to decomposing or spelling unusual words, so names and new technical terms may be sounded out rather than pronounced naturally. If an ordinary word is skipped, please report it with the word and the voice you use; the technical background is in [TTS_ENGINES.md](TTS_ENGINES.md#known-issue-dropped-out-of-vocabulary-words-sherpa-onnx-2x).
 
 ## Settings and Data
 
