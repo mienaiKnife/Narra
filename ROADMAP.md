@@ -43,7 +43,7 @@ Repository changes:
       their license permits redistribution inside the app.
 - [ ] Ship the non-code asset licenses: SIL OFL 1.1 for OpenDyslexic 3 and LGPL for
       `epublib-core` (the jar contains no license file), surfaced from the in-app licenses screen.
-- [ ] Add store metadata under `fastlane/metadata/android/en-US/`: title, short and full
+- [x] Add store metadata under `fastlane/metadata/android/en-US/`: title, short and full
       descriptions, a 512×512 icon, phone screenshots, and a changelog per version code.
 - [ ] Tune the release build for F-Droid's build VMs: lower the Gradle heap, and decide whether
       `lint.checkReleaseBuilds` stays enabled for release assembly.

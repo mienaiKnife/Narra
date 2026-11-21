@@ -1,0 +1,40 @@
+Narra turns text into audio and plays it like a podcast. Subscribe to RSS
+feeds, import EPUB books, or save web articles, then queue them up and
+listen without ads, accounts, or tracking.
+
+FEATURES
+
+- RSS and Atom feeds: subscribe to blogs and fetch new articles
+  automatically.
+- EPUB import: listen to DRM-free ebooks.
+- Web article import: extract clean, readable text from a URL.
+- Listening queue: play, reorder, and autoplay items in sequence.
+- Two TTS engines: Android's built-in voices, or optional on-device AI
+  voices powered by Sherpa-ONNX.
+- Background playback with notification and lock-screen controls.
+- Home screen widget with playback controls and queue status.
+- Sleep timer, adjustable playback speed, and customizable skip
+  durations.
+- Word highlighting while reading along.
+- OPML import and export for your feed list.
+- JSON backup and restore, plus optional auto-export for syncing between
+  devices with a file-sync tool such as Syncthing.
+
+PRIVACY
+
+Narra requires no account and has no analytics, ads, or crash reporting.
+Your feeds, articles, and listening history stay on your device, stored in
+an encrypted database.
+
+The optional AI voices run entirely on the device. Their voice models are
+large, so Narra downloads them only when you choose one in Settings >
+Voices, and the download can be restricted to Wi-Fi. Android's built-in
+TTS works without downloading anything in Narra.
+
+OPEN SOURCE
+
+Narra is free and open source software, licensed under Apache 2.0.
+Source code: https://github.com/mienaiKnife/Narra
+
+If you are switching from another installation source, export a backup
+before uninstalling the old build.

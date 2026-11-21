@@ -1,0 +1,7 @@
+First release.
+
+Subscribe to RSS and Atom feeds, import EPUB books, or save web articles
+and listen with Android's built-in TTS or optional on-device AI voices.
+Includes a listening queue, background playback with lock-screen
+controls, a home-screen widget, sleep timer, OPML import and export, and
+encrypted local storage with file-based backup and restore.
