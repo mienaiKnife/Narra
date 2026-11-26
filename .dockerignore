@@ -27,7 +27,6 @@ out
 .cxx
 *.log
 .DS_Store
-dummy-docs
 docs
 README.md
 LOCALIZATION.md
