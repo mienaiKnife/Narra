@@ -4,7 +4,7 @@ Narra follows a Clean Architecture approach with a clear separation of concerns:
 
 ## Layers
 
-- **UI Layer**: Built with **Jetpack Compose**. ViewModels observe state from the domain layer and are kept free of Android framework dependencies to ensure testability. Includes home screen widgets built with **Jetpack Glance**.
+- **UI Layer**: Built with **Jetpack Compose**. ViewModels observe state from the domain layer and are kept free of Android framework dependencies to ensure testability. Includes home screen widgets built with **Jetpack Glance**. The palette, typography, component patterns, and preview/screenshot conventions are documented in [DESIGN.md](DESIGN.md).
 - **Domain Layer**: The "brain" of the app. Contains domain models (`Article`, `ContentBlock`, `RichText`, `TtsModel`) and core interfaces (`TtsEngine`, `ContentRepository`).
 - **Data Layer**: Implementation of repositories. Handles data orchestration between local storage and remote APIs. Contains the Room entities (`ArticleEntity`, `FeedEntity`, `TtsModelEntity`) and maps them to the domain models. Data is encrypted using **SQLCipher** (key held in the Android Keystore). If the database file exists but cannot be opened with the current passphrase, `DatabaseModule` backs it up and recreates it rather than crashing. This only affects development installs and users who lost their key; changes to the key handling must preserve this behavior or provide a migration path.
 
@@ -33,6 +33,11 @@ Located in `data/parsing` (`HtmlParser.kt`), it is responsible for converting ra
 
 ### `ModelRepository`
 Manages the lifecycle of on-device AI models. It handles downloading from remote sources, local storage management, and versioning.
+
+### `CustomPronunciationRepository`
+Stores the user's word/phrase pronunciations in the settings DataStore. The lexicon patcher appends
+them to the merged Sherpa-ONNX lexicon, and the pronunciation settings screen reads and edits them;
+see [TTS_ENGINES.md#custom-pronunciations](TTS_ENGINES.md#custom-pronunciations).
 
 ## Data Persistence
 

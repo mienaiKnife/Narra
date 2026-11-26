@@ -56,9 +56,28 @@ Uses the text-to-speech engine built into your phone (like Google Speech Service
 
 ### 2. On-device AI (Sherpa-ONNX)
 Provides high-quality, natural-sounding AI voices that run entirely on your device without an internet connection.
-- **Download Models**: Go to **Settings > Voices**, select "On-device AI", and download a voice model (e.g., Piper or Kokoro).
-- **Customization**: Adjust "Noise Scale" (expressiveness) and "Length Scale" (speed) for these models.
+- **Download Models**: Go to **Settings > Voices**, select "On-device AI", and download a voice model (e.g., Piper or Kokoro). The voice list is grouped by language and scrolls inside its box, so it stays usable as more languages are added.
+- **Customization**: Select a voice, then tune it below the list. Controls appear only for models that use them:
+  - **Noise Scale** (VITS and Matcha) changes expressiveness. Matcha starts at 1.0, Piper VITS voices at 0.667.
+  - **Length Scale** (VITS, Matcha, Kokoro and Kitten) changes pacing. Higher values speak more slowly.
+  - **Extra Pause Between Sentences** adds silence between sentences, in milliseconds. This is independent of the player's speed control.
+  - **Advanced** holds **Noise Scale W** (VITS only), **Pause Length** (models that support it), and **CPU Threads** (all models). More threads can speed up synthesis at the cost of battery.
+  - **Reset** restores the selected model's defaults.
+  Each model remembers its own settings, so switching voices does not carry tuning over to another voice.
 - **Known limitation**: These voices pronounce from a downloaded dictionary, and the dictionary does not contain every word. Narra patches common gaps and falls back to decomposing or spelling unusual words, so names and new technical terms may be sounded out rather than pronounced naturally. If an ordinary word is skipped, please report it with the word and the voice you use; the technical background is in [TTS_ENGINES.md](TTS_ENGINES.md#known-issue-dropped-out-of-vocabulary-words-sherpa-onnx-2x).
+
+#### Custom pronunciations
+
+If a name, brand, acronym, or technical term is spelled out or pronounced oddly, you can give it a pronunciation of your own. This works with the on-device AI voices only.
+
+1. Go to **Settings > Voices > Custom pronunciations**.
+2. Enter the word or phrase, then its pronunciation in American English ARPAbet (not IPA), separated by spaces. For example, `Narra` → `N AA1 R AH0`, or `Kaldi` → `K AA1 L D IY0`.
+3. Save the entry. Playback stops while the voice reloads, and the new pronunciation applies from then on.
+
+- **Edit or delete**: Change an existing entry to correct it, or delete it to go back to the dictionary's pronunciation. Entries are matched after lowercasing and whitespace cleanup, so saving the same word again replaces the old entry.
+- **Stress**: A `1` after a vowel is primary stress, `2` is secondary, and `0` (or no digit) is unstressed. Consonants take no digit.
+- **Word rules**: Use letters, spaces, apostrophes, and hyphens only. Numbers and sentence punctuation are rewritten before speech, so an entry containing them would never match. Short phrases work too.
+- **Only exact forms**: Possessives and other inflections are not generated from an entry. Add `Narra's` or `Narras` separately if they need the same pronunciation.
 
 ## Settings and Data
 

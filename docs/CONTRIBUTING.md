@@ -39,6 +39,14 @@ Follow the Clean Architecture layering described in
 must be abstracted behind the `TtsEngine` interface. Don't bundle on-device TTS model files in the
 APK.
 
+### UI and design
+
+Before changing a Compose screen, component, theme token, widget, `@Preview`, or screenshot test,
+read [docs/DESIGN.md](DESIGN.md). It defines the palette, typography, spacing, component patterns,
+accessibility expectations, and the preview/Paparazzi workflow. Reuse the shared components in
+`ui/components/` instead of reimplementing a row or header, and update the design document when a
+change intentionally introduces a new pattern.
+
 ### Database changes
 
 When changing a Room entity, you **must** bump the version, add a `Migration`, update indices, and

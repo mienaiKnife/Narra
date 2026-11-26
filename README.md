@@ -23,7 +23,7 @@ Grab the latest signed APK from [GitHub Releases](https://github.com/mienaiKnife
 Narra requires Android 7.0 (API 24) or newer. Release APKs include 64-bit and 32-bit ARM native
 libraries; use a debug build for x86 emulators.
 
-## Getting Started
+## Building
 
 Follow these steps to set up the development environment and build Narra.
 
@@ -87,6 +87,7 @@ Run unit tests using the following command:
 - [AGENTS.md](AGENTS.md) - Guide to the project for AI agents
 - [Localization](LOCALIZATION.md) - Guide to translating Narra into new languages
 - [Architecture](docs/ARCHITECTURE.md) - Learn about the project's technical design
+- [Design Language](docs/DESIGN.md) - Palette, typography, component patterns, and preview conventions
 - [TTS Engines](docs/TTS_ENGINES.md) - Guide for implementing and extending TTS providers
 - [Content Parsing](docs/CONTENT_PARSING.md) - How we extract text from RSS, ebooks, and Web
 - [Playback Lifecycle](docs/PLAYBACK_LIFECYCLE.md) - Understanding the media service and audio flow

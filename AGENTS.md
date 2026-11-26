@@ -20,6 +20,11 @@ changing the relevant area.
 
 - **Clean Architecture layering**: UI → ViewModel → Repository → Data sources. ViewModels stay free
   of Android framework dependencies. See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+- **Read the design language before changing the GUI**: every Compose screen, shared component,
+  theme token, Glance widget, `@Preview`, or screenshot test must follow
+  [docs/DESIGN.md](docs/DESIGN.md). It is the source of truth for the palette, typography, spacing,
+  component patterns, accessibility rules, and preview/Paparazzi conventions. Do not invent a new
+  visual pattern without updating that document in the same change.
 - **TTS engines are interchangeable** behind the `TtsEngine` interface. New providers (cloud or
   self-hosted) are separate modules configured by base URL + API key. See
   [docs/TTS_ENGINES.md](docs/TTS_ENGINES.md).
@@ -46,7 +51,9 @@ changing the relevant area.
   download/storage/selection and is separate from `TtsEngine`. Only a small, versioned English
   pronunciation supplement (`LexiconSupplement`) ships in the app; it is hand-derived from entries
   in the downloaded lexicon, merged into a patched copy at runtime, and the downloaded base stays
-  recoverable. The 2.x frontend silently drops words the lexicon lacks, so the OOV pass
+  recoverable. User pronunciations are a separate, small, user-owned layer appended after the
+  built-in supplement; the downloaded base is never modified and user entries win by last-wins. The
+  2.x frontend silently drops words the lexicon lacks, so the OOV pass
   (`SpeechTextPreparer` + `LexiconIndex`) must stay in front of synthesis to keep unknown words
   audible. A model whose language has no sourced lexicon must fail loudly (`TtsState.Error`), never
   play silence. See [docs/TTS_ENGINES.md](docs/TTS_ENGINES.md#known-issue-dropped-out-of-vocabulary-words-sherpa-onnx-2x).
