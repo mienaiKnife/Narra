@@ -56,6 +56,9 @@ sealed interface NavDestination {
     data class SettingsDownloads(val highlightSetting: String? = null) : NavDestination
 
     @Serializable
+    data object SettingsPronunciations : NavDestination
+
+    @Serializable
     data object SettingsAbout : NavDestination
 
     @Serializable

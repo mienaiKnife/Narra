@@ -88,6 +88,7 @@ fun BottomNavBar(navController: NavController) {
                         NavDestination.SettingsUi::class,
                         NavDestination.SettingsPlayback::class,
                         NavDestination.SettingsVoices::class,
+                        NavDestination.SettingsPronunciations::class,
                         NavDestination.SettingsDownloads::class,
                         NavDestination.SettingsAbout::class,
                         NavDestination.SettingsLicenses::class,

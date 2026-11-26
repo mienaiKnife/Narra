@@ -107,6 +107,101 @@ class LexiconPatcherTest {
     }
 
     @Test
+    fun `an override of a base key is appended after the base line`() {
+        val merged = LexiconPatcher.resolve(
+            base,
+            supplement,
+            LexiconSupplement.VERSION,
+            overrides = mapOf("Her" to "h ɜː ɹ"),
+            revision = "arpabet-1:0000000000000001",
+        )
+
+        val lines = merged.readLines()
+        val baseIndex = lines.indexOf("Her || h ɜː")
+        val overrideIndex = lines.indexOf("her || h ɜː ɹ")
+
+        assertTrue("base line must be kept", baseIndex >= 0)
+        assertTrue("override must follow the base line", overrideIndex > baseIndex)
+        // The native 2.0.2 loader keeps the last duplicate key, so the appended line wins.
+        assertEquals(lines.lastIndex, overrideIndex)
+        assertEquals(2, lines.count { it.substringBefore("||").trim().lowercase(Locale.ROOT) == "her" })
+        assertTrue("base lexicon must be untouched", base.readText().contains("Her || h ɜː"))
+    }
+
+    @Test
+    fun `an override wins over a built-in supplement entry but both lines are written`() {
+        val merged = LexiconPatcher.resolve(
+            base,
+            supplement,
+            LexiconSupplement.VERSION,
+            overrides = mapOf("Seem" to "s iː m"),
+            revision = "arpabet-1:0000000000000002",
+        )
+
+        val lines = merged.readLines()
+        val supplementIndex = lines.indexOf("seem || sˈ iː m")
+        val overrideIndex = lines.indexOf("seem || s iː m")
+
+        assertTrue("supplement entry must still be written", supplementIndex >= 0)
+        assertTrue("override must follow the supplement entry", overrideIndex > supplementIndex)
+        // Last-wins: the user line is the final entry in the file.
+        assertEquals(lines.lastIndex, overrideIndex)
+    }
+
+    @Test
+    fun `overrides without a supplement still produce a patched copy`() {
+        val merged = LexiconPatcher.resolve(
+            base,
+            supplement = null,
+            version = LexiconSupplement.VERSION,
+            overrides = mapOf("Narra" to "n ˈ ɑː ɹ ə"),
+            revision = "arpabet-1:0000000000000003",
+        )
+
+        assertNotEquals(base, merged)
+        assertTrue("base lexicon must stay in place", base.isFile)
+
+        val lines = merged.readLines()
+        assertEquals("# Narra lexicon supplement v1 arpabet-1:0000000000000003", lines.first())
+        assertEquals("narra || n ˈ ɑː ɹ ə", lines.last())
+        assertFalse("the supplement must not be merged in", lines.any { it.startsWith("seem ||") })
+    }
+
+    @Test
+    fun `empty supplement and overrides keep the base path`() {
+        assertEquals(
+            base,
+            LexiconPatcher.resolve(base, emptyMap(), LexiconSupplement.VERSION, emptyMap(), ""),
+        )
+        assertFalse(LexiconPatcher.mergedFileFor(base).exists())
+    }
+
+    @Test
+    fun `a revision change regenerates the merged file`() {
+        val overrides = mapOf("Narra" to "n ˈ ɑː ɹ ə")
+        val first = LexiconPatcher.resolve(
+            base,
+            supplement,
+            LexiconSupplement.VERSION,
+            overrides,
+            "arpabet-1:aaaaaaaaaaaaaaaa",
+        )
+        assertEquals("# Narra lexicon supplement v1 arpabet-1:aaaaaaaaaaaaaaaa", first.readLines().first())
+
+        val second = LexiconPatcher.resolve(
+            base,
+            supplement,
+            LexiconSupplement.VERSION,
+            overrides,
+            "arpabet-1:bbbbbbbbbbbbbbbb",
+        )
+
+        assertEquals(first, second)
+        assertEquals("# Narra lexicon supplement v1 arpabet-1:bbbbbbbbbbbbbbbb", second.readLines().first())
+        assertEquals("narra || n ˈ ɑː ɹ ə", second.readLines().last())
+    }
+
+    @Test
     fun `a newer base regenerates the merged file`() {
         val merged = LexiconPatcher.resolve(base, supplement, LexiconSupplement.VERSION)
 

@@ -181,6 +181,13 @@ val allSearchableSettings =
             R.array.settings_search_keywords_noise_scale,
         ),
         SearchableSetting(
+            "noiseScaleW",
+            R.string.settings_voices_noise_scale_w_title,
+            R.string.settings_voices_noise_scale_w_desc,
+            NavDestination.SettingsVoices("noiseScaleW"),
+            R.array.settings_search_keywords_noise_scale_w,
+        ),
+        SearchableSetting(
             "lengthScale",
             R.string.settings_voices_length_scale_title,
             R.string.settings_voices_length_scale_desc,
@@ -188,11 +195,32 @@ val allSearchableSettings =
             R.array.settings_search_keywords_length_scale,
         ),
         SearchableSetting(
-            "kokoroVoice",
-            R.string.settings_voices_kokoro_voice,
-            R.string.settings_voices_kokoro_voice_desc,
-            NavDestination.SettingsVoices("kokoroVoice"),
-            R.array.settings_search_keywords_kokoro_voice,
+            "pauseScale",
+            R.string.settings_voices_pause_scale_title,
+            R.string.settings_voices_pause_scale_desc,
+            NavDestination.SettingsVoices("pauseScale"),
+            R.array.settings_search_keywords_pause_scale,
+        ),
+        SearchableSetting(
+            "extraPause",
+            R.string.settings_voices_extra_pause_title,
+            R.string.settings_voices_extra_pause_desc,
+            NavDestination.SettingsVoices("extraPause"),
+            R.array.settings_search_keywords_extra_pause,
+        ),
+        SearchableSetting(
+            "cpuThreads",
+            R.string.settings_voices_cpu_threads_title,
+            R.string.settings_voices_cpu_threads_desc,
+            NavDestination.SettingsVoices("cpuThreads"),
+            R.array.settings_search_keywords_cpu_threads,
+        ),
+        SearchableSetting(
+            "voice",
+            R.string.settings_voices_voice,
+            R.string.settings_voices_voice_desc,
+            NavDestination.SettingsVoices("voice"),
+            R.array.settings_search_keywords_voice,
         ),
         SearchableSetting(
             "voiceData",
@@ -200,6 +228,13 @@ val allSearchableSettings =
             R.string.settings_voices_voice_data_desc,
             NavDestination.SettingsVoices("voiceData"),
             R.array.settings_search_keywords_voice_data,
+        ),
+        SearchableSetting(
+            "pronunciations",
+            R.string.settings_pronunciations_title,
+            R.string.settings_voices_pronunciations_desc,
+            NavDestination.SettingsPronunciations,
+            R.array.settings_search_keywords_pronunciations,
         ),
         // Downloads
         SearchableSetting(

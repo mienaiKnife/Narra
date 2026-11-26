@@ -16,6 +16,7 @@
 package com.mienaiknife.narra.tts.ondevice
 
 import com.mienaiknife.narra.domain.TtsState
+import com.mienaiknife.narra.domain.repository.CustomPronunciationRepository
 import com.mienaiknife.narra.domain.repository.ModelRepository
 import com.mienaiknife.narra.playback.PlaybackSettingsManager
 import kotlinx.coroutines.Dispatchers
@@ -36,6 +37,7 @@ import org.mockito.Mockito.`when`
 class SherpaTtsEngineErrorTest {
     private lateinit var modelRepository: ModelRepository
     private lateinit var settingsManager: PlaybackSettingsManager
+    private lateinit var pronunciationRepository: CustomPronunciationRepository
     private lateinit var engine: SherpaTtsEngine
     private val testDispatcher = StandardTestDispatcher()
 
@@ -44,15 +46,15 @@ class SherpaTtsEngineErrorTest {
         Dispatchers.setMain(testDispatcher)
         modelRepository = mock(ModelRepository::class.java)
         settingsManager = mock(PlaybackSettingsManager::class.java)
+        pronunciationRepository = mock(CustomPronunciationRepository::class.java)
 
         // Mocking settings flows to avoid null pointer exceptions during init
         `when`(settingsManager.ttsModelId).thenReturn(MutableStateFlow(null))
-        `when`(settingsManager.sherpaNoiseScale).thenReturn(MutableStateFlow(0.667f))
-        `when`(settingsManager.sherpaLengthScale).thenReturn(MutableStateFlow(1.0f))
-        `when`(settingsManager.ttsSpeakerId).thenReturn(MutableStateFlow(0))
-        `when`(settingsManager.sherpaSpeed).thenReturn(MutableStateFlow(1.0f))
+        `when`(settingsManager.sherpaVoiceOverrides).thenReturn(MutableStateFlow(emptyMap()))
+        `when`(modelRepository.getAvailableModels()).thenReturn(MutableStateFlow(emptyList()))
+        `when`(pronunciationRepository.observeAll()).thenReturn(MutableStateFlow(emptyList()))
 
-        engine = SherpaTtsEngine(modelRepository, settingsManager)
+        engine = SherpaTtsEngine(modelRepository, settingsManager, pronunciationRepository)
     }
 
     @After

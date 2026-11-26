@@ -23,8 +23,15 @@ import com.k2fsa.sherpa.onnx.*
 import com.mienaiknife.narra.domain.TtsEngine
 import com.mienaiknife.narra.domain.TtsErrorReason
 import com.mienaiknife.narra.domain.TtsState
+import com.mienaiknife.narra.domain.models.CustomPronunciation
+import com.mienaiknife.narra.domain.models.SherpaVoiceDefaults
+import com.mienaiknife.narra.domain.models.SherpaVoiceOverrides
+import com.mienaiknife.narra.domain.models.SherpaVoiceParams
 import com.mienaiknife.narra.domain.models.TtsModel
 import com.mienaiknife.narra.domain.models.TtsModelType
+import com.mienaiknife.narra.domain.models.defaultVoiceParams
+import com.mienaiknife.narra.domain.models.renderKeyFor
+import com.mienaiknife.narra.domain.repository.CustomPronunciationRepository
 import com.mienaiknife.narra.domain.repository.ModelRepository
 import com.mienaiknife.narra.playback.PlaybackSettingsManager
 import kotlinx.coroutines.CoroutineScope
@@ -53,6 +60,7 @@ import kotlin.time.Duration.Companion.milliseconds
 class SherpaTtsEngine @Inject constructor(
     private val modelRepository: ModelRepository,
     private val settingsManager: PlaybackSettingsManager,
+    private val customPronunciationRepository: CustomPronunciationRepository,
 ) : TtsEngine {
 
     private val _state = MutableStateFlow<TtsState>(TtsState.Initializing)
@@ -84,9 +92,18 @@ class SherpaTtsEngine @Inject constructor(
     private var playbackJob: Job? = null
     private var monitorJob: Job? = null
     private var currentModelId: String? = null
-    private var lastNoiseScale: Float = -1f
-    private var lastLengthScale: Float = -1f
-    private var currentModelType: TtsModelType? = null
+    private var lastSettingsSignature: Triple<String?, SherpaVoiceParams, List<CustomPronunciation>>? = null
+
+    /** Native-config values this app applies to the current model; unsupported ones are cleared. */
+    @Volatile
+    private var currentPauseScale: Float = SherpaVoiceDefaults.PAUSE_SCALE
+
+    /** Narra-level silence inserted between per-sentence synthesis calls. */
+    @Volatile
+    private var extraPauseMs: Int = SherpaVoiceDefaults.EXTRA_PAUSE_MS
+
+    @Volatile
+    private var currentSpeakerCount: Int = 1
 
     @Volatile
     private var currentSessionId: Int = 0
@@ -107,6 +124,18 @@ class SherpaTtsEngine @Inject constructor(
         var totalFrames: Int,
         var isWriteFinished: Boolean = false,
         var boundaries: List<WordBoundary> = emptyList(),
+    )
+
+    /**
+     * Everything that can change the native engine or the synthesis loop. Native-config changes
+     * re-initialize it; the pronunciation list is included because the patched lexicon is rebuilt
+     * and reloaded during initialization.
+     */
+    private data class EngineSettings(
+        val modelId: String?,
+        val modelType: TtsModelType?,
+        val params: SherpaVoiceParams,
+        val pronunciations: List<CustomPronunciation>,
     )
 
     data class UtteranceRequest(val text: String, val utteranceId: String, val sessionId: Int)
@@ -149,54 +178,51 @@ class SherpaTtsEngine @Inject constructor(
 
     init {
         scope.launch {
+            settingsManager.migrateLegacyVoiceSettings()
             combine(
                 settingsManager.ttsModelId,
-                settingsManager.sherpaNoiseScale,
-                settingsManager.sherpaLengthScale,
-            ) { modelId, noiseScale, lengthScale ->
-                Triple(modelId, noiseScale, lengthScale)
+                modelRepository.getAvailableModels(),
+                settingsManager.sherpaVoiceOverrides,
+                customPronunciationRepository.observeAll(),
+            ) { modelId, models, overrides, pronunciations ->
+                val modelType = models.find { it.id == modelId }?.type
+                val defaults = modelType?.defaultVoiceParams() ?: SherpaVoiceParams()
+                val modelOverrides = modelId?.let { overrides[it] } ?: SherpaVoiceOverrides()
+                EngineSettings(
+                    modelId = modelId,
+                    modelType = modelType,
+                    params = modelOverrides.applyTo(defaults),
+                    pronunciations = pronunciations,
+                )
             }
                 .distinctUntilChanged()
-                .collectLatest { (modelId, noiseScale, lengthScale) ->
-                    // Delay for scales to avoid rapid re-init while sliding
-                    if (modelId == currentModelId) {
-                        delay(500.milliseconds)
-                    }
-                    initializeEngine(modelId, noiseScale, lengthScale)
-                }
-        }
-
-        scope.launch {
-            settingsManager.ttsSpeakerId.collect { speakerId ->
-                if (currentSpeakerId != speakerId) {
-                    currentSpeakerId = speakerId
-                    // For Kokoro, we can change speaker without re-init,
-                    // but we might want to restart current synthesis to apply it immediately
-                }
-            }
-        }
-
-        scope.launch {
-            settingsManager.sherpaSpeed.collect { speed ->
-                setPlaybackSpeed(speed)
-            }
+                .collectLatest { settings -> applySettings(settings) }
         }
     }
 
-    private suspend fun initializeEngine(modelId: String?, noiseScale: Float, lengthScale: Float) {
-        val models = modelRepository.getAvailableModels().first()
-        val modelMetadata = models.find { it.id == modelId }
-        val modelType = modelMetadata?.type
+    private suspend fun applySettings(settings: EngineSettings) {
+        // These take effect without rebuilding the model.
+        extraPauseMs = settings.params.extraPauseMs
+        currentSpeakerId = settings.params.speakerId
 
-        if (
-            (modelId == currentModelId) &&
-            (modelType == TtsModelType.KOKORO || noiseScale == lastNoiseScale) &&
-            (lengthScale == lastLengthScale) &&
-            (tts != null)
-        ) {
-            return
+        val renderKey = settings.params.renderKeyFor(settings.modelType)
+        val signature = Triple(settings.modelId, renderKey, settings.pronunciations)
+        val needsInitialization = signature != lastSettingsSignature ||
+            (tts == null && settings.modelId != null)
+        if (!needsInitialization) return
+
+        // Debounce slider drags; a model switch should happen immediately.
+        if (settings.modelId == currentModelId && tts != null) {
+            delay(500.milliseconds)
         }
+        lastSettingsSignature = signature
+        initializeEngine(settings, renderKey)
+    }
 
+    private suspend fun initializeEngine(
+        settings: EngineSettings,
+        renderKey: SherpaVoiceParams,
+    ) {
         withContext(Dispatchers.IO) {
             _state.value = TtsState.Initializing
             try {
@@ -222,15 +248,18 @@ class SherpaTtsEngine @Inject constructor(
                     currentSampleRate = -1
                 }
 
-                if (modelId == null) {
+                if (settings.modelId == null) {
                     Log.d("SherpaTtsEngine", "Engine skipped initialization: no model selected")
+                    currentModelId = null
+                    currentSpeakerCount = 1
+                    currentPauseScale = renderKey.pauseScale
                     _state.value = TtsState.Idle
                     return@withContext
                 }
 
                 val models = modelRepository.getAvailableModels().first()
-                val modelMetadata = models.find { it.id == modelId }
-                val modelPath = modelRepository.getModelPath(modelId)
+                val modelMetadata = models.find { it.id == settings.modelId }
+                val modelPath = modelRepository.getModelPath(settings.modelId)
 
                 if (modelPath == null || modelMetadata == null) {
                     _state.value = TtsState.Error("Model files not found")
@@ -259,21 +288,25 @@ class SherpaTtsEngine @Inject constructor(
                     ""
                 }
 
-                val modelConfig = createModelConfig(modelMetadata, modelPath, lexiconPath, noiseScale, lengthScale)
+                val modelConfig = createModelConfig(modelMetadata, modelPath, lexiconPath, renderKey)
                 val config = OfflineTtsConfig(
                     model = modelConfig,
                     ruleFsts = "",
                     ruleFars = "",
                     maxNumSentences = 1,
-                    silenceScale = 0.2f,
+                    silenceScale = renderKey.pauseScale,
                 )
 
-                tts = OfflineTts(null, config)
-                currentModelId = modelId
-                currentModelType = modelType
-                lastNoiseScale = noiseScale
-                lastLengthScale = lengthScale
-                Log.i("SherpaTtsEngine", "Engine initialized successfully with model: $modelId, type: $modelType")
+                val newTts = OfflineTts(null, config)
+                tts = newTts
+                currentSpeakerCount = newTts.numSpeakers().coerceAtLeast(1)
+                currentModelId = settings.modelId
+                currentPauseScale = renderKey.pauseScale
+                Log.i(
+                    "SherpaTtsEngine",
+                    "Engine initialized successfully with model: ${settings.modelId}, " +
+                        "type: ${modelMetadata.type}",
+                )
                 _state.value = TtsState.Ready
                 startLoops()
             } catch (e: Exception) {
@@ -295,12 +328,11 @@ class SherpaTtsEngine @Inject constructor(
         null
     }
 
-    private fun createModelConfig(
+    internal fun createModelConfig(
         model: TtsModel,
         modelPath: String,
         lexiconPath: String,
-        noiseScale: Float,
-        lengthScale: Float,
+        params: SherpaVoiceParams,
     ): OfflineTtsModelConfig {
         var vits = OfflineTtsVitsModelConfig()
         var matcha = OfflineTtsMatchaModelConfig()
@@ -316,9 +348,9 @@ class SherpaTtsEngine @Inject constructor(
                     model = File(modelPath, "model.onnx").absolutePath,
                     lexicon = lexiconPath,
                     tokens = File(modelPath, "tokens.txt").absolutePath,
-                    noiseScale = noiseScale,
-                    noiseScaleW = 0.8f,
-                    lengthScale = lengthScale,
+                    noiseScale = params.noiseScale,
+                    noiseScaleW = params.noiseScaleW,
+                    lengthScale = params.lengthScale,
                 )
             }
 
@@ -328,8 +360,8 @@ class SherpaTtsEngine @Inject constructor(
                     vocoder = File(modelPath, "vocoder.onnx").absolutePath,
                     lexicon = lexiconPath,
                     tokens = File(modelPath, "tokens.txt").absolutePath,
-                    noiseScale = noiseScale,
-                    lengthScale = lengthScale,
+                    noiseScale = params.noiseScale,
+                    lengthScale = params.lengthScale,
                 )
             }
 
@@ -339,7 +371,7 @@ class SherpaTtsEngine @Inject constructor(
                     voices = File(modelPath, "voices.bin").absolutePath,
                     tokens = File(modelPath, "tokens.txt").absolutePath,
                     lexicon = lexiconPath,
-                    lengthScale = lengthScale,
+                    lengthScale = params.lengthScale,
                 )
             }
 
@@ -356,7 +388,7 @@ class SherpaTtsEngine @Inject constructor(
                     model = File(modelPath, "model.onnx").absolutePath,
                     voices = File(modelPath, "voices.bin").absolutePath,
                     tokens = File(modelPath, "tokens.txt").absolutePath,
-                    lengthScale = lengthScale,
+                    lengthScale = params.lengthScale,
                     lexicon = lexiconPath,
                 )
             }
@@ -392,7 +424,7 @@ class SherpaTtsEngine @Inject constructor(
             kitten = kitten,
             pocket = pocket,
             supertonic = supertonic,
-            numThreads = 4,
+            numThreads = params.cpuThreads,
             debug = true,
             provider = "cpu",
         )
@@ -428,13 +460,17 @@ class SherpaTtsEngine @Inject constructor(
                         ),
                     )
 
+                    // `speed` must stay 1.0: for VITS/Matcha it overrides lengthScale, and the
+                    // player already applies user speed by time-stretching the output.
                     val genConfig = GenerationConfig(
                         speed = 1.0f,
-                        sid = currentSpeakerId ?: 0,
+                        sid = (currentSpeakerId ?: 0).coerceIn(0, currentSpeakerCount - 1),
+                        silenceScale = currentPauseScale,
                     )
 
                     var framesGenerated = 0
-                    for (sentence in splitIntoSentences(speech.text)) {
+                    val sentences = splitIntoSentences(speech.text)
+                    for ((sentenceIndex, sentence) in sentences.withIndex()) {
                         if (request.sessionId != currentSessionId) break
                         val sentenceText = speech.text.substring(sentence.first, sentence.last + 1)
                         if (sentenceText.none { it.isLetterOrDigit() }) continue
@@ -479,8 +515,19 @@ class SherpaTtsEngine @Inject constructor(
                         }
                         if (sentenceFrames > 0) {
                             eventChannel.trySend(AudioStreamEvent.Chunk(sentenceSamples))
+                            // Narra synthesizes one sentence per call, so Sherpa's own pause
+                            // scaling cannot cover the gap between sentences. Append it here,
+                            // after the audio but before the next sentence's frames.
+                            val pauseFrames = if (sentenceIndex < sentences.lastIndex) {
+                                extraPauseMs.coerceAtLeast(0) * sampleRate / 1000
+                            } else {
+                                0
+                            }
+                            if (pauseFrames > 0) {
+                                eventChannel.trySend(AudioStreamEvent.Chunk(FloatArray(pauseFrames)))
+                            }
+                            framesGenerated += sentenceFrames + pauseFrames
                         }
-                        framesGenerated += sentenceFrames
                     }
                     eventChannel.trySend(AudioStreamEvent.Finished)
                 } catch (e: Exception) {
@@ -839,9 +886,7 @@ class SherpaTtsEngine @Inject constructor(
 
             // Reset initialization guards and queues so the engine can be re-initialized if reused.
             currentModelId = null
-            currentModelType = null
-            lastNoiseScale = -1f
-            lastLengthScale = -1f
+            lastSettingsSignature = null
             currentSampleRate = -1
             currentSessionId++
 

@@ -16,16 +16,31 @@
 package com.mienaiknife.narra.ui.viewmodels
 
 import com.mienaiknife.narra.domain.TtsState
+import com.mienaiknife.narra.domain.models.SherpaVoiceParams
 import com.mienaiknife.narra.domain.models.TtsModel
+import com.mienaiknife.narra.domain.models.TtsModelType
+import com.mienaiknife.narra.domain.models.VoiceCapabilities
+import com.mienaiknife.narra.domain.models.defaultVoiceParams
+import com.mienaiknife.narra.domain.models.voiceCapabilities
 import com.mienaiknife.narra.ui.UiText
 
 data class VoicesSettingsUiState(
     val availableModels: List<TtsModel> = emptyList(),
     val selectedEngine: String = "android",
     val selectedModelId: String? = null,
-    val selectedSpeakerId: Int = 0,
-    val sherpaNoiseScale: Float = 0.667f,
-    val sherpaLengthScale: Float = 1.0f,
+    val voiceParams: SherpaVoiceParams = SherpaVoiceParams(),
     val engineState: TtsState = TtsState.Idle,
     val errorMessage: UiText? = null,
-)
+) {
+    val selectedModel: TtsModel? get() = availableModels.find { it.id == selectedModelId }
+
+    val selectedModelType: TtsModelType? get() = selectedModel?.type
+
+    val voiceCapabilities: VoiceCapabilities
+        get() = selectedModelType?.voiceCapabilities ?: VoiceCapabilities()
+
+    val defaultVoiceParams: SherpaVoiceParams
+        get() = selectedModelType?.defaultVoiceParams() ?: SherpaVoiceParams()
+
+    val hasCustomVoiceParams: Boolean get() = voiceParams != defaultVoiceParams
+}

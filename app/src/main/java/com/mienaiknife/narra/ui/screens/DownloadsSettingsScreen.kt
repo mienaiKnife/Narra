@@ -548,36 +548,3 @@ fun DownloadsSettingsScreenPreview() {
         }
     }
 }
-
-@Preview(uiMode = Configuration.UI_MODE_NIGHT_YES, showBackground = true)
-@Composable
-fun DownloadsSettingsImportOnlyPreview() {
-    val navController = rememberNavController()
-    NarraTheme(darkTheme = true, dynamicColor = false) {
-        Scaffold(
-            bottomBar = { BottomNavBar(navController) },
-        ) { innerPadding ->
-            Box(modifier = Modifier.padding(innerPadding)) {
-                DownloadsSettingsContent(
-                    uiState = DownloadsSettingsUiState(
-                        autoImportEnabled = true,
-                        autoExportUri = "content://com.android.externalstorage.documents/document/primary%3ASync%2Fnarra_db.json",
-                    ),
-                    highlightSetting = null,
-                    onDownloadOverWifiOnlyChange = {},
-                    onRefreshIntervalChange = {},
-                    onInboxInitialLimitChange = {},
-                    onImportOpml = {},
-                    onExportOpml = {},
-                    onBackupDatabase = {},
-                    onRestoreDatabase = {},
-                    onAutoExportEnabledChange = {},
-                    onAutoImportEnabledChange = {},
-                    onSetSyncLocation = {},
-                    onDeleteDatabase = {},
-                    onBack = {},
-                )
-            }
-        }
-    }
-}

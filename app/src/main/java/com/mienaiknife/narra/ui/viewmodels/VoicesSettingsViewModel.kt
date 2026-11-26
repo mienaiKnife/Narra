@@ -18,7 +18,11 @@ package com.mienaiknife.narra.ui.viewmodels
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mienaiknife.narra.domain.TtsEngine
+import com.mienaiknife.narra.domain.models.SherpaVoiceOverrides
+import com.mienaiknife.narra.domain.models.SherpaVoiceParams
 import com.mienaiknife.narra.domain.models.TtsModel
+import com.mienaiknife.narra.domain.models.TtsModelType
+import com.mienaiknife.narra.domain.models.defaultVoiceParams
 import com.mienaiknife.narra.domain.repository.ModelRepository
 import com.mienaiknife.narra.playback.PlaybackSettingsManager
 import com.mienaiknife.narra.ui.UiText
@@ -44,6 +48,7 @@ class VoicesSettingsViewModel @Inject constructor(
     init {
         viewModelScope.launch {
             modelRepository.ensureDefaultModelsInitialized()
+            settingsManager.migrateLegacyVoiceSettings()
         }
     }
 
@@ -51,8 +56,7 @@ class VoicesSettingsViewModel @Inject constructor(
         val models: List<TtsModel>,
         val engine: String,
         val modelId: String?,
-        val speakerId: Int,
-        val noiseScale: Float,
+        val overrides: Map<String, SherpaVoiceOverrides>,
     )
 
     val uiState: StateFlow<VoicesSettingsUiState> = combine(
@@ -60,26 +64,18 @@ class VoicesSettingsViewModel @Inject constructor(
             modelRepository.getAvailableModels(),
             settingsManager.ttsEngine,
             settingsManager.ttsModelId,
-            settingsManager.ttsSpeakerId,
-            settingsManager.sherpaNoiseScale,
+            settingsManager.sherpaVoiceOverrides,
             ::VoicesData,
         ),
-        combine(
-            settingsManager.sherpaLengthScale,
-            ttsEngine.state,
-            _errorMessage,
-        ) { lengthScale, engineState, errorMessage ->
-            Triple(lengthScale, engineState, errorMessage)
-        },
-    ) { data, engineDetails ->
-        val (lengthScale, engineState, errorMessage) = engineDetails
+        ttsEngine.state,
+        _errorMessage,
+    ) { data, engineState, errorMessage ->
+        val modelType = data.models.find { it.id == data.modelId }?.type
         VoicesSettingsUiState(
             availableModels = data.models,
             selectedEngine = data.engine,
             selectedModelId = data.modelId,
-            selectedSpeakerId = data.speakerId,
-            sherpaNoiseScale = data.noiseScale,
-            sherpaLengthScale = lengthScale,
+            voiceParams = resolveVoiceParams(data.modelId, modelType, data.overrides),
             engineState = engineState,
             errorMessage = errorMessage,
         )
@@ -88,6 +84,16 @@ class VoicesSettingsViewModel @Inject constructor(
         started = SharingStarted.WhileSubscribed(5000),
         initialValue = VoicesSettingsUiState(),
     )
+
+    private fun resolveVoiceParams(
+        modelId: String?,
+        modelType: TtsModelType?,
+        overrides: Map<String, SherpaVoiceOverrides>,
+    ): SherpaVoiceParams {
+        val defaults = modelType?.defaultVoiceParams() ?: SherpaVoiceParams()
+        val modelOverrides = modelId?.let { overrides[it] } ?: SherpaVoiceOverrides()
+        return modelOverrides.applyTo(defaults)
+    }
 
     fun setEngine(engine: String) {
         viewModelScope.launch {
@@ -98,12 +104,16 @@ class VoicesSettingsViewModel @Inject constructor(
     fun selectModel(modelId: String?) {
         viewModelScope.launch {
             settingsManager.setTtsModelId(modelId)
+            // Covers upgrades where no model was selected on first launch: adopt the old global
+            // tuning for the first model the user picks.
+            if (modelId != null) settingsManager.migrateLegacyVoiceSettings()
         }
     }
 
     fun setSpeakerId(speakerId: Int) {
+        val modelId = uiState.value.selectedModelId ?: return
         viewModelScope.launch {
-            settingsManager.setTtsSpeakerId(speakerId)
+            settingsManager.setVoiceSpeaker(modelId, speakerId)
         }
     }
 
@@ -126,18 +136,40 @@ class VoicesSettingsViewModel @Inject constructor(
                 settingsManager.setTtsModelId(null)
             }
             modelRepository.deleteModel(modelId)
+            settingsManager.resetVoiceParams(modelId)
         }
     }
 
-    fun setSherpaNoiseScale(noiseScale: Float) {
-        viewModelScope.launch {
-            settingsManager.setSherpaNoiseScale(noiseScale)
-        }
+    fun setVoiceNoiseScale(value: Float) = updateVoiceParams { modelId ->
+        settingsManager.setVoiceNoiseScale(modelId, value)
     }
 
-    fun setSherpaLengthScale(lengthScale: Float) {
-        viewModelScope.launch {
-            settingsManager.setSherpaLengthScale(lengthScale)
-        }
+    fun setVoiceNoiseScaleW(value: Float) = updateVoiceParams { modelId ->
+        settingsManager.setVoiceNoiseScaleW(modelId, value)
+    }
+
+    fun setVoiceLengthScale(value: Float) = updateVoiceParams { modelId ->
+        settingsManager.setVoiceLengthScale(modelId, value)
+    }
+
+    fun setVoicePauseScale(value: Float) = updateVoiceParams { modelId ->
+        settingsManager.setVoicePauseScale(modelId, value)
+    }
+
+    fun setVoiceExtraPause(value: Int) = updateVoiceParams { modelId ->
+        settingsManager.setVoiceExtraPause(modelId, value)
+    }
+
+    fun setVoiceCpuThreads(value: Int) = updateVoiceParams { modelId ->
+        settingsManager.setVoiceCpuThreads(modelId, value)
+    }
+
+    fun resetVoiceParams() = updateVoiceParams { modelId ->
+        settingsManager.resetVoiceParams(modelId)
+    }
+
+    private fun updateVoiceParams(action: suspend (String) -> Unit) {
+        val modelId = uiState.value.selectedModelId ?: return
+        viewModelScope.launch { action(modelId) }
     }
 }

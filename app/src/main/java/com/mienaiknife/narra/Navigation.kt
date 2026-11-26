@@ -49,6 +49,7 @@ import com.mienaiknife.narra.ui.screens.HomeScreen
 import com.mienaiknife.narra.ui.screens.InboxScreen
 import com.mienaiknife.narra.ui.screens.LicensesScreen
 import com.mienaiknife.narra.ui.screens.PlaybackSettingsScreen
+import com.mienaiknife.narra.ui.screens.PronunciationsSettingsScreen
 import com.mienaiknife.narra.ui.screens.QueueScreen
 import com.mienaiknife.narra.ui.screens.ReaderScreen
 import com.mienaiknife.narra.ui.screens.SettingsScreen
@@ -180,7 +181,13 @@ fun AppNavigation(
                 VoicesSettingsScreen(
                     highlightSetting = route.highlightSetting,
                     onBack = { navController.popBackStack() },
+                    onNavigateToPronunciations = {
+                        navController.navigate(NavDestination.SettingsPronunciations)
+                    },
                 )
+            }
+            composable<NavDestination.SettingsPronunciations> {
+                PronunciationsSettingsScreen(onBack = { navController.popBackStack() })
             }
             composable<NavDestination.SettingsDownloads> { backStackEntry ->
                 val route = backStackEntry.toRoute<NavDestination.SettingsDownloads>()

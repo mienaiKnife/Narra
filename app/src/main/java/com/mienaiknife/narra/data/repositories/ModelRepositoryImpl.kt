@@ -30,6 +30,9 @@ import com.mienaiknife.narra.data.workers.DownloadWorker
 import com.mienaiknife.narra.domain.NarraError
 import com.mienaiknife.narra.domain.models.TtsModel
 import com.mienaiknife.narra.domain.models.TtsModelType
+import com.mienaiknife.narra.domain.pronunciation.ArpabetToIpa
+import com.mienaiknife.narra.domain.pronunciation.PronunciationValidator
+import com.mienaiknife.narra.domain.repository.CustomPronunciationRepository
 import com.mienaiknife.narra.domain.repository.ModelRepository
 import com.mienaiknife.narra.utils.Log
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -49,6 +52,7 @@ import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.io.IOException
+import java.security.MessageDigest
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -58,6 +62,7 @@ class ModelRepositoryImpl @Inject constructor(
     private val ttsModelDao: TtsModelDao,
     private val okHttpClient: OkHttpClient,
     private val workManager: WorkManager,
+    private val customPronunciationRepository: CustomPronunciationRepository,
 ) : ModelRepository {
 
     private val modelsDir = File(context.filesDir, "tts_models")
@@ -69,6 +74,11 @@ class ModelRepositoryImpl @Inject constructor(
      * place.
      */
     private val lexiconMutex = Mutex()
+
+    private companion object {
+        /** Same key separator as the lexicon format, used to build the override revision. */
+        const val REVISION_SEPARATOR = "||"
+    }
 
     init {
         if (!modelsDir.exists()) {
@@ -358,9 +368,10 @@ class ModelRepositoryImpl @Inject constructor(
      * a cancelled download resume, and the final rename keeps the engine from ever opening a
      * partially written lexicon.
      *
-     * The downloaded file is the base. When the language has a [LexiconSupplement], a merged copy
-     * (see [LexiconPatcher]) is returned instead so the engine can pronounce the words the base
-     * lexicon lacks. The base stays on disk and is what future merges start from.
+     * The downloaded file is the base. When the language has a [LexiconSupplement] or the user has
+     * custom pronunciations, a merged copy (see [LexiconPatcher]) is returned instead so the engine
+     * can pronounce the words the base lexicon lacks. The base stays on disk and is what future
+     * merges start from.
      */
     private suspend fun ensureLexiconFile(
         language: String,
@@ -394,19 +405,83 @@ class ModelRepositoryImpl @Inject constructor(
     }
 
     /**
-     * Applies the language's supplement. A failure falls back to the downloaded base, because the
-     * supplement only adds words and the base still synthesizes on its own.
+     * Applies the language's supplement and the user's custom pronunciations. A failure falls back
+     * to the downloaded base, because both layers only add words and the base still synthesizes on
+     * its own.
      */
-    private fun patchedLexiconPath(base: File, language: String): File {
+    private suspend fun patchedLexiconPath(base: File, language: String): File {
         val supplement = LexiconSupplement.forLanguage(language)
+        val overrides = customPronunciationOverrides(language)
+        val revision = overrideRevision(overrides)
         return try {
-            LexiconPatcher.resolve(base, supplement, LexiconSupplement.VERSION).also { resolved ->
+            LexiconPatcher.resolve(
+                base,
+                supplement,
+                LexiconSupplement.VERSION,
+                overrides,
+                revision,
+            ).also { resolved ->
                 if (resolved != base) Log.i("ModelRepository", "Patched lexicon ready: ${resolved.absolutePath}")
             }
         } catch (e: Exception) {
-            Log.e("ModelRepository", "Could not apply the lexicon supplement; using the base lexicon", e)
+            Log.e(
+                "ModelRepository",
+                "Could not apply the lexicon supplement or custom pronunciations; using the base lexicon",
+                e,
+            )
             base
         }
+    }
+
+    /**
+     * Reads the user's pronunciations for [language] as `normalized word -> IPA phones`.
+     *
+     * Entries that fail validation are skipped: one bad entry must not take the rest of the list (or
+     * the base lexicon) down with it. A repository failure is treated the same way, so a broken
+     * database still lets the engine open the base lexicon.
+     */
+    private suspend fun customPronunciationOverrides(language: String): Map<String, String> = try {
+        val overrides = LinkedHashMap<String, String>()
+        for (entry in customPronunciationRepository.snapshot(language)) {
+            val key = PronunciationValidator.normalizeWord(entry.word)
+            if (key == null) {
+                Log.w("ModelRepository", "Skipping custom pronunciation with an unusable word: '${entry.word}'")
+                continue
+            }
+            when (val converted = ArpabetToIpa.convert(entry.arpabet)) {
+                is ArpabetToIpa.Result.Success -> overrides[key] = converted.ipa
+                is ArpabetToIpa.Result.Failure -> {
+                    val token = converted.token?.let { " ($it)" }.orEmpty()
+                    Log.w(
+                        "ModelRepository",
+                        "Skipping custom pronunciation for '$key': ${converted.reason}$token",
+                    )
+                }
+            }
+        }
+        overrides
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        Log.e("ModelRepository", "Could not load custom pronunciations; using the base lexicon", e)
+        emptyMap()
+    }
+
+    /**
+     * Revision of the override set, or `""` when there are none. Including it in the marker makes
+     * [LexiconPatcher] regenerate the merged file whenever the entries or the ARPAbet mapping change;
+     * removing the last entry drops the revision and rebuilds the base-plus-supplement copy.
+     */
+    private fun overrideRevision(overrides: Map<String, String>): String {
+        if (overrides.isEmpty()) return ""
+        val payload = overrides.toSortedMap().entries.joinToString("\n") { (word, ipa) ->
+            "$word$REVISION_SEPARATOR$ipa"
+        }
+        val hash = MessageDigest.getInstance("SHA-256").digest(payload.toByteArray(Charsets.UTF_8))
+        val hex = hash.joinToString("") { byte ->
+            byte.toInt().and(0xFF).toString(16).padStart(2, '0')
+        }
+        return "arpabet-${ArpabetToIpa.VERSION}:${hex.take(16)}"
     }
 
     internal suspend fun extractTarBz2(

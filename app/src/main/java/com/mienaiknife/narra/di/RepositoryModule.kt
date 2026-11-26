@@ -32,9 +32,11 @@ import com.mienaiknife.narra.data.repositories.ContentRepositoryImpl
 import com.mienaiknife.narra.data.repositories.FeedRepositoryImpl
 import com.mienaiknife.narra.data.repositories.ImportExportRepositoryImpl
 import com.mienaiknife.narra.data.repositories.ModelRepositoryImpl
+import com.mienaiknife.narra.data.settings.CustomPronunciationRepositoryImpl
 import com.mienaiknife.narra.data.settings.DownloadSettingsManager
 import com.mienaiknife.narra.domain.repository.ArticleRepository
 import com.mienaiknife.narra.domain.repository.ContentRepository
+import com.mienaiknife.narra.domain.repository.CustomPronunciationRepository
 import com.mienaiknife.narra.domain.repository.FeedRepository
 import com.mienaiknife.narra.domain.repository.ImportExportRepository
 import com.mienaiknife.narra.domain.repository.ModelRepository
@@ -129,6 +131,12 @@ object RepositoryModule {
     @Provides
     @Singleton
     fun provideModelRepository(modelRepositoryImpl: ModelRepositoryImpl): ModelRepository = modelRepositoryImpl
+
+    @Provides
+    @Singleton
+    fun provideCustomPronunciationRepository(
+        impl: CustomPronunciationRepositoryImpl,
+    ): CustomPronunciationRepository = impl
 
     @Provides
     @Singleton

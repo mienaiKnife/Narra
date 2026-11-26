@@ -37,6 +37,7 @@ import androidx.core.view.WindowCompat
 
 data class NarraSpacing(
     val itemVertical: Dp = 4.dp,
+    val voiceListMaxHeight: Dp = 260.dp,
 )
 
 val LocalNarraSpacing = staticCompositionLocalOf { NarraSpacing() }
