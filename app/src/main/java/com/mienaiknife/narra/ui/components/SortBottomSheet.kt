@@ -25,7 +25,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.selection.toggleable
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
@@ -36,10 +35,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.SheetState
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
@@ -47,7 +43,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
@@ -69,11 +64,10 @@ fun SortBottomSheet(
     onKeepSortedChange: (Boolean) -> Unit = {},
     showPlayed: Boolean = false,
     onShowPlayedChange: ((Boolean) -> Unit)? = null,
-    sheetState: SheetState = rememberModalBottomSheetState(),
 ) {
     ModalBottomSheet(
         onDismissRequest = onDismissRequest,
-        sheetState = sheetState,
+        sheetState = rememberModalBottomSheetState(),
     ) {
         SortBottomSheetContent(
             selectedOption = selectedOption,
@@ -174,65 +168,27 @@ fun SortBottomSheetContent(
         if (isQueue) {
             Spacer(modifier = Modifier.height(16.dp))
 
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .toggleable(
-                        value = keepSorted,
-                        role = Role.Switch,
-                        onValueChange = onKeepSortedChange,
-                    )
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    text = stringResource(R.string.sort_keep_sorted),
-                    style = MaterialTheme.typography.bodyLarge,
-                )
-                Switch(
-                    checked = keepSorted,
-                    onCheckedChange = null,
-                    colors = SwitchDefaults.colors(
-                        checkedThumbColor = MaterialTheme.colorScheme.primary,
-                        checkedTrackColor = MaterialTheme.colorScheme.primaryContainer,
-                        uncheckedThumbColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                        uncheckedTrackColor = MaterialTheme.colorScheme.surfaceContainer,
-                    ),
-                )
-            }
+            SettingsSwitchRow(
+                title = stringResource(R.string.sort_keep_sorted),
+                subtitle = null,
+                checked = keepSorted,
+                onCheckedChange = onKeepSortedChange,
+                modifier = Modifier.padding(horizontal = 16.dp),
+            )
         }
 
         if (onShowPlayedChange != null) {
-            Spacer(modifier = Modifier.height(if (isQueue) 0.dp else 16.dp))
-
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .toggleable(
-                        value = showPlayed,
-                        role = Role.Switch,
-                        onValueChange = onShowPlayedChange,
-                    )
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    text = stringResource(R.string.sort_show_played),
-                    style = MaterialTheme.typography.bodyLarge,
-                )
-                Switch(
-                    checked = showPlayed,
-                    onCheckedChange = null,
-                    colors = SwitchDefaults.colors(
-                        checkedThumbColor = MaterialTheme.colorScheme.primary,
-                        checkedTrackColor = MaterialTheme.colorScheme.primaryContainer,
-                        uncheckedThumbColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                        uncheckedTrackColor = MaterialTheme.colorScheme.surfaceContainer,
-                    ),
-                )
+            if (!isQueue) {
+                Spacer(modifier = Modifier.height(16.dp))
             }
+
+            SettingsSwitchRow(
+                title = stringResource(R.string.sort_show_played),
+                subtitle = null,
+                checked = showPlayed,
+                onCheckedChange = onShowPlayedChange,
+                modifier = Modifier.padding(horizontal = 16.dp),
+            )
         }
     }
 }

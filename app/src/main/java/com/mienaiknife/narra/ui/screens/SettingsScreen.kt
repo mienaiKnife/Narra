@@ -15,23 +15,14 @@
  */
 package com.mienaiknife.narra.ui.screens
 
-import android.content.res.Configuration
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Download
@@ -47,7 +38,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -55,17 +45,19 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.dp
 import androidx.navigation.compose.rememberNavController
 import com.mienaiknife.narra.R
 import com.mienaiknife.narra.ui.components.BottomNavBar
+import com.mienaiknife.narra.ui.components.NarraListItem
+import com.mienaiknife.narra.ui.components.NarraTextFieldShape
+import com.mienaiknife.narra.ui.components.TopLevelScreen
+import com.mienaiknife.narra.ui.components.narraTextFieldColors
 import com.mienaiknife.narra.ui.theme.LocalNarraSpacing
 import com.mienaiknife.narra.ui.theme.NarraTheme
 
@@ -80,28 +72,7 @@ fun SettingsScreen(
 ) {
     var searchQuery by remember { mutableStateOf("") }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .statusBarsPadding(),
-    ) {
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .heightIn(min = 48.dp)
-                .padding(horizontal = 16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                text = stringResource(R.string.nav_settings),
-                style = MaterialTheme.typography.headlineSmall,
-            )
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
+    TopLevelScreen(title = stringResource(R.string.nav_settings)) {
         var expanded by remember { mutableStateOf(false) }
         val resources = LocalResources.current
 
@@ -137,11 +108,8 @@ fun SettingsScreen(
                         }
                     }
                 },
-                shape = RoundedCornerShape(24.dp),
-                colors = OutlinedTextFieldDefaults.colors(
-                    unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
-                    focusedBorderColor = MaterialTheme.colorScheme.primary,
-                ),
+                shape = NarraTextFieldShape,
+                colors = narraTextFieldColors(),
                 singleLine = true,
             )
 
@@ -224,11 +192,18 @@ fun SettingsScreen(
         )
 
         LazyColumn(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth(),
             contentPadding = PaddingValues(vertical = 8.dp),
         ) {
             items(settingsItems, key = { it.title }) { item ->
-                SettingsListItem(item)
+                NarraListItem(
+                    title = item.title,
+                    subtitle = item.subtitle,
+                    leadingIcon = item.icon,
+                    onClick = item.onClick,
+                )
             }
         }
     }
@@ -241,47 +216,11 @@ data class SettingsItem(
     val onClick: () -> Unit,
 )
 
-@Composable
-fun SettingsListItem(item: SettingsItem) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(role = Role.Button, onClick = item.onClick)
-            .padding(horizontal = 16.dp, vertical = 16.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Icon(
-            imageVector = item.icon,
-            contentDescription = null,
-            modifier = Modifier.padding(end = 16.dp),
-            tint = MaterialTheme.colorScheme.onSurface,
-        )
-        Column(
-            modifier = Modifier.weight(1f),
-            verticalArrangement = Arrangement.spacedBy(
-                LocalNarraSpacing.current.itemVertical,
-                Alignment.CenterVertically,
-            ),
-        ) {
-            Text(
-                text = item.title,
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurface,
-            )
-            Text(
-                text = item.subtitle,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-    }
-}
-
-@Preview(uiMode = Configuration.UI_MODE_NIGHT_YES, showBackground = true)
+@PreviewLightDark
 @Composable
 fun SettingsScreenPreview() {
     val navController = rememberNavController()
-    NarraTheme(darkTheme = true, dynamicColor = false) {
+    NarraTheme(dynamicColor = false) {
         Scaffold(
             bottomBar = { BottomNavBar(navController) },
         ) { innerPadding ->

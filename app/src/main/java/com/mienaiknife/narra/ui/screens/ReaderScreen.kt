@@ -26,19 +26,14 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -46,9 +41,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CenterFocusStrong
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -94,8 +87,10 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.mienaiknife.narra.R
 import com.mienaiknife.narra.data.models.SampleArticles
 import com.mienaiknife.narra.data.parsing.HtmlParser
-import com.mienaiknife.narra.ui.UiText
+import com.mienaiknife.narra.ui.components.ErrorView
 import com.mienaiknife.narra.ui.components.NarraScrollbar
+import com.mienaiknife.narra.ui.components.NarraTextFieldShape
+import com.mienaiknife.narra.ui.components.narraTextFieldColors
 import com.mienaiknife.narra.ui.screens.reader.ReaderContentList
 import com.mienaiknife.narra.ui.screens.reader.ReaderPlaybackControls
 import com.mienaiknife.narra.ui.screens.reader.ReaderTopBar
@@ -495,102 +490,59 @@ fun ReaderSearchSheet(
                     }
                 },
                 singleLine = true,
+                shape = NarraTextFieldShape,
+                colors = narraTextFieldColors(),
             )
 
             HorizontalDivider()
 
-            LazyColumn(modifier = Modifier.weight(1f)) {
-                itemsIndexed(
-                    items = uiState.searchResults,
-                    key = { _, result -> "${result.paragraphIndex}:${result.wordRange.first}-${result.wordRange.last}" },
-                ) { _, result ->
-                    ListItem(
-                        headlineContent = {
-                            Text(
-                                text = result.previewText,
-                                maxLines = 2,
-                                overflow = TextOverflow.Ellipsis,
-                            )
-                        },
-                        overlineContent = {
-                            Text(stringResource(R.string.reader_paragraph_search_desc, result.paragraphIndex + 1))
-                        },
-                        modifier = Modifier.clickable(role = Role.Button) {
-                            onResultClick(result)
-                            onDismiss()
-                        },
-                    )
-                }
+            Box(modifier = Modifier.weight(1f)) {
+                val resultsListState = rememberLazyListState()
 
-                if (uiState.searchQuery.length >= 2 && uiState.searchResults.isEmpty()) {
-                    item {
-                        Text(
-                            text = stringResource(R.string.reader_no_results),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(32.dp),
-                            textAlign = TextAlign.Center,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    state = resultsListState,
+                ) {
+                    itemsIndexed(
+                        items = uiState.searchResults,
+                        key = { _, result -> "${result.paragraphIndex}:${result.wordRange.first}-${result.wordRange.last}" },
+                    ) { _, result ->
+                        ListItem(
+                            headlineContent = {
+                                Text(
+                                    text = result.previewText,
+                                    maxLines = 2,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
+                            },
+                            overlineContent = {
+                                Text(stringResource(R.string.reader_paragraph_search_desc, result.paragraphIndex + 1))
+                            },
+                            modifier = Modifier.clickable(role = Role.Button) {
+                                onResultClick(result)
+                                onDismiss()
+                            },
                         )
                     }
-                }
-            }
-        }
-    }
-}
 
-@Composable
-fun ErrorView(
-    error: UiText,
-    onRetry: () -> Unit,
-    onBack: () -> Unit,
-) {
-    val context = LocalContext.current
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-            .padding(32.dp),
-        contentAlignment = Alignment.Center,
-    ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
-        ) {
-            Icon(
-                imageVector = Icons.Default.ErrorOutline,
-                contentDescription = null,
-                modifier = Modifier.size(64.dp),
-                tint = MaterialTheme.colorScheme.error,
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-            Text(
-                text = stringResource(R.string.reader_error_title),
-                style = MaterialTheme.typography.titleLarge,
-                color = MaterialTheme.colorScheme.onBackground,
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = error.asString(context),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center,
-            )
-            Spacer(modifier = Modifier.height(32.dp))
-            Row {
-                Button(
-                    onClick = onBack,
-                    modifier = Modifier.weight(1f),
-                ) {
-                    Text(stringResource(R.string.reader_go_back))
+                    if (uiState.searchQuery.length >= 2 && uiState.searchResults.isEmpty()) {
+                        item {
+                            Text(
+                                text = stringResource(R.string.reader_no_results),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(32.dp),
+                                textAlign = TextAlign.Center,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
                 }
-                Spacer(modifier = Modifier.width(16.dp))
-                Button(
-                    onClick = onRetry,
-                    modifier = Modifier.weight(1f),
-                ) {
-                    Text(stringResource(R.string.reader_retry))
-                }
+
+                NarraScrollbar(
+                    lazyListState = resultsListState,
+                    modifier = Modifier.align(Alignment.CenterEnd),
+                )
             }
         }
     }
@@ -602,12 +554,17 @@ fun ErrorView(
     backgroundColor = 0xFF191919,
     showSystemUi = true,
 )
+@Preview(
+    uiMode = Configuration.UI_MODE_NIGHT_NO,
+    showBackground = true,
+    showSystemUi = true,
+)
 @Composable
 fun ReaderScreenPreview() {
     val article = SampleArticles.sampleArticle1
     val blocks = remember(article.content) { HtmlParser.parse(article.content, article.url) }
     val fontFamily = getFontFamily("Roboto")
-    NarraTheme(darkTheme = true, dynamicColor = false, fontFamily = fontFamily) {
+    NarraTheme(dynamicColor = false, fontFamily = fontFamily) {
         ReaderContent(
             uiState = ReaderUiState(
                 article = article,

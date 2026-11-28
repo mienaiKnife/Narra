@@ -15,48 +15,33 @@
  */
 package com.mienaiknife.narra.ui.screens
 
-import android.content.res.Configuration
-import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.PlaylistPlay
 import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.History
-import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
-import androidx.compose.material3.pulltorefresh.PullToRefreshBox
-import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
-import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -73,8 +58,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
@@ -86,9 +70,13 @@ import com.mienaiknife.narra.data.models.SampleArticles
 import com.mienaiknife.narra.data.models.SortOption
 import com.mienaiknife.narra.domain.models.Article
 import com.mienaiknife.narra.ui.components.BottomNavBar
+import com.mienaiknife.narra.ui.components.EmptyState
+import com.mienaiknife.narra.ui.components.NarraPullToRefreshBox
 import com.mienaiknife.narra.ui.components.NarraScrollbar
+import com.mienaiknife.narra.ui.components.OverflowMenu
 import com.mienaiknife.narra.ui.components.QueueItem
 import com.mienaiknife.narra.ui.components.SortBottomSheet
+import com.mienaiknife.narra.ui.components.TopLevelScreen
 import com.mienaiknife.narra.ui.theme.NarraTheme
 import com.mienaiknife.narra.ui.viewmodels.QueueViewModel
 import kotlinx.coroutines.launch
@@ -97,10 +85,10 @@ import java.util.concurrent.TimeUnit
 @Composable
 fun QueueScreen(
     onNavigateToHistory: () -> Unit,
+    snackbarHostState: SnackbarHostState,
     viewModel: QueueViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
     val context = LocalContext.current
@@ -117,57 +105,49 @@ fun QueueScreen(
     val removedMessage = stringResource(R.string.queue_removed_message)
     val undoAction = stringResource(R.string.action_undo)
 
-    Box(modifier = Modifier.fillMaxSize()) {
-        when (val state = uiState) {
-            is com.mienaiknife.narra.ui.viewmodels.QueueUiState.Loading -> {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    androidx.compose.material3.CircularProgressIndicator()
-                }
-            }
-            is com.mienaiknife.narra.ui.viewmodels.QueueUiState.Success -> {
-                QueueScreenContent(
-                    articles = state.articles,
-                    isRefreshing = state.isRefreshing,
-                    currentArticle = state.currentArticle,
-                    isPlaying = state.isPlaying,
-                    playbackSpeed = state.playbackSpeed,
-                    sortOption = state.sortOption,
-                    keepSorted = state.keepSorted,
-                    totalRemainingTimeMs = state.totalRemainingTimeMs,
-                    downloadingArticleIds = state.downloadingArticleIds,
-                    onPlayPauseClick = { article -> viewModel.onPlayPauseClick(article) },
-                    onMarkAsPlayedClick = { article -> viewModel.togglePlayedStatus(article) },
-                    onRemoveFromQueue = { article ->
-                        viewModel.removeFromQueue(article)
-                        scope.launch {
-                            val result = snackbarHostState.showSnackbar(
-                                message = removedMessage,
-                                actionLabel = undoAction,
-                                duration = SnackbarDuration.Short,
-                            )
-                            if (result == SnackbarResult.ActionPerformed) {
-                                viewModel.addToQueue(article.id)
-                            }
-                        }
-                    },
-                    onHistoryClick = onNavigateToHistory,
-                    onClearQueue = { viewModel.clearQueue() },
-                    onRefresh = { viewModel.refresh() },
-                    onSortOptionSelected = { viewModel.setSortOption(it) },
-                    onKeepSortedChange = { viewModel.setKeepSorted(it) },
-                    onReorder = { from, to -> viewModel.reorderQueue(from, to) },
-                )
+    when (val state = uiState) {
+        is com.mienaiknife.narra.ui.viewmodels.QueueUiState.Loading -> {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                androidx.compose.material3.CircularProgressIndicator()
             }
         }
-
-        SnackbarHost(
-            hostState = snackbarHostState,
-            modifier = Modifier.align(Alignment.BottomCenter),
-        )
+        is com.mienaiknife.narra.ui.viewmodels.QueueUiState.Success -> {
+            QueueScreenContent(
+                articles = state.articles,
+                isRefreshing = state.isRefreshing,
+                currentArticle = state.currentArticle,
+                isPlaying = state.isPlaying,
+                playbackSpeed = state.playbackSpeed,
+                sortOption = state.sortOption,
+                keepSorted = state.keepSorted,
+                totalRemainingTimeMs = state.totalRemainingTimeMs,
+                downloadingArticleIds = state.downloadingArticleIds,
+                onPlayPauseClick = { article -> viewModel.onPlayPauseClick(article) },
+                onMarkAsPlayedClick = { article -> viewModel.togglePlayedStatus(article) },
+                onRemoveFromQueue = { article ->
+                    viewModel.removeFromQueue(article)
+                    scope.launch {
+                        val result = snackbarHostState.showSnackbar(
+                            message = removedMessage,
+                            actionLabel = undoAction,
+                            duration = SnackbarDuration.Short,
+                        )
+                        if (result == SnackbarResult.ActionPerformed) {
+                            viewModel.addToQueue(article.id)
+                        }
+                    }
+                },
+                onHistoryClick = onNavigateToHistory,
+                onClearQueue = { viewModel.clearQueue() },
+                onRefresh = { viewModel.refresh() },
+                onSortOptionSelected = { viewModel.setSortOption(it) },
+                onKeepSortedChange = { viewModel.setKeepSorted(it) },
+                onReorder = { from, to -> viewModel.reorderQueue(from, to) },
+            )
+        }
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun QueueScreenContent(
     articles: List<Article>,
@@ -192,7 +172,6 @@ fun QueueScreenContent(
     var showMenu by remember { mutableStateOf(false) }
     val showSortSheet = remember { mutableStateOf(false) }
     val lazyListState = rememberLazyListState()
-    val pullToRefreshState = rememberPullToRefreshState()
 
     var draggedItemIndex by remember { mutableIntStateOf(-1) }
     var draggingOffset by remember { mutableFloatStateOf(0f) }
@@ -228,102 +207,10 @@ fun QueueScreenContent(
         )
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .statusBarsPadding()
-            .background(MaterialTheme.colorScheme.background),
-    ) {
-        Spacer(modifier = Modifier.height(16.dp))
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                text = stringResource(R.string.nav_queue),
-                style = MaterialTheme.typography.headlineSmall,
-                color = MaterialTheme.colorScheme.onBackground,
-            )
-            Box {
-                IconButton(onClick = { showMenu = true }) {
-                    Icon(
-                        imageVector = Icons.Default.Menu,
-                        contentDescription = stringResource(R.string.action_menu),
-                        modifier = Modifier.size(32.dp),
-                        tint = MaterialTheme.colorScheme.onBackground,
-                    )
-                }
-
-                DropdownMenu(
-                    expanded = showMenu,
-                    onDismissRequest = { showMenu = false },
-                ) {
-                    DropdownMenuItem(
-                        text = { Text(stringResource(R.string.action_sort)) },
-                        onClick = {
-                            showMenu = false
-                            showSortSheet.value = true
-                        },
-                        leadingIcon = {
-                            Icon(
-                                Icons.AutoMirrored.Filled.Sort,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onBackground,
-                            )
-                        },
-                    )
-                    DropdownMenuItem(
-                        text = { Text(stringResource(R.string.action_refresh)) },
-                        onClick = {
-                            showMenu = false
-                            onRefresh()
-                        },
-                        leadingIcon = {
-                            Icon(
-                                Icons.Default.Refresh,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onBackground,
-                            )
-                        },
-                    )
-                    DropdownMenuItem(
-                        text = { Text(stringResource(R.string.nav_history)) },
-                        onClick = {
-                            showMenu = false
-                            onHistoryClick()
-                        },
-                        leadingIcon = {
-                            Icon(
-                                Icons.Default.History,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onBackground,
-                            )
-                        },
-                    )
-                    DropdownMenuItem(
-                        text = { Text(stringResource(R.string.action_clear)) },
-                        onClick = {
-                            showMenu = false
-                            onClearQueue()
-                        },
-                        leadingIcon = {
-                            Icon(
-                                Icons.Default.Delete,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onBackground,
-                            )
-                        },
-                    )
-                }
-            }
-        }
-
-        if (articles.isNotEmpty()) {
-            val articlesCountText = pluralStringResource(R.plurals.unit_articles, articles.size, articles.size)
-            val separator = stringResource(R.string.separator_bullet)
+    val articlesCountText = pluralStringResource(R.plurals.unit_articles, articles.size, articles.size)
+    val separator = stringResource(R.string.separator_bullet)
+    val metaContent: (@Composable () -> Unit)? = if (articles.isNotEmpty()) {
+        {
             Text(
                 text = buildString {
                     append(articlesCountText)
@@ -335,46 +222,94 @@ fun QueueScreenContent(
                 modifier = Modifier.padding(horizontal = 16.dp),
             )
         }
+    } else {
+        null
+    }
 
-        Spacer(modifier = Modifier.height(16.dp))
-
-        PullToRefreshBox(
+    TopLevelScreen(
+        title = stringResource(R.string.nav_queue),
+        headerActions = {
+            OverflowMenu(
+                expanded = showMenu,
+                onExpandedChange = { showMenu = it },
+                contentDescription = stringResource(R.string.action_menu),
+            ) {
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.action_sort)) },
+                    onClick = {
+                        showMenu = false
+                        showSortSheet.value = true
+                    },
+                    leadingIcon = {
+                        Icon(
+                            Icons.AutoMirrored.Filled.Sort,
+                            contentDescription = null,
+                        )
+                    },
+                )
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.action_refresh)) },
+                    onClick = {
+                        showMenu = false
+                        onRefresh()
+                    },
+                    leadingIcon = {
+                        Icon(
+                            Icons.Default.Refresh,
+                            contentDescription = null,
+                        )
+                    },
+                )
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.nav_history)) },
+                    onClick = {
+                        showMenu = false
+                        onHistoryClick()
+                    },
+                    leadingIcon = {
+                        Icon(
+                            Icons.Default.History,
+                            contentDescription = null,
+                        )
+                    },
+                )
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.action_clear)) },
+                    onClick = {
+                        showMenu = false
+                        onClearQueue()
+                    },
+                    leadingIcon = {
+                        Icon(
+                            Icons.Default.Delete,
+                            contentDescription = null,
+                        )
+                    },
+                )
+            }
+        },
+        meta = metaContent,
+    ) {
+        NarraPullToRefreshBox(
             isRefreshing = isRefreshing,
             onRefresh = onRefresh,
-            state = pullToRefreshState,
             modifier = Modifier.weight(1f),
-            indicator = {
-                PullToRefreshDefaults.Indicator(
-                    state = pullToRefreshState,
-                    isRefreshing = isRefreshing,
-                    containerColor = MaterialTheme.colorScheme.surface,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.align(Alignment.TopCenter),
-                )
-            },
         ) {
             if (articles.isEmpty()) {
-                Box(
+                EmptyState(
+                    icon = Icons.AutoMirrored.Filled.PlaylistPlay,
+                    title = stringResource(R.string.queue_empty_message),
                     modifier = Modifier
                         .fillMaxSize()
-                        .verticalScroll(rememberScrollState())
-                        .padding(horizontal = 16.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(
-                        text = stringResource(R.string.queue_empty_message),
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        textAlign = TextAlign.Center,
-                    )
-                }
+                        .verticalScroll(rememberScrollState()),
+                )
             } else {
                 Box(modifier = Modifier.fillMaxSize()) {
                     LazyColumn(
                         state = lazyListState,
                         modifier = Modifier
                             .fillMaxSize(),
-                        verticalArrangement = Arrangement.spacedBy(24.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp),
                         contentPadding = PaddingValues(bottom = 32.dp),
                     ) {
                         itemsIndexed(
@@ -455,11 +390,11 @@ fun QueueScreenContent(
     }
 }
 
-@Preview(uiMode = Configuration.UI_MODE_NIGHT_YES, showBackground = true)
+@PreviewLightDark
 @Composable
 fun QueueScreenPreview() {
     val navController = rememberNavController()
-    NarraTheme(darkTheme = true, dynamicColor = false) {
+    NarraTheme(dynamicColor = false) {
         Scaffold(
             bottomBar = { BottomNavBar(navController) },
         ) { innerPadding ->

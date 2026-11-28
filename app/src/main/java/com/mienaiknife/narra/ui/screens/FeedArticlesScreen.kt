@@ -15,7 +15,6 @@
  */
 package com.mienaiknife.narra.ui.screens
 
-import android.content.res.Configuration
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -26,16 +25,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.pulltorefresh.PullToRefreshBox
-import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
-import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -44,6 +38,9 @@ import com.mienaiknife.narra.R
 import com.mienaiknife.narra.data.models.SortOption
 import com.mienaiknife.narra.domain.models.Article
 import com.mienaiknife.narra.ui.components.BottomNavBar
+import com.mienaiknife.narra.ui.components.EmptyState
+import com.mienaiknife.narra.ui.components.NarraPullToRefreshBox
+import com.mienaiknife.narra.ui.components.OverflowMenu
 import com.mienaiknife.narra.ui.components.QueueItem
 import com.mienaiknife.narra.ui.components.ScreenHeader
 import com.mienaiknife.narra.ui.components.SortBottomSheet
@@ -54,10 +51,10 @@ import com.mienaiknife.narra.ui.viewmodels.FeedArticlesViewModel
 @Composable
 fun FeedArticlesScreen(
     onBack: () -> Unit,
+    snackbarHostState: SnackbarHostState,
     viewModel: FeedArticlesViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val snackbarHostState = remember { SnackbarHostState() }
 
     val context = LocalContext.current
 
@@ -71,27 +68,19 @@ fun FeedArticlesScreen(
         }
     }
 
-    Box(modifier = Modifier.fillMaxSize()) {
-        FeedArticlesScreenContent(
-            uiState = uiState,
-            onBackClick = onBack,
-            onAddToQueue = { viewModel.addToQueue(it) },
-            onDeleteArticle = { viewModel.deleteArticle(it) },
-            onRefresh = { viewModel.refresh() },
-            onSortOptionSelected = { viewModel.setSortOption(it) },
-            onShowPlayedChange = { viewModel.setShowPlayed(it) },
-            onMarkAllAsPlayed = { viewModel.markAllAsPlayed() },
-            onMarkAllAsUnplayed = { viewModel.markAllAsUnplayed() },
-        )
-
-        SnackbarHost(
-            hostState = snackbarHostState,
-            modifier = Modifier.align(Alignment.BottomCenter),
-        )
-    }
+    FeedArticlesScreenContent(
+        uiState = uiState,
+        onBackClick = onBack,
+        onAddToQueue = { viewModel.addToQueue(it) },
+        onDeleteArticle = { viewModel.deleteArticle(it) },
+        onRefresh = { viewModel.refresh() },
+        onSortOptionSelected = { viewModel.setSortOption(it) },
+        onShowPlayedChange = { viewModel.setShowPlayed(it) },
+        onMarkAllAsPlayed = { viewModel.markAllAsPlayed() },
+        onMarkAllAsUnplayed = { viewModel.markAllAsUnplayed() },
+    )
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FeedArticlesScreenContent(
     uiState: FeedArticlesUiState,
@@ -106,7 +95,6 @@ fun FeedArticlesScreenContent(
 ) {
     var showMenu by remember { mutableStateOf(false) }
     val showSortSheet = remember { mutableStateOf(false) }
-    val pullToRefreshState = rememberPullToRefreshState()
 
     if (showSortSheet.value) {
         SortBottomSheet(
@@ -121,8 +109,8 @@ fun FeedArticlesScreenContent(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .statusBarsPadding()
-            .background(MaterialTheme.colorScheme.background),
+            .background(MaterialTheme.colorScheme.background)
+            .statusBarsPadding(),
     ) {
         Spacer(modifier = Modifier.height(16.dp))
 
@@ -130,120 +118,90 @@ fun FeedArticlesScreenContent(
             title = uiState.feedTitle,
             onBack = onBackClick,
         ) {
-            Box {
-                IconButton(onClick = { showMenu = true }) {
-                    Icon(
-                        imageVector = Icons.Default.Menu,
-                        contentDescription = stringResource(R.string.action_menu),
-                        modifier = Modifier.size(32.dp),
-                        tint = MaterialTheme.colorScheme.onBackground,
-                    )
-                }
+            OverflowMenu(
+                expanded = showMenu,
+                onExpandedChange = { showMenu = it },
+                contentDescription = stringResource(R.string.action_menu),
+            ) {
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.action_sort)) },
+                    onClick = {
+                        showMenu = false
+                        showSortSheet.value = true
+                    },
+                    leadingIcon = {
+                        Icon(
+                            Icons.AutoMirrored.Filled.Sort,
+                            contentDescription = null,
+                        )
+                    },
+                )
 
-                DropdownMenu(
-                    expanded = showMenu,
-                    onDismissRequest = { showMenu = false },
-                ) {
-                    DropdownMenuItem(
-                        text = { Text(stringResource(R.string.action_sort)) },
-                        onClick = {
-                            showMenu = false
-                            showSortSheet.value = true
-                        },
-                        leadingIcon = {
-                            Icon(
-                                Icons.AutoMirrored.Filled.Sort,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onBackground,
-                            )
-                        },
-                    )
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.action_refresh)) },
+                    onClick = {
+                        showMenu = false
+                        onRefresh()
+                    },
+                    leadingIcon = {
+                        Icon(
+                            Icons.Default.Refresh,
+                            contentDescription = null,
+                        )
+                    },
+                )
 
-                    DropdownMenuItem(
-                        text = { Text(stringResource(R.string.action_refresh)) },
-                        onClick = {
-                            showMenu = false
-                            onRefresh()
-                        },
-                        leadingIcon = {
-                            Icon(
-                                Icons.Default.Refresh,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onBackground,
-                            )
-                        },
-                    )
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.action_mark_all_played)) },
+                    onClick = {
+                        showMenu = false
+                        onMarkAllAsPlayed()
+                    },
+                    leadingIcon = {
+                        Icon(
+                            Icons.Default.DoneAll,
+                            contentDescription = null,
+                        )
+                    },
+                )
 
-                    DropdownMenuItem(
-                        text = { Text(stringResource(R.string.action_mark_all_played)) },
-                        onClick = {
-                            showMenu = false
-                            onMarkAllAsPlayed()
-                        },
-                        leadingIcon = {
-                            Icon(
-                                Icons.Default.DoneAll,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onBackground,
-                            )
-                        },
-                    )
-
-                    DropdownMenuItem(
-                        text = { Text(stringResource(R.string.action_mark_all_unplayed)) },
-                        onClick = {
-                            showMenu = false
-                            onMarkAllAsUnplayed()
-                        },
-                        leadingIcon = {
-                            Icon(
-                                Icons.Default.RemoveDone,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onBackground,
-                            )
-                        },
-                    )
-                }
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.action_mark_all_unplayed)) },
+                    onClick = {
+                        showMenu = false
+                        onMarkAllAsUnplayed()
+                    },
+                    leadingIcon = {
+                        Icon(
+                            Icons.Default.RemoveDone,
+                            contentDescription = null,
+                        )
+                    },
+                )
             }
         }
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        PullToRefreshBox(
+        NarraPullToRefreshBox(
             isRefreshing = uiState.isRefreshing,
             onRefresh = onRefresh,
-            state = pullToRefreshState,
             modifier = Modifier.weight(1f),
-            indicator = {
-                PullToRefreshDefaults.Indicator(
-                    state = pullToRefreshState,
-                    isRefreshing = uiState.isRefreshing,
-                    containerColor = MaterialTheme.colorScheme.surface,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.align(Alignment.TopCenter),
-                )
-            },
         ) {
             if (uiState.articles.isEmpty()) {
-                Box(
+                EmptyState(
+                    icon = Icons.Default.Article,
+                    title = stringResource(R.string.feed_articles_empty_message),
                     modifier = Modifier
                         .fillMaxSize()
-                        .verticalScroll(rememberScrollState())
-                        .padding(horizontal = 16.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(
-                        text = stringResource(R.string.feed_articles_empty_message),
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
+                        .verticalScroll(rememberScrollState()),
+                )
             } else {
                 LazyColumn(
                     modifier = Modifier
                         .fillMaxSize(),
                     verticalArrangement = Arrangement.spacedBy(16.dp),
-                    contentPadding = PaddingValues(bottom = 24.dp),
+                    contentPadding = PaddingValues(bottom = 32.dp),
                 ) {
                     items(uiState.articles, key = { it.id }) { article ->
                         QueueItem(
@@ -261,7 +219,7 @@ fun FeedArticlesScreenContent(
     }
 }
 
-@Preview(uiMode = Configuration.UI_MODE_NIGHT_YES, showBackground = true)
+@PreviewLightDark
 @Composable
 fun FeedArticlesScreenPreview() {
     val navController = rememberNavController()
@@ -290,7 +248,7 @@ fun FeedArticlesScreenPreview() {
         feedTitle = "The Verge",
     )
 
-    NarraTheme(darkTheme = true, dynamicColor = false) {
+    NarraTheme(dynamicColor = false) {
         Scaffold(
             bottomBar = { BottomNavBar(navController) },
         ) { innerPadding ->

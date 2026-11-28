@@ -188,9 +188,7 @@ private fun QueueItemRow(
         else -> stringResource(R.string.action_play_desc, article.title)
     }
     Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.background),
+        modifier = modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (dragModifier != null && article.isInQueue) {
@@ -325,16 +323,9 @@ private fun QueueItemRow(
 
                             Spacer(modifier = Modifier.width(8.dp))
 
-                            LinearProgressIndicator(
-                                progress = { progress },
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .height(5.dp)
-                                    .clip(RoundedCornerShape(2.dp)),
-                                color = MaterialTheme.colorScheme.primary,
-                                trackColor = MaterialTheme.colorScheme.primaryContainer,
-                                gapSize = 5.dp,
-                                drawStopIndicator = {},
+                            NarraProgressBar(
+                                progress = progress,
+                                modifier = Modifier.weight(1f),
                             )
 
                             Spacer(modifier = Modifier.width(8.dp))

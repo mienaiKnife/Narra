@@ -15,8 +15,16 @@
  */
 package com.mienaiknife.narra
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.VectorConverter
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.calculateEndPadding
 import androidx.compose.foundation.layout.calculateStartPadding
@@ -27,9 +35,13 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.MotionDurationScale
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.compose.NavHost
@@ -56,6 +68,13 @@ import com.mienaiknife.narra.ui.screens.SettingsScreen
 import com.mienaiknife.narra.ui.screens.UserInterfaceSettingsScreen
 import com.mienaiknife.narra.ui.screens.VoicesSettingsScreen
 import com.mienaiknife.narra.ui.theme.ThemeViewModel
+import kotlinx.coroutines.delay
+
+/** Duration of the reader's dismiss slide and the bottom bar's handoff animation. */
+private const val ReaderTransitionMillis = 300
+
+/** How long before the reader's slide ends the mini-player and navigation bar start returning. */
+private const val ReaderBarHeadStartMillis = 100
 
 @Composable
 fun AppNavigation(
@@ -76,14 +95,46 @@ fun AppNavigation(
 
     val navBackStackEntry by navController.currentBackStackEntryAsState()
 
-    val isReaderScreen = navBackStackEntry?.destination?.hasRoute<NavDestination.Reader>() == true
+    val isReaderDestination = navBackStackEntry?.destination?.hasRoute<NavDestination.Reader>() == true
+
+    // Keep the reader full-bleed until its dismiss slide has finished. If the bottom bar and the
+    // NavHost padding came back at the same frame the pop commits, the reader would be clipped from
+    // the bottom while it slides, making its bottom edge trail the top instead of moving together.
+    var isReaderLayoutHeld by remember { mutableStateOf(isReaderDestination) }
+    var isBottomBarVisible by remember { mutableStateOf(!isReaderDestination) }
+    LaunchedEffect(isReaderDestination) {
+        // Compose scales animations by the system animator duration scale, so scale the handoff
+        // delays to match; with animations turned off the bar comes back immediately.
+        val motionScale = coroutineContext[MotionDurationScale]?.scaleFactor ?: 1f
+        val slideMillis = (ReaderTransitionMillis * motionScale).toLong()
+        val headStartMillis = (ReaderBarHeadStartMillis * motionScale).toLong()
+        if (isReaderDestination) {
+            isBottomBarVisible = false
+            isReaderLayoutHeld = true
+        } else if (isReaderLayoutHeld) {
+            // Let the bar start rising while the reader's last sliver is still on screen; the
+            // layout stays full-bleed underneath, so the reader is never clipped mid-slide.
+            delay((slideMillis - headStartMillis).coerceAtLeast(0L))
+            isBottomBarVisible = true
+            delay(headStartMillis)
+            isReaderLayoutHeld = false
+        }
+    }
+    val isReaderChromeVisible = isReaderDestination || isReaderLayoutHeld
 
     val snackbarHostState = remember { SnackbarHostState() }
 
     Scaffold(
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         bottomBar = {
-            if (!isReaderScreen) {
+            AnimatedVisibility(
+                visible = isBottomBarVisible && !isReaderDestination,
+                enter = fadeIn(tween(ReaderTransitionMillis)) +
+                    slideInVertically(animationSpec = tween(ReaderTransitionMillis)) { it },
+                // The reader covers the bar as it opens, so hiding it instantly is invisible and
+                // avoids keeping the bar's space reserved while the reader slides in on top.
+                exit = ExitTransition.None,
+            ) {
                 Column {
                     MiniPlayer(onExpand = { articleId ->
                         navController.navigate(NavDestination.Reader(articleId)) {
@@ -96,7 +147,25 @@ fun AppNavigation(
         },
     ) { innerPadding ->
         val layoutDirection = LocalLayoutDirection.current
-        val bottomPadding = if (isReaderScreen) 0.dp else innerPadding.calculateBottomPadding()
+        val bottomPaddingTarget = innerPadding.calculateBottomPadding()
+        val bottomPadding = remember {
+            Animatable(
+                initialValue = if (isReaderChromeVisible) 0.dp else bottomPaddingTarget,
+                typeConverter = Dp.VectorConverter,
+            )
+        }
+        // The reader keeps a full-height layout while it slides away; the bar's space comes back
+        // only after the slide, so neither edge of the reader is clipped mid-flight.
+        LaunchedEffect(isReaderChromeVisible, bottomPaddingTarget) {
+            if (isReaderChromeVisible) {
+                bottomPadding.snapTo(0.dp)
+            } else {
+                bottomPadding.animateTo(
+                    targetValue = bottomPaddingTarget,
+                    animationSpec = tween(ReaderTransitionMillis),
+                )
+            }
+        }
         NavHost(
             navController = navController,
             startDestination = NavDestination.Home,
@@ -104,10 +173,21 @@ fun AppNavigation(
             exitTransition = { ExitTransition.None },
             popEnterTransition = { EnterTransition.None },
             popExitTransition = { ExitTransition.None },
+            predictivePopEnterTransition = { EnterTransition.None },
+            predictivePopExitTransition = {
+                if (initialState.destination.hasRoute<NavDestination.Reader>()) {
+                    slideOutVertically(
+                        targetOffsetY = { it },
+                        animationSpec = tween(ReaderTransitionMillis, easing = FastOutSlowInEasing),
+                    )
+                } else {
+                    ExitTransition.None
+                }
+            },
             modifier = Modifier.padding(
-                start = if (isReaderScreen) 0.dp else innerPadding.calculateStartPadding(layoutDirection),
-                end = if (isReaderScreen) 0.dp else innerPadding.calculateEndPadding(layoutDirection),
-                bottom = bottomPadding,
+                start = if (isReaderChromeVisible) 0.dp else innerPadding.calculateStartPadding(layoutDirection),
+                end = if (isReaderChromeVisible) 0.dp else innerPadding.calculateEndPadding(layoutDirection),
+                bottom = bottomPadding.value,
             ),
         ) {
             composable<NavDestination.Home> {
@@ -124,10 +204,16 @@ fun AppNavigation(
                 )
             }
             composable<NavDestination.Queue> {
-                QueueScreen(onNavigateToHistory = { navController.navigate(NavDestination.History) })
+                QueueScreen(
+                    onNavigateToHistory = { navController.navigate(NavDestination.History) },
+                    snackbarHostState = snackbarHostState,
+                )
             }
             composable<NavDestination.History> {
-                HistoryScreen(onBack = { navController.popBackStack() })
+                HistoryScreen(
+                    onBack = { navController.popBackStack() },
+                    snackbarHostState = snackbarHostState,
+                )
             }
             composable<NavDestination.Add> {
                 AddScreen(
@@ -138,6 +224,7 @@ fun AppNavigation(
             composable<NavDestination.Inbox> {
                 InboxScreen(
                     onNavigateToFeeds = { navController.navigate(NavDestination.Feeds) },
+                    snackbarHostState = snackbarHostState,
                 )
             }
             composable<NavDestination.Feeds> {
@@ -147,7 +234,10 @@ fun AppNavigation(
                 )
             }
             composable<NavDestination.Feed> {
-                FeedArticlesScreen(onBack = { navController.popBackStack() })
+                FeedArticlesScreen(
+                    onBack = { navController.popBackStack() },
+                    snackbarHostState = snackbarHostState,
+                )
             }
             composable<NavDestination.Settings> {
                 SettingsScreen(
@@ -205,7 +295,29 @@ fun AppNavigation(
             composable<NavDestination.SettingsLicenses> {
                 LicensesScreen(onBack = { navController.popBackStack() })
             }
-            composable<NavDestination.Reader> {
+            composable<NavDestination.Reader>(
+                // Mirror the dismiss slide so opening and closing the reader share one motion: the
+                // page rises from the bottom edge and settles, then falls back down on pop. The
+                // reader paints the same background as the tab underneath, so only its content (top
+                // bar, text, controls) appears to move. Swapping one article for another (a deep
+                // link while the reader is open) stays instant instead of sliding over itself.
+                enterTransition = {
+                    if (initialState.destination.hasRoute<NavDestination.Reader>()) {
+                        EnterTransition.None
+                    } else {
+                        slideInVertically(
+                            initialOffsetY = { it },
+                            animationSpec = tween(ReaderTransitionMillis, easing = FastOutSlowInEasing),
+                        )
+                    }
+                },
+                popExitTransition = {
+                    slideOutVertically(
+                        targetOffsetY = { it },
+                        animationSpec = tween(ReaderTransitionMillis, easing = FastOutSlowInEasing),
+                    )
+                },
+            ) {
                 ReaderScreen(
                     onBack = { navController.popBackStack() },
                     themeViewModel = themeViewModel,

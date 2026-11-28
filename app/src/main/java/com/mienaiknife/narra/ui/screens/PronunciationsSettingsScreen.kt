@@ -15,21 +15,17 @@
  */
 package com.mienaiknife.narra.ui.screens
 
-import android.content.res.Configuration
 import android.widget.Toast
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -47,12 +43,8 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
-import androidx.compose.material3.ListItem
-import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -65,12 +57,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -80,7 +70,11 @@ import com.mienaiknife.narra.domain.TtsState
 import com.mienaiknife.narra.domain.models.CustomPronunciation
 import com.mienaiknife.narra.domain.pronunciation.PronunciationValidator
 import com.mienaiknife.narra.ui.components.BottomNavBar
-import com.mienaiknife.narra.ui.components.ScreenHeader
+import com.mienaiknife.narra.ui.components.NarraListItem
+import com.mienaiknife.narra.ui.components.NarraTextFieldShape
+import com.mienaiknife.narra.ui.components.SettingsScaffold
+import com.mienaiknife.narra.ui.components.SettingsSectionLabel
+import com.mienaiknife.narra.ui.components.narraTextFieldColors
 import com.mienaiknife.narra.ui.theme.LocalNarraSpacing
 import com.mienaiknife.narra.ui.theme.NarraTheme
 import com.mienaiknife.narra.ui.viewmodels.PronunciationsUiState
@@ -173,101 +167,74 @@ fun PronunciationsSettingsContent(
         )
     }
 
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .statusBarsPadding(),
+    SettingsScaffold(
+        title = stringResource(R.string.settings_pronunciations_title),
+        onBack = onBack,
+        modifier = modifier,
+        showInitProgress = uiState.engineState is TtsState.Initializing,
     ) {
-        if (uiState.engineState is TtsState.Initializing) {
-            LinearProgressIndicator(
-                modifier = Modifier.fillMaxWidth(),
-                color = MaterialTheme.colorScheme.primary,
-                trackColor = MaterialTheme.colorScheme.primaryContainer,
-            )
-        }
-        Spacer(modifier = Modifier.height(16.dp))
-
-        ScreenHeader(
-            title = stringResource(R.string.settings_pronunciations_title),
-            onBack = onBack,
+        Text(
+            text = stringResource(R.string.settings_pronunciations_intro),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp),
+        Button(
+            onClick = {
+                editorEntry = null
+                showEditor = true
+            },
+            shape = RoundedCornerShape(8.dp),
+            modifier = Modifier.fillMaxWidth(),
         ) {
+            Icon(
+                imageVector = Icons.Default.Add,
+                contentDescription = null,
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(stringResource(R.string.settings_pronunciations_add))
+        }
+
+        SettingsSectionLabel(
+            text = stringResource(R.string.settings_pronunciations_saved_section),
+        )
+
+        if (uiState.entries.isEmpty()) {
             Text(
-                text = stringResource(R.string.settings_pronunciations_intro),
+                text = stringResource(R.string.settings_pronunciations_empty),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(bottom = 16.dp),
             )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Button(
-                onClick = {
-                    editorEntry = null
-                    showEditor = true
-                },
-                shape = RoundedCornerShape(8.dp),
+        } else {
+            Surface(
+                color = MaterialTheme.colorScheme.surfaceContainer,
+                shape = MaterialTheme.shapes.medium,
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Icon(
-                    imageVector = Icons.Default.Add,
-                    contentDescription = null,
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(stringResource(R.string.settings_pronunciations_add))
-            }
-
-            Text(
-                text = stringResource(R.string.settings_pronunciations_saved_section),
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.padding(top = 24.dp, bottom = 8.dp),
-            )
-
-            if (uiState.entries.isEmpty()) {
-                Text(
-                    text = stringResource(R.string.settings_pronunciations_empty),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(bottom = 16.dp),
-                )
-            } else {
-                Surface(
-                    color = MaterialTheme.colorScheme.surfaceContainer,
-                    shape = MaterialTheme.shapes.medium,
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Column {
-                        uiState.entries.forEachIndexed { index, entry ->
-                            PronunciationListItem(
-                                entry = entry,
-                                engineReady = uiState.engineReady,
-                                onPreview = { onPreview(entry) },
-                                onEdit = {
-                                    editorEntry = entry
-                                    showEditor = true
-                                },
-                                onDelete = { entryToDelete = entry },
+                Column {
+                    uiState.entries.forEachIndexed { index, entry ->
+                        PronunciationListItem(
+                            entry = entry,
+                            previewEnabled = uiState.previewEnabled,
+                            onPreview = { onPreview(entry) },
+                            onEdit = {
+                                editorEntry = entry
+                                showEditor = true
+                            },
+                            onDelete = { entryToDelete = entry },
+                        )
+                        if (index < uiState.entries.lastIndex) {
+                            HorizontalDivider(
+                                modifier = Modifier.padding(horizontal = 16.dp),
+                                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
                             )
-                            if (index < uiState.entries.lastIndex) {
-                                HorizontalDivider(
-                                    modifier = Modifier.padding(horizontal = 16.dp),
-                                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
-                                )
-                            }
                         }
                     }
                 }
             }
-
-            Spacer(modifier = Modifier.height(24.dp))
         }
     }
 }
@@ -275,7 +242,7 @@ fun PronunciationsSettingsContent(
 @Composable
 private fun PronunciationListItem(
     entry: CustomPronunciation,
-    engineReady: Boolean,
+    previewEnabled: Boolean,
     onPreview: () -> Unit,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
@@ -288,15 +255,9 @@ private fun PronunciationListItem(
             is PronunciationValidator.Result.Invalid -> null
         }
     }
-    ListItem(
-        modifier = Modifier.clickable(role = Role.Button, onClick = onEdit),
-        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-        headlineContent = {
-            Text(
-                text = entry.word,
-                style = MaterialTheme.typography.bodyLarge,
-            )
-        },
+    NarraListItem(
+        title = entry.word,
+        onClick = onEdit,
         supportingContent = {
             Column(
                 modifier = Modifier.padding(top = 2.dp),
@@ -320,7 +281,7 @@ private fun PronunciationListItem(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 IconButton(
                     onClick = onPreview,
-                    enabled = engineReady,
+                    enabled = previewEnabled,
                 ) {
                     Icon(
                         imageVector = Icons.Default.PlayArrow,
@@ -405,10 +366,6 @@ fun PronunciationEditorDialog(
     }
     val wordError = shownError?.takeIf { it.error in WORD_VALIDATION_ERRORS }
     val arpabetError = shownError?.takeIf { it.error !in WORD_VALIDATION_ERRORS }
-    val fieldColors = OutlinedTextFieldDefaults.colors(
-        unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
-        focusedBorderColor = MaterialTheme.colorScheme.primary,
-    )
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -435,8 +392,8 @@ fun PronunciationEditorDialog(
                     label = { Text(stringResource(R.string.settings_pronunciations_word)) },
                     singleLine = true,
                     isError = wordError != null,
-                    shape = RoundedCornerShape(24.dp),
-                    colors = fieldColors,
+                    shape = NarraTextFieldShape,
+                    colors = narraTextFieldColors(),
                     supportingText = if (wordError != null) {
                         { ValidationMessage(wordError.error, wordError.detail) }
                     } else {
@@ -452,8 +409,8 @@ fun PronunciationEditorDialog(
                     placeholder = { Text(stringResource(R.string.settings_pronunciations_arpabet_placeholder)) },
                     singleLine = true,
                     isError = arpabetError != null,
-                    shape = RoundedCornerShape(24.dp),
-                    colors = fieldColors,
+                    shape = NarraTextFieldShape,
+                    colors = narraTextFieldColors(),
                     supportingText = if (arpabetError != null) {
                         { ValidationMessage(arpabetError.error, arpabetError.detail) }
                     } else {
@@ -524,7 +481,7 @@ private fun ArpabetHelpDialog(onDismiss: () -> Unit) {
     )
 }
 
-@Preview(uiMode = Configuration.UI_MODE_NIGHT_YES, showBackground = true)
+@PreviewLightDark
 @Composable
 fun PronunciationsSettingsScreenPreview() {
     val navController = rememberNavController()
@@ -534,7 +491,7 @@ fun PronunciationsSettingsScreenPreview() {
         CustomPronunciation(word = "Kokoro", arpabet = "K OW0 K AO1 R OW0"),
     )
 
-    NarraTheme(darkTheme = true, dynamicColor = false) {
+    NarraTheme(dynamicColor = false) {
         Scaffold(
             bottomBar = { BottomNavBar(navController) },
         ) { innerPadding ->

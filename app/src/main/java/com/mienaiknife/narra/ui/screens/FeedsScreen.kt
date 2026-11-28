@@ -15,7 +15,6 @@
  */
 package com.mienaiknife.narra.ui.screens
 
-import android.content.res.Configuration
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -29,12 +28,10 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -45,7 +42,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Download
-import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.NotificationsNone
 import androidx.compose.material.icons.filled.Refresh
@@ -54,16 +50,12 @@ import androidx.compose.material.icons.filled.Upload
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconToggleButton
+import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.pulltorefresh.PullToRefreshBox
-import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
-import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -77,7 +69,8 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -86,10 +79,15 @@ import coil3.compose.AsyncImage
 import com.mienaiknife.narra.R
 import com.mienaiknife.narra.data.local.entities.FeedEntity
 import com.mienaiknife.narra.data.models.SortOption
+import com.mienaiknife.narra.ui.components.AdaptiveText
 import com.mienaiknife.narra.ui.components.BottomNavBar
+import com.mienaiknife.narra.ui.components.EmptyState
+import com.mienaiknife.narra.ui.components.NarraPullToRefreshBox
 import com.mienaiknife.narra.ui.components.NarraScrollbar
+import com.mienaiknife.narra.ui.components.OverflowMenu
 import com.mienaiknife.narra.ui.components.ScreenHeader
 import com.mienaiknife.narra.ui.components.SortBottomSheet
+import com.mienaiknife.narra.ui.components.narraListItemColors
 import com.mienaiknife.narra.ui.theme.NarraTheme
 import com.mienaiknife.narra.ui.utils.UrlUtils
 import com.mienaiknife.narra.ui.viewmodels.FeedsViewModel
@@ -144,7 +142,6 @@ fun FeedsScreen(
     )
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FeedsScreenContent(
     onFeedClick: (String, String) -> Unit,
@@ -161,7 +158,6 @@ fun FeedsScreenContent(
 ) {
     var showMenu by remember { mutableStateOf(false) }
     val showSortSheet = remember { mutableStateOf(false) }
-    val pullToRefreshState = rememberPullToRefreshState()
 
     if (showSortSheet.value) {
         SortBottomSheet(
@@ -177,8 +173,8 @@ fun FeedsScreenContent(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .statusBarsPadding()
-            .background(MaterialTheme.colorScheme.background),
+            .background(MaterialTheme.colorScheme.background)
+            .statusBarsPadding(),
     ) {
         Spacer(modifier = Modifier.height(16.dp))
 
@@ -186,121 +182,89 @@ fun FeedsScreenContent(
             title = stringResource(R.string.nav_feeds),
             onBack = onBackClick,
         ) {
-            Box {
-                IconButton(onClick = { showMenu = true }) {
-                    Icon(
-                        imageVector = Icons.Default.Menu,
-                        contentDescription = stringResource(R.string.action_menu),
-                        modifier = Modifier.size(32.dp),
-                        tint = MaterialTheme.colorScheme.onBackground,
-                    )
-                }
-
-                DropdownMenu(
-                    expanded = showMenu,
-                    onDismissRequest = { showMenu = false },
-                ) {
-                    DropdownMenuItem(
-                        text = { Text(stringResource(R.string.action_sort)) },
-                        onClick = {
-                            showMenu = false
-                            showSortSheet.value = true
-                        },
-                        leadingIcon = {
-                            Icon(
-                                Icons.AutoMirrored.Filled.Sort,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onBackground,
-                            )
-                        },
-                    )
-                    DropdownMenuItem(
-                        text = { Text(stringResource(R.string.action_refresh)) },
-                        onClick = {
-                            showMenu = false
-                            onRefresh()
-                        },
-                        leadingIcon = {
-                            Icon(
-                                Icons.Default.Refresh,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onBackground,
-                            )
-                        },
-                    )
-                    DropdownMenuItem(
-                        text = { Text(stringResource(R.string.settings_downloads_import_feeds)) },
-                        onClick = {
-                            showMenu = false
-                            onImportOpml()
-                        },
-                        leadingIcon = {
-                            Icon(
-                                Icons.Default.Upload,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onBackground,
-                            )
-                        },
-                    )
-                    DropdownMenuItem(
-                        text = { Text(stringResource(R.string.settings_downloads_export_feeds)) },
-                        onClick = {
-                            showMenu = false
-                            onExportOpml()
-                        },
-                        leadingIcon = {
-                            Icon(
-                                Icons.Default.Download,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onBackground,
-                            )
-                        },
-                    )
-                }
+            OverflowMenu(
+                expanded = showMenu,
+                onExpandedChange = { showMenu = it },
+                contentDescription = stringResource(R.string.action_menu),
+            ) {
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.action_sort)) },
+                    onClick = {
+                        showMenu = false
+                        showSortSheet.value = true
+                    },
+                    leadingIcon = {
+                        Icon(
+                            Icons.AutoMirrored.Filled.Sort,
+                            contentDescription = null,
+                        )
+                    },
+                )
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.action_refresh)) },
+                    onClick = {
+                        showMenu = false
+                        onRefresh()
+                    },
+                    leadingIcon = {
+                        Icon(
+                            Icons.Default.Refresh,
+                            contentDescription = null,
+                        )
+                    },
+                )
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.settings_downloads_import_feeds)) },
+                    onClick = {
+                        showMenu = false
+                        onImportOpml()
+                    },
+                    leadingIcon = {
+                        Icon(
+                            Icons.Default.Upload,
+                            contentDescription = null,
+                        )
+                    },
+                )
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.settings_downloads_export_feeds)) },
+                    onClick = {
+                        showMenu = false
+                        onExportOpml()
+                    },
+                    leadingIcon = {
+                        Icon(
+                            Icons.Default.Download,
+                            contentDescription = null,
+                        )
+                    },
+                )
             }
         }
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        PullToRefreshBox(
+        NarraPullToRefreshBox(
             isRefreshing = isRefreshing,
             onRefresh = onRefresh,
-            state = pullToRefreshState,
             modifier = Modifier.weight(1f),
-            indicator = {
-                PullToRefreshDefaults.Indicator(
-                    state = pullToRefreshState,
-                    isRefreshing = isRefreshing,
-                    containerColor = MaterialTheme.colorScheme.surface,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.align(Alignment.TopCenter),
-                )
-            },
         ) {
             if (feeds.isEmpty()) {
-                Box(
+                EmptyState(
+                    icon = Icons.Default.RssFeed,
+                    title = stringResource(R.string.feeds_empty_message),
                     modifier = Modifier
                         .fillMaxSize()
-                        .verticalScroll(rememberScrollState())
-                        .padding(horizontal = 16.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(
-                        text = stringResource(R.string.feeds_empty_message),
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
+                        .verticalScroll(rememberScrollState()),
+                )
             } else {
                 val scrollState = rememberLazyListState()
                 Box(modifier = Modifier.fillMaxSize()) {
                     LazyColumn(
                         state = scrollState,
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(horizontal = 16.dp),
+                        modifier = Modifier.fillMaxSize(),
                         verticalArrangement = Arrangement.spacedBy(16.dp),
-                        contentPadding = PaddingValues(bottom = 24.dp),
+                        contentPadding = PaddingValues(bottom = 32.dp),
                     ) {
                         items(feeds, key = { it.url }) { feed ->
                             FeedItem(
@@ -335,92 +299,91 @@ fun FeedItem(
     var showMenu by remember { mutableStateOf(false) }
 
     Box {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(64.dp)
-                .combinedClickable(
-                    role = Role.Button,
-                    onClick = onClick,
-                    onLongClick = { showMenu = true },
-                ),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            // Square favicon or placeholder image
-            Box(
-                modifier = Modifier
-                    .size(64.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(MaterialTheme.colorScheme.surfaceContainer),
-                contentAlignment = Alignment.Center,
-            ) {
-                val imageUrl = feed.imageUrl ?: UrlUtils.faviconUrl(feed.url)
-                var isImageLoaded by remember(imageUrl) { mutableStateOf(false) }
-
-                if (!isImageLoaded) {
-                    Icon(
-                        imageVector = Icons.Default.RssFeed,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(32.dp),
-                    )
-                }
-
-                AsyncImage(
-                    model = imageUrl,
-                    contentDescription = stringResource(R.string.feeds_icon_desc),
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop,
-                    onSuccess = { isImageLoaded = true },
-                )
-            }
-
-            Spacer(modifier = Modifier.width(16.dp))
-
-            // Feed name
-            Column(
-                modifier = Modifier.weight(1f),
-            ) {
-                Text(
+        ListItem(
+            modifier = Modifier.combinedClickable(
+                role = Role.Button,
+                onClick = onClick,
+                onLongClick = { showMenu = true },
+            ),
+            headlineContent = {
+                AdaptiveText(
                     text = feed.title,
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onBackground,
+                    style = MaterialTheme.typography.bodyMedium,
                     maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                 )
-                if (feed.description != null) {
-                    Text(
-                        text = feed.description,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+            },
+            supportingContent = feed.description?.let { description ->
+                {
+                    AdaptiveText(
+                        text = description,
+                        style = MaterialTheme.typography.bodySmall.copy(
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        ),
                         maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
                     )
                 }
-            }
-
-            if (feed.lastRefreshErrorAt != null) {
-                Icon(
-                    imageVector = Icons.Default.Warning,
-                    contentDescription = stringResource(R.string.feeds_refresh_error_desc),
+            },
+            leadingContent = {
+                // Square favicon or placeholder image
+                Box(
                     modifier = Modifier
-                        .padding(end = 8.dp)
-                        .size(24.dp),
-                    tint = MaterialTheme.colorScheme.error,
-                )
-            }
+                        .size(64.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(MaterialTheme.colorScheme.surfaceContainer),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    val imageUrl = feed.imageUrl ?: UrlUtils.faviconUrl(feed.url)
+                    var isImageLoaded by remember(imageUrl) { mutableStateOf(false) }
 
-            // Notification icon on the right
-            IconToggleButton(
-                checked = feed.notificationsEnabled,
-                onCheckedChange = { onToggleNotifications() },
-            ) {
-                Icon(
-                    imageVector = if (feed.notificationsEnabled) Icons.Default.Notifications else Icons.Default.NotificationsNone,
-                    contentDescription = stringResource(R.string.feeds_notifications_desc),
-                    modifier = Modifier.size(24.dp),
-                    tint = if (feed.notificationsEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        }
+                    if (!isImageLoaded) {
+                        Icon(
+                            imageVector = Icons.Default.RssFeed,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(32.dp),
+                        )
+                    }
+
+                    AsyncImage(
+                        model = imageUrl,
+                        contentDescription = stringResource(R.string.feeds_icon_desc),
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop,
+                        onSuccess = { isImageLoaded = true },
+                    )
+                }
+            },
+            trailingContent = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (feed.lastRefreshErrorAt != null) {
+                        Icon(
+                            imageVector = Icons.Default.Warning,
+                            contentDescription = stringResource(R.string.feeds_refresh_error_desc),
+                            modifier = Modifier
+                                .padding(end = 8.dp)
+                                .size(24.dp),
+                            tint = MaterialTheme.colorScheme.error,
+                        )
+                    }
+
+                    // Notification icon on the right
+                    IconToggleButton(
+                        checked = feed.notificationsEnabled,
+                        onCheckedChange = { onToggleNotifications() },
+                    ) {
+                        Icon(
+                            imageVector = if (feed.notificationsEnabled) Icons.Default.Notifications else Icons.Default.NotificationsNone,
+                            contentDescription = stringResource(R.string.feeds_notifications_desc),
+                            modifier = Modifier.size(24.dp),
+                            tint = if (feed.notificationsEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+            },
+            colors = narraListItemColors(),
+        )
 
         DropdownMenu(
             expanded = showMenu,
@@ -438,7 +401,7 @@ fun FeedItem(
     }
 }
 
-@Preview(uiMode = Configuration.UI_MODE_NIGHT_YES, showBackground = true)
+@PreviewLightDark
 @Composable
 fun FeedsScreenPreview() {
     val navController = rememberNavController()
@@ -447,7 +410,7 @@ fun FeedsScreenPreview() {
         FeedEntity(url = "2", title = "Android Central", description = "Android news and reviews", lastRefreshErrorAt = 1L),
         FeedEntity(url = "3", title = "9to5Google", description = "Google and Android news"),
     )
-    NarraTheme(darkTheme = true, dynamicColor = false) {
+    NarraTheme(dynamicColor = false) {
         Scaffold(
             bottomBar = { BottomNavBar(navController) },
         ) { innerPadding ->

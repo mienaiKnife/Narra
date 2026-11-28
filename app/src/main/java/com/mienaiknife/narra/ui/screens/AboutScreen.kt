@@ -16,42 +16,26 @@
 package com.mienaiknife.narra.ui.screens
 
 import android.content.Context
-import android.content.res.Configuration
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Info
-import androidx.compose.material3.Icon
-import androidx.compose.material3.ListItem
-import androidx.compose.material3.ListItemDefaults
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.dp
 import androidx.navigation.compose.rememberNavController
 import com.mienaiknife.narra.R
 import com.mienaiknife.narra.ui.components.BottomNavBar
-import com.mienaiknife.narra.ui.components.ScreenHeader
+import com.mienaiknife.narra.ui.components.NarraListItem
+import com.mienaiknife.narra.ui.components.SettingsScaffold
 import com.mienaiknife.narra.ui.theme.NarraTheme
 
 @Composable
@@ -63,109 +47,72 @@ fun AboutScreen(onBack: () -> Unit, onNavigateToLicenses: () -> Unit) {
     val previewString = stringResource(R.string.reader_preview)
     val versionName = if (isPreview) previewString else getVersionName(context, unknownString)
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .statusBarsPadding(),
-    ) {
-        Spacer(modifier = Modifier.height(16.dp))
+    AboutContent(
+        versionName = versionName,
+        onBack = onBack,
+        onOpenRepository = { uriHandler.openUri("https://github.com/mienaiKnife/Narra") },
+        onOpenPrivacyPolicy = { uriHandler.openUri("https://github.com/mienaiKnife/Narra/blob/main/docs/PRIVACY.md") },
+        onNavigateToLicenses = onNavigateToLicenses,
+    )
+}
 
-        ScreenHeader(
-            title = stringResource(R.string.settings_about_title),
-            onBack = onBack,
+@Composable
+fun AboutContent(
+    versionName: String,
+    onBack: () -> Unit,
+    onOpenRepository: () -> Unit,
+    onOpenPrivacyPolicy: () -> Unit,
+    onNavigateToLicenses: () -> Unit,
+) {
+    SettingsScaffold(
+        title = stringResource(R.string.settings_about_title),
+        onBack = onBack,
+        horizontalPadding = 0.dp,
+    ) {
+        NarraListItem(
+            title = stringResource(R.string.about_version),
+            subtitle = versionName,
+            leadingIcon = Icons.Default.Info,
         )
 
-        Spacer(modifier = Modifier.height(16.dp))
+        NarraListItem(
+            title = stringResource(R.string.about_code_repository),
+            subtitle = stringResource(R.string.about_code_repository_desc),
+            leadingIcon = Icons.Default.Code,
+            onClick = onOpenRepository,
+        )
 
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(bottom = 32.dp),
-        ) {
-            item {
-                ListItem(
-                    headlineContent = { Text(stringResource(R.string.about_version)) },
-                    supportingContent = { Text(versionName) },
-                    leadingContent = {
-                        Icon(
-                            Icons.Default.Info,
-                            contentDescription = null,
-                            modifier = Modifier.size(24.dp),
-                            tint = MaterialTheme.colorScheme.onBackground,
-                        )
-                    },
-                    colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                )
-            }
+        NarraListItem(
+            title = stringResource(R.string.reader_menu_licenses),
+            subtitle = stringResource(R.string.about_licenses_desc),
+            leadingIcon = Icons.Default.Description,
+            onClick = onNavigateToLicenses,
+        )
 
-            item {
-                ListItem(
-                    headlineContent = { Text(stringResource(R.string.about_code_repository)) },
-                    supportingContent = { Text(stringResource(R.string.about_code_repository_desc)) },
-                    leadingContent = {
-                        Icon(
-                            Icons.Default.Code,
-                            contentDescription = null,
-                            modifier = Modifier.size(24.dp),
-                            tint = MaterialTheme.colorScheme.onBackground,
-                        )
-                    },
-                    modifier = Modifier.clickable(role = Role.Button) {
-                        uriHandler.openUri("https://github.com/mienaiKnife/Narra")
-                    },
-                    colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                )
-            }
-
-            item {
-                ListItem(
-                    headlineContent = { Text(stringResource(R.string.reader_menu_licenses)) },
-                    supportingContent = { Text(stringResource(R.string.about_licenses_desc)) },
-                    leadingContent = {
-                        Icon(
-                            Icons.Default.Description,
-                            contentDescription = null,
-                            modifier = Modifier.size(24.dp),
-                            tint = MaterialTheme.colorScheme.onBackground,
-                        )
-                    },
-                    modifier = Modifier.clickable(role = Role.Button) {
-                        onNavigateToLicenses()
-                    },
-                    colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                )
-            }
-
-            item {
-                ListItem(
-                    headlineContent = { Text(stringResource(R.string.about_privacy_policy)) },
-                    leadingContent = {
-                        Icon(
-                            Icons.Default.Info,
-                            contentDescription = null,
-                            modifier = Modifier.size(24.dp),
-                            tint = MaterialTheme.colorScheme.onBackground,
-                        )
-                    },
-                    modifier = Modifier.clickable(role = Role.Button) {
-                        uriHandler.openUri("https://github.com/mienaiKnife/Narra/blob/main/docs/PRIVACY.md")
-                    },
-                    colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                )
-            }
-        }
+        NarraListItem(
+            title = stringResource(R.string.about_privacy_policy),
+            leadingIcon = Icons.Default.Info,
+            onClick = onOpenPrivacyPolicy,
+        )
     }
 }
 
-@Preview(uiMode = Configuration.UI_MODE_NIGHT_YES, showBackground = true)
+@PreviewLightDark
 @Composable
 fun AboutScreenPreview() {
     val navController = rememberNavController()
-    NarraTheme(darkTheme = true, dynamicColor = false) {
+    NarraTheme(dynamicColor = false) {
         Scaffold(
             bottomBar = { BottomNavBar(navController) },
         ) { innerPadding ->
             Box(modifier = Modifier.padding(innerPadding)) {
-                AboutScreen(onBack = {}, onNavigateToLicenses = {})
+                AboutContent(
+                    versionName = "1.0.0",
+                    onBack = {},
+                    onOpenRepository = {},
+                    onOpenPrivacyPolicy = {},
+                    onNavigateToLicenses = {},
+                )
             }
         }
     }

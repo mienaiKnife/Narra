@@ -144,6 +144,9 @@ Typography rules:
 
 - **Screen title:** `headlineSmall` with `onBackground`.
 - **Section heading:** `titleMedium` with `primary`, usually followed by 8 dp of space.
+- **Home carousel heading:** `titleMedium` with `onBackground`. Carousel headings sit on the page
+  rather than opening a settings group, so they stay neutral; this is the one section-heading
+  exception.
 - **Settings row:** `bodyLarge` title plus `bodyMedium` subtitle in `onSurfaceVariant`.
 - **List row:** `bodyMedium` title, `bodySmall` metadata, `labelSmall` timestamps.
 - **No ad-hoc font sizes in normal screens.** Size belongs to the type role. The reader (user
@@ -183,8 +186,8 @@ The base unit is 4 dp. These values recur across the app:
 | 4 dp | Title-to-subtitle gap via `LocalNarraSpacing.itemVertical`; compact internal gaps |
 | 8 dp | Vertical padding on settings rows; gap between a control and its label |
 | 12 dp | Gap between thumbnail and text; gap between cards in a horizontal carousel |
-| 16 dp | Standard horizontal screen padding; top spacer above the header; gap below the header; section heading bottom padding; header icon side spacing |
-| 24 dp | Gap between major sections; reader horizontal padding; bottom-sheet content padding |
+| 16 dp | Standard horizontal screen padding; top spacer above the header; gap below the header; **gap between list rows**; section heading bottom padding; leading-icon side spacing in list rows |
+| 24 dp | Gap between major sections and settings groups; reader horizontal padding; bottom-sheet content padding |
 | 32 dp | Final scroll spacer; back-arrow icon size |
 | 48 dp | Minimum height for top-level header rows and touch targets |
 | 56 dp | Reader scroll-to-current FAB |
@@ -194,37 +197,48 @@ The base unit is 4 dp. These values recur across the app:
 | 400 dp | Maximum bottom-navigation content width on tablets |
 | 600 dp | `smallestScreenWidthDp` breakpoint for tablet layout |
 
-A typical top-level screen starts like this:
+Never hand-roll the tab skeleton. Top-level tabs ("Home", "Queue", "Add", "Inbox", "Settings") use
+`TopLevelScreen`, which applies the status bar inset, the 16 dp spacer, a 48 dp header without a
+back arrow, an optional one-line `meta` summary (for example the queue count and remaining time),
+and the 16 dp gap below the header:
 
 ```kotlin
-Column(
-    modifier = Modifier
-        .fillMaxSize()
-        .statusBarsPadding(),
-) {
-    Spacer(modifier = Modifier.height(16.dp))
-
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .heightIn(min = 48.dp)
-            .padding(horizontal = 16.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
+TopLevelScreen(
+    title = stringResource(R.string.nav_queue),
+    headerActions = {
+        OverflowMenu(
+            expanded = showMenu,
+            onExpandedChange = { showMenu = it },
+            contentDescription = stringResource(R.string.action_menu),
+        ) {
+            // Menu items
+        }
+    },
+    meta = {
         Text(
-            text = stringResource(R.string.nav_home),
-            style = MaterialTheme.typography.headlineSmall,
+            text = queueSummary,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(horizontal = 16.dp),
         )
+    },
+) {
+    NarraPullToRefreshBox(
+        isRefreshing = isRefreshing,
+        onRefresh = onRefresh,
+        modifier = Modifier.weight(1f),
+    ) {
+        // List or EmptyState
     }
-
-    Spacer(modifier = Modifier.height(16.dp))
-    // Content
 }
 ```
 
-Top-level tabs ("Home", "Queue", "Add", "Inbox", "Settings") use this header without a back
-arrow. Sub-screens use `ScreenHeader` instead. Do not introduce a `TopAppBar`; the app deliberately
-uses the flat in-content header.
+Sub-screens use `ScreenHeader` instead. Settings sub-screens use `SettingsScaffold`, which supplies
+`ScreenHeader`, a 16 dp horizontal gutter, the scroll container, and the 32 dp final spacer. A
+sub-screen made only of full-width `NarraListItem` rows (About, Licenses) passes
+`horizontalPadding = 0.dp` so its rows align with the top-level Settings list. Do not introduce a
+`TopAppBar`; the app deliberately uses the flat in-content header. Header actions are
+`OverflowMenu` (a 32 dp `MoreVert` icon), not the navigation `Menu` icon.
 
 ### Shapes
 
@@ -235,7 +249,7 @@ uses the flat in-content header.
 | 8 dp | Filled action buttons, including empty-state and add-pronunciation buttons |
 | 12 dp | Queue and feed thumbnails; pronunciation cards; home-screen widget corners |
 | 16 dp | Add-screen action cards |
-| 24 dp | Outlined text fields and the settings search field (pill-like) |
+| 24 dp | Outlined text fields everywhere (pill-like) |
 | `MaterialTheme.shapes.small` | Reader block quotes, via the theme's small shape |
 | `MaterialTheme.shapes.medium` | Reader images |
 | `CircleShape` | Reader FAB, queue play/pause affordance, scrollbar thumb |
@@ -252,6 +266,14 @@ default elevation (menus, dialogs, bottom sheets, the navigation bar) keep it.
 Motion is restrained:
 
 - root navigation transitions are intentionally disabled, so tabs switch instantly;
+- the reader is the one exception: it opens with a 300 ms upward slide and dismisses with the
+  matching downward slide, which also follows the predictive-back gesture, and the top-bar chevron
+  uses the same motion. The reader stays full-bleed for the whole slide; the mini-player and
+  navigation bar start returning just before the dismiss slide ends and come back over 300 ms.
+  Every other push or pop stays instant;
+- every route root paints `MaterialTheme.colorScheme.background` (through `TopLevelScreen`,
+  `SettingsScaffold`, or the screen's own root) so a screen is always opaque; the status bar strip
+  then matches the page instead of the window background;
 - the reader follows playback with a low-stiffness spring scroll;
 - the custom scrollbar fades in and out over 300 ms and disappears after 1.5 s of inactivity;
 - settings deep links use `flashHighlight`, which waits 300 ms for navigation to settle, flashes
@@ -264,11 +286,32 @@ playback.
 
 Reuse these before building a one-off version. They live in `ui/components/`.
 
+### `TopLevelScreen`
+
+The skeleton for the five tabs. It owns `statusBarsPadding`, the 16 dp top spacer, the 48 dp header
+row (`TopLevelScreenHeader`), the optional `meta` line, and the 16 dp gap below the header. Use it
+instead of assembling a `Column` in each tab.
+
 ### `ScreenHeader`
 
 The sub-screen header: 32 dp back arrow, `headlineSmall` title with ellipsis, optional trailing
 actions, and 16 dp horizontal padding. Every screen reached by pushing a route uses it. Use
 `Icons.AutoMirrored.Filled.ArrowBack` so RTL is handled.
+
+### `SettingsScaffold`
+
+The skeleton for settings sub-screens. It supplies `statusBarsPadding`, an optional engine-init
+`LinearProgressIndicator`, `ScreenHeader`, a horizontal gutter (16 dp by default, overridable via
+`horizontalPadding`), a vertical scroll container, and the 32 dp final spacer. Pass
+`horizontalPadding = 0.dp` for screens that are only full-width list rows so those rows stay
+full-bleed like the top-level Settings list. Screens do not add their own scroll container or
+trailing spacer.
+
+### `OverflowMenu`
+
+The standard header action: a 32 dp `MoreVert` icon that opens a dropdown with default menu colors.
+Callers own the expanded state so the menu can close when an item is chosen. Do not use
+`Icons.Default.Menu` for an overflow menu.
 
 ### `BottomNavBar`
 
@@ -296,19 +339,71 @@ tap opens the item menu with played, queue, and visit-site actions.
 
 ### Settings Rows
 
-`SettingsSwitchRow`, `SettingsActionRow`, and `SettingDropDownItem` implement the standard settings
-pattern:
+`SettingsSwitchRow`, `SettingsActionRow`, `SettingsSliderRow`, `SettingDropDownItem`, and
+`SettingsSectionLabel` implement the standard settings pattern. Reuse them instead of hand-rolling a
+row; a hand-rolled switch loses the whole-row `Role.Switch` target and drifts from the shared colors.
 
-- full-width clickable/toggleable row with 8 dp vertical padding;
+- group headings use `SettingsSectionLabel` (`titleMedium` in `primary`, 24 dp above and 8 dp below;
+  the first group on a screen passes `first = true`);
+- a heading that carries a trailing control (the Voices language filter, its Reset button) centres
+  that control on the heading's line: the control is a 48 dp touch target, so the heading and the
+  control share a centred 48 dp row and the group gap is applied to the row. Padding the heading
+  text instead leaves the control sitting above the heading;
+- full-width clickable/toggleable row with 8 dp vertical padding — do not override the padding;
 - `bodyLarge` title and `bodyMedium` subtitle in `onSurfaceVariant`;
 - title-to-subtitle gap from `LocalNarraSpacing.current.itemVertical`;
-- switch thumb/track colors `primary`/`primaryContainer` when checked, and
-  `onSurfaceVariant`/`surfaceContainer` when unchecked;
-- dropdown rows show the current value in `primary` and use radio buttons in the menu.
+- switch thumb/track colors come from `NarraSwitch` (`primary`/`primaryContainer` when checked,
+  `onSurfaceVariant`/`surfaceContainer` when unchecked). Never copy the colors into a screen;
+- sliders use `SettingsSliderRow`, which owns the label/description rhythm and the primary over
+  `primaryContainer` track;
+- dropdown rows use `SettingDropDownItem` (current value in `primary`, radio buttons in the menu) and
+  expose `enabled` for engine-initializing states. There is no second dropdown idiom;
+- rows that opt into search highlighting pass `bringIntoViewRequester(...)` and
+  `flashHighlight(...)` through the row `modifier`.
+
+Voice model rows (`Settings > Voices > Voice data`) show one metadata line rendered from the
+structured `VoiceProfile`: quality, accent, and gender or voice count, for example
+`Low quality · American English · Female`. Render it through `voiceProfileDescription()`; do not
+hand-write a description or place free-form copy in the catalog. The line uses `bodyMedium` in
+`onSurfaceVariant`, and its ` · ` separator is a `translatable="false"` string resource.
 
 Settings screens label each group with `titleMedium` in `primary`, separate groups with 24 dp, and
 end the scroll with a 32 dp spacer. When adding a setting, add it to `SettingsSearchData` and use a
 `BringIntoViewRequester` plus `flashHighlight` when the search result navigates to it.
+
+### `NarraListItem`
+
+The standard icon + title + subtitle row used by Settings, About, and Licenses. It applies
+`bodyLarge`/`bodyMedium`, a 24 dp leading icon, a transparent container, and `Role.Button` for
+clickable rows. The leading icon gets its side spacing from Material 3 `ListItem`'s own
+`LeadingContentEndPadding` (16 dp), so the 16 dp screen inset and the icon-to-text gap match; do not
+add padding to the icon. Rows with richer content (progress bars, multiple supporting lines, inline
+icon buttons) use a Material 3 `ListItem` with `narraListItemColors()` and the same text styles.
+
+### `EmptyState`
+
+The shared empty state: a 64 dp icon in `primary` at 50%, a `headlineSmall` title, an optional
+`bodyMedium` description in `onSurfaceVariant`, and an optional filled primary action with an 8 dp
+corner radius. Every list empty state uses it; do not leave a bare centered `Text`. When the empty
+state sits inside a pull-to-refresh container, pass it
+`Modifier.fillMaxSize().verticalScroll(rememberScrollState())` so the gesture still works.
+
+### `NarraProgressBar`
+
+The app's only linear progress bar: 5 dp tall, clipped to a 2 dp radius, `primary` over
+`primaryContainer`, no stop indicator. Use it for the mini player, cards, queue rows, download rows,
+and the reader instead of configuring `LinearProgressIndicator` locally.
+
+### `NarraPullToRefreshBox`
+
+Pull-to-refresh with the app's indicator styling (`surface` container, `primary` spinner). Use it
+instead of constructing `PullToRefreshBox` and its indicator in each list.
+
+### Text fields
+
+Every `OutlinedTextField` uses `NarraTextFieldShape` (24 dp pill) and `narraTextFieldColors()`
+(`outlineVariant` border, `primary` when focused). That includes the settings search field, the Add
+screen, the pronunciation editor, and the reader search sheet.
 
 ### `NarraScrollbar`
 
@@ -319,12 +414,15 @@ history lists do.
 
 ### Empty, Loading, and Error States
 
-- **Empty:** centered 64 dp icon tinted `primary` at 50%, `headlineSmall` title, `bodyMedium`
-  description in `onSurfaceVariant`, then an optional filled primary button.
+- **Empty:** use `EmptyState` — centered 64 dp icon tinted `primary` at 50%, `headlineSmall` title,
+  optional `bodyMedium` description in `onSurfaceVariant`, then an optional filled primary button.
 - **Loading:** a centered `CircularProgressIndicator`; long-running engine setup may also show a
-  full-width `LinearProgressIndicator` above the header.
-- **Error:** `ErrorView` with a human-readable message plus retry and back actions.
-- **Transient feedback:** snackbars at the bottom, or a toast for import confirmations.
+  full-width `LinearProgressIndicator` above the header (`SettingsScaffold` provides this).
+- **Error:** `ErrorView` (`headlineSmall` title, the message, an outlined back action, and a filled
+  8 dp retry action).
+- **Transient feedback:** snackbars at the bottom, or a toast for import confirmations. There is one
+  snackbar host, owned by the root `Scaffold` in `Navigation.kt`; screens receive its
+  `SnackbarHostState` instead of creating their own host.
 
 ### Dialogs and Sheets
 
@@ -334,10 +432,15 @@ timer, and search. Keep actions in sentence case and put the destructive action 
 
 ## Screen Patterns
 
-- **Top-level tabs:** flat header with no back arrow, `statusBarsPadding`, content starts 16 dp
-  below the header. The root `Scaffold` supplies `MiniPlayer` and `BottomNavBar`.
-- **Sub-screens:** `ScreenHeader` with back arrow, then a scrollable column with 16 dp side
-  padding. The bottom navigation remains visible.
+- **Top-level tabs:** use `TopLevelScreen` — flat header with no back arrow, `statusBarsPadding`,
+  content starts 16 dp below the header, and the optional `meta` summary sits directly under the
+  title. The root `Scaffold` supplies `MiniPlayer` and `BottomNavBar`.
+- **Sub-screens:** `ScreenHeader` with back arrow, then a scrollable column. Card- or control-based
+  screens use `SettingsScaffold` with its 16 dp side gutter; screens that are only full-width list
+  rows (About, Licenses) pass `horizontalPadding = 0.dp` so their rows match the top-level lists.
+  The bottom navigation remains visible.
+- **Lists:** rows are separated by 16 dp, sections by 24 dp, and the list ends with 32 dp of bottom
+  padding. The same rhythm applies to queue, history, inbox, feeds, and feed articles.
 - **Reader:** full-screen and outside the bottom navigation. It uses `background`, 24 dp side
   padding, and its own overlay controls. The current paragraph has a `primary` 15–20% background;
   the current word is drawn with a `primary` 40% highlight; links are `primary` and switch to
@@ -382,10 +485,12 @@ Conventions:
 - **Preview the stateless `*Content` composable, not the Hilt-backed screen.** Screens that take a
   ViewModel expose a `...Content` function with an immutable UI state and callbacks; preview that
   function with fake data.
-- **Use the canonical dark preview annotation:**
-  `@Preview(uiMode = Configuration.UI_MODE_NIGHT_YES, showBackground = true)`.
-- **Always disable dynamic color:** `NarraTheme(darkTheme = true, dynamicColor = false)`. Dynamic
-  color makes previews depend on the host wallpaper and breaks visual comparison.
+- **Use the canonical pair annotation:** `@PreviewLightDark` renders the same body in light and
+  dark. Full screens, empty/error states, and anything color-sensitive should use it.
+- **Let the theme follow the preview:** call `NarraTheme(dynamicColor = false)` and do not hardcode
+  `darkTheme`, so the light and dark previews render correctly.
+- **Always disable dynamic color.** Dynamic color makes previews depend on the host wallpaper and
+  breaks visual comparison.
 - **Wrap full screens in the app chrome.** Use `Scaffold(bottomBar = { BottomNavBar(...) })` and
   apply its inner padding, matching the real root scaffold. Include `MiniPlayerContent` with fake
   state when the screen state includes a playing article, or provide a dedicated mini-player
@@ -396,25 +501,24 @@ Conventions:
 - **Use real sample content.** `SampleArticles` and hand-built UI states live in the data models;
   prefer them over empty placeholders when the visual result matters.
 - **Keep previews free of real I/O.** Do not let a preview touch DataStore, the network, Hilt,
-  playback, or the file system. When a ViewModel is unavoidable, subclass it and override its
-  state, as `UserInterfaceSettingsScreenPreview` does for `ThemeViewModel`, because a real
-  DataStore subscription performs file I/O in the layout renderer.
+  playback, or the file system. Screens that own a `ViewModel` expose a stateless `*Content`
+  composable; preview that instead of subclassing the ViewModel.
 - **Pass the font explicitly when layout depends on it.** Reader and UI-settings previews call
   `getFontFamily("Roboto")` so the rendered type matches the default theme.
-- Use `showSystemUi = true` only when system bars or insets are part of what you are checking, as
-  in `ReaderScreenPreview`.
-- **Add at least one preview for a new screen or component.** A light variant is optional for
-  components, but a new full screen should eventually be checked in both themes through the
-  screenshot suite.
+- `@PreviewLightDark` cannot carry `showSystemUi`; when system bars or insets are part of what you
+  are checking (as in `ReaderScreenPreview`), use two explicit `@Preview` annotations
+  (`UI_MODE_NIGHT_NO` and `UI_MODE_NIGHT_YES`) on the same body.
+- **Add at least one preview for a new screen or component.** A new full screen must be checked in
+  both themes through the screenshot suite.
 
 Full-screen preview template:
 
 ```kotlin
-@Preview(uiMode = Configuration.UI_MODE_NIGHT_YES, showBackground = true)
+@PreviewLightDark
 @Composable
 fun QueueScreenPreview() {
     val navController = rememberNavController()
-    NarraTheme(darkTheme = true, dynamicColor = false) {
+    NarraTheme(dynamicColor = false) {
         Scaffold(
             bottomBar = { BottomNavBar(navController) },
         ) { innerPadding ->
@@ -469,10 +573,10 @@ runs `verifyPaparazziDebug`; a changed or missing image fails the build.
   list-heavy screens should have both themes.
 - **Use immutable state and callbacks.** Snapshot the `*Content` composable with fake data. Do not
   snapshot a Hilt-backed screen.
-- **Wrap the content in a Surface.** The newer suites define a private `SnapshotSurface` helper
-  that applies `NarraTheme(darkTheme = ..., dynamicColor = false)`, fills the size, and paints
-  `MaterialTheme.colorScheme.background`. Use that pattern for new tests; without it, light-theme
-  content can render against Paparazzi's raw canvas instead of the app background.
+- **Wrap the content in a Surface.** Use the shared `SnapshotSurface` helper in the screenshot test
+  source set, which applies `NarraTheme(darkTheme = ..., dynamicColor = false)`, fills the size, and
+  paints `MaterialTheme.colorScheme.background`. Without it, light-theme content can render against
+  Paparazzi's raw canvas instead of the app background. Do not define per-file copies.
 - **Keep snapshots deterministic.** No clocks, network, random values, animations, or real
   `ViewModel`s. Use fixed sample articles and fixed timestamps.
 - **Review the PNG diff before recording.** A screenshot update is a visual change and should be
@@ -520,22 +624,11 @@ class NewScreenScreenshotTest {
         }
     }
 }
-
-@Composable
-private fun SnapshotSurface(
-    darkTheme: Boolean = false,
-    content: @Composable () -> Unit,
-) {
-    NarraTheme(darkTheme = darkTheme, dynamicColor = false) {
-        Surface(
-            modifier = Modifier.fillMaxSize(),
-            color = MaterialTheme.colorScheme.background,
-        ) {
-            content()
-        }
-    }
-}
 ```
+
+`SnapshotSurface` is defined once in
+`app/src/test/java/com/mienaiknife/narra/ui/screenshots/SnapshotSurface.kt`; do not add a private
+copy to a suite.
 
 Previews and screenshots are complementary: a preview is the fast iteration loop inside Android
 Studio; a Paparazzi test is the committed, CI-enforced record. Adding a `@Preview` does not
@@ -547,9 +640,12 @@ preview in the IDE.
 Before opening a GUI pull request:
 
 - [ ] Read this document and reused the existing components before adding a new one.
+- [ ] Used `TopLevelScreen`, `SettingsScaffold`, `EmptyState`, `NarraListItem`, `NarraProgressBar`,
+      and the settings rows instead of hand-rolling their layouts.
 - [ ] Used theme roles for color, the type scale for text, and the standard spacing and shapes.
-- [ ] Kept the standard screen structure (top-level header or `ScreenHeader`; flat surfaces).
-- [ ] Added or updated a `@Preview` using `NarraTheme(darkTheme = true, dynamicColor = false)`.
+- [ ] Kept the standard screen structure (top-level header or `ScreenHeader`; flat surfaces) and the
+      16/24/32 list rhythm.
+- [ ] Added or updated a `@PreviewLightDark` with `NarraTheme(dynamicColor = false)`.
 - [ ] Checked the layout in light and dark themes, at large font scale, and with long titles.
 - [ ] Put new strings in `strings.xml`; added content descriptions and RTL-safe icons.
 - [ ] Added or updated a Paparazzi test for each meaningful visual state.

@@ -15,54 +15,32 @@
  */
 package com.mienaiknife.narra.ui.screens
 
-import android.content.res.Configuration
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Slider
-import androidx.compose.material3.SliderDefaults
-import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
+import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.rememberNavController
 import com.mienaiknife.narra.R
 import com.mienaiknife.narra.ui.components.BottomNavBar
-import com.mienaiknife.narra.ui.components.ScreenHeader
 import com.mienaiknife.narra.ui.components.SettingDropDownItem
+import com.mienaiknife.narra.ui.components.SettingsScaffold
+import com.mienaiknife.narra.ui.components.SettingsSectionLabel
+import com.mienaiknife.narra.ui.components.SettingsSliderRow
+import com.mienaiknife.narra.ui.components.SettingsSwitchRow
 import com.mienaiknife.narra.ui.components.flashHighlight
-import com.mienaiknife.narra.ui.theme.LocalNarraSpacing
 import com.mienaiknife.narra.ui.theme.NarraTheme
-import com.mienaiknife.narra.ui.theme.ThemeManager
 import com.mienaiknife.narra.ui.theme.ThemeUiState
 import com.mienaiknife.narra.ui.theme.ThemeViewModel
-import com.mienaiknife.narra.ui.theme.getFontFamily
-import kotlinx.coroutines.flow.MutableStateFlow
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun UserInterfaceSettingsScreen(
     themeViewModel: ThemeViewModel,
@@ -70,10 +48,38 @@ fun UserInterfaceSettingsScreen(
     onBack: () -> Unit,
 ) {
     val uiState by themeViewModel.uiState.collectAsStateWithLifecycle()
-    val isDarkMode = uiState.isDarkMode
-    val isDynamicColor = uiState.isDynamicColor
-    val useSystemTheme = uiState.useSystemTheme
 
+    UserInterfaceSettingsContent(
+        uiState = uiState,
+        highlightSetting = highlightSetting,
+        onBack = onBack,
+        onSetUseSystemTheme = themeViewModel::setUseSystemTheme,
+        onSetDarkMode = themeViewModel::setDarkMode,
+        onSetDynamicColor = themeViewModel::setDynamicColor,
+        onSetReaderFontFamily = themeViewModel::setReaderFontFamily,
+        onSetLineSpacing = themeViewModel::setLineSpacing,
+        onSetAutoFullscreen = themeViewModel::setAutoFullscreen,
+        onSetTapToShowControls = themeViewModel::setTapToShowControls,
+        onSetReaderFontSize = themeViewModel::setReaderFontSize,
+        onSetShowRemainingTime = themeViewModel::setShowRemainingTime,
+    )
+}
+
+@Composable
+fun UserInterfaceSettingsContent(
+    uiState: ThemeUiState,
+    highlightSetting: String?,
+    onBack: () -> Unit,
+    onSetUseSystemTheme: (Boolean) -> Unit,
+    onSetDarkMode: (Boolean) -> Unit,
+    onSetDynamicColor: (Boolean) -> Unit,
+    onSetReaderFontFamily: (String) -> Unit,
+    onSetLineSpacing: (String) -> Unit,
+    onSetAutoFullscreen: (Boolean) -> Unit,
+    onSetTapToShowControls: (Boolean) -> Unit,
+    onSetReaderFontSize: (Float) -> Unit,
+    onSetShowRemainingTime: (Boolean) -> Unit,
+) {
     val useSystemThemeRequester = remember { BringIntoViewRequester() }
     val darkModeRequester = remember { BringIntoViewRequester() }
     val dynamicColorsRequester = remember { BringIntoViewRequester() }
@@ -98,357 +104,143 @@ fun UserInterfaceSettingsScreen(
         }
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .statusBarsPadding(),
+    SettingsScaffold(
+        title = stringResource(R.string.settings_ui_title),
+        onBack = onBack,
     ) {
-        Spacer(modifier = Modifier.height(16.dp))
-
-        ScreenHeader(
-            title = stringResource(R.string.settings_ui_title),
-            onBack = onBack,
+        SettingsSectionLabel(
+            text = stringResource(R.string.settings_ui_theme_section),
+            first = true,
         )
 
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Column(
+        SettingsSwitchRow(
+            title = stringResource(R.string.settings_ui_use_system_theme),
+            subtitle = stringResource(R.string.settings_ui_use_system_theme_desc),
+            checked = uiState.useSystemTheme,
+            onCheckedChange = onSetUseSystemTheme,
             modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp),
-        ) {
-            Text(
-                text = stringResource(R.string.settings_ui_theme_section),
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.padding(bottom = 8.dp),
+                .bringIntoViewRequester(useSystemThemeRequester)
+                .flashHighlight(highlightSetting == "useSystemTheme"),
+        )
+
+        if (!uiState.useSystemTheme) {
+            SettingsSwitchRow(
+                title = stringResource(R.string.settings_ui_dark_mode),
+                subtitle = stringResource(R.string.settings_ui_dark_mode_desc),
+                checked = uiState.isDarkMode,
+                onCheckedChange = onSetDarkMode,
+                modifier = Modifier
+                    .bringIntoViewRequester(darkModeRequester)
+                    .flashHighlight(highlightSetting == "darkMode"),
+                enabled = true,
             )
-
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .bringIntoViewRequester(useSystemThemeRequester)
-                    .flashHighlight(highlightSetting == "useSystemTheme")
-                    .padding(vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Column(
-                    modifier = Modifier
-                        .weight(1f)
-                        .padding(end = 8.dp),
-                    verticalArrangement = Arrangement.spacedBy(LocalNarraSpacing.current.itemVertical),
-                ) {
-                    Text(
-                        text = stringResource(R.string.settings_ui_use_system_theme),
-                        style = MaterialTheme.typography.bodyLarge,
-                    )
-                    Text(
-                        text = stringResource(R.string.settings_ui_use_system_theme_desc),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-                Switch(
-                    checked = useSystemTheme,
-                    onCheckedChange = { themeViewModel.setUseSystemTheme(it) },
-                    colors = SwitchDefaults.colors(
-                        checkedThumbColor = MaterialTheme.colorScheme.primary,
-                        checkedTrackColor = MaterialTheme.colorScheme.primaryContainer,
-                        uncheckedThumbColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                        uncheckedTrackColor = MaterialTheme.colorScheme.surfaceContainer,
-                    ),
-                )
-            }
-
-            if (!useSystemTheme) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .bringIntoViewRequester(darkModeRequester)
-                        .flashHighlight(highlightSetting == "darkMode")
-                        .padding(vertical = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Column(
-                        modifier = Modifier
-                            .weight(1f)
-                            .padding(end = 8.dp),
-                    ) {
-                        Text(
-                            text = stringResource(R.string.settings_ui_dark_mode),
-                            style = MaterialTheme.typography.bodyLarge,
-                        )
-                        Text(
-                            text = stringResource(R.string.settings_ui_dark_mode_desc),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                    Switch(
-                        checked = isDarkMode,
-                        onCheckedChange = { themeViewModel.setDarkMode(it) },
-                        colors = SwitchDefaults.colors(
-                            checkedThumbColor = MaterialTheme.colorScheme.primary,
-                            checkedTrackColor = MaterialTheme.colorScheme.primaryContainer,
-                            uncheckedThumbColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                            uncheckedTrackColor = MaterialTheme.colorScheme.surfaceContainer,
-                            disabledCheckedThumbColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.38f),
-                            disabledCheckedTrackColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.38f),
-                            disabledUncheckedThumbColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f),
-                            disabledUncheckedTrackColor = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.38f),
-                        ),
-                    )
-                }
-            }
-
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .bringIntoViewRequester(dynamicColorsRequester)
-                    .flashHighlight(highlightSetting == "dynamicColors")
-                    .padding(vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Column(
-                    modifier = Modifier
-                        .weight(1f)
-                        .padding(end = 8.dp),
-                    verticalArrangement = Arrangement.spacedBy(LocalNarraSpacing.current.itemVertical),
-                ) {
-                    Text(
-                        text = stringResource(R.string.settings_ui_dynamic_colors),
-                        style = MaterialTheme.typography.bodyLarge,
-                    )
-                    Text(
-                        text = stringResource(R.string.settings_ui_dynamic_colors_desc),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-                Switch(
-                    checked = isDynamicColor,
-                    onCheckedChange = { themeViewModel.setDynamicColor(it) },
-                    colors = SwitchDefaults.colors(
-                        checkedThumbColor = MaterialTheme.colorScheme.primary,
-                        checkedTrackColor = MaterialTheme.colorScheme.primaryContainer,
-                        uncheckedThumbColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                        uncheckedTrackColor = MaterialTheme.colorScheme.surfaceContainer,
-                    ),
-                )
-            }
-
-            Text(
-                text = stringResource(R.string.settings_ui_reader_section),
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.padding(top = 24.dp, bottom = 8.dp),
-            )
-
-            SettingDropDownItem(
-                title = stringResource(R.string.settings_ui_reader_font_family),
-                subtitle = stringResource(R.string.settings_ui_reader_font_family_desc),
-                selectedValue = uiState.readerFontFamily,
-                options = listOf("Roboto", "OpenDyslexic3"),
-                onValueChange = themeViewModel::setReaderFontFamily,
-                modifier = Modifier
-                    .bringIntoViewRequester(readerFontFamilyRequester)
-                    .flashHighlight(highlightSetting == "readerFontFamily"),
-            )
-
-            SettingDropDownItem(
-                title = stringResource(R.string.settings_ui_line_spacing),
-                subtitle = stringResource(R.string.settings_ui_line_spacing_desc),
-                selectedValue = uiState.lineSpacing,
-                options = listOf("1.0", "1.2", "1.4", "1.6", "1.8", "2.0"),
-                onValueChange = themeViewModel::setLineSpacing,
-                modifier = Modifier
-                    .bringIntoViewRequester(lineSpacingRequester)
-                    .flashHighlight(highlightSetting == "lineSpacing"),
-            )
-
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .bringIntoViewRequester(autoFullscreenRequester)
-                    .flashHighlight(highlightSetting == "autoFullscreen")
-                    .padding(vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Column(
-                    modifier = Modifier
-                        .weight(1f)
-                        .padding(end = 8.dp),
-                    verticalArrangement = Arrangement.spacedBy(LocalNarraSpacing.current.itemVertical),
-                ) {
-                    Text(
-                        text = stringResource(R.string.settings_ui_auto_fullscreen),
-                        style = MaterialTheme.typography.bodyLarge,
-                    )
-                    Text(
-                        text = stringResource(R.string.settings_ui_auto_fullscreen_desc),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-                Switch(
-                    checked = uiState.autoFullscreen,
-                    onCheckedChange = { themeViewModel.setAutoFullscreen(it) },
-                    colors = SwitchDefaults.colors(
-                        checkedThumbColor = MaterialTheme.colorScheme.primary,
-                        checkedTrackColor = MaterialTheme.colorScheme.primaryContainer,
-                        uncheckedThumbColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                        uncheckedTrackColor = MaterialTheme.colorScheme.surfaceContainer,
-                    ),
-                )
-            }
-
-            if (uiState.autoFullscreen) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .bringIntoViewRequester(tapToShowControlsRequester)
-                        .flashHighlight(highlightSetting == "tapToShowControls")
-                        .padding(vertical = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Column(
-                        modifier = Modifier
-                            .weight(1f)
-                            .padding(end = 8.dp),
-                    ) {
-                        Text(
-                            text = stringResource(R.string.settings_ui_tap_to_show),
-                            style = MaterialTheme.typography.bodyLarge,
-                        )
-                        Text(
-                            text = stringResource(R.string.settings_ui_tap_to_show_desc),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                    Switch(
-                        checked = uiState.tapToShowControls,
-                        onCheckedChange = { themeViewModel.setTapToShowControls(it) },
-                        colors = SwitchDefaults.colors(
-                            checkedThumbColor = MaterialTheme.colorScheme.primary,
-                            checkedTrackColor = MaterialTheme.colorScheme.primaryContainer,
-                            uncheckedThumbColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                            uncheckedTrackColor = MaterialTheme.colorScheme.surfaceContainer,
-                        ),
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            val sliderColors = SliderDefaults.colors(
-                activeTrackColor = MaterialTheme.colorScheme.primary,
-                inactiveTrackColor = MaterialTheme.colorScheme.primaryContainer,
-                activeTickColor = MaterialTheme.colorScheme.onPrimary,
-                inactiveTickColor = MaterialTheme.colorScheme.primary,
-            )
-
-            Column(
-                modifier = Modifier
-                    .bringIntoViewRequester(readerFontSizeRequester)
-                    .flashHighlight(highlightSetting == "readerFontSize")
-                    .padding(bottom = 16.dp),
-            ) {
-                Text(
-                    text = stringResource(R.string.settings_ui_font_size_label, uiState.readerFontSize.toInt()),
-                    style = MaterialTheme.typography.bodyLarge,
-                )
-                Text(
-                    text = stringResource(R.string.settings_ui_font_size_desc),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(bottom = 8.dp),
-                )
-                Slider(
-                    value = uiState.readerFontSize,
-                    onValueChange = { themeViewModel.setReaderFontSize(it) },
-                    valueRange = 12f..36f,
-                    steps = 23, // Increments of 1
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = sliderColors,
-                    track = { sliderState ->
-                        SliderDefaults.Track(
-                            sliderState = sliderState,
-                            colors = sliderColors,
-                        )
-                    },
-                )
-            }
-
-            Text(
-                text = stringResource(R.string.settings_ui_text_info_section),
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.padding(top = 8.dp, bottom = 8.dp),
-            )
-
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .bringIntoViewRequester(showRemainingTimeRequester)
-                    .flashHighlight(highlightSetting == "showRemainingTime")
-                    .padding(vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Column(
-                    modifier = Modifier
-                        .weight(1f)
-                        .padding(end = 8.dp),
-                    verticalArrangement = Arrangement.spacedBy(LocalNarraSpacing.current.itemVertical),
-                ) {
-                    Text(
-                        text = stringResource(R.string.settings_ui_show_remaining_time),
-                        style = MaterialTheme.typography.bodyLarge,
-                    )
-                    Text(
-                        text = stringResource(R.string.settings_ui_show_remaining_time_desc),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-                Switch(
-                    checked = uiState.showRemainingTime,
-                    onCheckedChange = { themeViewModel.setShowRemainingTime(it) },
-                    colors = SwitchDefaults.colors(
-                        checkedThumbColor = MaterialTheme.colorScheme.primary,
-                        checkedTrackColor = MaterialTheme.colorScheme.primaryContainer,
-                        uncheckedThumbColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                        uncheckedTrackColor = MaterialTheme.colorScheme.surfaceContainer,
-                    ),
-                )
-            }
-
-            Spacer(modifier = Modifier.height(32.dp))
         }
+
+        SettingsSwitchRow(
+            title = stringResource(R.string.settings_ui_dynamic_colors),
+            subtitle = stringResource(R.string.settings_ui_dynamic_colors_desc),
+            checked = uiState.isDynamicColor,
+            onCheckedChange = onSetDynamicColor,
+            modifier = Modifier
+                .bringIntoViewRequester(dynamicColorsRequester)
+                .flashHighlight(highlightSetting == "dynamicColors"),
+        )
+
+        SettingsSectionLabel(text = stringResource(R.string.settings_ui_reader_section))
+
+        SettingDropDownItem(
+            title = stringResource(R.string.settings_ui_reader_font_family),
+            subtitle = stringResource(R.string.settings_ui_reader_font_family_desc),
+            selectedValue = uiState.readerFontFamily,
+            options = listOf("Roboto", "OpenDyslexic3"),
+            onValueChange = onSetReaderFontFamily,
+            modifier = Modifier
+                .bringIntoViewRequester(readerFontFamilyRequester)
+                .flashHighlight(highlightSetting == "readerFontFamily"),
+        )
+
+        SettingDropDownItem(
+            title = stringResource(R.string.settings_ui_line_spacing),
+            subtitle = stringResource(R.string.settings_ui_line_spacing_desc),
+            selectedValue = uiState.lineSpacing,
+            options = listOf("1.0", "1.2", "1.4", "1.6", "1.8", "2.0"),
+            onValueChange = onSetLineSpacing,
+            modifier = Modifier
+                .bringIntoViewRequester(lineSpacingRequester)
+                .flashHighlight(highlightSetting == "lineSpacing"),
+        )
+
+        SettingsSwitchRow(
+            title = stringResource(R.string.settings_ui_auto_fullscreen),
+            subtitle = stringResource(R.string.settings_ui_auto_fullscreen_desc),
+            checked = uiState.autoFullscreen,
+            onCheckedChange = onSetAutoFullscreen,
+            modifier = Modifier
+                .bringIntoViewRequester(autoFullscreenRequester)
+                .flashHighlight(highlightSetting == "autoFullscreen"),
+        )
+
+        if (uiState.autoFullscreen) {
+            SettingsSwitchRow(
+                title = stringResource(R.string.settings_ui_tap_to_show),
+                subtitle = stringResource(R.string.settings_ui_tap_to_show_desc),
+                checked = uiState.tapToShowControls,
+                onCheckedChange = onSetTapToShowControls,
+                modifier = Modifier
+                    .bringIntoViewRequester(tapToShowControlsRequester)
+                    .flashHighlight(highlightSetting == "tapToShowControls"),
+            )
+        }
+
+        SettingsSliderRow(
+            title = stringResource(R.string.settings_ui_font_size_label, uiState.readerFontSize.toInt()),
+            subtitle = stringResource(R.string.settings_ui_font_size_desc),
+            value = uiState.readerFontSize,
+            valueRange = 12f..36f,
+            steps = 23, // Increments of 1
+            onValueChange = onSetReaderFontSize,
+            modifier = Modifier
+                .bringIntoViewRequester(readerFontSizeRequester)
+                .flashHighlight(highlightSetting == "readerFontSize"),
+        )
+
+        SettingsSectionLabel(text = stringResource(R.string.settings_ui_text_info_section))
+
+        SettingsSwitchRow(
+            title = stringResource(R.string.settings_ui_show_remaining_time),
+            subtitle = stringResource(R.string.settings_ui_show_remaining_time_desc),
+            checked = uiState.showRemainingTime,
+            onCheckedChange = onSetShowRemainingTime,
+            modifier = Modifier
+                .bringIntoViewRequester(showRemainingTimeRequester)
+                .flashHighlight(highlightSetting == "showRemainingTime"),
+        )
     }
 }
 
-@Preview(uiMode = Configuration.UI_MODE_NIGHT_YES, showBackground = true)
+@PreviewLightDark
 @Composable
 fun UserInterfaceSettingsScreenPreview() {
-    val context = androidx.compose.ui.platform.LocalContext.current
-    // Subclass the ViewModel so the preview never subscribes to the real DataStore-backed state,
-    // which would perform file I/O in the layout preview and can crash it.
-    val themeViewModel =
-        remember {
-            object : ThemeViewModel(ThemeManager(context)) {
-                override val uiState = MutableStateFlow(ThemeUiState())
-            }
-        }
     val navController = rememberNavController()
-    val fontFamily = getFontFamily("Roboto")
-    NarraTheme(darkTheme = true, dynamicColor = false, fontFamily = fontFamily) {
+    NarraTheme(dynamicColor = false) {
         Scaffold(
             bottomBar = { BottomNavBar(navController) },
         ) { innerPadding ->
             Box(modifier = Modifier.padding(innerPadding)) {
-                UserInterfaceSettingsScreen(themeViewModel, highlightSetting = null, onBack = {})
+                UserInterfaceSettingsContent(
+                    uiState = ThemeUiState(),
+                    highlightSetting = null,
+                    onBack = {},
+                    onSetUseSystemTheme = {},
+                    onSetDarkMode = {},
+                    onSetDynamicColor = {},
+                    onSetReaderFontFamily = {},
+                    onSetLineSpacing = {},
+                    onSetAutoFullscreen = {},
+                    onSetTapToShowControls = {},
+                    onSetReaderFontSize = {},
+                    onSetShowRemainingTime = {},
+                )
             }
         }
     }

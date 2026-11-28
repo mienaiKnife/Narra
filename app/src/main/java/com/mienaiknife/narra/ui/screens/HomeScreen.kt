@@ -15,21 +15,17 @@
  */
 package com.mienaiknife.narra.ui.screens
 
-import android.content.res.Configuration
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -41,18 +37,13 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AutoStories
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.RssFeed
-import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.material3.pulltorefresh.PullToRefreshBox
-import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
-import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -67,9 +58,8 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -80,6 +70,10 @@ import com.mienaiknife.narra.data.models.SampleArticles
 import com.mienaiknife.narra.domain.models.Article
 import com.mienaiknife.narra.ui.components.AdaptiveText
 import com.mienaiknife.narra.ui.components.BottomNavBar
+import com.mienaiknife.narra.ui.components.EmptyState
+import com.mienaiknife.narra.ui.components.NarraProgressBar
+import com.mienaiknife.narra.ui.components.NarraPullToRefreshBox
+import com.mienaiknife.narra.ui.components.TopLevelScreen
 import com.mienaiknife.narra.ui.theme.LocalNarraSpacing
 import com.mienaiknife.narra.ui.theme.NarraTheme
 import com.mienaiknife.narra.ui.utils.UrlUtils
@@ -115,7 +109,6 @@ fun HomeScreen(
     )
 }
 
-@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreenContent(
     uiState: com.mienaiknife.narra.ui.viewmodels.HomeUiState,
@@ -126,46 +119,16 @@ fun HomeScreenContent(
     onRefresh: () -> Unit = {},
 ) {
     val scrollState = rememberScrollState()
-    val pullToRefreshState = rememberPullToRefreshState()
     val isRefreshing = (uiState as? com.mienaiknife.narra.ui.viewmodels.HomeUiState.Success)?.isRefreshing ?: false
 
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .statusBarsPadding(),
+    TopLevelScreen(
+        title = stringResource(R.string.nav_home),
+        modifier = modifier,
     ) {
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .heightIn(min = 48.dp)
-                .padding(horizontal = 16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                text = stringResource(R.string.nav_home),
-                style = MaterialTheme.typography.headlineSmall,
-                color = MaterialTheme.colorScheme.onBackground,
-            )
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        PullToRefreshBox(
+        NarraPullToRefreshBox(
             isRefreshing = isRefreshing,
             onRefresh = onRefresh,
-            state = pullToRefreshState,
             modifier = Modifier.weight(1f),
-            indicator = {
-                PullToRefreshDefaults.Indicator(
-                    state = pullToRefreshState,
-                    isRefreshing = isRefreshing,
-                    containerColor = MaterialTheme.colorScheme.surface,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.align(Alignment.TopCenter),
-                )
-            },
         ) {
             when (uiState) {
                 is com.mienaiknife.narra.ui.viewmodels.HomeUiState.Loading -> {
@@ -215,53 +178,19 @@ fun HomeScreenContent(
                             Spacer(modifier = Modifier.height(32.dp))
                         }
                     } else {
-                        EmptyHomeContent(onAddClick, scrollState)
+                        EmptyState(
+                            icon = Icons.Default.AutoStories,
+                            title = stringResource(R.string.home_empty_title),
+                            description = stringResource(R.string.home_empty_message),
+                            actionLabel = stringResource(R.string.home_add_content),
+                            actionIcon = Icons.Default.Add,
+                            onActionClick = onAddClick,
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .verticalScroll(rememberScrollState()),
+                        )
                     }
                 }
-            }
-        }
-    }
-}
-
-@Composable
-private fun EmptyHomeContent(onAddClick: () -> Unit, scrollState: androidx.compose.foundation.ScrollState) {
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(scrollState),
-        contentAlignment = Alignment.Center,
-    ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.padding(32.dp),
-        ) {
-            Icon(
-                imageVector = Icons.Default.AutoStories,
-                contentDescription = null,
-                modifier = Modifier.size(64.dp),
-                tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-            Text(
-                text = stringResource(R.string.home_empty_title),
-                style = MaterialTheme.typography.headlineSmall,
-                color = MaterialTheme.colorScheme.onSurface,
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = stringResource(R.string.home_empty_message),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center,
-            )
-            Spacer(modifier = Modifier.height(24.dp))
-            Button(
-                onClick = onAddClick,
-                shape = RoundedCornerShape(8.dp),
-            ) {
-                Icon(Icons.Default.Add, contentDescription = null)
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(stringResource(R.string.home_add_content))
             }
         }
     }
@@ -355,15 +284,9 @@ fun ArticleCard(
             // Progress Bar underneath the image
             article.progress?.let { progress ->
                 if (progress > 0f && progress < 1f) {
-                    LinearProgressIndicator(
-                        progress = { progress },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(5.dp),
-                        color = MaterialTheme.colorScheme.primary,
-                        trackColor = MaterialTheme.colorScheme.primaryContainer,
-                        gapSize = 5.dp,
-                        drawStopIndicator = {},
+                    NarraProgressBar(
+                        progress = progress,
+                        modifier = Modifier.fillMaxWidth(),
                     )
                 }
             }
@@ -396,13 +319,13 @@ fun ArticleCard(
     }
 }
 
-@Preview(uiMode = Configuration.UI_MODE_NIGHT_YES, showBackground = true)
+@PreviewLightDark
 @Composable
 fun HomeScreenPreview() {
     val navController = rememberNavController()
     val mockArticles = SampleArticles.all
     val snackbarHostState = remember { SnackbarHostState() }
-    NarraTheme(darkTheme = true, dynamicColor = false) {
+    NarraTheme(dynamicColor = false) {
         Scaffold(
             bottomBar = { BottomNavBar(navController) },
         ) { innerPadding ->

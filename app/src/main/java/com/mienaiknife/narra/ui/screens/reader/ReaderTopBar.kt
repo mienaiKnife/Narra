@@ -18,7 +18,6 @@ package com.mienaiknife.narra.ui.screens.reader
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -30,13 +29,12 @@ import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Timer
-import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -50,6 +48,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.mienaiknife.narra.R
 import com.mienaiknife.narra.domain.models.Article
+import com.mienaiknife.narra.ui.components.OverflowMenu
 import com.mienaiknife.narra.utils.DateUtils
 
 @Composable
@@ -124,83 +123,71 @@ fun ReaderTopBar(
                     )
                 }
 
-                Box {
-                    IconButton(onClick = { onMenuExpandChange(true) }) {
-                        Icon(
-                            imageVector = Icons.Default.Menu,
-                            contentDescription = stringResource(R.string.action_menu),
-                            modifier = Modifier.size(32.dp),
-                            tint = MaterialTheme.colorScheme.onBackground,
-                        )
+                OverflowMenu(
+                    expanded = isMenuExpanded,
+                    onExpandedChange = onMenuExpandChange,
+                    contentDescription = stringResource(R.string.action_menu),
+                ) {
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.action_search)) },
+                        onClick = {
+                            onMenuExpandChange(false)
+                            onSearchClick()
+                        },
+                        leadingIcon = {
+                            Icon(
+                                Icons.Default.Search,
+                                contentDescription = null,
+                            )
+                        },
+                    )
+                    DropdownMenuItem(
+                        text = { Text(if (article.isFavorite) stringResource(R.string.reader_menu_unfavorite) else stringResource(R.string.reader_menu_favorite)) },
+                        onClick = {
+                            onMenuExpandChange(false)
+                            onToggleFavorite()
+                        },
+                        leadingIcon = {
+                            Icon(
+                                if (article.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                                contentDescription = null,
+                                tint = if (article.isFavorite) MaterialTheme.colorScheme.primary else LocalContentColor.current,
+                            )
+                        },
+                    )
+                    val sleepTimerText = if (sleepTimerMillis != null && sleepTimerMillis > 0) {
+                        stringResource(R.string.reader_menu_sleep_timer_active, DateUtils.formatElapsedTime(sleepTimerMillis))
+                    } else {
+                        stringResource(R.string.reader_sleep_timer)
                     }
-
-                    DropdownMenu(
-                        expanded = isMenuExpanded,
-                        onDismissRequest = { onMenuExpandChange(false) },
-                    ) {
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.action_search)) },
-                            onClick = {
-                                onMenuExpandChange(false)
-                                onSearchClick()
-                            },
-                            leadingIcon = {
-                                Icon(
-                                    Icons.Default.Search,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.onBackground,
-                                )
-                            },
-                        )
-                        DropdownMenuItem(
-                            text = { Text(if (article.isFavorite) stringResource(R.string.reader_menu_unfavorite) else stringResource(R.string.reader_menu_favorite)) },
-                            onClick = {
-                                onMenuExpandChange(false)
-                                onToggleFavorite()
-                            },
-                            leadingIcon = {
-                                Icon(
-                                    if (article.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                                    contentDescription = null,
-                                    tint = if (article.isFavorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onBackground,
-                                )
-                            },
-                        )
-                        val sleepTimerText = if (sleepTimerMillis != null && sleepTimerMillis > 0) {
-                            stringResource(R.string.reader_menu_sleep_timer_active, DateUtils.formatElapsedTime(sleepTimerMillis))
-                        } else {
-                            stringResource(R.string.reader_sleep_timer)
-                        }
-                        DropdownMenuItem(
-                            text = { Text(sleepTimerText) },
-                            onClick = {
-                                onMenuExpandChange(false)
-                                onSleepTimerClick()
-                            },
-                            leadingIcon = {
-                                Icon(
-                                    Icons.Default.Timer,
-                                    contentDescription = null,
-                                    tint = if (sleepTimerMillis != null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onBackground,
-                                )
-                            },
-                        )
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.reader_menu_visit_site)) },
-                            onClick = {
-                                onMenuExpandChange(false)
-                                article.url?.let { uriHandler.openUri(it) }
-                            },
-                            enabled = article.url != null,
-                            leadingIcon = {
-                                Icon(
-                                    Icons.AutoMirrored.Filled.OpenInNew,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.onBackground,
-                                )
-                            },
-                        )
-                    }
+                    DropdownMenuItem(
+                        text = { Text(sleepTimerText) },
+                        onClick = {
+                            onMenuExpandChange(false)
+                            onSleepTimerClick()
+                        },
+                        leadingIcon = {
+                            Icon(
+                                Icons.Default.Timer,
+                                contentDescription = null,
+                                tint = if (sleepTimerMillis != null && sleepTimerMillis > 0) MaterialTheme.colorScheme.primary else LocalContentColor.current,
+                            )
+                        },
+                    )
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.reader_menu_visit_site)) },
+                        onClick = {
+                            onMenuExpandChange(false)
+                            article.url?.let { uriHandler.openUri(it) }
+                        },
+                        enabled = article.url != null,
+                        leadingIcon = {
+                            Icon(
+                                Icons.AutoMirrored.Filled.OpenInNew,
+                                contentDescription = null,
+                            )
+                        },
+                    )
                 }
             }
         }
