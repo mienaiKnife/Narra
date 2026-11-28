@@ -17,7 +17,11 @@ package com.mienaiknife.narra.data.local.entities
 
 import com.mienaiknife.narra.domain.models.TtsModel
 import com.mienaiknife.narra.domain.models.TtsModelType
+import com.mienaiknife.narra.domain.models.VoiceGender
+import com.mienaiknife.narra.domain.models.VoiceProfile
+import com.mienaiknife.narra.domain.models.VoiceQuality
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class TtsModelEntityTest {
@@ -34,7 +38,6 @@ class TtsModelEntityTest {
                 id = "test-model",
                 name = "Test Model",
                 language = "en",
-                description = "Test Description",
                 type = TtsModelType.KOKORO,
                 modelUrl = "https://example.com/model.tar.bz2",
                 extraUrls = originalExtraUrls,
@@ -48,13 +51,32 @@ class TtsModelEntityTest {
     }
 
     @Test
-    fun `unknown model type falls back instead of throwing`() {
+    fun `voice profile roundtrips through the entity`() {
+        val profile = VoiceProfile(
+            quality = VoiceQuality.HIGH,
+            gender = VoiceGender.MIXED,
+            locale = "en-US",
+            speakerCount = 11,
+        )
+        val model = TtsModel(
+            id = "kokoro",
+            name = "Kokoro",
+            language = "en",
+            voice = profile,
+            type = TtsModelType.KOKORO,
+            modelUrl = "",
+        )
+
+        assertEquals(profile, TtsModelEntity.fromDomain(model).toDomain().voice)
+    }
+
+    @Test
+    fun `unknown voice enums fall back instead of throwing`() {
         val entity =
             TtsModelEntity(
                 id = "legacy",
                 name = "Legacy",
                 language = "en",
-                description = "",
                 type = "BOGUS_TYPE",
                 modelUrl = "",
                 tokensUrl = "",
@@ -62,10 +84,58 @@ class TtsModelEntityTest {
                 sizeBytes = 0,
                 isDownloaded = false,
                 progress = 0f,
+                voiceQuality = "PREMIUM",
+                voiceGender = "ROBOT",
+                voiceSpeakerCount = 0,
             )
 
         val domain = entity.toDomain()
 
         assertEquals(TtsModelType.VITS, domain.type)
+        assertEquals(VoiceQuality.UNKNOWN, domain.voice.quality)
+        assertEquals(VoiceGender.UNSPECIFIED, domain.voice.gender)
+        assertEquals(1, domain.voice.speakerCount)
+    }
+
+    @Test
+    fun `catalog metadata keeps install state and the selected speaker`() {
+        val existing =
+            TtsModelEntity(
+                id = "kokoro",
+                name = "Old name",
+                language = "en",
+                type = "KOKORO",
+                modelUrl = "",
+                tokensUrl = "",
+                dataDir = "/data/tts_models/kokoro",
+                sizeBytes = 0,
+                isDownloaded = true,
+                progress = 0.75f,
+                speakerId = 7,
+                lastError = "stale",
+            )
+        val catalog =
+            TtsModelEntity(
+                id = "kokoro",
+                name = "Kokoro",
+                language = "en",
+                type = "KOKORO",
+                modelUrl = "https://example.com/kokoro.tar.bz2",
+                tokensUrl = "",
+                dataDir = null,
+                sizeBytes = 80_000_000,
+                isDownloaded = false,
+                progress = 0f,
+            )
+
+        val merged = catalog.withPreservedState(existing)
+
+        assertEquals("Kokoro", merged.name)
+        assertEquals(80_000_000L, merged.sizeBytes)
+        assertTrue(merged.isDownloaded)
+        assertEquals(0.75f, merged.progress, 0.0001f)
+        assertEquals("/data/tts_models/kokoro", merged.dataDir)
+        assertEquals(7, merged.speakerId)
+        assertEquals("stale", merged.lastError)
     }
 }

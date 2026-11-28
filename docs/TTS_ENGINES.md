@@ -35,6 +35,34 @@ Every TTS implementation must reside in its own package under `com.<package>.tts
 - **Delegating Engine** (`/tts/common`): A wrapper that delegates to the currently selected engine, allowing for seamless switching at runtime.
 - **Cloud Providers** (`/tts/cloud`): (Planned) Will handle network-based synthesis (Google Cloud, OpenAI, etc.).
 
+## Voice Metadata
+
+On-device voices are described by a typed `VoiceProfile` on `TtsModel`
+(`domain/models/VoiceProfile.kt`), not by free-form prose. The shipped catalog lives in
+`data/models/TtsModelCatalog.kt`, so every entry has the same shape and can be checked by tests:
+
+| Field | Meaning |
+| --- | --- |
+| `quality` | `LOW`, `MEDIUM`, or `HIGH`, matching Piper's low/medium/high quality vocabulary. `UNKNOWN` is the fallback for legacy rows. |
+| `gender` | `FEMALE`, `MALE`, `MIXED`, or `UNSPECIFIED`. `MIXED` describes multi-speaker models. |
+| `locale` | A BCP-47 tag such as `en-US`. This is the standard source for the displayed accent. |
+| `speakerCount` | Number of speakers in the model, minimum 1. Shown as `N voices` when greater than one. |
+
+`TtsModel.language` remains the bare language code (`en`) because `ModelLexicons` and
+`SherpaTtsEngine` use it to select a pronunciation lexicon; `voice.locale` is display metadata and
+must have the same language, which `TtsModelCatalogTest` asserts. Adding a locale does **not** add
+lexicon support.
+
+The UI renders the profile as one localized line in `ui/screens/VoiceMetadataLabels.kt`
+(`quality · accent · gender/voice count`, for example `Low quality · American English · Female`).
+Known accents get a dedicated string resource; other locales fall back to the locale's display name.
+Never add a free-text description to the catalog: it cannot be translated or validated.
+
+Metadata is refreshed from the shipped catalog on startup while installation state (`isDownloaded`,
+`progress`, `dataDir`, `lastError`) and the user's selected `speakerId` are preserved. A row that no
+longer exists is never re-inserted. The `description` column was dropped in database version 19; see
+[ARCHITECTURE.md#database-migrations](ARCHITECTURE.md#database-migrations).
+
 ## On-Device Voice Tuning
 
 `Settings > Voices` exposes only the knobs the selected model actually consumes. Capabilities and

@@ -19,7 +19,7 @@ data class TtsModel(
     val id: String,
     val name: String,
     val language: String,
-    val description: String,
+    val voice: VoiceProfile = VoiceProfile(),
     val type: TtsModelType,
     val modelUrl: String,
     val tokensUrl: String = "",

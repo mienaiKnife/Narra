@@ -75,6 +75,50 @@ object DatabaseModule {
             }
         }
 
+    /**
+     * Replaces the free-text `description` with the structured [VoiceProfile][com.mienaiknife.narra.domain.models.VoiceProfile]
+     * columns. SQLite below 3.35 cannot drop a column, so the table is rebuilt and every row copied.
+     * `voiceLocale` is seeded from `language` as a fallback; the next startup refresh replaces it
+     * with the catalog's BCP-47 tag.
+     */
+    val migration18to19 =
+        object : Migration(18, 19) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `tts_models_new` (" +
+                        "`id` TEXT NOT NULL, " +
+                        "`name` TEXT NOT NULL, " +
+                        "`language` TEXT NOT NULL, " +
+                        "`type` TEXT NOT NULL, " +
+                        "`modelUrl` TEXT NOT NULL, " +
+                        "`tokensUrl` TEXT NOT NULL, " +
+                        "`extraUrls` TEXT NOT NULL, " +
+                        "`dataDir` TEXT, " +
+                        "`sizeBytes` INTEGER NOT NULL, " +
+                        "`isDownloaded` INTEGER NOT NULL, " +
+                        "`progress` REAL NOT NULL, " +
+                        "`speakerId` INTEGER, " +
+                        "`lastError` TEXT, " +
+                        "`voiceQuality` TEXT NOT NULL, " +
+                        "`voiceGender` TEXT NOT NULL, " +
+                        "`voiceLocale` TEXT NOT NULL, " +
+                        "`voiceSpeakerCount` INTEGER NOT NULL, " +
+                        "PRIMARY KEY(`id`))",
+                )
+                db.execSQL(
+                    "INSERT INTO `tts_models_new` (" +
+                        "`id`, `name`, `language`, `type`, `modelUrl`, `tokensUrl`, `extraUrls`, " +
+                        "`dataDir`, `sizeBytes`, `isDownloaded`, `progress`, `speakerId`, `lastError`, " +
+                        "`voiceQuality`, `voiceGender`, `voiceLocale`, `voiceSpeakerCount`) " +
+                        "SELECT `id`, `name`, `language`, `type`, `modelUrl`, `tokensUrl`, `extraUrls`, " +
+                        "`dataDir`, `sizeBytes`, `isDownloaded`, `progress`, `speakerId`, `lastError`, " +
+                        "'UNKNOWN', 'UNSPECIFIED', `language`, 1 FROM `tts_models`",
+                )
+                db.execSQL("DROP TABLE `tts_models`")
+                db.execSQL("ALTER TABLE `tts_models_new` RENAME TO `tts_models`")
+            }
+        }
+
     @Provides
     @Singleton
     fun provideAppDatabase(
@@ -86,7 +130,7 @@ object DatabaseModule {
             AppDatabase::class.java,
             AppDatabase.DATABASE_NAME,
         ).openHelperFactory(PreparingOpenHelperFactory(securityManager))
-        .addMigrations(migration16to17, migration17to18)
+        .addMigrations(migration16to17, migration17to18, migration18to19)
         // Schemas before 16 were never released and their Room schemas were not exported, so no
         // faithful migration path exists. Rather than crashing on `IllegalStateException`, wipe
         // and recreate the database for those legacy development installs. Real migrations must

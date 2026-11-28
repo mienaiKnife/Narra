@@ -20,6 +20,9 @@ import com.mienaiknife.narra.domain.TtsState
 import com.mienaiknife.narra.domain.models.SherpaVoiceOverrides
 import com.mienaiknife.narra.domain.models.TtsModel
 import com.mienaiknife.narra.domain.models.TtsModelType
+import com.mienaiknife.narra.domain.models.VoiceGender
+import com.mienaiknife.narra.domain.models.VoiceProfile
+import com.mienaiknife.narra.domain.models.VoiceQuality
 import com.mienaiknife.narra.domain.repository.ModelRepository
 import com.mienaiknife.narra.playback.PlaybackSettingsManager
 import kotlinx.coroutines.Dispatchers
@@ -49,9 +52,14 @@ class VoicesSettingsViewModelTest {
 
     private val kokoroModel = TtsModel(
         id = "kokoro-en-v0_19",
-        name = "Kokoro (English)",
+        name = "Kokoro",
         language = "en",
-        description = "High quality multi-voice Kokoro TTS",
+        voice = VoiceProfile(
+            quality = VoiceQuality.HIGH,
+            gender = VoiceGender.MIXED,
+            locale = "en-US",
+            speakerCount = 11,
+        ),
         type = TtsModelType.KOKORO,
         modelUrl = "",
         isDownloaded = true,

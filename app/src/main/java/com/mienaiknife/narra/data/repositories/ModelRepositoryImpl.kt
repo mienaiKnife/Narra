@@ -26,10 +26,10 @@ import androidx.work.workDataOf
 import com.mienaiknife.narra.data.NetworkConstants
 import com.mienaiknife.narra.data.local.dao.TtsModelDao
 import com.mienaiknife.narra.data.local.entities.TtsModelEntity
+import com.mienaiknife.narra.data.models.TtsModelCatalog
 import com.mienaiknife.narra.data.workers.DownloadWorker
 import com.mienaiknife.narra.domain.NarraError
 import com.mienaiknife.narra.domain.models.TtsModel
-import com.mienaiknife.narra.domain.models.TtsModelType
 import com.mienaiknife.narra.domain.pronunciation.ArpabetToIpa
 import com.mienaiknife.narra.domain.pronunciation.PronunciationValidator
 import com.mienaiknife.narra.domain.repository.CustomPronunciationRepository
@@ -91,63 +91,14 @@ class ModelRepositoryImpl @Inject constructor(
     }
 
     override suspend fun ensureDefaultModelsInitialized() = withContext(Dispatchers.IO) {
-        if (ttsModelDao.getModelCount() == 0) {
-            initializeDefaultModels()
-        }
-    }
-
-    private suspend fun initializeDefaultModels() {
-        val defaultModels = listOf(
-            TtsModel(
-                id = "vits-piper-en_US-amy-low",
-                name = "Piper Amy",
-                language = "en",
-                description = "Low quality, fast American English female voice",
-                type = TtsModelType.VITS,
-                modelUrl = "${NetworkConstants.SHERPA_MODELS_BASE_URL}/vits-piper-en_US-amy-low.tar.bz2",
-                sizeBytes = 28000000,
-            ),
-            TtsModel(
-                id = "vits-piper-en_US-ryan-medium",
-                name = "Piper Ryan",
-                language = "en",
-                description = "Medium quality American English male voice",
-                type = TtsModelType.VITS,
-                modelUrl = "${NetworkConstants.SHERPA_MODELS_BASE_URL}/vits-piper-en_US-ryan-medium.tar.bz2",
-                sizeBytes = 60000000,
-            ),
-            TtsModel(
-                id = "kokoro-en-v0_19",
-                name = "Kokoro (English)",
-                language = "en",
-                description = "High quality multi-voice Kokoro TTS",
-                type = TtsModelType.KOKORO,
-                modelUrl = "${NetworkConstants.SHERPA_MODELS_BASE_URL}/kokoro-en-v0_19.tar.bz2",
-                sizeBytes = 80000000,
-            ),
-            TtsModel(
-                id = "matcha-icefall-en_US-ljspeech",
-                name = "Matcha Icefall",
-                language = "en",
-                description = "High quality American English female TTS model",
-                type = TtsModelType.MATCHA,
-                modelUrl = "${NetworkConstants.SHERPA_MODELS_BASE_URL}/matcha-icefall-en_US-ljspeech.tar.bz2",
-                sizeBytes = 150000000,
-            ),
-        )
-        defaultModels.forEach { model ->
-            val existing = ttsModelDao.getModelById(model.id)
-            if (existing != null) {
-                // Update only the metadata, preserve download status and dataDir
-                val updated = TtsModelEntity.fromDomain(model).copy(
-                    isDownloaded = existing.isDownloaded,
-                    progress = existing.progress,
-                    dataDir = existing.dataDir,
-                    lastError = existing.lastError,
-                )
-                ttsModelDao.insertModel(updated)
-            } else {
+        val isFirstRun = ttsModelDao.getModelCount() == 0
+        TtsModelCatalog.defaultModels.forEach { model ->
+            if (isFirstRun) {
                 ttsModelDao.insertModel(TtsModelEntity.fromDomain(model))
+            } else {
+                // Refresh catalog metadata without touching install state or the selected speaker.
+                // No-op when the row no longer exists, so startup never resurrects one.
+                ttsModelDao.updateCatalogMetadata(TtsModelEntity.fromDomain(model))
             }
         }
     }

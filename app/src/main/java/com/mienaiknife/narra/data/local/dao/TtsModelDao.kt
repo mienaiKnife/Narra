@@ -19,7 +19,9 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Transaction
 import com.mienaiknife.narra.data.local.entities.TtsModelEntity
+import com.mienaiknife.narra.data.local.entities.withPreservedState
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -35,6 +37,16 @@ interface TtsModelDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertModel(model: TtsModelEntity)
+
+    /**
+     * Refreshes the catalog metadata for an existing row in a single transaction, preserving the
+     * download state and the user's selected speaker. Does nothing when the row is gone.
+     */
+    @Transaction
+    suspend fun updateCatalogMetadata(model: TtsModelEntity) {
+        val existing = getModelById(model.id) ?: return
+        insertModel(model.withPreservedState(existing))
+    }
 
     @Query("UPDATE tts_models SET isDownloaded = :isDownloaded, dataDir = :dataDir WHERE id = :id")
     suspend fun updateDownloadStatus(

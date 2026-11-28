@@ -56,7 +56,6 @@ class SherpaTtsModelConfigTest {
         id = "model",
         name = "Model",
         language = "en",
-        description = "",
         type = type,
         modelUrl = "",
         isDownloaded = true,

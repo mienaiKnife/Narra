@@ -19,6 +19,9 @@ import androidx.room.Entity
 import androidx.room.PrimaryKey
 import com.mienaiknife.narra.domain.models.TtsModel
 import com.mienaiknife.narra.domain.models.TtsModelType
+import com.mienaiknife.narra.domain.models.VoiceGender
+import com.mienaiknife.narra.domain.models.VoiceProfile
+import com.mienaiknife.narra.domain.models.VoiceQuality
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -28,7 +31,6 @@ data class TtsModelEntity(
     @PrimaryKey val id: String,
     val name: String,
     val language: String,
-    val description: String,
     val type: String, // Store as String for Room compatibility
     val modelUrl: String,
     val tokensUrl: String,
@@ -39,12 +41,21 @@ data class TtsModelEntity(
     val progress: Float,
     val speakerId: Int? = null,
     val lastError: String? = null,
+    val voiceQuality: String = VoiceQuality.UNKNOWN.name,
+    val voiceGender: String = VoiceGender.UNSPECIFIED.name,
+    val voiceLocale: String = "",
+    val voiceSpeakerCount: Int = 1,
 ) {
     fun toDomain() = TtsModel(
         id = id,
         name = name,
         language = language,
-        description = description,
+        voice = VoiceProfile(
+            quality = parseEnum(voiceQuality, VoiceQuality.UNKNOWN),
+            gender = parseEnum(voiceGender, VoiceGender.UNSPECIFIED),
+            locale = voiceLocale,
+            speakerCount = voiceSpeakerCount.coerceAtLeast(1),
+        ),
         type = parseType(type),
         modelUrl = modelUrl,
         tokensUrl = tokensUrl,
@@ -59,7 +70,7 @@ data class TtsModelEntity(
 
     // Unknown/legacy values must not throw: a single bad row would otherwise break the whole
     // models Flow. Fall back to VITS so the app stays usable.
-    private fun parseType(raw: String): TtsModelType = runCatching { TtsModelType.valueOf(raw) }.getOrDefault(TtsModelType.VITS)
+    private fun parseType(raw: String): TtsModelType = parseEnum(raw, TtsModelType.VITS)
 
     private fun parseExtraUrls(json: String): Map<String, String> {
         if (json.isBlank()) return emptyMap()
@@ -75,7 +86,6 @@ data class TtsModelEntity(
             id = model.id,
             name = model.name,
             language = model.language,
-            description = model.description,
             type = model.type.name,
             modelUrl = model.modelUrl,
             tokensUrl = model.tokensUrl,
@@ -86,6 +96,10 @@ data class TtsModelEntity(
             progress = model.progress,
             speakerId = model.speakerId,
             lastError = model.lastError,
+            voiceQuality = model.voice.quality.name,
+            voiceGender = model.voice.gender.name,
+            voiceLocale = model.voice.locale,
+            voiceSpeakerCount = model.voice.speakerCount,
         )
 
         private fun formatExtraUrls(urls: Map<String, String>): String {
@@ -94,3 +108,17 @@ data class TtsModelEntity(
         }
     }
 }
+
+/**
+ * Copies the catalog metadata onto an existing row while keeping everything that belongs to the
+ * installation: download state, progress, error, and the user's selected speaker.
+ */
+internal fun TtsModelEntity.withPreservedState(existing: TtsModelEntity): TtsModelEntity = copy(
+    isDownloaded = existing.isDownloaded,
+    progress = existing.progress,
+    dataDir = existing.dataDir,
+    lastError = existing.lastError,
+    speakerId = existing.speakerId,
+)
+
+private inline fun <reified T : Enum<T>> parseEnum(raw: String, fallback: T): T = runCatching { enumValueOf<T>(raw) }.getOrDefault(fallback)

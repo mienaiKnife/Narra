@@ -15,6 +15,7 @@
  */
 package com.mienaiknife.narra.ui.screens
 
+import com.mienaiknife.narra.data.models.TtsModelCatalog
 import com.mienaiknife.narra.domain.models.TtsModel
 import com.mienaiknife.narra.domain.models.TtsModelType
 import org.junit.Assert.assertEquals
@@ -30,7 +31,6 @@ class VoiceCatalogTest {
         id = id,
         name = name,
         language = language,
-        description = "",
         type = TtsModelType.VITS,
         modelUrl = "",
     )
@@ -88,6 +88,13 @@ class VoiceCatalogTest {
         assertEquals(11, voices.size)
         assertTrue(voices.any { it.id == 0 && it.name == "Julia" })
         assertTrue(voices.any { it.id == 5 && it.name == "Amelie" })
+    }
+
+    @Test
+    fun `kokoro speaker count matches the curated voice list`() {
+        val kokoro = TtsModelCatalog.defaultModels.single { it.id == "kokoro-en-v0_19" }
+
+        assertEquals(kokoro.voice.speakerCount, curatedVoicesFor(kokoro.id).size)
     }
 
     @Test

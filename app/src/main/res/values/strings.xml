@@ -31,7 +31,7 @@
     <string name="home_new_from_feeds">New from your feeds</string>
     <string name="home_favorites">Your favorites</string>
     <string name="home_empty_title">Your library is empty</string>
-    <string name="home_empty_message">Add articles from URLs, RSS feeds, or ebooks to start listening.</string>
+    <string name="home_empty_message">Add articles from URLs, RSS feeds, or ebooks to start listening</string>
     <string name="home_add_content">Add Articles</string>
     <string name="home_cover_image_desc">Cover image for %1$s</string>
     <plurals name="home_article_semantics_desc">
@@ -40,17 +40,17 @@
     </plurals>
 
     <!-- Inbox Screen -->
-    <string name="inbox_empty_message">No new articles from your feeds.</string>
+    <string name="inbox_empty_message">No new articles from your feeds</string>
     <string name="inbox_menu_edit_feeds">Edit feeds</string>
 
     <!-- Queue Screen -->
-    <string name="queue_empty_message">Your queue is empty.</string>
+    <string name="queue_empty_message">Your queue is empty</string>
     <string name="queue_removed_message">Removed from queue</string>
     <string name="queue_time_left_prefix">"Time left: "</string>
     <string name="queue_and">" and "</string>
 
     <!-- History Screen -->
-    <string name="history_empty_message">Your history is empty.</string>
+    <string name="history_empty_message">Your history is empty</string>
 
     <!-- Add Screen -->
     <string name="add_import_webpage">Import webpage</string>
@@ -85,7 +85,7 @@
     <string name="settings_ui_use_system_theme">Use system theme</string>
     <string name="settings_ui_use_system_theme_desc">Make Narra match your system theme</string>
     <string name="settings_ui_dark_mode">Dark mode</string>
-    <string name="settings_ui_dark_mode_desc">Make Narra always use dark mode. If unchecked, Narra will use light mode.</string>
+    <string name="settings_ui_dark_mode_desc">Make Narra always use dark mode. If unchecked, Narra will use light mode</string>
     <string name="settings_ui_dynamic_colors">Dynamic colors</string>
     <string name="settings_ui_dynamic_colors_desc">Make the theme match your wallpaper</string>
     <string name="settings_ui_reader_section">Reader screen</string>
@@ -130,15 +130,27 @@
     <string name="settings_voices_cpu_threads">CPU Threads: %1$d</string>
     <string name="settings_voices_voice">Voice</string>
     <string name="settings_voices_all_languages">All languages</string>
-    <string name="settings_voices_no_models">No voices available.</string>
+    <string name="settings_voices_no_models">No voices available</string>
     <string name="settings_voices_voice_data">Voice data</string>
     <string name="settings_voices_error">Error: %1$s</string>
     <string name="settings_voices_pronunciations">Custom pronunciations</string>
-    <string name="settings_voices_pronunciations_desc">Teach the on-device voice to say specific words</string>
+    <string name="settings_voices_pronunciations_desc">Program how the AI TTS pronounces words</string>
+    <string name="settings_voices_quality_low">Low quality</string>
+    <string name="settings_voices_quality_medium">Medium quality</string>
+    <string name="settings_voices_quality_high">High quality</string>
+    <string name="settings_voices_gender_female">Female</string>
+    <string name="settings_voices_gender_male">Male</string>
+    <string name="settings_voices_gender_mixed">Mixed voices</string>
+    <string name="settings_voices_accent_american_english">American English</string>
+    <string name="settings_voices_metadata_separator" translatable="false">" · "</string>
+    <plurals name="settings_voices_speaker_count">
+        <item quantity="one">%1$d voice</item>
+        <item quantity="other">%1$d voices</item>
+    </plurals>
     <string name="settings_pronunciations_title">Custom pronunciations</string>
-    <string name="settings_pronunciations_intro">Add words the on-device voice gets wrong and spell out how they should sound in ARPAbet. Entries apply to English voices only.</string>
+    <string name="settings_pronunciations_intro">Use ARPAbet to program how the AI TTS pronounces words. Applies to English voices only</string>
     <string name="settings_pronunciations_saved_section">Saved pronunciations</string>
-    <string name="settings_pronunciations_empty">No custom pronunciations yet. Add one to get started.</string>
+    <string name="settings_pronunciations_empty">No custom pronunciations yet. Add one to get started</string>
     <string name="settings_pronunciations_add">Add pronunciation</string>
     <string name="settings_pronunciations_edit">Edit pronunciation</string>
     <string name="settings_pronunciations_word">Word or phrase</string>
@@ -151,15 +163,15 @@
     <string name="settings_pronunciations_delete_title">Delete pronunciation?</string>
     <string name="settings_pronunciations_delete_message">Remove the custom pronunciation for %1$s?</string>
     <string name="settings_pronunciations_play_desc">Play pronunciation</string>
-    <string name="settings_pronunciations_error_empty_word">Enter a word or phrase.</string>
-    <string name="settings_pronunciations_error_word_too_long">The word is too long. Try a shorter word or phrase.</string>
-    <string name="settings_pronunciations_error_invalid_word">The word can only contain letters, spaces, apostrophes, and hyphens.</string>
-    <string name="settings_pronunciations_error_empty_pronunciation">Enter an ARPAbet pronunciation.</string>
+    <string name="settings_pronunciations_error_empty_word">Enter a word or phrase</string>
+    <string name="settings_pronunciations_error_word_too_long">The word is too long. Try a shorter word or phrase</string>
+    <string name="settings_pronunciations_error_invalid_word">The word can only contain letters, spaces, apostrophes, and hyphens</string>
+    <string name="settings_pronunciations_error_empty_pronunciation">Enter an ARPAbet pronunciation</string>
     <string name="settings_pronunciations_error_unknown_symbol">Unknown ARPAbet symbol: %1$s</string>
     <string name="settings_pronunciations_error_stress_on_consonant">Stress numbers go on vowels only: %1$s</string>
-    <string name="settings_pronunciations_error_too_many_symbols">That pronunciation has too many symbols.</string>
-    <string name="settings_pronunciations_save_failed">Could not save the pronunciation.</string>
-    <string name="settings_pronunciations_delete_failed">Could not delete the pronunciation.</string>
+    <string name="settings_pronunciations_error_too_many_symbols">That pronunciation has too many symbols</string>
+    <string name="settings_pronunciations_save_failed">Could not save the pronunciation</string>
+    <string name="settings_pronunciations_delete_failed">Could not delete the pronunciation</string>
 
     <!-- Downloads & Data Settings -->
     <string name="settings_downloads_network_section">Network</string>
@@ -179,7 +191,7 @@
     <string name="settings_downloads_sync_location_desc">Shared file written by auto-export and read by auto-import</string>
     <string name="settings_downloads_last_manual_export">Last manual export: %1$s</string>
     <string name="settings_downloads_last_auto_export">Last auto-export: %1$s</string>
-    <string name="settings_downloads_staged_message">New database staged. Restart app to apply.</string>
+    <string name="settings_downloads_staged_message">New database staged. Restart app to apply</string>
     <string name="settings_downloads_delete_db">Delete database</string>
     <string name="settings_downloads_delete_db_desc">Delete all articles, feeds, and playback progress from this device</string>
     <string name="settings_downloads_opml_section">OPML</string>
@@ -391,7 +403,7 @@
     </string-array>
 
     <!-- Feed Articles Screen -->
-    <string name="feed_articles_empty_message">No articles found in this feed.</string>
+    <string name="feed_articles_empty_message">No articles found in this feed</string>
 
     <!-- Feeds Screen -->
     <string name="feeds_refresh_error_desc">This feed could not be refreshed</string>
@@ -446,7 +458,7 @@
     <string name="message_export_failed">Export failed: %1$s</string>
     <string name="message_backup_created">Backup created</string>
     <string name="message_backup_failed">Backup failed: %1$s</string>
-    <string name="message_db_restored">Database restored. Restart app.</string>
+    <string name="message_db_restored">Database restored. Restart app</string>
     <string name="message_restore_failed">Restore failed: %1$s</string>
 
     <!-- Plurals Equivalents (templates) -->
@@ -500,7 +512,7 @@
     <string name="settings_downloads_refresh_never">Never</string>
     <string name="settings_downloads_inbox_limit_all">All</string>
     <string name="settings_downloads_inbox_limit">Initial inbox limit</string>
-    <string name="settings_downloads_inbox_limit_desc">Number of recent articles to keep in the Inbox when adding a new feed.</string>
+    <string name="settings_downloads_inbox_limit_desc">Number of recent articles to keep in the Inbox when adding a new feed</string>
     <string name="settings_voices_android_engine_name">Android\'s native TTS</string>
     <string name="settings_voices_ondevice_engine_name">On-device AI (Sherpa-ONNX)</string>
     <string name="settings_voices_selected_label">(Selected)</string>
@@ -510,8 +522,8 @@
     <string name="settings_voices_download_model_desc">Download model</string>
     <string name="settings_voices_cancel_download_desc">Cancel download</string>
     <string name="settings_voices_delete_model_desc">Delete model</string>
-    <string name="settings_downloads_delete_db_confirm">Are you sure you want to delete all your data? This cannot be undone.</string>
-    <string name="settings_downloads_sync_location_set">File set. Tap to change.</string>
+    <string name="settings_downloads_delete_db_confirm">Are you sure you want to delete all your data? This cannot be undone</string>
+    <string name="settings_downloads_sync_location_set">File set. Tap to change</string>
     <string name="settings_downloads_sync_location_not_set">Not set. Tap to pick a file</string>
     <string name="action_save">Save</string>
     <string name="action_edit">Edit</string>
@@ -539,8 +551,8 @@
     <string name="reader_retry">Retry</string>
     <string name="reader_now_playing">Now playing: %1$s</string>
     <string name="reader_image_prefix">Image: %1$s</string>
-    <string name="reader_playing_prefix">Playing %1$s. Tap to open player.</string>
-    <string name="reader_paused_prefix">Paused %1$s. Tap to open player.</string>
+    <string name="reader_playing_prefix">Playing %1$s. Tap to open player</string>
+    <string name="reader_paused_prefix">Paused %1$s. Tap to open player</string>
     <string name="reader_link_to">" link to %1$s "</string>
     <string name="reader_paragraph_semantics">Paragraph %1$d of %2$d</string>
     <string name="reader_unknown">Unknown</string>

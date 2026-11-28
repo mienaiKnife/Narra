@@ -16,6 +16,7 @@
 package com.mienaiknife.narra.ui.screens
 
 import com.mienaiknife.narra.domain.models.TtsModel
+import com.mienaiknife.narra.domain.models.VoiceGender
 import java.util.Locale
 
 /** A named speaker inside a model that exposes more than one voice. */
@@ -24,11 +25,6 @@ data class CuratedVoice(
     val name: String,
     val gender: VoiceGender,
 )
-
-enum class VoiceGender {
-    FEMALE,
-    MALE,
-}
 
 /**
  * Curated speaker names for models that ship several voices. Sherpa exposes only speaker indices,

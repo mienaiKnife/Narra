@@ -25,8 +25,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
@@ -43,10 +46,35 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.mienaiknife.narra.ui.theme.LocalNarraSpacing
 
+/**
+ * The single switch styling for the app. Keeping the colors here means a toggle looks the same in
+ * a settings screen, a bottom sheet, or anywhere else it is reused.
+ */
+@Composable
+fun NarraSwitch(
+    checked: Boolean,
+    onCheckedChange: ((Boolean) -> Unit)?,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+) {
+    Switch(
+        checked = checked,
+        onCheckedChange = onCheckedChange,
+        modifier = modifier,
+        enabled = enabled,
+        colors = SwitchDefaults.colors(
+            checkedThumbColor = MaterialTheme.colorScheme.primary,
+            checkedTrackColor = MaterialTheme.colorScheme.primaryContainer,
+            uncheckedThumbColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            uncheckedTrackColor = MaterialTheme.colorScheme.surfaceContainer,
+        ),
+    )
+}
+
 @Composable
 fun SettingsSwitchRow(
     title: String,
-    subtitle: String,
+    subtitle: String?,
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
@@ -75,22 +103,18 @@ fun SettingsSwitchRow(
                 text = title,
                 style = MaterialTheme.typography.bodyLarge,
             )
-            Text(
-                text = subtitle,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            if (subtitle != null) {
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
-        Switch(
+        NarraSwitch(
             checked = checked,
             onCheckedChange = null,
             enabled = enabled,
-            colors = SwitchDefaults.colors(
-                checkedThumbColor = MaterialTheme.colorScheme.primary,
-                checkedTrackColor = MaterialTheme.colorScheme.primaryContainer,
-                uncheckedThumbColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                uncheckedTrackColor = MaterialTheme.colorScheme.surfaceContainer,
-            ),
         )
     }
 }
@@ -103,12 +127,13 @@ fun SettingsActionRow(
     modifier: Modifier = Modifier,
     verticalPadding: Dp = 8.dp,
     titleColor: Color? = null,
+    enabled: Boolean = true,
     content: (@Composable ColumnScope.() -> Unit)? = null,
 ) {
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .clickable(role = Role.Button, onClick = onClick)
+            .clickable(enabled = enabled, role = Role.Button, onClick = onClick)
             .padding(vertical = verticalPadding),
         verticalArrangement = Arrangement.spacedBy(LocalNarraSpacing.current.itemVertical),
     ) {
@@ -126,22 +151,101 @@ fun SettingsActionRow(
     }
 }
 
+/**
+ * The heading that starts a settings group. The first group on a screen passes [first] so it does
+ * not add the 24 dp gap that separates it from the content above.
+ */
 @Composable
-fun SettingDropDownItem(
-    title: String,
-    subtitle: String,
-    selectedValue: String,
-    options: List<String>,
-    onValueChange: (String) -> Unit,
+fun SettingsSectionLabel(
+    text: String,
     modifier: Modifier = Modifier,
-    optionLabel: @Composable (String) -> String = { it },
+    first: Boolean = false,
+) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.titleMedium,
+        color = MaterialTheme.colorScheme.primary,
+        modifier = modifier.padding(top = if (first) 0.dp else 24.dp, bottom = 8.dp),
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SettingsSliderRow(
+    title: String,
+    value: Float,
+    onValueChange: (Float) -> Unit,
+    valueRange: ClosedFloatingPointRange<Float>,
+    modifier: Modifier = Modifier,
+    subtitle: String? = null,
+    steps: Int = 0,
+    enabled: Boolean = true,
+) {
+    val sliderColors = SliderDefaults.colors(
+        activeTrackColor = MaterialTheme.colorScheme.primary,
+        inactiveTrackColor = MaterialTheme.colorScheme.primaryContainer,
+        activeTickColor = MaterialTheme.colorScheme.onPrimary,
+        inactiveTickColor = MaterialTheme.colorScheme.primary,
+    )
+
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(LocalNarraSpacing.current.itemVertical),
+    ) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.bodyLarge,
+        )
+        if (subtitle != null) {
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        Slider(
+            value = value,
+            onValueChange = onValueChange,
+            enabled = enabled,
+            valueRange = valueRange,
+            steps = steps,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 4.dp),
+            colors = sliderColors,
+            track = { sliderState ->
+                SliderDefaults.Track(
+                    sliderState = sliderState,
+                    colors = sliderColors,
+                )
+            },
+        )
+    }
+}
+
+/**
+ * A settings row that shows the current value in [MaterialTheme.colorScheme.primary] and opens a
+ * radio menu with the alternatives.
+ */
+@Composable
+fun <T> SettingDropDownItem(
+    title: String,
+    subtitle: String?,
+    selectedValue: T,
+    options: List<T>,
+    onValueChange: (T) -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    optionLabel: @Composable (T) -> String = { it.toString() },
 ) {
     var expanded by remember { mutableStateOf(false) }
 
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .clickable(role = Role.Button) { expanded = true }
+            .clickable(enabled = enabled, role = Role.Button) { expanded = true }
             .padding(vertical = 8.dp),
     ) {
         Row(
@@ -158,11 +262,13 @@ fun SettingDropDownItem(
                     text = title,
                     style = MaterialTheme.typography.bodyLarge,
                 )
-                Text(
-                    text = subtitle,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+                if (subtitle != null) {
+                    Text(
+                        text = subtitle,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
             }
             Text(
                 text = optionLabel(selectedValue),
@@ -172,7 +278,7 @@ fun SettingDropDownItem(
         }
 
         DropdownMenu(
-            expanded = expanded,
+            expanded = expanded && enabled,
             onDismissRequest = { expanded = false },
         ) {
             options.forEach { option ->

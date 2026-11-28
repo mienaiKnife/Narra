@@ -64,7 +64,9 @@ interface ModelRepository {
     suspend fun ensureLexiconAvailable(language: String): String?
 
     /**
-     * Inserts the default models when the model table is empty.
+     * Seeds the default models on first run, and on later runs refreshes their catalog metadata
+     * (names, structured voice profiles, URLs) while preserving download state and the selected
+     * speaker. Rows that are no longer present are not re-inserted.
      */
     suspend fun ensureDefaultModelsInitialized()
 }
