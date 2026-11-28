@@ -18,6 +18,7 @@ package com.mienaiknife.narra.tts.ondevice
 import android.media.AudioAttributes
 import android.media.AudioFormat
 import android.media.AudioTrack
+import android.os.Build
 import android.util.Log
 import com.k2fsa.sherpa.onnx.*
 import com.mienaiknife.narra.domain.TtsEngine
@@ -51,6 +52,7 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
+import java.util.concurrent.atomic.AtomicInteger
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.math.abs
@@ -70,6 +72,14 @@ class SherpaTtsEngine @Inject constructor(
 
     @Volatile
     private var tts: OfflineTts? = null
+
+    /**
+     * Serializes native calls on [tts] with its teardown. Releasing the engine while
+     * `generateWithConfigAndCallback` is running aborts the process inside ONNX Runtime, so a
+     * reload waits here for the in-flight sentence to return. The session id changes first, so the
+     * generation callback stops at the next chunk instead of running the sentence to completion.
+     */
+    private val nativeEngineLock = Any()
 
     /**
      * Words the engine's lexicon can pronounce. Built on the IO dispatcher during initialization
@@ -105,8 +115,7 @@ class SherpaTtsEngine @Inject constructor(
     @Volatile
     private var currentSpeakerCount: Int = 1
 
-    @Volatile
-    private var currentSessionId: Int = 0
+    private val currentSessionId = AtomicInteger(0)
     private var currentSampleRate: Int = -1
 
     /**
@@ -226,25 +235,29 @@ class SherpaTtsEngine @Inject constructor(
         withContext(Dispatchers.IO) {
             _state.value = TtsState.Initializing
             try {
-                synchronized(this@SherpaTtsEngine) {
-                    currentSessionId++
-                    // Stop any current synthesis/playback loops
-                    synthesisJob?.cancel()
-                    playbackJob?.cancel()
+                // Invalidate in-flight work first: the generation callback sees the new session
+                // and returns 0, so the native call we wait for below stops quickly.
+                currentSessionId.incrementAndGet()
 
-                    // Clear queues
-                    while (utteranceQueue.tryReceive().isSuccess) { /* consume */ }
-                    var result = synthesizedQueue.tryReceive()
-                    while (result.isSuccess) {
-                        result.getOrNull()?.eventChannel?.close()
-                        result = synthesizedQueue.tryReceive()
-                    }
+                // Stop any current synthesis/playback loops
+                synthesisJob?.cancel()
+                playbackJob?.cancel()
 
-                    // Release the previous engine under the same lock that guards `tts`, so no
-                    // synthesis/playback thread can be using it while it is freed.
+                // Clear queues
+                while (utteranceQueue.tryReceive().isSuccess) { /* consume */ }
+                var result = synthesizedQueue.tryReceive()
+                while (result.isSuccess) {
+                    result.getOrNull()?.eventChannel?.close()
+                    result = synthesizedQueue.tryReceive()
+                }
+
+                // Wait for any in-flight native synthesis call before freeing the old engine.
+                synchronized(nativeEngineLock) {
                     tts?.release()
                     tts = null
                     lexiconIndex = null
+                }
+                synchronized(this@SherpaTtsEngine) {
                     currentSampleRate = -1
                 }
 
@@ -298,8 +311,11 @@ class SherpaTtsEngine @Inject constructor(
                 )
 
                 val newTts = OfflineTts(null, config)
-                tts = newTts
-                currentSpeakerCount = newTts.numSpeakers().coerceAtLeast(1)
+                val speakerCount = newTts.numSpeakers().coerceAtLeast(1)
+                synchronized(nativeEngineLock) {
+                    tts = newTts
+                }
+                currentSpeakerCount = speakerCount
                 currentModelId = settings.modelId
                 currentPauseScale = renderKey.pauseScale
                 Log.i(
@@ -437,8 +453,7 @@ class SherpaTtsEngine @Inject constructor(
 
         synthesisJob = scope.launch(Dispatchers.Default) {
             for (request in utteranceQueue) {
-                if (request.sessionId != currentSessionId) continue
-                val engine = tts ?: continue
+                if (request.sessionId != currentSessionId.get()) continue
                 val eventChannel = Channel<AudioStreamEvent>(Channel.UNLIMITED)
                 try {
                     // Digits and OOV words are not pronounceable by the 2.x lexicon, so rewrite
@@ -449,7 +464,10 @@ class SherpaTtsEngine @Inject constructor(
                         continue
                     }
 
-                    val sampleRate = engine.sampleRate()
+                    val sampleRate = synchronized(nativeEngineLock) {
+                        if (request.sessionId != currentSessionId.get()) null else tts?.sampleRate()
+                    }
+                    if (sampleRate == null) continue
 
                     synthesizedQueue.send(
                         SynthesizedAudioStream(
@@ -471,7 +489,7 @@ class SherpaTtsEngine @Inject constructor(
                     var framesGenerated = 0
                     val sentences = splitIntoSentences(speech.text)
                     for ((sentenceIndex, sentence) in sentences.withIndex()) {
-                        if (request.sessionId != currentSessionId) break
+                        if (request.sessionId != currentSessionId.get()) break
                         val sentenceText = speech.text.substring(sentence.first, sentence.last + 1)
                         if (sentenceText.none { it.isLetterOrDigit() }) continue
 
@@ -484,15 +502,23 @@ class SherpaTtsEngine @Inject constructor(
                         var sentenceFrames = 0
                         val callback = object : SherpaTtsCallback() {
                             override fun invoke(samples: FloatArray): Int {
-                                if (request.sessionId != currentSessionId) return 0
+                                if (request.sessionId != currentSessionId.get()) return 0
                                 chunks.add(samples)
                                 sentenceFrames += samples.size
                                 return 1
                             }
                         }
 
-                        engine.generateWithConfigAndCallback(sentenceText, genConfig, callback)
-                        if (request.sessionId != currentSessionId) break
+                        // Hold the native-engine lock while generating. A reload that arrives now
+                        // bumps the session (the callback returns 0), then waits here for this
+                        // call to return before releasing the engine.
+                        val generated = synchronized(nativeEngineLock) {
+                            if (request.sessionId != currentSessionId.get()) return@synchronized false
+                            val engine = tts ?: return@synchronized false
+                            engine.generateWithConfigAndCallback(sentenceText, genConfig, callback)
+                            true
+                        }
+                        if (!generated) break
 
                         val sentenceSamples = concatenate(chunks, sentenceFrames)
                         val boundaries = estimateWordBoundaries(
@@ -543,7 +569,7 @@ class SherpaTtsEngine @Inject constructor(
 
         playbackJob = scope.launch(Dispatchers.Default) {
             for (stream in synthesizedQueue) {
-                if (stream.sessionId != currentSessionId) {
+                if (stream.sessionId != currentSessionId.get()) {
                     Log.d("SherpaTtsEngine", "Skipping stale audio: ${stream.utteranceId}")
                     stream.eventChannel.close()
                     continue
@@ -575,7 +601,7 @@ class SherpaTtsEngine @Inject constructor(
             val iterator = activeStreams.iterator()
             while (iterator.hasNext()) {
                 val info = iterator.next()
-                if (info.stream.sessionId != currentSessionId) {
+                if (info.stream.sessionId != currentSessionId.get()) {
                     iterator.remove()
                     continue
                 }
@@ -649,63 +675,9 @@ class SherpaTtsEngine @Inject constructor(
     private suspend fun playAudioStream(stream: SynthesizedAudioStream) {
         try {
             // Check session before starting
-            if (stream.sessionId != currentSessionId) return
+            if (stream.sessionId != currentSessionId.get()) return
 
-            val sampleRate = stream.sampleRate
-
-            val track = synchronized(this) {
-                if (audioTrack == null || currentSampleRate != sampleRate) {
-                    audioTrack?.let {
-                        try {
-                            it.flush()
-                            it.stop()
-                            it.release()
-                        } catch (e: Exception) {
-                            Log.w("SherpaTtsEngine", "Error releasing AudioTrack", e)
-                        }
-                    }
-
-                    val bufferSize = AudioTrack.getMinBufferSize(
-                        sampleRate,
-                        AudioFormat.CHANNEL_OUT_MONO,
-                        AudioFormat.ENCODING_PCM_FLOAT,
-                    )
-
-                    val newTrack = AudioTrack.Builder()
-                        .setAudioAttributes(
-                            AudioAttributes.Builder()
-                                .setUsage(audioUsage)
-                                .setContentType(audioContentType)
-                                .build(),
-                        )
-                        .setAudioFormat(
-                            AudioFormat.Builder()
-                                .setEncoding(AudioFormat.ENCODING_PCM_FLOAT)
-                                .setSampleRate(sampleRate)
-                                .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
-                                .build(),
-                        )
-                        .setBufferSizeInBytes(maxOf(bufferSize, sampleRate * 4)) // at least 1s (4 bytes per mono float frame)
-                        .setTransferMode(AudioTrack.MODE_STREAM)
-                        .build()
-
-                    newTrack.playbackParams = newTrack.playbackParams.setSpeed(playbackSpeed)
-                    newTrack.setVolume(volume)
-                    newTrack.play()
-
-                    audioTrack = newTrack
-                    currentSampleRate = sampleRate
-                    framesWrittenToTrack = 0
-                    newTrack
-                } else {
-                    audioTrack!!
-                }
-            }
-
-            // Ensure track is playing before writing
-            if (track.playState != AudioTrack.PLAYSTATE_PLAYING) {
-                track.play()
-            }
+            val outputSampleRate = stream.sampleRate
 
             val info = StreamPlaybackInfo(
                 stream = stream,
@@ -714,8 +686,102 @@ class SherpaTtsEngine @Inject constructor(
 
             synchronized(activeStreams) { activeStreams.add(info) }
 
+            // Create the track together with the first chunk, not when the stream is queued.
+            // AudioFlinger removes a track that has no data after ~0.5 s, and a slow model such as
+            // Kokoro takes longer than that to produce its first sentence. Creating the track up
+            // front leaves it removed before any audio is written, which makes playback silent.
+            var playbackTrack: AudioTrack? = null
+            var expandPreApi31Buffer = false
+
+            fun ensureTrack(): AudioTrack {
+                playbackTrack?.let { return it }
+
+                val track = synchronized(this@SherpaTtsEngine) {
+                    if (audioTrack == null || currentSampleRate != outputSampleRate) {
+                        audioTrack?.let {
+                            try {
+                                it.flush()
+                                it.stop()
+                                it.release()
+                            } catch (e: Exception) {
+                                Log.w("SherpaTtsEngine", "Error releasing AudioTrack", e)
+                            }
+                        }
+
+                        val minBufferBytes = AudioTrack.getMinBufferSize(
+                            outputSampleRate,
+                            AudioFormat.CHANNEL_OUT_MONO,
+                            AudioFormat.ENCODING_PCM_FLOAT,
+                        )
+                        val minCapacityBytes = if (minBufferBytes > 0) {
+                            minBufferBytes
+                        } else {
+                            (outputSampleRate / 10).coerceAtLeast(1) * Float.SIZE_BYTES
+                        }
+                        val capacityBytes = maxOf(
+                            minCapacityBytes,
+                            outputSampleRate * Float.SIZE_BYTES * BUFFER_SECONDS,
+                        )
+
+                        val newTrack = AudioTrack.Builder()
+                            .setAudioAttributes(
+                                AudioAttributes.Builder()
+                                    .setUsage(audioUsage)
+                                    .setContentType(audioContentType)
+                                    .build(),
+                            )
+                            .setAudioFormat(
+                                AudioFormat.Builder()
+                                    .setEncoding(AudioFormat.ENCODING_PCM_FLOAT)
+                                    .setSampleRate(outputSampleRate)
+                                    .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
+                                    .build(),
+                            )
+                            .setBufferSizeInBytes(capacityBytes)
+                            .setTransferMode(AudioTrack.MODE_STREAM)
+                            .build()
+
+                        if (newTrack.state != AudioTrack.STATE_INITIALIZED) {
+                            newTrack.release()
+                            throw IllegalStateException("AudioTrack initialization failed")
+                        }
+
+                        // A 15 s buffer makes Android 12+ default startThresholdInFrames to seconds of
+                        // audio, so short utterances (such as a single-word pronunciation preview)
+                        // sit unmixed until AudioFlinger drops the track for underrun. Lower the
+                        // start threshold so playback begins as soon as the first chunk arrives.
+                        val capacityFrames = newTrack.bufferCapacityInFrames
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                            val startThreshold = computeStartThresholdFrames(
+                                sampleRate = outputSampleRate,
+                                minBufferBytes = minBufferBytes,
+                                capacityFrames = capacityFrames,
+                            )
+                            newTrack.setStartThresholdInFrames(startThreshold)
+                        } else {
+                            val initialFrames = (minCapacityBytes / Float.SIZE_BYTES)
+                                .coerceIn(1, capacityFrames)
+                            newTrack.setBufferSizeInFrames(initialFrames)
+                            expandPreApi31Buffer = true
+                        }
+
+                        newTrack.playbackParams = newTrack.playbackParams.setSpeed(playbackSpeed)
+                        newTrack.setVolume(volume)
+                        audioTrack = newTrack
+                        currentSampleRate = outputSampleRate
+                        framesWrittenToTrack = 0
+                        newTrack
+                    } else {
+                        audioTrack!!
+                    }
+                }
+
+                playbackTrack = track
+                return track
+            }
+
             for (event in stream.eventChannel) {
-                if (stream.sessionId != currentSessionId) break
+                if (stream.sessionId != currentSessionId.get()) break
 
                 when (event) {
                     is AudioStreamEvent.Boundaries -> {
@@ -725,16 +791,11 @@ class SherpaTtsEngine @Inject constructor(
                     }
                     is AudioStreamEvent.Chunk -> {
                         val samples = event.samples
+                        if (samples.isEmpty()) continue
+                        ensureTrack()
                         var offset = 0
-                        while (offset < samples.size && scope.isActive && stream.sessionId == currentSessionId) {
+                        while (offset < samples.size && scope.isActive && stream.sessionId == currentSessionId.get()) {
                             val currentTrack = synchronized(this@SherpaTtsEngine) { audioTrack } ?: break
-                            if (currentTrack.playState != AudioTrack.PLAYSTATE_PLAYING) {
-                                try {
-                                    currentTrack.play()
-                                } catch (_: Exception) {
-                                    break
-                                }
-                            }
 
                             val toWrite = samples.size - offset
                             val written = try {
@@ -745,6 +806,18 @@ class SherpaTtsEngine @Inject constructor(
                             if (written < 0) {
                                 Log.e("SherpaTtsEngine", "AudioTrack write error: $written")
                                 break
+                            }
+                            if (currentTrack.playState != AudioTrack.PLAYSTATE_PLAYING) {
+                                try {
+                                    currentTrack.play()
+                                    if (expandPreApi31Buffer) {
+                                        currentTrack.setBufferSizeInFrames(currentTrack.bufferCapacityInFrames)
+                                        expandPreApi31Buffer = false
+                                    }
+                                } catch (e: Exception) {
+                                    Log.e("SherpaTtsEngine", "AudioTrack start failed", e)
+                                    break
+                                }
                             }
                             if (written == 0) {
                                 delay(10.milliseconds) // Wait for buffer to clear
@@ -793,12 +866,12 @@ class SherpaTtsEngine @Inject constructor(
             _state.value = TtsState.Error("No Sherpa-ONNX model selected", TtsErrorReason.NO_MODEL_SELECTED)
             return
         }
-        utteranceQueue.trySend(UtteranceRequest(text, utteranceId, currentSessionId))
+        utteranceQueue.trySend(UtteranceRequest(text, utteranceId, currentSessionId.get()))
     }
 
     override fun stop() {
         synchronized(this) {
-            currentSessionId++
+            currentSessionId.incrementAndGet()
             // Reset sample rate to force AudioTrack recreation if needed next time
             currentSampleRate = -1
             while (utteranceQueue.tryReceive().isSuccess) { /* consume */ }
@@ -874,21 +947,26 @@ class SherpaTtsEngine @Inject constructor(
     // but not exposed in the Kotlin/JVM bindings (GeneratedAudio only contains samples/sampleRate).
     // Using this heuristic until the bindings expose timestamps.
     override fun release() {
-        synchronized(this) {
-            synthesisJob?.cancel()
-            playbackJob?.cancel()
-            monitorJob?.cancel()
+        currentSessionId.incrementAndGet()
+        synthesisJob?.cancel()
+        playbackJob?.cancel()
+        monitorJob?.cancel()
+
+        // Never free the native engine while a generate call is still inside it.
+        synchronized(nativeEngineLock) {
             tts?.release()
-            audioTrack?.release()
             tts = null
             lexiconIndex = null
+        }
+
+        synchronized(this) {
+            audioTrack?.release()
             audioTrack = null
 
             // Reset initialization guards and queues so the engine can be re-initialized if reused.
             currentModelId = null
             lastSettingsSignature = null
             currentSampleRate = -1
-            currentSessionId++
 
             while (utteranceQueue.tryReceive().isSuccess) { /* consume */ }
             var result = synthesizedQueue.tryReceive()
@@ -906,6 +984,13 @@ class SherpaTtsEngine @Inject constructor(
         private const val FRAME_COUNTER_MASK = 0xFFFFFFFFL
         private const val FRAME_COUNTER_WRAP = 0x1_0000_0000L
 
+        /**
+         * AudioTrack buffer, in seconds of mono float audio. Kokoro can spend several seconds
+         * generating the next sentence, which is longer than a small buffer, so this must be
+         * large enough to let synthesis run ahead of playback. It only costs a few MB.
+         */
+        private const val BUFFER_SECONDS = 15
+
         /** Punctuation that ends a spoken sentence, matching Sherpa's own sentence frontends. */
         private const val SENTENCE_TERMINATORS = ".!?;:。！？；：…\n"
 
@@ -918,6 +1003,26 @@ class SherpaTtsEngine @Inject constructor(
          * avoids handing an abbreviation such as "Dr." to the engine as a standalone sentence.
          */
         private const val MIN_WORDS_PER_SEGMENT = 5
+
+        /**
+         * Start threshold in frames for [AudioTrack]: ~50 ms (or the HAL minimum, if smaller),
+         * clamped to [1, capacityFrames]. Keeping this small prevents Android 12+ from waiting for
+         * seconds of buffered audio before starting playback on short clips.
+         */
+        internal fun computeStartThresholdFrames(
+            sampleRate: Int,
+            minBufferBytes: Int,
+            capacityFrames: Int,
+        ): Int {
+            val safeCapacity = capacityFrames.coerceAtLeast(1)
+            val minFrames = if (minBufferBytes > 0) {
+                (minBufferBytes / Float.SIZE_BYTES).coerceAtLeast(1)
+            } else {
+                (sampleRate / 10).coerceAtLeast(1)
+            }
+            val targetFrames = minOf(minFrames, (sampleRate / 20).coerceAtLeast(1))
+            return targetFrames.coerceIn(1, safeCapacity)
+        }
 
         /**
          * Distance from [startFrame] to [head] in the AudioTrack's 32-bit frame counter, handling

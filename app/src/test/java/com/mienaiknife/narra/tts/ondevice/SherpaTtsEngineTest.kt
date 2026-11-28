@@ -192,4 +192,37 @@ class SherpaTtsEngineTest {
         val nearWrap = 0xFFFF_FF00L
         assertEquals(356, SherpaTtsEngine.framesPlayedSince(100, nearWrap))
     }
+
+    @Test
+    fun testComputeStartThresholdFramesStartsQuicklyForShortClips() {
+        val sampleRate = 24_000
+        val capacityFrames = sampleRate * 15
+        val threshold = SherpaTtsEngine.computeStartThresholdFrames(
+            sampleRate = sampleRate,
+            minBufferBytes = 1920 * Float.SIZE_BYTES,
+            capacityFrames = capacityFrames,
+        )
+
+        assertEquals(1200, threshold)
+    }
+
+    @Test
+    fun testComputeStartThresholdFramesRespectsSmallerMinBufferAndCapacity() {
+        assertEquals(
+            256,
+            SherpaTtsEngine.computeStartThresholdFrames(
+                sampleRate = 24_000,
+                minBufferBytes = 256 * Float.SIZE_BYTES,
+                capacityFrames = 360_000,
+            ),
+        )
+        assertEquals(
+            500,
+            SherpaTtsEngine.computeStartThresholdFrames(
+                sampleRate = 24_000,
+                minBufferBytes = -1,
+                capacityFrames = 500,
+            ),
+        )
+    }
 }

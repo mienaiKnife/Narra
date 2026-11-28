@@ -28,6 +28,7 @@ import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
@@ -35,7 +36,9 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import org.mockito.kotlin.any
 import org.mockito.kotlin.mock
+import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 
@@ -43,6 +46,7 @@ import org.mockito.kotlin.whenever
 class PronunciationsViewModelTest {
     private val repository = FakeCustomPronunciationRepository()
     private val ttsEngine: TtsEngine = mock()
+    private val engineState = MutableStateFlow<TtsState>(TtsState.Ready)
     private val testDispatcher = StandardTestDispatcher()
 
     private lateinit var viewModel: PronunciationsViewModel
@@ -50,7 +54,7 @@ class PronunciationsViewModelTest {
     @Before
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
-        whenever(ttsEngine.state).thenReturn(MutableStateFlow(TtsState.Ready))
+        whenever(ttsEngine.state).thenReturn(engineState)
         viewModel = PronunciationsViewModel(repository, ttsEngine)
     }
 
@@ -106,10 +110,47 @@ class PronunciationsViewModelTest {
     }
 
     @Test
-    fun `preview speaks the entry through the engine`() {
+    fun `preview speaks the entry through the engine`() = runTest {
         val entry = CustomPronunciation(word = "Narra", arpabet = "N AA1 R AH0")
 
         viewModel.preview(entry)
+        advanceUntilIdle()
+
+        verify(ttsEngine).speak("Narra", "pronunciation-preview-Narra")
+    }
+
+    @Test
+    fun `preview waits for initialization to finish instead of being dropped`() = runTest {
+        val entry = CustomPronunciation(word = "Narra", arpabet = "N AA1 R AH0")
+        engineState.value = TtsState.Initializing
+
+        viewModel.preview(entry)
+        runCurrent()
+        verify(ttsEngine, never()).speak(any(), any())
+
+        engineState.value = TtsState.Ready
+        advanceUntilIdle()
+
+        verify(ttsEngine).speak("Narra", "pronunciation-preview-Narra")
+    }
+
+    @Test
+    fun `preview after a save waits for the lexicon reload`() = runTest {
+        val entry = CustomPronunciation(word = "Narra", arpabet = "N AA1 R AH0")
+
+        viewModel.save("Narra", "N AA1 R AH0")
+        advanceUntilIdle()
+        viewModel.preview(entry)
+        runCurrent()
+
+        // The reload is debounced, so the engine is still Ready here. The preview must not
+        // start until the reload has run, otherwise its audio is discarded.
+        engineState.value = TtsState.Initializing
+        runCurrent()
+        verify(ttsEngine, never()).speak(any(), any())
+
+        engineState.value = TtsState.Ready
+        advanceUntilIdle()
 
         verify(ttsEngine).speak("Narra", "pronunciation-preview-Narra")
     }

@@ -204,6 +204,12 @@ only; Android's native TTS keeps its own voice/pronunciation controls.
   entries and `ArpabetToIpa.VERSION` (alongside the supplement version), so adding, editing or
   deleting an entry regenerates `lexicon-en-us.narra.txt` and triggers a Sherpa engine reload. The
   downloaded base is never modified and stays the recoverable fallback.
+- **Reload safety.** `SherpaTtsEngine` serializes every `generateWithConfigAndCallback` call and
+  `OfflineTts.release()` on `nativeEngineLock`, after first bumping the session id so the generation
+  callback returns 0 at its next chunk. Freeing the engine while a native generate is in flight
+  aborts the process inside ONNX Runtime (`pthread_mutex_lock called on a destroyed mutex`). The
+  pronunciation preview also waits for a save/delete-triggered reload to start and finish before
+  speaking; audio requested during the rebuild is discarded when the native engine is recreated.
 - **Limitations.** American English only; entries match exact normalized word forms, so possessives
   and inflections fall back to the existing stem/spelling behavior and need their own entries if they
   should sound the same; saving an entry interrupts current playback because the engine reopens; the

@@ -32,6 +32,13 @@ data class PronunciationsUiState(
             engineState is TtsState.Speaking ||
             engineState is TtsState.Buffering ||
             engineState is TtsState.Finished
+
+    /**
+     * A preview requested while the engine is reloading the lexicon is queued and plays when the
+     * reload finishes, so the button stays enabled during initialization.
+     */
+    val previewEnabled: Boolean
+        get() = engineReady || engineState is TtsState.Initializing
 }
 
 /**
