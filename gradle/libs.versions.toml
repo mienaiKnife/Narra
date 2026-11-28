@@ -54,7 +54,7 @@ robolectric = "4.18.1"
 turbine = "1.2.1"
 coroutines-test = "1.11.0"
 glance = "1.1.1"
-spotless = "8.11.0"
+spotless = "8.12.0"
 sherpaOnnx = "v2.0.2"
 testServices = "1.6.0"
 
