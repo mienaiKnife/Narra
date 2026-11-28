@@ -456,6 +456,9 @@ timer, and search. Keep actions in sentence case and put the destructive action 
 
 - Put every user-facing string in `strings.xml`; use `<plurals>` for counts. Keep layout literals
   in code, never display text.
+- English UI strings do not end in a period. Titles, subtitles, descriptions, empty states, and
+  dialog text all follow the same rule; question marks and exclamation marks are still fine where
+  the sentence needs them.
 - Decorative icons use `contentDescription = null`. Interactive icons describe the action and,
   where useful, the article title (for example "Play <title>").
 - Use `Icons.AutoMirrored.*` for directional icons (back, sort, open-in-new, playlist) and avoid

@@ -30,6 +30,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
+import androidx.compose.material3.SliderState
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
@@ -205,19 +206,23 @@ fun SettingsSliderRow(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
+        // Material3 1.5 removed the value+track overload; drive a state instead. Keep the
+        // external value authoritative so a settings reload is reflected immediately.
+        val sliderState = remember(steps, valueRange) {
+            SliderState(value = value, steps = steps, trackRange = valueRange)
+        }
+        sliderState.value = value
         Slider(
-            value = value,
+            state = sliderState,
             onValueChange = onValueChange,
             enabled = enabled,
-            valueRange = valueRange,
-            steps = steps,
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(top = 4.dp),
             colors = sliderColors,
-            track = { sliderState ->
+            track = { state ->
                 SliderDefaults.Track(
-                    sliderState = sliderState,
+                    sliderState = state,
                     colors = sliderColors,
                 )
             },

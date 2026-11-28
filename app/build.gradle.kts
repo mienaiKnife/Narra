@@ -70,6 +70,8 @@ val configuredVersionName = System.getenv("VERSION_NAME")?.takeIf { it.isNotBlan
 android {
     namespace = "com.mienaiknife.narra"
     compileSdk = 37
+    // Compose 1.13/Material3 1.5 AARs require API 37.1 (see AGENTS.md toolchain coupling).
+    compileSdkMinor = 1
 
     defaultConfig {
         applicationId = "com.mienaiknife.narra"
