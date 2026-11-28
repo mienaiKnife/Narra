@@ -15,18 +15,15 @@
  */
 package com.mienaiknife.narra.ui.screenshots
 
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
 import app.cash.paparazzi.DeviceConfig
 import app.cash.paparazzi.Paparazzi
 import com.mienaiknife.narra.domain.TtsState
 import com.mienaiknife.narra.domain.models.TtsModel
 import com.mienaiknife.narra.domain.models.TtsModelType
+import com.mienaiknife.narra.domain.models.VoiceGender
+import com.mienaiknife.narra.domain.models.VoiceProfile
+import com.mienaiknife.narra.domain.models.VoiceQuality
 import com.mienaiknife.narra.ui.screens.VoicesSettingsContent
-import com.mienaiknife.narra.ui.theme.NarraTheme
 import com.mienaiknife.narra.ui.viewmodels.VoicesSettingsUiState
 import org.junit.Rule
 import org.junit.Test
@@ -43,12 +40,16 @@ class VoicesSettingsScreenshotTest {
         name: String,
         language: String,
         type: TtsModelType,
-        description: String = "Sample voice",
+        voice: VoiceProfile = VoiceProfile(
+            quality = VoiceQuality.MEDIUM,
+            gender = VoiceGender.FEMALE,
+            locale = "en-US",
+        ),
     ) = TtsModel(
         id = id,
         name = name,
         language = language,
-        description = description,
+        voice = voice,
         type = type,
         modelUrl = "",
         isDownloaded = true,
@@ -59,15 +60,24 @@ class VoicesSettingsScreenshotTest {
         name = "Piper Amy",
         language = "en",
         type = TtsModelType.VITS,
-        description = "Low quality, fast American English female voice",
+        voice = VoiceProfile(
+            quality = VoiceQuality.LOW,
+            gender = VoiceGender.FEMALE,
+            locale = "en-US",
+        ),
     )
 
     private val kokoro = model(
         id = "kokoro-en-v0_19",
-        name = "Kokoro (English)",
+        name = "Kokoro",
         language = "en",
         type = TtsModelType.KOKORO,
-        description = "High quality multi-voice Kokoro TTS",
+        voice = VoiceProfile(
+            quality = VoiceQuality.HIGH,
+            gender = VoiceGender.MIXED,
+            locale = "en-US",
+            speakerCount = 11,
+        ),
     )
 
     @Test
@@ -205,21 +215,6 @@ class VoicesSettingsScreenshotTest {
                     onBack = {},
                 )
             }
-        }
-    }
-}
-
-@Composable
-private fun SnapshotSurface(
-    darkTheme: Boolean = false,
-    content: @Composable () -> Unit,
-) {
-    NarraTheme(darkTheme = darkTheme, dynamicColor = false) {
-        Surface(
-            modifier = Modifier.fillMaxSize(),
-            color = MaterialTheme.colorScheme.background,
-        ) {
-            content()
         }
     }
 }

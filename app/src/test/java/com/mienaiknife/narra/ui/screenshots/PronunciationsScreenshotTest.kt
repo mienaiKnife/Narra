@@ -15,18 +15,12 @@
  */
 package com.mienaiknife.narra.ui.screenshots
 
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
 import app.cash.paparazzi.DeviceConfig
 import app.cash.paparazzi.Paparazzi
 import com.mienaiknife.narra.domain.TtsState
 import com.mienaiknife.narra.domain.models.CustomPronunciation
 import com.mienaiknife.narra.ui.screens.PronunciationEditorDialog
 import com.mienaiknife.narra.ui.screens.PronunciationsSettingsContent
-import com.mienaiknife.narra.ui.theme.NarraTheme
 import com.mienaiknife.narra.ui.viewmodels.PronunciationsUiState
 import org.junit.Rule
 import org.junit.Test
@@ -105,22 +99,6 @@ class PronunciationsScreenshotTest {
                     onSave = { _, _ -> },
                 )
             }
-        }
-    }
-}
-
-/** Mirrors the host scaffold background so snapshots do not render on Paparazzi's raw canvas. */
-@Composable
-private fun SnapshotSurface(
-    darkTheme: Boolean = false,
-    content: @Composable () -> Unit,
-) {
-    NarraTheme(darkTheme = darkTheme, dynamicColor = false) {
-        Surface(
-            modifier = Modifier.fillMaxSize(),
-            color = MaterialTheme.colorScheme.background,
-        ) {
-            content()
         }
     }
 }
